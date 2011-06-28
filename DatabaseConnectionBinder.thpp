@@ -1,0 +1,12 @@
+#include "GenericDataObjectBinder.hpp"
+
+typedef
+	GenericDataObjectBindColumn< DatabaseServer , `server` , 0,
+	GenericDataObjectBindColumn< DatabaseName , `database` , 0,
+	GenericDataObjectBindColumn< DatabaseUserName , `username` , 0,
+	GenericDataObjectBindColumn< DatabasePassword , `password` , 0,
+	GenericDataObjectBindColumn< DatabaseSchema , `schema` , 0,
+	RowEnd > > > > >
+DatabaseConfigBinderDesc;
+
+typedef GenericDataObjectBinder< DatabaseConfigDatum , DatabaseConfigBinderDesc > DatabaseConfigBinder;

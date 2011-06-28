@@ -1,0 +1,91 @@
+// FILE NAME:       $RCSfile: AbstractNodeTest.hpp,v $
+//
+// REVISION:        $Revision$
+//
+// COPYRIGHT:       (c) 2006 Advertising.com All Rights Reserved.
+//
+// LAST UPDATED:    $Date$
+// UPDATED BY:      $Author$
+
+#ifndef _ABSTRACT_NODE_TEST_HPP_
+#define _ABSTRACT_NODE_TEST_HPP_
+
+#include <cppunit/TestFixture.h>
+#include <cppunit/extensions/HelperMacros.h>
+#include <boost/scoped_ptr.hpp>
+#include "DataProxyClient.hpp"
+
+class TempDirectory;
+
+class AbstractNodeTest : public CppUnit::TestFixture
+{
+private:
+	CPPUNIT_TEST_SUITE( AbstractNodeTest );
+	CPPUNIT_TEST( testIllegalXml );
+
+	CPPUNIT_TEST( testLoad );
+	CPPUNIT_TEST( testLoadTranslateParameters );
+	CPPUNIT_TEST( testLoadRequiredParameters );
+	CPPUNIT_TEST( testLoadTransformStream );
+	CPPUNIT_TEST( testLoadRetryCount );
+	CPPUNIT_TEST( testLoadFailureForwarding );
+	CPPUNIT_TEST( testLoadFailureForwarding_ParameterTranslationFail );
+	CPPUNIT_TEST( testLoadFailureForwarding_ParameterValidationFail );
+	CPPUNIT_TEST( testLoadFailureForwarding_UseTranslatedParams_False );
+	CPPUNIT_TEST( testLoadFailureForwarding_UseTranslatedParams_True );
+
+	CPPUNIT_TEST( testStore );
+	CPPUNIT_TEST( testStoreTranslateParameters );
+	CPPUNIT_TEST( testStoreRequiredParameters );
+	CPPUNIT_TEST( testStoreTransformStream );
+	CPPUNIT_TEST( testStoreRetryCount );
+	CPPUNIT_TEST( testStoreFailureForwarding );
+	CPPUNIT_TEST( testStoreFailureForwardingRetryCount );
+	CPPUNIT_TEST( testStoreFailureForwarding_ParameterTranslationFail );
+	CPPUNIT_TEST( testStoreFailureForwarding_ParameterValidationFail );
+	CPPUNIT_TEST( testStoreFailureForwarding_UseTranslatedParams_False );
+	CPPUNIT_TEST( testStoreFailureForwarding_UseTranslatedParams_True );
+	CPPUNIT_TEST( testStoreFailureForwarding_UseTransformedStream_False );
+	CPPUNIT_TEST( testStoreFailureForwarding_UseTransformedStream_True );
+
+	CPPUNIT_TEST_SUITE_END();
+
+public:
+	AbstractNodeTest();
+	virtual ~AbstractNodeTest();
+
+	void setUp();
+	void tearDown();
+
+	void testIllegalXml();
+
+	void testLoad();
+	void testLoadTranslateParameters();
+	void testLoadRequiredParameters();
+	void testLoadTransformStream();
+	void testLoadRetryCount();
+	void testLoadFailureForwarding();
+	void testLoadFailureForwarding_ParameterTranslationFail();
+	void testLoadFailureForwarding_ParameterValidationFail();
+	void testLoadFailureForwarding_UseTranslatedParams_False();
+	void testLoadFailureForwarding_UseTranslatedParams_True();
+
+	void testStore();
+	void testStoreTranslateParameters();
+	void testStoreRequiredParameters();
+	void testStoreTransformStream();
+	void testStoreRetryCount();
+	void testStoreFailureForwarding();
+	void testStoreFailureForwardingRetryCount();
+	void testStoreFailureForwarding_ParameterTranslationFail();
+	void testStoreFailureForwarding_ParameterValidationFail();
+	void testStoreFailureForwarding_UseTranslatedParams_False();
+	void testStoreFailureForwarding_UseTranslatedParams_True();
+	void testStoreFailureForwarding_UseTransformedStream_False();
+	void testStoreFailureForwarding_UseTransformedStream_True();
+
+private:
+	boost::scoped_ptr< TempDirectory > m_pTempDir;
+};
+
+#endif //_ABSTRACT_NODE_TEST_HPP_

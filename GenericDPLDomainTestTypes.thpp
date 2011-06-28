@@ -1,0 +1,60 @@
+//
+// FILE NAME:			$RCSfile: TestHelpersGDPTypes.thpp,v $
+//
+// REVISION:			$Revision$
+//
+// COPYRIGHT:			(c) 2008 Advertising.com All Rights Reserved.
+//
+// LAST UPDATED:		$Date$
+//
+// UPDATED BY:			$Author$
+//
+
+#include "GenericDataObject.hpp"
+#include "GenericDataContainer.hpp"
+#include "GenericDataObjectBinder.hpp"
+#include "GenericAggregator.hpp"
+
+namespace TestHelpersGDPTypes
+{
+  DATUMINFO(Key1Entry,int);
+  DATUMINFO(Key2Entry,int);
+  DATUMINFO(Col1Entry,int);
+  DATUMINFO(Col2Entry,int);
+};
+
+typedef
+GenericDatum< TestHelpersGDPTypes::Key1Entry,
+GenericDatum< TestHelpersGDPTypes::Key2Entry,
+GenericDatum< TestHelpersGDPTypes::Col1Entry,
+GenericDatum< TestHelpersGDPTypes::Col2Entry,
+RowEnd > > > > TestDatum;
+
+typedef
+GenericDataContainerDescriptor< TestHelpersGDPTypes::Key1Entry, KeyDatum,
+GenericDataContainerDescriptor< TestHelpersGDPTypes::Key2Entry, KeyDatum,
+GenericDataContainerDescriptor< TestHelpersGDPTypes::Col1Entry, RetainFirstDatum,
+GenericDataContainerDescriptor< TestHelpersGDPTypes::Col2Entry, RetainFirstDatum,
+RowEnd > > > > ContainerDescription;
+
+typedef GenericDataContainer<TestDatum,ContainerDescription,std::map> TestContainer;
+
+typedef
+GenericDataObjectBindColumn< TestHelpersGDPTypes::Key1Entry, `Key1Column`, 0,
+GenericDataObjectBindColumn< TestHelpersGDPTypes::Key2Entry, `Key2Column`, 0,
+GenericDataObjectBindColumn< TestHelpersGDPTypes::Col1Entry, `Col1Column`, 0,
+GenericDataObjectBindColumn< TestHelpersGDPTypes::Col2Entry, `Col2Column`, 0,
+RowEnd > > > > BindColumns;
+
+typedef
+GenericDataObjectBindColumn< TestHelpersGDPTypes::Key1Entry, `Column0`, 0,
+GenericDataObjectBindColumn< TestHelpersGDPTypes::Key2Entry, `Column1`, 0,
+GenericDataObjectBindColumn< TestHelpersGDPTypes::Col1Entry, `Column2`, 0,
+GenericDataObjectBindColumn< TestHelpersGDPTypes::Col2Entry, `Column3`, 0,
+RowEnd > > > > UnheaderedBindColumns;
+
+typedef GenericDataObjectBinder<TestDatum,BindColumns> TestBinder;
+typedef GenericDataObjectBinder<TestDatum,UnheaderedBindColumns> UnheaderedTestBinder;
+
+typedef GenericAggregator<TestContainer> TestAggregator;
+

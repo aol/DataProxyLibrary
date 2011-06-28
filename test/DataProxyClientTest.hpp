@@ -1,0 +1,74 @@
+// FILE NAME:       $RCSfile: DataProxyClientTest.hpp,v $
+//
+// REVISION:        $Revision$
+//
+// COPYRIGHT:       (c) 2006 Advertising.com All Rights Reserved.
+//
+// LAST UPDATED:    $Date$
+// UPDATED BY:      $Author$
+
+#ifndef _DATA_PROXY_CLIENT_TEST_HPP_
+#define _DATA_PROXY_CLIENT_TEST_HPP_
+
+#include <cppunit/TestFixture.h>
+#include <cppunit/extensions/HelperMacros.h>
+#include <boost/scoped_ptr.hpp>
+#include "DataProxyClient.hpp"
+
+class TempDirectory;
+
+class DataProxyClientTest : public CppUnit::TestFixture
+{
+private:
+	CPPUNIT_TEST_SUITE( DataProxyClientTest );
+	CPPUNIT_TEST( testUninitialized );
+	CPPUNIT_TEST( testMissingName );
+	CPPUNIT_TEST( testDuplicateName );
+	CPPUNIT_TEST( testDatabaseConnectionsNode );
+	CPPUNIT_TEST( testStoreUnsuccessfulRollback );
+	CPPUNIT_TEST( testStoreUnsuccessfulRollback_WithTransactions );
+	CPPUNIT_TEST( testTransactionException );
+	CPPUNIT_TEST( testCommit );
+	CPPUNIT_TEST( testCommitPartial );
+	CPPUNIT_TEST( testRollback );
+	CPPUNIT_TEST( testRollbackException );
+	CPPUNIT_TEST( testAutoRollback );
+	CPPUNIT_TEST( testForwardingOk );
+	CPPUNIT_TEST( testReadCycles );
+	CPPUNIT_TEST( testWriteCycles );
+	CPPUNIT_TEST( testUndefinedReadForwards );
+	CPPUNIT_TEST( testUndefinedWriteForwards );
+	CPPUNIT_TEST( testEntityResolution );
+	CPPUNIT_TEST_SUITE_END();
+
+public:
+	DataProxyClientTest();
+	virtual ~DataProxyClientTest();
+
+	void setUp();
+	void tearDown();
+
+	void testUninitialized();
+	void testMissingName();
+	void testDuplicateName();
+	void testDatabaseConnectionsNode();
+	void testStoreUnsuccessfulRollback();
+	void testStoreUnsuccessfulRollback_WithTransactions();
+	void testTransactionException();
+	void testCommit();
+	void testCommitPartial();
+	void testRollback();
+	void testRollbackException();
+	void testAutoRollback();
+	void testForwardingOk();
+	void testReadCycles();
+	void testWriteCycles();
+	void testUndefinedReadForwards();
+	void testUndefinedWriteForwards();
+	void testEntityResolution();
+
+private:
+	boost::scoped_ptr< TempDirectory > m_pTempDir;
+};
+
+#endif //_DATA_PROXY_CLIENT_TEST_HPP_

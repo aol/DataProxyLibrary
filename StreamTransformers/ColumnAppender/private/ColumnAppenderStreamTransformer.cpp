@@ -1,0 +1,101 @@
+//
+// FILE NAME:       $RCSfile: ColumnAppenderStreamTransformer.cpp,v $
+//
+// REVISION:        $Revision$
+//
+// COPYRIGHT:       (c) 2008 Advertising.com All Rights Reserved.
+//
+// LAST UPDATED:    $Date$
+// UPDATED BY:      $Author$
+
+#include "ColumnAppenderStreamTransformer.hpp"
+#include "MVLogger.hpp"
+#include "TransformerUtilities.hpp"
+#include "StringUtilities.hpp"
+#include "CSVReader.hpp"
+#include "DataProxyClient.hpp"
+#include "PropertyDomain.hpp"
+#include <boost/algorithm/string/split.hpp>
+#include <set>
+
+boost::shared_ptr< std::stringstream > AppendColumns( std::istream& i_rInputStream, const std::map< std::string, std::string >& i_rParameters )
+{
+	boost::shared_ptr< std::stringstream > pResult( new std::stringstream() );
+
+	// parse input parameters
+	std::string propertyNodeName =  TransformerUtilities::GetValue( PROPERTY_NODE_NAME, i_rParameters );
+	std::string propertiesKeyColumnName = TransformerUtilities::GetValue( PROPERTY_KEY_COLUMN_NAME, i_rParameters );
+	std::string streamKeyColumnName = TransformerUtilities::GetValue( STREAM_KEY_COLUMN_NAME, i_rParameters );
+	std::string propertiesToAppend = TransformerUtilities::GetValue( PROPERTIES_TO_APPEND, i_rParameters );
+		
+	std::string onMissingPropertyValue = TransformerUtilities::GetValue( ON_MISSING_PROPERTY, i_rParameters, ON_MISSING_PROPERTY_USENULL );
+
+	OnMissingPropertyBehavior onMissingPropertyBehavior = USE_NULL;
+	
+	if( onMissingPropertyValue == ON_MISSING_PROPERTY_USENULL )
+	{	
+		onMissingPropertyBehavior = USE_NULL;
+	}
+	else if( onMissingPropertyValue == ON_MISSING_PROPERTY_DISCARD )
+	{
+		onMissingPropertyBehavior = DISCARD;
+	}
+	else if( onMissingPropertyValue == ON_MISSING_PROPERTY_THROW )
+	{
+		onMissingPropertyBehavior = THROW;
+	}
+	else  
+	{
+		MV_THROW( ColumnAppenderStreamTransformerException, "Unrecognized Value: " << onMissingPropertyValue << " given for parameter: " << ON_MISSING_PROPERTY ); 
+	}
+
+	// parse out DPLConfig for the operation
+	std::string dplConfig = TransformerUtilities::GetValue( DPL_CONFIG, i_rParameters );
+	
+	// Loading DPLClient
+	DataProxyClient client;
+	client.Initialize( dplConfig );
+	PropertyDomain propDomain;
+	propDomain.Load( client, propertyNodeName, propertiesKeyColumnName, propertiesToAppend );
+
+	// Reading from input stream 
+	CSVReader reader( i_rInputStream );
+	std::string headerText = reader.GetHeaderLine();
+	*pResult << headerText << "," << propertiesToAppend << std::endl;	
+	std::string streamKeyValue; 
+	reader.BindCol( streamKeyColumnName, streamKeyValue );
+	std::set< std::string > discardedColumns;
+	
+	while( reader.NextRow() )
+	{
+		const std::string* pProperties = propDomain.GetProperties( streamKeyValue );
+		if( !pProperties )
+		{
+			pProperties = propDomain.GetDefaultProperties();
+			switch( onMissingPropertyBehavior ) 
+			{
+				case DISCARD:
+					discardedColumns.insert( streamKeyValue );
+					continue;
+				case THROW:
+					MV_THROW( ColumnAppenderStreamTransformerException, "Unable to find properties for key: " << streamKeyColumnName );
+				case USE_NULL:
+					break;
+			}
+
+		}
+
+		*pResult << reader.GetCurrentDataLine() << ',' << *pProperties << std::endl; 
+		
+	}
+
+	if( !discardedColumns.empty() )
+	{
+		std::string discardedColumnString;
+		Join( discardedColumns, discardedColumnString, ',' );
+		MVLOGGER( "root.lib.DataProxy.StreamTransformers.ColumnAppender.AppendColumns.DiscardedRows",
+			"Rows with the following keys have been discarded from the input stream: " << discardedColumnString
+			<< " because properties could not be located for their values and " << ON_MISSING_PROPERTY << " was set to " << ON_MISSING_PROPERTY_DISCARD );
+	}
+	return pResult;
+}

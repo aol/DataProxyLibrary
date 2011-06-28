@@ -1,0 +1,72 @@
+//
+// FILE NAME:       $RCSfile: DataProxyService.cpp,v $
+//
+// REVISION:        $Revision$
+//
+// COPYRIGHT:       (c) 2008 Advertising.com All Rights Reserved.
+//
+// LAST UPDATED:    $Date$
+// UPDATED BY:      $Author$
+
+#include "DataProxyService.hpp"
+#include "DataProxyServiceConfig.hpp"
+#include "WebServer.hpp"
+#include "MVLogger.hpp"
+#include "XMLUtilities.hpp"
+#include "LoadHandler.hpp"
+#include "StoreHandler.hpp"
+
+namespace
+{
+	const std::string LISTENING_PORTS( "listening_ports" );
+	const std::string NUM_THREADS( "num_threads" );
+
+	const std::string MATCH_ALL( ".*" );
+}
+
+int main( int argc, char** argv )
+{
+	try
+	{
+		DataProxyServiceConfig config( argc, argv );
+		MVLogger::Init( "/dev/null", config.GetLogConfig(), config.GetInstanceId() );
+		XMLPlatformUtils::Initialize();
+	
+		// create a webserver with the configured params
+		std::map< std::string, std::string > parameters;
+		parameters[ LISTENING_PORTS ] = boost::lexical_cast< std::string >( config.GetPort() );
+		parameters[ NUM_THREADS ] = boost::lexical_cast< std::string >( config.GetNumThreads() );
+		WebServer::CreateInstance( parameters );
+		WebServer& rWebServer = WebServer::GetInstance();
+
+		// create handlers
+		LoadHandler loadHandler( config.GetDplConfig(), config.GetZLibCompressionLevel(), config.GetEnableXForwardedFor() );
+		StoreHandler storeHandler( config.GetDplConfig(), config.GetEnableXForwardedFor() );
+
+		// register handlers
+		rWebServer.AddWebService( HTTP_POST, MATCH_ALL, storeHandler );
+		rWebServer.AddWebService( HTTP_GET, MATCH_ALL, loadHandler );
+
+		// start webservice
+		MVLOGGER( "root.lib.DataProxy.Service.CreatedWebserver", "Starting data proxy service, instance id: " << config.GetInstanceId() << ", listening on port: " << config.GetPort() );
+		rWebServer.Run();
+
+		XMLPlatformUtils::Terminate();
+	}
+	catch (cli::QuietException)
+	{
+		// Exit normally
+	}
+	catch (std::exception& ex)
+	{
+		MVLOGGER( "root.lib.DataProxy.Service.CaughtException", "Exiting on exception with error " << ex.what() );
+		return -1;
+	}
+	catch (...)
+	{
+		MVLOGGER( "root.lib.DataProxy.Service.UnknownException", "Exiting on unknown exception " );
+		return -1;
+	}
+
+	return 0;
+}

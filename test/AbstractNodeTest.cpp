@@ -1,0 +1,1177 @@
+// FILE NAME:       $RCSfile: AbstractNodeTest.cpp,v $
+//
+// REVISION:        $Revision$
+//
+// COPYRIGHT:       (c) 2006 Advertising.com All Rights Reserved.
+//
+// LAST UPDATED:    $Date$
+// UPDATED BY:      $Author$
+
+#include "TestableNode.hpp"
+#include "AbstractNodeTest.hpp"
+#include "ProxyUtilities.hpp"
+#include "ProxyTestHelpers.hpp"
+#include "FileUtilities.hpp"
+#include "TempDirectory.hpp"
+#include "AssertThrowWithMessage.hpp"
+#include "AssertFileContents.hpp"
+#include "LocalFileProxy.hpp"
+#include "MockDataProxyClient.hpp"
+#include "MockDatabaseConnectionManager.hpp"
+#include "XMLUtilities.hpp"
+#include "TransformerTestHelpers.hpp"
+#include <iostream>
+#include <unistd.h>
+#include <fstream>
+#include <boost/regex.hpp>
+#include <boost/algorithm/string/replace.hpp>
+
+CPPUNIT_TEST_SUITE_REGISTRATION( AbstractNodeTest );
+CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( AbstractNodeTest, "AbstractNodeTest" );
+
+namespace
+{
+	enum ParamType
+	{
+		KEY,
+		VALUE
+	};
+
+	std::string GetEscapedForRegex( const std::string& i_rInput )
+	{
+		std::string result = i_rInput;
+		boost::replace_all( result, ".", "\\." );
+		boost::replace_all( result, "?", "\\?" );
+		boost::replace_all( result, "^", "\\^" );
+		boost::replace_all( result, "$", "\\$" );
+		return result;
+	}
+}
+
+AbstractNodeTest::AbstractNodeTest()
+:	m_pTempDir(NULL)
+{
+}
+
+AbstractNodeTest::~AbstractNodeTest()
+{
+}
+
+void AbstractNodeTest::setUp()
+{
+	XMLPlatformUtils::Initialize();
+	m_pTempDir.reset( new TempDirectory() );
+}
+
+void AbstractNodeTest::tearDown()
+{
+	::system( (std::string("chmod 777 ") + m_pTempDir->GetDirectoryName() + "/* >/dev/null 2>&1" ).c_str() );
+	m_pTempDir.reset( NULL );
+	//XMLPlatformUtils::Terminate();
+}
+
+void AbstractNodeTest::testIllegalXml()
+{
+	std::stringstream xmlContents;
+	MockDataProxyClient client;
+	std::vector<xercesc::DOMNode*> nodes;
+
+	xmlContents.str("");
+	xmlContents << "<DataNode>" << std::endl
+				<< "  <Read>" << std::endl
+				<< "    <OnFailure garbage=\"true\" />" << std::endl
+				<< "  </Read>" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( TestableNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Found invalid attribute: garbage in node: OnFailure" );
+
+	xmlContents.str("");
+	xmlContents << "<DataNode>" << std::endl
+				<< "  <Read>" << std::endl
+				<< "    <OnFailure forwardTo=\"somewhere\">" << std::endl
+				<< "      <garbage/>" << std::endl
+				<< "    </OnFailure>" << std::endl
+				<< "  </Read>" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( TestableNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Found invalid child: garbage in node: OnFailure" );
+
+	xmlContents.str("");
+	xmlContents << "<DataNode>" << std::endl
+				<< "  <Read>" << std::endl
+				<< "    <OnFailure />" << std::endl
+				<< "  </Read>" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( TestableNode node( "name", client, *nodes[0] ), NodeConfigException,
+		".*:\\d+: Node has an OnFailure element, but no forwardTo attribute has been set" );
+
+	xmlContents.str("");
+	xmlContents << "<DataNode>" << std::endl
+				<< "  <Write>" << std::endl
+				<< "    <OnFailure />" << std::endl
+				<< "  </Write>" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( TestableNode node( "name", client, *nodes[0] ), NodeConfigException,
+		".*:\\d+: Node has an OnFailure element, but no forwardTo or retryCount attributes have been set" );
+
+	xmlContents.str("");
+	xmlContents << "<DataNode>" << std::endl
+				<< "  <Read>" << std::endl
+				<< "    <RequiredParameters garbage=\"true\" />" << std::endl
+				<< "  </Read>" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( TestableNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Found invalid attribute: garbage in node: RequiredParameters" );
+
+	xmlContents.str("");
+	xmlContents << "<DataNode>" << std::endl
+				<< "  <Read>" << std::endl
+				<< "    <RequiredParameters>" << std::endl
+				<< "      <garbage/>" << std::endl
+				<< "    </RequiredParameters>" << std::endl
+				<< "  </Read>" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( TestableNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Found invalid child: garbage in node: RequiredParameters" );
+
+	xmlContents.str("");
+	xmlContents << "<DataNode>" << std::endl
+				<< "  <Read>" << std::endl
+				<< "    <RequiredParameters>" << std::endl
+				<< "      <Parameter garbage=\"true\"/>" << std::endl
+				<< "    </RequiredParameters>" << std::endl
+				<< "  </Read>" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( TestableNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Found invalid attribute: garbage in node: Parameter" );
+
+	xmlContents.str("");
+	xmlContents << "<DataNode>" << std::endl
+				<< "  <Read>" << std::endl
+				<< "    <RequiredParameters>" << std::endl
+				<< "      <Parameter name=\"whatever\" >" << std::endl
+				<< "        <garbage/>" << std::endl
+				<< "      </Parameter>" << std::endl
+				<< "    </RequiredParameters>" << std::endl
+				<< "  </Read>" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( TestableNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Found invalid child: garbage in node: Parameter" );
+
+	xmlContents.str("");
+	xmlContents << "<DataNode>" << std::endl
+				<< "  <Write>" << std::endl
+				<< "    <OnFailure garbage=\"true\" />" << std::endl
+				<< "  </Write>" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( TestableNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Found invalid attribute: garbage in node: OnFailure" );
+
+	xmlContents.str("");
+	xmlContents << "<DataNode>" << std::endl
+				<< "  <Write>" << std::endl
+				<< "    <OnFailure forwardTo=\"somewhere\">" << std::endl
+				<< "      <garbage/>" << std::endl
+				<< "    </OnFailure>" << std::endl
+				<< "  </Write>" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( TestableNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Found invalid child: garbage in node: OnFailure" );
+
+	xmlContents.str("");
+	xmlContents << "<DataNode>" << std::endl
+				<< "  <Write>" << std::endl
+				<< "    <RequiredParameters garbage=\"true\" />" << std::endl
+				<< "  </Write>" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( TestableNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Found invalid attribute: garbage in node: RequiredParameters" );
+
+	xmlContents.str("");
+	xmlContents << "<DataNode>" << std::endl
+				<< "  <Write>" << std::endl
+				<< "    <RequiredParameters>" << std::endl
+				<< "      <garbage/>" << std::endl
+				<< "    </RequiredParameters>" << std::endl
+				<< "  </Write>" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( TestableNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Found invalid child: garbage in node: RequiredParameters" );
+
+	xmlContents.str("");
+	xmlContents << "<DataNode>" << std::endl
+				<< "  <Write>" << std::endl
+				<< "    <RequiredParameters>" << std::endl
+				<< "      <Parameter garbage=\"true\"/>" << std::endl
+				<< "    </RequiredParameters>" << std::endl
+				<< "  </Write>" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( TestableNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Found invalid attribute: garbage in node: Parameter" );
+
+	xmlContents.str("");
+	xmlContents << "<DataNode>" << std::endl
+				<< "  <Write>" << std::endl
+				<< "    <RequiredParameters>" << std::endl
+				<< "      <Parameter name=\"whatever\" >" << std::endl
+				<< "        <garbage/>" << std::endl
+				<< "      </Parameter>" << std::endl
+				<< "    </RequiredParameters>" << std::endl
+				<< "  </Write>" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( TestableNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Found invalid child: garbage in node: Parameter" );
+}
+
+void AbstractNodeTest::testLoad()
+{
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+
+	std::map<std::string,std::string> parameters;
+	parameters["param1"] = "value1";
+	parameters["param2"] = "value2";
+	parameters["param3"] = "value3";
+	parameters["param4"] = "value4";
+
+	std::stringstream results;
+
+	CPPUNIT_ASSERT_NO_THROW( node.Load( parameters, results ) );
+
+	std::stringstream expected;
+	expected << "LoadImpl called with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), node.GetLog() );
+}
+
+void AbstractNodeTest::testLoadTranslateParameters()
+{
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Read>" << std::endl
+				<< "      <TranslateParameters>" << std::endl
+				<< "        <Parameter name=\"param2\" valueOverride=\"overrideValue2\" />" << std::endl
+				<< "      </TranslateParameters>" << std::endl
+				<< "    </Read>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+
+	std::map<std::string,std::string> parameters;
+	parameters["param1"] = "value1";
+	parameters["param2"] = "value2";
+	parameters["param3"] = "value3";
+	parameters["param4"] = "value4";
+
+	std::stringstream results;
+
+	CPPUNIT_ASSERT_NO_THROW( node.Load( parameters, results ) );
+
+	std::map<std::string,std::string> expectedParameters( parameters );
+	expectedParameters["param2"] = "overrideValue2";
+
+	std::stringstream expected;
+	expected << "LoadImpl called with parameters: " << ProxyUtilities::ToString( expectedParameters ) << std::endl;
+
+	CPPUNIT_ASSERT_EQUAL( expected.str(), node.GetLog() );
+}
+
+void AbstractNodeTest::testLoadRequiredParameters()
+{
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Read>" << std::endl
+				<< "      <RequiredParameters>" << std::endl
+				<< "        <Parameter name=\"param5\" />" << std::endl
+				<< "      </RequiredParameters>" << std::endl
+				<< "    </Read>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+
+	std::map<std::string,std::string> parameters;
+	parameters["param1"] = "value1";
+	parameters["param2"] = "value2";
+	parameters["param3"] = "value3";
+	parameters["param4"] = "value4";
+
+	std::stringstream results;
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Load( parameters, results ), ParameterValidationException, ".*:\\d+: Incoming request is missing the following parameters: param5" );
+}
+
+void AbstractNodeTest::testLoadTransformStream()
+{
+	std::string m_LibrarySpec;
+	TransformerTestHelpers::SetupLibraryFile( m_pTempDir->GetDirectoryName(), m_LibrarySpec );
+
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Read>" << std::endl
+			 	<< "      <TranslateParameters>" << std::endl
+				<< "		<Parameter name=\"param3\" valueOverride=\"override3\" />" << std::endl
+			 	<< "      </TranslateParameters>" << std::endl
+			 	<< "      <StreamTransformers>" << std::endl
+				<< "		 <StreamTransformer path=\"" << m_LibrarySpec << "\"" << " functionName=\"TransformFunction\">" << std::endl
+				<< " 		  	<Parameter name=\"ST1_name1\" value=\"ST1_value1\" /> " << std::endl
+				<< "			<Parameter name=\"ST1_name2\" value=\"ST1_value2\"/> " << std::endl
+				<< "	     </StreamTransformer>" << std::endl
+				<< "        <StreamTransformer path=\"" << m_LibrarySpec << "\"" << " functionName=\"TransformFunction\">" << std::endl
+				<< " 		  	<Parameter name=\"ST2_name1\" value=\"ST2_value1\" /> " << std::endl
+				<< "                   <Parameter name=\"ST2_name2\" value=\"%v\" valueSource=\"param2\"/> " << std::endl
+				<< "                   <Parameter name=\"ST2_name3\" value=\"%v\" valueSource=\"param3\"/> " << std::endl
+				<< "		 </StreamTransformer>" << std::endl
+				<< "      </StreamTransformers>" << std::endl
+				<< "    </Read>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+	node.SetDataToReturn( "original node data" );
+
+	std::map<std::string,std::string> parameters;
+	parameters["param1"] = "value1";
+	parameters["param2"] = "value2";
+	parameters["param3"] = "value3";
+	parameters["param4"] = "value4";
+
+	std::stringstream results;
+	CPPUNIT_ASSERT_NO_THROW( node.Load( parameters, results ) );
+
+	std::stringstream expected;
+	expected << "ST2_name1 : ST2_value1" << std::endl
+			 << "ST2_name2 : value2" << std::endl
+			 << "ST2_name3 : override3" << std::endl
+			 << "ST1_name1 : ST1_value1" << std::endl
+			 << "ST1_name2 : ST1_value2" << std::endl
+			 << "original node data";
+	CPPUNIT_ASSERT_EQUAL( expected.str(), results.str() );
+}
+
+void AbstractNodeTest::testLoadFailureForwarding()
+{
+	std::string m_LibrarySpec;
+	TransformerTestHelpers::SetupLibraryFile( m_pTempDir->GetDirectoryName(), m_LibrarySpec );
+
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Read>" << std::endl
+				<< "      <OnFailure forwardTo=\"failureName\" includeNameAsParameter=\"myFirstFailedDplName\" forwardTranslatedParameters=\"true\" />" << std::endl
+				<< "    </Read>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+	client.SetDataToReturn( "failureName", "default data" );
+
+	TestableNode node( "name", client, *nodes[0] );
+	node.SetLoadException( true );
+	node.InsertReadForward( "implForward1" );
+	node.InsertReadForward( "implForward2" );
+
+	std::map<std::string,std::string> parameters;
+
+	std::stringstream results;
+	CPPUNIT_ASSERT_NO_THROW( node.Load( parameters, results ) );
+
+	parameters["myFirstFailedDplName"] = "name";
+
+	std::stringstream expected;
+	expected << "Load called with Name: failureName Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+
+	expected.str("");
+	expected << "default data";
+	CPPUNIT_ASSERT_EQUAL( expected.str(), results.str() );
+
+	std::set< std::string > forwards;
+	node.InsertReadForwards( forwards );
+	CPPUNIT_ASSERT_EQUAL( size_t(3), forwards.size() );
+	CPPUNIT_ASSERT( forwards.find( "failureName" ) != forwards.end() );
+	CPPUNIT_ASSERT( forwards.find( "implForward1" ) != forwards.end() );
+	CPPUNIT_ASSERT( forwards.find( "implForward2" ) != forwards.end() );
+}
+
+void AbstractNodeTest::testLoadRetryCount()
+{
+	std::string m_LibrarySpec;
+	TransformerTestHelpers::SetupLibraryFile( m_pTempDir->GetDirectoryName(), m_LibrarySpec );
+
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Read>" << std::endl
+				<< "      <OnFailure retryCount=\"2\" />" << std::endl
+				<< "    </Read>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+	TestableNode node( "name", client, *nodes[0] );
+	node.SetLoadException( true );
+	node.SetWriteOnLoadException( true );
+
+	std::map<std::string,std::string> parameters;
+
+	std::stringstream results;
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Load( parameters, results ), MVException,
+		".*:\\d+: Set to throw exception" );
+
+	std::stringstream expected;
+	expected << "LoadImpl called with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	expected << "LoadImpl called with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	expected << "LoadImpl called with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), node.GetLog() );
+
+	expected.str("");
+	CPPUNIT_ASSERT_EQUAL( expected.str(), results.str() );
+}
+
+void AbstractNodeTest::testLoadFailureForwarding_ParameterTranslationFail()
+{
+	std::string m_LibrarySpec;
+	TransformerTestHelpers::SetupLibraryFile( m_pTempDir->GetDirectoryName(), m_LibrarySpec );
+
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Read>" << std::endl
+				<< "	  <TranslateParameters>" << std::endl
+				<< "	    <Parameter name=\"p1\" valueOverride=\"`nonexistent`\" />" << std::endl
+				<< "	  </TranslateParameters>" << std::endl
+				<< "      <OnFailure forwardTo=\"failureName\" includeNameAsParameter=\"myFirstFailedDplName\" forwardTranslatedParameters=\"true\" />" << std::endl
+				<< "    </Read>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+	client.SetDataToReturn( "failureName", "default data" );
+
+	TestableNode node( "name", client, *nodes[0] );
+	node.InsertReadForward( "implForward1" );
+	node.InsertReadForward( "implForward2" );
+
+	std::map<std::string,std::string> parameters;
+
+	std::stringstream results;
+	CPPUNIT_ASSERT_NO_THROW( node.Load( parameters, results ) );
+
+	parameters["myFirstFailedDplName"] = "name";
+
+	std::stringstream expected;
+	expected << "Load called with Name: failureName Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+
+	expected.str("");
+	expected << "default data";
+	CPPUNIT_ASSERT_EQUAL( expected.str(), results.str() );
+
+	std::set< std::string > forwards;
+	node.InsertReadForwards( forwards );
+	CPPUNIT_ASSERT_EQUAL( size_t(3), forwards.size() );
+	CPPUNIT_ASSERT( forwards.find( "failureName" ) != forwards.end() );
+	CPPUNIT_ASSERT( forwards.find( "implForward1" ) != forwards.end() );
+	CPPUNIT_ASSERT( forwards.find( "implForward2" ) != forwards.end() );
+}
+
+void AbstractNodeTest::testLoadFailureForwarding_ParameterValidationFail()
+{
+	std::string m_LibrarySpec;
+	TransformerTestHelpers::SetupLibraryFile( m_pTempDir->GetDirectoryName(), m_LibrarySpec );
+
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Read>" << std::endl
+				<< "	  <RequiredParameters>" << std::endl
+				<< "	    <Parameter name=\"nonexistent\" />" << std::endl
+				<< "	  </RequiredParameters>" << std::endl
+				<< "      <OnFailure forwardTo=\"failureName\" includeNameAsParameter=\"myFirstFailedDplName\" forwardTranslatedParameters=\"true\" />" << std::endl
+				<< "    </Read>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+	client.SetDataToReturn( "failureName", "default data" );
+
+	TestableNode node( "name", client, *nodes[0] );
+	node.InsertReadForward( "implForward1" );
+	node.InsertReadForward( "implForward2" );
+
+	std::map<std::string,std::string> parameters;
+
+	std::stringstream results;
+	CPPUNIT_ASSERT_NO_THROW( node.Load( parameters, results ) );
+
+	parameters["myFirstFailedDplName"] = "name";
+
+	std::stringstream expected;
+	expected << "Load called with Name: failureName Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+
+	expected.str("");
+	expected << "default data";
+	CPPUNIT_ASSERT_EQUAL( expected.str(), results.str() );
+
+	std::set< std::string > forwards;
+	node.InsertReadForwards( forwards );
+	CPPUNIT_ASSERT_EQUAL( size_t(3), forwards.size() );
+	CPPUNIT_ASSERT( forwards.find( "failureName" ) != forwards.end() );
+	CPPUNIT_ASSERT( forwards.find( "implForward1" ) != forwards.end() );
+	CPPUNIT_ASSERT( forwards.find( "implForward2" ) != forwards.end() );
+}
+
+void AbstractNodeTest::testLoadFailureForwarding_UseTranslatedParams_False()
+{
+	std::string m_LibrarySpec;
+	TransformerTestHelpers::SetupLibraryFile( m_pTempDir->GetDirectoryName(), m_LibrarySpec );
+
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Read>" << std::endl
+				<< "      <TranslateParameters>" << std::endl
+				<< "        <Parameter name=\"default1\" valueDefault=\"defaultValue1\" />" << std::endl
+				<< "      </TranslateParameters>" << std::endl
+				<< "      <OnFailure forwardTo=\"failureName\" forwardTranslatedParameters=\"false\" />" << std::endl
+				<< "    </Read>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+	client.SetDataToReturn( "failureName", "default data" );
+
+	TestableNode node( "name", client, *nodes[0] );
+	node.SetLoadException( true );
+
+	std::map<std::string,std::string> parameters;
+
+	std::stringstream results;
+	CPPUNIT_ASSERT_NO_THROW( node.Load( parameters, results ) );
+
+	std::stringstream expected;
+	expected << "Load called with Name: failureName Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+
+	expected.str("");
+	expected << "default data";
+	CPPUNIT_ASSERT_EQUAL( expected.str(), results.str() );
+}
+
+void AbstractNodeTest::testLoadFailureForwarding_UseTranslatedParams_True()
+{
+	std::string m_LibrarySpec;
+	TransformerTestHelpers::SetupLibraryFile( m_pTempDir->GetDirectoryName(), m_LibrarySpec );
+
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Read>" << std::endl
+				<< "      <TranslateParameters>" << std::endl
+				<< "        <Parameter name=\"default1\" valueDefault=\"defaultValue1\" />" << std::endl
+				<< "      </TranslateParameters>" << std::endl
+				<< "      <OnFailure forwardTo=\"failureName\" forwardTranslatedParameters=\"true\" />" << std::endl
+				<< "    </Read>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+	client.SetDataToReturn( "failureName", "default data" );
+
+	TestableNode node( "name", client, *nodes[0] );
+	node.SetLoadException( true );
+
+	std::map<std::string,std::string> parameters;
+
+	std::stringstream results;
+	CPPUNIT_ASSERT_NO_THROW( node.Load( parameters, results ) );
+
+	parameters["default1"] = "defaultValue1";
+
+	std::stringstream expected;
+	expected << "Load called with Name: failureName Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+
+	expected.str("");
+	expected << "default data";
+	CPPUNIT_ASSERT_EQUAL( expected.str(), results.str() );
+}
+
+void AbstractNodeTest::testStore()
+{
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+
+	std::map<std::string,std::string> parameters;
+	parameters["param1"] = "value1";
+	parameters["param2"] = "value2";
+	parameters["param3"] = "value3";
+	parameters["param4"] = "value4";
+
+	std::stringstream data;
+	data << "this is some data";
+
+	CPPUNIT_ASSERT_NO_THROW( CPPUNIT_ASSERT( node.Store( parameters, data ) ) );
+
+	std::stringstream expected;
+	expected << "StoreImpl called with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data.str() << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), node.GetLog() );
+}
+
+void AbstractNodeTest::testStoreTranslateParameters()
+{
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Write>" << std::endl
+				<< "      <TranslateParameters>" << std::endl
+				<< "        <Parameter name=\"param2\" valueOverride=\"overrideValue2\" />" << std::endl
+				<< "      </TranslateParameters>" << std::endl
+				<< "    </Write>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+
+	std::map<std::string,std::string> parameters;
+	parameters["param1"] = "value1";
+	parameters["param2"] = "value2";
+	parameters["param3"] = "value3";
+	parameters["param4"] = "value4";
+
+	std::stringstream data;
+	data << "this is some data";
+
+	CPPUNIT_ASSERT_NO_THROW( CPPUNIT_ASSERT( node.Store( parameters, data ) ) );
+
+	std::map<std::string,std::string> expectedParameters( parameters );
+	expectedParameters["param2"] = "overrideValue2";
+
+	std::stringstream expected;
+	expected << "StoreImpl called with parameters: " << ProxyUtilities::ToString( expectedParameters ) << " with data: " << data.str() << std::endl;
+
+	CPPUNIT_ASSERT_EQUAL( expected.str(), node.GetLog() );
+}
+
+void AbstractNodeTest::testStoreRequiredParameters()
+{
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Write>" << std::endl
+				<< "      <RequiredParameters>" << std::endl
+				<< "        <Parameter name=\"param5\" />" << std::endl
+				<< "      </RequiredParameters>" << std::endl
+				<< "    </Write>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+
+	std::map<std::string,std::string> parameters;
+	parameters["param1"] = "value1";
+	parameters["param2"] = "value2";
+	parameters["param3"] = "value3";
+	parameters["param4"] = "value4";
+
+	std::stringstream data;
+	data << "this is some data";
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Store( parameters, data ), ParameterValidationException, ".*:\\d+: Incoming request is missing the following parameters: param5" );
+}
+
+void AbstractNodeTest::testStoreTransformStream()
+{
+	std::string m_LibrarySpec;
+	TransformerTestHelpers::SetupLibraryFile( m_pTempDir->GetDirectoryName(), m_LibrarySpec );
+
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Write>" << std::endl
+			 	<< "      <TranslateParameters>" << std::endl
+				<< "		<Parameter name=\"param3\" valueOverride=\"override3\" />" << std::endl
+			 	<< "      </TranslateParameters>" << std::endl
+			 	<< "      <StreamTransformers>" << std::endl
+				<< "		 <StreamTransformer path=\"" << m_LibrarySpec << "\"" << " functionName=\"TransformFunction\">" << std::endl
+				<< " 		  	<Parameter name=\"ST1_name1\" value=\"ST1_value1\" /> " << std::endl
+				<< "			<Parameter name=\"ST1_name2\" value=\"ST1_value2\"/> " << std::endl
+				<< "	     </StreamTransformer>" << std::endl
+				<< "        <StreamTransformer path=\"" << m_LibrarySpec << "\"" << " functionName=\"TransformFunction\">" << std::endl
+				<< " 		  	<Parameter name=\"ST2_name1\" value=\"ST2_value1\" /> " << std::endl
+				<< "                   <Parameter name=\"ST2_name2\" value=\"%v\" valueSource=\"param2\"/> " << std::endl
+				<< "                   <Parameter name=\"ST2_name3\" value=\"%v\" valueSource=\"param3\"/> " << std::endl
+				<< "		 </StreamTransformer>" << std::endl
+				<< "      </StreamTransformers>" << std::endl
+				<< "    </Write>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+
+	std::map<std::string,std::string> parameters;
+	parameters["param1"] = "value1";
+	parameters["param2"] = "value2";
+	parameters["param3"] = "value3";
+	parameters["param4"] = "value4";
+
+	std::map<std::string,std::string> expectedParameters( parameters );
+	expectedParameters["param3"] = "override3";
+
+	std::stringstream data;
+	data << "this is some data";
+	CPPUNIT_ASSERT_NO_THROW( CPPUNIT_ASSERT( node.Store( parameters, data ) ) );
+
+	std::stringstream expected;
+	expected << "StoreImpl called with parameters: " << ProxyUtilities::ToString( expectedParameters ) << " with data: "
+			 << "ST2_name1 : ST2_value1" << std::endl
+			 << "ST2_name2 : value2" << std::endl
+			 << "ST2_name3 : override3" << std::endl
+			 << "ST1_name1 : ST1_value1" << std::endl
+			 << "ST1_name2 : ST1_value2" << std::endl
+			 << "this is some data" << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), node.GetLog() );
+}
+
+void AbstractNodeTest::testStoreRetryCount()
+{
+	std::string m_LibrarySpec;
+	TransformerTestHelpers::SetupLibraryFile( m_pTempDir->GetDirectoryName(), m_LibrarySpec );
+
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Write>" << std::endl
+				<< "      <OnFailure retryCount=\"4\" />" << std::endl
+				<< "    </Write>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+	node.SetStoreException( true );
+
+	std::map<std::string,std::string> parameters;
+	parameters["param1"] = "value1";
+	parameters["param2"] = "value2";
+	parameters["param3"] = "value3";
+
+	std::stringstream data;
+	data << "this is some data";
+	// we throw an exception...
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Store( parameters, data ), MVException, ".*Set to throw exception" );
+
+	// but an attempt was made 5 times (1 initial + 4 retries)
+	std::stringstream expected;
+	expected << "StoreImpl called with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data.str() << std::endl;
+	expected << "StoreImpl called with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data.str() << std::endl;
+	expected << "StoreImpl called with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data.str() << std::endl;
+	expected << "StoreImpl called with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data.str() << std::endl;
+	expected << "StoreImpl called with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data.str() << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), node.GetLog() );
+}
+
+void AbstractNodeTest::testStoreFailureForwarding()
+{
+	std::string m_LibrarySpec;
+	TransformerTestHelpers::SetupLibraryFile( m_pTempDir->GetDirectoryName(), m_LibrarySpec );
+
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Write>" << std::endl
+				<< "      <OnFailure forwardTo=\"failureName\" includeNameAsParameter=\"myFirstFailedDplName\" forwardTranslatedParameters=\"true\" />" << std::endl
+				<< "    </Write>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+	node.SetStoreException( true );
+	node.InsertWriteForward( "implForward1" );
+	node.InsertWriteForward( "implForward2" );
+
+	std::map<std::string,std::string> parameters;
+
+	std::stringstream data;
+	data << "this is some data";
+	CPPUNIT_ASSERT_NO_THROW( CPPUNIT_ASSERT( !node.Store( parameters, data ) ) );
+
+	parameters["myFirstFailedDplName"] = "name";
+
+	std::stringstream expected;
+	expected << "Store called with Name: failureName Parameters: " << ProxyUtilities::ToString( parameters ) << " Data: " << data.str() << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+
+	std::set< std::string > forwards;
+	node.InsertWriteForwards( forwards );
+	CPPUNIT_ASSERT_EQUAL( size_t(3), forwards.size() );
+	CPPUNIT_ASSERT( forwards.find( "failureName" ) != forwards.end() );
+	CPPUNIT_ASSERT( forwards.find( "implForward1" ) != forwards.end() );
+	CPPUNIT_ASSERT( forwards.find( "implForward2" ) != forwards.end() );
+}
+
+void AbstractNodeTest::testStoreFailureForwarding_ParameterTranslationFail()
+{
+	std::string m_LibrarySpec;
+	TransformerTestHelpers::SetupLibraryFile( m_pTempDir->GetDirectoryName(), m_LibrarySpec );
+
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Write>" << std::endl
+				<< "	  <TranslateParameters>" << std::endl
+				<< "	    <Parameter name=\"p1\" valueOverride=\"`nonexistent`\" />" << std::endl
+				<< "	  </TranslateParameters>" << std::endl
+				<< "      <OnFailure forwardTo=\"failureName\" includeNameAsParameter=\"myFirstFailedDplName\" forwardTranslatedParameters=\"true\" />" << std::endl
+				<< "    </Write>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+	node.InsertWriteForward( "implForward1" );
+	node.InsertWriteForward( "implForward2" );
+
+	std::map<std::string,std::string> parameters;
+
+	std::stringstream data;
+	data << "this is some data";
+	CPPUNIT_ASSERT_NO_THROW( CPPUNIT_ASSERT( !node.Store( parameters, data ) ) );
+
+	parameters["myFirstFailedDplName"] = "name";
+
+	std::stringstream expected;
+	expected << "Store called with Name: failureName Parameters: " << ProxyUtilities::ToString( parameters ) << " Data: " << data.str() << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+
+	std::set< std::string > forwards;
+	node.InsertWriteForwards( forwards );
+	CPPUNIT_ASSERT_EQUAL( size_t(3), forwards.size() );
+	CPPUNIT_ASSERT( forwards.find( "failureName" ) != forwards.end() );
+	CPPUNIT_ASSERT( forwards.find( "implForward1" ) != forwards.end() );
+	CPPUNIT_ASSERT( forwards.find( "implForward2" ) != forwards.end() );
+}
+
+void AbstractNodeTest::testStoreFailureForwarding_ParameterValidationFail()
+{
+	std::string m_LibrarySpec;
+	TransformerTestHelpers::SetupLibraryFile( m_pTempDir->GetDirectoryName(), m_LibrarySpec );
+
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Write>" << std::endl
+				<< "	  <RequiredParameters>" << std::endl
+				<< "	    <Parameter name=\"nonexistent\" />" << std::endl
+				<< "	  </RequiredParameters>" << std::endl
+				<< "      <OnFailure forwardTo=\"failureName\" includeNameAsParameter=\"myFirstFailedDplName\" forwardTranslatedParameters=\"true\" />" << std::endl
+				<< "    </Write>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+	node.InsertWriteForward( "implForward1" );
+	node.InsertWriteForward( "implForward2" );
+
+	std::map<std::string,std::string> parameters;
+
+	std::stringstream data;
+	data << "this is some data";
+	CPPUNIT_ASSERT_NO_THROW( CPPUNIT_ASSERT( !node.Store( parameters, data ) ) );
+
+	parameters["myFirstFailedDplName"] = "name";
+
+	std::stringstream expected;
+	expected << "Store called with Name: failureName Parameters: " << ProxyUtilities::ToString( parameters ) << " Data: " << data.str() << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+
+	std::set< std::string > forwards;
+	node.InsertWriteForwards( forwards );
+	CPPUNIT_ASSERT_EQUAL( size_t(3), forwards.size() );
+	CPPUNIT_ASSERT( forwards.find( "failureName" ) != forwards.end() );
+	CPPUNIT_ASSERT( forwards.find( "implForward1" ) != forwards.end() );
+	CPPUNIT_ASSERT( forwards.find( "implForward2" ) != forwards.end() );
+}
+
+void AbstractNodeTest::testStoreFailureForwardingRetryCount()
+{
+	std::string m_LibrarySpec;
+	TransformerTestHelpers::SetupLibraryFile( m_pTempDir->GetDirectoryName(), m_LibrarySpec );
+
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Write>" << std::endl
+				<< "      <OnFailure retryCount=\"4\" forwardTo=\"failureName\" />" << std::endl
+				<< "    </Write>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+	node.SetStoreException( true );
+
+	std::map<std::string,std::string> parameters;
+	parameters["param1"] = "value1";
+	parameters["param2"] = "value2";
+	parameters["param3"] = "value3";
+
+	std::stringstream data;
+	data << "this is some data";
+	// did not throw an exception...
+	CPPUNIT_ASSERT_NO_THROW( CPPUNIT_ASSERT( !node.Store( parameters, data ) ) );
+
+	// but an attempt was made 5 times on this node (1 initial + 4 retries)
+	std::stringstream expected;
+	expected << "StoreImpl called with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data.str() << std::endl;
+	expected << "StoreImpl called with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data.str() << std::endl;
+	expected << "StoreImpl called with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data.str() << std::endl;
+	expected << "StoreImpl called with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data.str() << std::endl;
+	expected << "StoreImpl called with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data.str() << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), node.GetLog() );
+
+	// and a single call to store to failureName afterwards
+	expected.str("");
+	expected << "Store called with Name: failureName Parameters: " << ProxyUtilities::ToString( parameters ) << " Data: " << data.str() << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+}
+
+void AbstractNodeTest::testStoreFailureForwarding_UseTranslatedParams_False()
+{
+	std::string m_LibrarySpec;
+	TransformerTestHelpers::SetupLibraryFile( m_pTempDir->GetDirectoryName(), m_LibrarySpec );
+
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Write>" << std::endl
+				<< "      <TranslateParameters>" << std::endl
+				<< "        <Parameter name=\"default1\" valueDefault=\"defaultValue1\" />" << std::endl
+				<< "      </TranslateParameters>" << std::endl
+				<< "      <OnFailure forwardTo=\"failureName\" forwardTranslatedParameters=\"false\" />" << std::endl
+				<< "    </Write>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+	node.SetStoreException( true );
+
+	std::map<std::string,std::string> parameters;
+
+	std::stringstream data;
+	data << "this is some data";
+	CPPUNIT_ASSERT_NO_THROW( CPPUNIT_ASSERT( !node.Store( parameters, data ) ) );
+
+	std::stringstream expected;
+	expected << "Store called with Name: failureName Parameters: " << ProxyUtilities::ToString( parameters ) << " Data: " << data.str() << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+}
+
+void AbstractNodeTest::testStoreFailureForwarding_UseTranslatedParams_True()
+{
+	std::string m_LibrarySpec;
+	TransformerTestHelpers::SetupLibraryFile( m_pTempDir->GetDirectoryName(), m_LibrarySpec );
+
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Write>" << std::endl
+				<< "      <TranslateParameters>" << std::endl
+				<< "        <Parameter name=\"default1\" valueDefault=\"defaultValue1\" />" << std::endl
+				<< "      </TranslateParameters>" << std::endl
+				<< "      <OnFailure forwardTo=\"failureName\" forwardTranslatedParameters=\"true\" />" << std::endl
+				<< "    </Write>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+	node.SetStoreException( true );
+
+	std::map<std::string,std::string> parameters;
+
+	std::stringstream data;
+	data << "this is some data";
+	CPPUNIT_ASSERT_NO_THROW( CPPUNIT_ASSERT( !node.Store( parameters, data ) ) );
+
+	parameters["default1"] = "defaultValue1";
+
+	std::stringstream expected;
+	expected << "Store called with Name: failureName Parameters: " << ProxyUtilities::ToString( parameters ) << " Data: " << data.str() << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+}
+
+void AbstractNodeTest::testStoreFailureForwarding_UseTransformedStream_False()
+{
+	std::string m_LibrarySpec;
+	TransformerTestHelpers::SetupLibraryFile( m_pTempDir->GetDirectoryName(), m_LibrarySpec );
+
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Write>" << std::endl
+			 	<< "      <StreamTransformers>" << std::endl
+				<< "		 <StreamTransformer path=\"" << m_LibrarySpec << "\"" << " functionName=\"TransformFunction\">" << std::endl
+				<< " 		  	<Parameter name=\"st_param1\" value=\"st_value1\" /> " << std::endl
+				<< "	     </StreamTransformer>" << std::endl
+				<< "      </StreamTransformers>" << std::endl
+				<< "      <OnFailure forwardTo=\"failureName\" forwardTransformedStream=\"false\" />" << std::endl
+				<< "    </Write>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+	node.SetStoreException( true );
+
+	std::map<std::string,std::string> parameters;
+
+	std::stringstream data;
+	data << "this is some data";
+	CPPUNIT_ASSERT_NO_THROW( CPPUNIT_ASSERT( !node.Store( parameters, data ) ) );
+
+	std::stringstream expected;
+	expected << "Store called with Name: failureName Parameters: " << ProxyUtilities::ToString( parameters ) << " Data: " << data.str() << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+}
+
+void AbstractNodeTest::testStoreFailureForwarding_UseTransformedStream_True()
+{
+	std::string m_LibrarySpec;
+	TransformerTestHelpers::SetupLibraryFile( m_pTempDir->GetDirectoryName(), m_LibrarySpec );
+
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Write>" << std::endl
+			 	<< "      <StreamTransformers>" << std::endl
+				<< "		 <StreamTransformer path=\"" << m_LibrarySpec << "\"" << " functionName=\"TransformFunction\">" << std::endl
+				<< " 		  	<Parameter name=\"st_param1\" value=\"st_value1\" /> " << std::endl
+				<< "	     </StreamTransformer>" << std::endl
+				<< "      </StreamTransformers>" << std::endl
+				<< "      <OnFailure forwardTo=\"failureName\" forwardTransformedStream=\"true\" />" << std::endl
+				<< "    </Write>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+	node.SetStoreException( true );
+
+	std::map<std::string,std::string> parameters;
+
+	std::stringstream data;
+	data << "this is some data";
+	CPPUNIT_ASSERT_NO_THROW( CPPUNIT_ASSERT( !node.Store( parameters, data ) ) );
+
+	std::stringstream expected;
+	expected << "Store called with Name: failureName Parameters: " << ProxyUtilities::ToString( parameters ) << " Data: "
+			 << "st_param1 : st_value1" << std::endl << data.str() << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+}
