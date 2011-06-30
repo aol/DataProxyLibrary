@@ -56,7 +56,7 @@ namespace
 		return base + name;
 	}
 
-	std::string GetSuffixedFileSpec( const std::string& i_rDestinationFileSpec, bool i_FindUnique, const std::string& i_rSuffix = EMPTY_STRING )
+	std::string GetSuffixedFileSpec( const std::string& i_rDestinationFileSpec, bool i_FindUnique, const std::string& i_rSuffix )
 	{
 		std::string basePendingFileSpec = i_rDestinationFileSpec + i_rSuffix;
 		if( !i_FindUnique )

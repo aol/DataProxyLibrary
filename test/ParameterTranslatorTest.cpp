@@ -386,7 +386,7 @@ void ParameterTranslatorTest::testBadEvalCommand()
 	ParameterTranslator translator2( *nodes[0] );
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( translator2.Translate( inputParameters, translatedParameters ), TimeoutException,
-		".*\\.cpp:\\d+: The command 'sleep 2 && echo -n 10' failed to finish after -1 seconds\\." );
+		".*\\.cpp:\\d+: The command 'sleep 2 && echo -n 10' failed to finish after -1 seconds\\. Wrote 0 bytes to standard input\\. Read 0 bytes from standard output\\. Read 0 bytes from standard error\\." );
 	
 }
 

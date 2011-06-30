@@ -259,7 +259,7 @@ void ExecutionProxyTest::testLoadTimeout()
 	boost::scoped_ptr< ExecutionProxy > pProxy;
 	CPPUNIT_ASSERT_NO_THROW( pProxy.reset( new ExecutionProxy( std::string("name"), client, *nodes[0] ) ) );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pProxy->Load( parameters, results ), TimeoutException,
-		".*:\\d+: The command 'sleep 1' failed to finish after 0 seconds." );
+		".*:\\d+: The command 'sleep 1' failed to finish after 0 seconds. Wrote 0 bytes to standard input. Read 0 bytes from standard output. Read 0 bytes from standard error." );
 }
 
 void ExecutionProxyTest::testLoadNotSupported()
@@ -386,7 +386,7 @@ void ExecutionProxyTest::testStoreTimeout()
 	boost::scoped_ptr< ExecutionProxy > pProxy;
 	CPPUNIT_ASSERT_NO_THROW( pProxy.reset( new ExecutionProxy( std::string("name"), client, *nodes[0] ) ) );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pProxy->Store( parameters, data ), TimeoutException,
-		".*:\\d+: The command 'sleep 1' failed to finish after 0 seconds." );
+		".*:\\d+: The command 'sleep 1' failed to finish after 0 seconds. Wrote 0 bytes to standard input. Read 0 bytes from standard output. Read 0 bytes from standard error." );
 }
 
 void ExecutionProxyTest::testStoreNotSupported()
