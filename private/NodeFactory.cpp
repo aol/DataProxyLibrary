@@ -28,7 +28,9 @@ namespace
 }
 
 NodeFactory::NodeFactory( DataProxyClient& i_rParent )
-:	m_rParent( i_rParent )
+:	m_UniqueIdGenerator(),
+	m_pDatabaseConnectionManager( NULL ),
+	m_rParent( i_rParent )
 {
 }
 
@@ -47,7 +49,7 @@ AbstractNode* NodeFactory::CreateNode( const std::string& i_rName, const std::st
 		}
 		else if( type == LOCAL )
 		{
-			return new LocalFileProxy( i_rName, m_rParent, i_rNode );
+			return new LocalFileProxy( i_rName, m_rParent, i_rNode, m_UniqueIdGenerator );
 		}
 		else if( type == DB )
 		{

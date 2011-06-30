@@ -23,10 +23,12 @@ MV_MAKEEXCEPTIONCLASS( LocalFileMissingException, LocalFileProxyException );
 namespace xercesc_2_7 { class DOMNode; }
 namespace xercesc = xercesc_2_7;
 
+class UniqueIdGenerator;
+
 class LocalFileProxy : public AbstractNode
 {
 public:
-	LocalFileProxy( const std::string& i_rName, DataProxyClient& i_rParent, const xercesc::DOMNode& i_rNode );
+	LocalFileProxy( const std::string& i_rName, DataProxyClient& i_rParent, const xercesc::DOMNode& i_rNode, UniqueIdGenerator& i_rUniqueIdGenerator );
 	virtual ~LocalFileProxy();
 	
 	virtual void LoadImpl( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData );
@@ -52,6 +54,7 @@ private:
 	OpenMode m_OpenMode;
 	std::string m_NewFileParam;
 	int m_SkipLines;
+	UniqueIdGenerator& m_rUniqueIdGenerator;
 	std::map< std::string, std::vector< std::string > > m_PendingRenames; // a map from destination -> temp filenames
 };
 

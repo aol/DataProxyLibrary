@@ -13,6 +13,7 @@
 
 #include "INodeFactory.hpp"
 #include "MVException.hpp"
+#include "UniqueIdGenerator.hpp"
 
 MV_MAKEEXCEPTIONCLASS( NodeFactoryException, MVException );
 
@@ -28,6 +29,7 @@ public:
 	virtual void RegisterDatabaseConnections( DatabaseConnectionManager& i_rDatabaseConnectionManager );
 
 private:
+	UniqueIdGenerator m_UniqueIdGenerator;
 	DatabaseConnectionManager *m_pDatabaseConnectionManager;
 	DataProxyClient& m_rParent;
 };

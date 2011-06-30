@@ -45,6 +45,7 @@ MODULES=\
 TESTMODULES=\
 	lib/cpp/TestHelpers \
 	lib/cpp/Service \
+	lib/cpp/Utility \
 	lib/cpp/Database \
 
 MATLABMODULES=\
@@ -84,7 +85,7 @@ LIBLOC=\
 
 # Libraries
 LIBS		= -lLogger -lclntsh -lmyodbc3 -lxerces-c -lpthread -lboost_regex -lboost_filesystem -llog4cxx -lboost_thread -lcurl
-TESTLIBS	= -lcppunit -lTestHelpers -lMockDatabase -lMockService $(LIBS)
+TESTLIBS	= -lcppunit -lTestHelpers -lMockDatabase -lMockService -lMockUtility $(LIBS)
 MATLABLIBS	= -lMatlab -leng -lmx -lut -lmat
 
 ifeq ($(ARCH), x86_64)
@@ -199,6 +200,8 @@ UTILITYFILES=\
 	MVUtility.cpp \
 	CSVReader.cpp \
 	Stopwatch.cpp \
+	UniqueIdGenerator.cpp \
+	MutexFileLock.cpp \
 
 DATABASEFILES=\
 	Database.cpp \

@@ -13,13 +13,29 @@
 #include "ProxyUtilities.hpp"
 #include "ProxyTestHelpers.hpp"
 #include "MockDataProxyClient.hpp"
+#include "MockUniqueIdGenerator.hpp"
 #include "AssertThrowWithMessage.hpp"
 #include "AssertFileContents.hpp"
 #include <fstream>
 #include <boost/regex.hpp>
+#include <iomanip>
 
 CPPUNIT_TEST_SUITE_REGISTRATION( LocalFileProxyTest );
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( LocalFileProxyTest, "LocalFileProxyTest" );
+
+namespace
+{
+	void AddUniqueIds( MockUniqueIdGenerator& i_rUniqueIdGenerator, int i_NumUniqueIds = 20 )
+	{
+		std::string base( "00000000-0000-0000-0000-0000000000" );
+		for( int i=1; i<=i_NumUniqueIds; ++i )
+		{
+			std::stringstream id;
+			id << base << std::setw(2) << std::setfill('0') << i;
+			i_rUniqueIdGenerator.AddUniqueId( id.str() );
+		}
+	}
+}
 
 LocalFileProxyTest::LocalFileProxyTest()
 :	m_pTempDir(NULL)
@@ -46,28 +62,31 @@ void LocalFileProxyTest::tearDown()
 void LocalFileProxyTest::testNoLocation()
 {
 	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode />";
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Unable to find attribute: 'location' in node: DataNode" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Unable to find attribute: 'location' in node: DataNode" );
 }
 
 void LocalFileProxyTest::testBadBaseLocation()
 {
 	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode location=\"/nonexistent1234\" />";
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0] ), InvalidDirectoryException, ".*/FileUtilities\\.cpp:\\d+: /nonexistent1234 does not exist or is not a valid directory\\." );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator ), InvalidDirectoryException, ".*/FileUtilities\\.cpp:\\d+: /nonexistent1234 does not exist or is not a valid directory\\." );
 }
 
 void LocalFileProxyTest::testGarbageChildren()
 {
 	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl;
 	xmlContents << "<garbage />" << std::endl;
@@ -76,7 +95,7 @@ void LocalFileProxyTest::testGarbageChildren()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: DataNode" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: DataNode" );
 
 	xmlContents.str("");
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl;
@@ -86,7 +105,7 @@ void LocalFileProxyTest::testGarbageChildren()
 	xmlContents << "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: Read" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: Read" );
 
 	xmlContents.str("");
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl;
@@ -96,18 +115,19 @@ void LocalFileProxyTest::testGarbageChildren()
 	xmlContents << "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: Write" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: Write" );
 }
 
 void LocalFileProxyTest::testLoadNonexistent()
 {
 	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" />";
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0] );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -121,12 +141,13 @@ void LocalFileProxyTest::testLoadNonexistent()
 void LocalFileProxyTest::testLoadUnreadable()
 {
 	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" />";
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0] );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -151,13 +172,14 @@ void LocalFileProxyTest::testLoadUnreadable()
 void LocalFileProxyTest::testLoad()
 {
 	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >"
 				<< "</DataNode>";
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0] );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -181,12 +203,13 @@ void LocalFileProxyTest::testLoad()
 void LocalFileProxyTest::testLoadNameFormat()
 {
 	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" format=\"subdir1_${key1}/subdir2_${key2}/filename_is_${key3}.txt\" />";
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0] );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -226,12 +249,13 @@ void LocalFileProxyTest::testLoadNameFormat()
 void LocalFileProxyTest::testLoadNameFormatAll()
 {
 	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" format=\"subdir1_${key1}/subdir2_${key2}/*\" />";
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0] );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -258,12 +282,13 @@ void LocalFileProxyTest::testLoadNameFormatAll()
 void LocalFileProxyTest::testLoadNoParameters()
 {
 	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" />";
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0] );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 
@@ -284,12 +309,13 @@ void LocalFileProxyTest::testLoadNoParameters()
 void LocalFileProxyTest::testStoreUnwritable()
 {
 	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" />";
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0] );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -315,12 +341,13 @@ void LocalFileProxyTest::testStoreUnwritable()
 void LocalFileProxyTest::testStore()
 {
 	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" />";
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0] );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
 	CPPUNIT_ASSERT( proxy.SupportsTransactions() );
 
 	std::map< std::string, std::string > parameters;
@@ -352,12 +379,13 @@ void LocalFileProxyTest::testStore()
 void LocalFileProxyTest::testStoreNameFormat()
 {
 	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" format=\"subdir1_${key1}/subdir2_${key2}/filename_is_${key3}.txt\" />";
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0] );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -393,12 +421,13 @@ void LocalFileProxyTest::testStoreNameFormat()
 void LocalFileProxyTest::testStoreNameFormatAll()
 {
 	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" format=\"subdir1_${key1}/subdir2_${key2}/**\" />";	// note the multiple stars
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0] );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -421,6 +450,7 @@ void LocalFileProxyTest::testStoreNameFormatAll()
 void LocalFileProxyTest::testStoreNameFormatException()
 {
 	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" format=\"key1_is_${key1}.txt\" >"
 				<< "  <Write onFileExist=\"createNew\" newFileParam=\"copy\" />"
@@ -428,13 +458,14 @@ void LocalFileProxyTest::testStoreNameFormatException()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0] ), LocalFileProxyException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator ), LocalFileProxyException,
 		".*\\.cpp:\\d+: onFileExist cannot be set to 'createNew' when a custom format has been specified" );
 }
 
 void LocalFileProxyTest::testStoreFileExistsBehavior()
 {
 	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >"
 				<< "  <Write onFileExist=\"overwrite\" />"
@@ -442,7 +473,7 @@ void LocalFileProxyTest::testStoreFileExistsBehavior()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0] );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -473,7 +504,7 @@ void LocalFileProxyTest::testStoreFileExistsBehavior()
 				<< "</DataNode>";
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy2( "name", client, *nodes[0] );
+	LocalFileProxy proxy2( "name", client, *nodes[0], uniqueIdGenerator );
 
 	std::stringstream appendedData;
 	appendedData << "this data will be appended to previously stored data" << std::endl;
@@ -491,7 +522,7 @@ void LocalFileProxyTest::testStoreFileExistsBehavior()
 				<< "</DataNode>";
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy2a( "name", client, *nodes[0] );
+	LocalFileProxy proxy2a( "name", client, *nodes[0], uniqueIdGenerator );
 
 	std::stringstream appendedData2;
 	appendedData2 << "line1\nline2\nline3\nline4";
@@ -509,7 +540,7 @@ void LocalFileProxyTest::testStoreFileExistsBehavior()
 				<< "</DataNode>";
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException, 
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator ), XMLUtilitiesException, 
 		".*/XMLUtilities\\.cpp:\\d+: Unable to find attribute: 'newFileParam' in node: Write" );
 
 	// now create a proxy that is configured to create new and has a definition for the param identifier
@@ -519,7 +550,7 @@ void LocalFileProxyTest::testStoreFileExistsBehavior()
 				<< "</DataNode>";
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy3( "name", client, *nodes[0] );
+	LocalFileProxy proxy3( "name", client, *nodes[0], uniqueIdGenerator );
 
 	std::stringstream copiedData1;
 	std::stringstream copiedData2;
@@ -563,12 +594,13 @@ void LocalFileProxyTest::testStoreFileExistsBehavior()
 void LocalFileProxyTest::testStoreNoParameters()
 {
 	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" />";
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0] );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 
@@ -596,12 +628,14 @@ void LocalFileProxyTest::testStoreNoParameters()
 void LocalFileProxyTest::testRoundTrip()
 {
 	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
+	AddUniqueIds( uniqueIdGenerator );
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" someOtherAttribute=\"OK\" />";
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0] );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -628,6 +662,8 @@ void LocalFileProxyTest::testRoundTrip()
 void LocalFileProxyTest::testStoreCommitOverwrite()
 {
 	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
+	AddUniqueIds( uniqueIdGenerator );
 	// case 1: overwrite behavior
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >"
@@ -636,7 +672,7 @@ void LocalFileProxyTest::testStoreCommitOverwrite()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0] );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -659,7 +695,7 @@ void LocalFileProxyTest::testStoreCommitOverwrite()
 	// at this point, we should have two files in the temp directory: data1 (committed) and data3 (still pending)
 	std::vector< std::string > dirFiles;
 	std::string fileCommitted = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( parameters );
-	std::string filePending = fileCommitted + "~~dpl.pending";
+	std::string filePending = fileCommitted + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000005";
 	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
 	CPPUNIT_ASSERT_EQUAL( size_t(2), dirFiles.size() );
 	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted ) != dirFiles.end() );
@@ -678,6 +714,8 @@ void LocalFileProxyTest::testStoreCommitOverwrite()
 void LocalFileProxyTest::testStoreCommitAppend()
 {
 	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
+	AddUniqueIds( uniqueIdGenerator );
 	// case 1: overwrite behavior
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >"
@@ -686,7 +724,7 @@ void LocalFileProxyTest::testStoreCommitAppend()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0] );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -708,8 +746,8 @@ void LocalFileProxyTest::testStoreCommitAppend()
 	// at this point, we should have three files in the temp directory: data1 (committed), data2 (still pending), and data3 (still pending)
 	std::vector< std::string > dirFiles;
 	std::string fileCommitted = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( parameters );
-	std::string filePending1 = fileCommitted + "~~dpl.pending";
-	std::string filePending2 = fileCommitted + "~~dpl.pending.2";
+	std::string filePending1 = fileCommitted + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000003";
+	std::string filePending2 = fileCommitted + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000004";
 	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
 	CPPUNIT_ASSERT_EQUAL( size_t(3), dirFiles.size() );
 	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted ) != dirFiles.end() );
@@ -730,6 +768,8 @@ void LocalFileProxyTest::testStoreCommitAppend()
 void LocalFileProxyTest::testStoreCommitCreateNew()
 {
 	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
+	AddUniqueIds( uniqueIdGenerator );
 	// case 1: overwrite behavior
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >"
@@ -738,7 +778,7 @@ void LocalFileProxyTest::testStoreCommitCreateNew()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0] );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -775,9 +815,9 @@ void LocalFileProxyTest::testStoreCommitCreateNew()
 	std::vector< std::string > dirFiles;
 	std::string fileCommitted1 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( parameters );
 	std::string fileCommitted2 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParams2 );
-	std::string filePending1 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParams3 ) + "~~dpl.pending";
-	std::string filePending2 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParams4 ) + "~~dpl.pending";
-	std::string filePending3 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParams5 ) + "~~dpl.pending";
+	std::string filePending1 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParams3 ) + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000005";
+	std::string filePending2 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParams4 ) + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000006";
+	std::string filePending3 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParams5 ) + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000007";
 	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
 	CPPUNIT_ASSERT_EQUAL( size_t(5), dirFiles.size() );
 	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted1 ) != dirFiles.end() );
@@ -813,6 +853,8 @@ void LocalFileProxyTest::testStoreCommitCreateNew()
 void LocalFileProxyTest::testStoreRollbackOverwrite()
 {
 	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
+	AddUniqueIds( uniqueIdGenerator );
 	// case 1: overwrite behavior
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >"
@@ -821,7 +863,7 @@ void LocalFileProxyTest::testStoreRollbackOverwrite()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0] );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -844,7 +886,7 @@ void LocalFileProxyTest::testStoreRollbackOverwrite()
 	// at this point, we should have two files in the temp directory: data1 (committed) and data3 (still pending)
 	std::vector< std::string > dirFiles;
 	std::string fileCommitted = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( parameters );
-	std::string filePending = fileCommitted + "~~dpl.pending";
+	std::string filePending = fileCommitted + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000005";
 	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
 	CPPUNIT_ASSERT_EQUAL( size_t(2), dirFiles.size() );
 	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted ) != dirFiles.end() );
@@ -863,6 +905,8 @@ void LocalFileProxyTest::testStoreRollbackOverwrite()
 void LocalFileProxyTest::testStoreRollbackAppend()
 {
 	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
+	AddUniqueIds( uniqueIdGenerator );
 	// case 1: overwrite behavior
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >"
@@ -871,7 +915,7 @@ void LocalFileProxyTest::testStoreRollbackAppend()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0] );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -893,8 +937,8 @@ void LocalFileProxyTest::testStoreRollbackAppend()
 	// at this point, we should have three files in the temp directory: data1 (committed), data2 (still pending), and data3 (still pending)
 	std::vector< std::string > dirFiles;
 	std::string fileCommitted = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( parameters );
-	std::string filePending1 = fileCommitted + "~~dpl.pending";
-	std::string filePending2 = fileCommitted + "~~dpl.pending.2";
+	std::string filePending1 = fileCommitted + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000003";
+	std::string filePending2 = fileCommitted + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000004";
 	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
 	CPPUNIT_ASSERT_EQUAL( size_t(3), dirFiles.size() );
 	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted ) != dirFiles.end() );
@@ -915,6 +959,8 @@ void LocalFileProxyTest::testStoreRollbackAppend()
 void LocalFileProxyTest::testStoreRollbackCreateNew()
 {
 	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
+	AddUniqueIds( uniqueIdGenerator );
 	// case 1: overwrite behavior
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >"
@@ -923,7 +969,7 @@ void LocalFileProxyTest::testStoreRollbackCreateNew()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0] );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -960,9 +1006,9 @@ void LocalFileProxyTest::testStoreRollbackCreateNew()
 	std::vector< std::string > dirFiles;
 	std::string fileCommitted1 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( parameters );
 	std::string fileCommitted2 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParams2 );
-	std::string filePending1 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParams3 ) + "~~dpl.pending";
-	std::string filePending2 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParams4 ) + "~~dpl.pending";
-	std::string filePending3 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParams5 ) + "~~dpl.pending";
+	std::string filePending1 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParams3 ) + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000005";
+	std::string filePending2 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParams4 ) + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000006";
+	std::string filePending3 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParams5 ) + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000007";
 	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
 	CPPUNIT_ASSERT_EQUAL( size_t(5), dirFiles.size() );
 	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted1 ) != dirFiles.end() );

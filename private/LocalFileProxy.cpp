@@ -13,6 +13,8 @@
 #include "XMLUtilities.hpp"
 #include "ProxyUtilities.hpp"
 #include "FileUtilities.hpp"
+#include "UniqueIdGenerator.hpp"
+#include "MutexFileLock.hpp"
 #include <fstream>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/replace.hpp>
@@ -56,22 +58,9 @@ namespace
 		return base + name;
 	}
 
-	std::string GetSuffixedFileSpec( const std::string& i_rDestinationFileSpec, bool i_FindUnique, const std::string& i_rSuffix )
+	std::string GetSuffixedFileSpec( const std::string& i_rDestinationFileSpec, const std::string& i_rSuffix, UniqueIdGenerator& i_rUniqueIdGenerator )
 	{
-		std::string basePendingFileSpec = i_rDestinationFileSpec + i_rSuffix;
-		if( !i_FindUnique )
-		{
-			return basePendingFileSpec;
-		}
-
-		std::string uniquePendingFileSpec = basePendingFileSpec;
-		long id = 1L;
-		while( FileUtilities::DoesExist( uniquePendingFileSpec ) )
-		{
-			uniquePendingFileSpec = basePendingFileSpec + "." + boost::lexical_cast< std::string >( ++id );
-		}
-
-		return uniquePendingFileSpec;
+		return i_rDestinationFileSpec + i_rSuffix + + "." + i_rUniqueIdGenerator.GetUniqueId();
 	}
 
 	bool NeedUniqueDestinationFile( const std::string& i_rDestinationFileSpec, const std::map< std::string, std::vector< std::string > >& i_rPendingRenames )
@@ -80,13 +69,14 @@ namespace
 	}
 }
 
-LocalFileProxy::LocalFileProxy( const std::string& i_rName, DataProxyClient& i_rParent, const xercesc::DOMNode& i_rNode )
+LocalFileProxy::LocalFileProxy( const std::string& i_rName, DataProxyClient& i_rParent, const xercesc::DOMNode& i_rNode, UniqueIdGenerator& i_rUniqueIdGenerator )
 :	AbstractNode( i_rName, i_rParent, i_rNode ),
 	m_BaseLocation(),
 	m_NameFormat(),
 	m_OpenMode( OVERWRITE ),
 	m_NewFileParam(),
 	m_SkipLines( 0 ),
+	m_rUniqueIdGenerator( i_rUniqueIdGenerator ),
 	m_PendingRenames()
 {
 	// get base location & validate
@@ -197,7 +187,7 @@ void LocalFileProxy::StoreImpl( const std::map<std::string,std::string>& i_rPara
 	FileUtilities::ValidateOrCreateDirectory( FileUtilities::GetDirName( destinationFileSpec ), W_OK | X_OK );
 
 	// build a pending file spec
-	pendingFileSpec = GetSuffixedFileSpec( destinationFileSpec, true, PENDING_SUFFIX );
+	pendingFileSpec = GetSuffixedFileSpec( destinationFileSpec, PENDING_SUFFIX, m_rUniqueIdGenerator );
 	
 	std::ofstream file( pendingFileSpec.c_str() );
 	if( !file.good() )
@@ -233,12 +223,19 @@ void LocalFileProxy::Commit()
 	while( destinationIter != m_PendingRenames.end() )
 	{
 		// open a file for writing
-		std::string tempFileSpec = GetSuffixedFileSpec( destinationIter->first, true, COMMIT_SUFFIX );
+		std::string tempFileSpec = GetSuffixedFileSpec( destinationIter->first, COMMIT_SUFFIX, m_rUniqueIdGenerator );
 		std::ofstream file( tempFileSpec.c_str() );
 		if( !file.good() )
 		{
 			MV_THROW( LocalFileProxyException, "Temporary commit file: " << tempFileSpec << " could not be opened for writing. "
 				<< " eof(): " << file.eof() << ", fail(): " << file.fail() << ", bad(): " << file.bad() );
+		}
+
+		// have to obtain a lock on the file so that other DPL's trying to commit to this file will wait
+		MutexFileLock destinationFileLock( destinationIter->first, false );
+		if( FileUtilities::DoesExist( destinationIter->first ) )
+		{
+			destinationFileLock.ObtainLock( MutexFileLock::BLOCK );
 		}
 
 		// if we are appending previous data, we first have to read our input & write it to the temp file
@@ -284,6 +281,11 @@ void LocalFileProxy::Commit()
 		// close out our temp file and move it to the real thing
 		file.close();
 		FileUtilities::Move( tempFileSpec, destinationIter->first );
+
+		// now release the lock
+		destinationFileLock.ReleaseLock();
+
+		// and remove this entry from pending renames
 		m_PendingRenames.erase( destinationIter++ );
 	}
 }
