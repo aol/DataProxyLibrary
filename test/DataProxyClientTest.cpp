@@ -842,3 +842,69 @@ void DataProxyClientTest::testEntityResolution()
 	CPPUNIT_ASSERT_NO_THROW( pClient->Load( "n", parameters, result ) );
 	CPPUNIT_ASSERT_EQUAL( data, result.str() );
 }
+
+void DataProxyClientTest::testConfigFileMD5()
+{
+	std::string configFileSpec( m_pTempDir->GetDirectoryName() + "/dataProxyConfig.xml" );
+	std::ofstream file( configFileSpec.c_str() );
+
+	file << "<DPLConfig>" << std::endl
+		 << "  <DataNode name=\"n\" type=\"type1\" />" << std::endl
+		 << "  <DataNode name=\"nn\" type=\"type2\" />" << std::endl
+		 << "</DPLConfig>" << std::endl;
+	file.close();
+	
+	std::string data( "this is some data that will be returned" );
+	std::map< std::string, std::string > parameters;
+	std::stringstream result;
+
+	// first make sure the orignal node n is working fine
+	MockNodeFactory factory;
+	factory.SetDataToReturn( "n", data );
+	TestableDataProxyClient client;
+	CPPUNIT_ASSERT_NO_THROW( client.Initialize( configFileSpec, factory ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Load( "n", parameters, result ) );
+	CPPUNIT_ASSERT_EQUAL( data, result.str() );
+
+	// then initialize again, the nodes should be the same as before
+	result.str("");
+	// even though changed the return value for node, the actual result returned remained same
+	factory.SetDataToReturn( "nn", std::string( "dafsd" ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Initialize( configFileSpec, factory ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Load( "n", parameters, result ) );
+	CPPUNIT_ASSERT_EQUAL( data, result.str() );
+	result.str("");
+	CPPUNIT_ASSERT_NO_THROW( client.Load( "nn", parameters, result ) );
+	CPPUNIT_ASSERT_EQUAL( std::string( "" ), result.str() );
+
+	// then change the file content and re-initialize
+	std::ofstream file1( configFileSpec.c_str() );
+	file1 << "<DPLConfig>" << std::endl
+		 << "  <DataNode name=\"n\" type=\"type1\" />" << std::endl
+		 << "  <DataNode name=\"name1\" type=\"type2\" />" << std::endl
+		 << "</DPLConfig>" << std::endl;
+	file1.close();
+	result.str("");
+	std::string newdata( "new test data" );
+	std::string newdata1( "new test data 1" );
+
+	// change return value for previous node n and add new node name1 to prove the nodes have been reloaded
+	factory.SetDataToReturn( "n", newdata1 );
+	factory.SetDataToReturn( "name1", newdata );
+	CPPUNIT_ASSERT_NO_THROW( client.Initialize( configFileSpec, factory ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Load( "name1", parameters, result ) );
+	CPPUNIT_ASSERT_EQUAL( newdata, result.str() );
+	result.str("");
+	CPPUNIT_ASSERT_NO_THROW( client.Load( "n", parameters, result ) );
+	CPPUNIT_ASSERT_EQUAL( newdata1, result.str() );
+
+}
+
+void DataProxyClientTest::testConfigFileMissing()
+{
+	std::string fileSpec( "randomfilenotexist" );
+	MockNodeFactory factory;
+	TestableDataProxyClient client;
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( client.Initialize( fileSpec, factory ), DataProxyClientException,
+		".*:\\d+: Cannot find config file: randomfilenotexist" );
+}

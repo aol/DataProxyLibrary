@@ -66,6 +66,7 @@ private:
 	NodesMap m_Nodes;
 	bool m_DoNotInitializeXerces;
 	bool m_InsideTransaction;
+	std::string m_ConfigFileMD5;
 
 	DatabaseConnectionManager m_DatabaseConnectionManager;
 	

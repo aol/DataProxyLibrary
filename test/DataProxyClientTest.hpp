@@ -39,6 +39,8 @@ private:
 	CPPUNIT_TEST( testUndefinedReadForwards );
 	CPPUNIT_TEST( testUndefinedWriteForwards );
 	CPPUNIT_TEST( testEntityResolution );
+	CPPUNIT_TEST( testConfigFileMD5 );
+	CPPUNIT_TEST( testConfigFileMissing );
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -66,6 +68,8 @@ public:
 	void testUndefinedReadForwards();
 	void testUndefinedWriteForwards();
 	void testEntityResolution();
+	void testConfigFileMD5();
+	void testConfigFileMissing();
 
 private:
 	boost::scoped_ptr< TempDirectory > m_pTempDir;

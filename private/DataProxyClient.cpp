@@ -117,6 +117,18 @@ void DataProxyClient::InitializeImplementation( const std::string& i_rConfigFile
 												INodeFactory& i_rNodeFactory,
 												DatabaseConnectionManager& i_rDatabaseConnectionManager )
 {
+	if( !FileUtilities::DoesExist( i_rConfigFileSpec ) )
+	{
+		MV_THROW( DataProxyClientException, "Cannot find config file: " << i_rConfigFileSpec );
+	}
+	
+	if ( FileUtilities::GetMD5( i_rConfigFileSpec ) == m_ConfigFileMD5 )
+	{
+		m_Initialized = true;
+		MVLOGGER( "root.lib.DataProxy.DataProxyClient.Initialize.CheckConfigFileMD5", "Config File MD5 did not change, skip re-initialization." );
+		return;
+	}
+
 	// if already initialized, we need to clear & start over (re-initialize)
 	if( m_Initialized )
 	{
@@ -125,11 +137,6 @@ void DataProxyClient::InitializeImplementation( const std::string& i_rConfigFile
 		i_rDatabaseConnectionManager.ClearConnections();
 	}
 	m_Initialized = true;
-
-	if( !FileUtilities::DoesExist( i_rConfigFileSpec ) )
-	{
-		MV_THROW( DataProxyClientException, "Cannot find config file: " << i_rConfigFileSpec );
-	}
 
 	std::set< std::string > allowedChildren;
 	std::set< std::string > allowedAttributes;
@@ -240,6 +247,8 @@ void DataProxyClient::InitializeImplementation( const std::string& i_rConfigFile
 	{
 		MV_THROW( DataProxyClientException, "Error parsing file: " << i_rConfigFileSpec << ": " << xercesc::XMLString::transcode( ex.getMessage() ) );
 	}
+
+	m_ConfigFileMD5 = FileUtilities::GetMD5( i_rConfigFileSpec );
 }
 
 void DataProxyClient::CheckForCycles( const NodesMap::const_iterator& i_rNodeIter, int i_WhichPath, const std::vector< std::string >& i_rNamePath ) const
