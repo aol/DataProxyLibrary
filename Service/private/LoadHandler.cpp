@@ -33,8 +33,9 @@ namespace
 	const std::string ACCEPT_ENCODING_SEPARATORS( ", " );
 }
 
-LoadHandler::LoadHandler( const std::string& i_rDplConfig, int i_ZLibCompressionLevel, bool i_EnableXForwardedFor )
-:	m_DplConfig( i_rDplConfig ),
+LoadHandler::LoadHandler( DataProxyClient& i_rDataProxyClient, const std::string& i_rDplConfig, int i_ZLibCompressionLevel, bool i_EnableXForwardedFor )
+:	m_rDataProxyClient( i_rDataProxyClient ),
+	m_DplConfig( i_rDplConfig ),
 	// gzip params have all default values except for the compression level
 	m_GZipParams( i_ZLibCompressionLevel,
 				  boost::iostreams::zlib::deflated,
@@ -62,10 +63,9 @@ LoadHandler::~LoadHandler()
 
 void LoadHandler::Handle( HTTPRequest& i_rRequest, HTTPResponse& o_rResponse )
 {
-	DataProxyClient client( true );
 	try
 	{
-		client.Initialize( m_DplConfig );
+		m_rDataProxyClient.Initialize( m_DplConfig );
 	}
 	catch( const std::exception& i_rEx )
 	{
@@ -133,7 +133,7 @@ void LoadHandler::Handle( HTTPRequest& i_rRequest, HTTPResponse& o_rResponse )
 	// try to issue the load command
 	try
 	{
-		client.Load( name, parameters, *pFilter );
+		m_rDataProxyClient.Load( name, parameters, *pFilter );
 	}
 	catch( const std::exception& i_rEx )
 	{

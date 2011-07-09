@@ -20,6 +20,7 @@
 #include "StringUtilities.hpp"
 #include "MVLogger.hpp"
 #include <boost/scoped_ptr.hpp>
+#include <boost/thread/thread.hpp>
 #include <string>
 #include <xercesc/dom/DOM.hpp>
 #include <xercesc/util/PlatformUtils.hpp>
@@ -33,6 +34,7 @@ namespace
 
 	const int READ_PATH = 1;
 	const int WRITE_PATH = 2;
+	boost::shared_mutex CONFIG_MUTEX;
 
 	void AddIfAbsent( const std::string& i_rName, std::vector< std::string >& o_rNodes )
 	{
@@ -65,6 +67,7 @@ DataProxyClient::DataProxyClient( bool i_DoNotInitializeXerces )
 	m_DoNotInitializeXerces( i_DoNotInitializeXerces ),
 	m_InsideTransaction( false ),
 	m_DatabaseConnectionManager( *this ),
+	m_NodeFactory( *this ),
 	m_PendingCommitNodes(),
 	m_PendingRollbackNodes(),
 	m_AutoCommittedNodes()
@@ -109,8 +112,7 @@ void DataProxyClient::Initialize( const std::string& i_rConfigFileSpec,
 
 void DataProxyClient::Initialize( const std::string& i_rConfigFileSpec )
 {
-	NodeFactory nodeFactory( *this );
-	InitializeImplementation( i_rConfigFileSpec, nodeFactory, m_DatabaseConnectionManager );
+	InitializeImplementation( i_rConfigFileSpec, m_NodeFactory, m_DatabaseConnectionManager );
 }
 
 void DataProxyClient::InitializeImplementation( const std::string& i_rConfigFileSpec,
@@ -122,7 +124,17 @@ void DataProxyClient::InitializeImplementation( const std::string& i_rConfigFile
 		MV_THROW( DataProxyClientException, "Cannot find config file: " << i_rConfigFileSpec );
 	}
 	
-	if ( FileUtilities::GetMD5( i_rConfigFileSpec ) == m_ConfigFileMD5 )
+	std::string md5 = FileUtilities::GetMD5( i_rConfigFileSpec );
+	if ( md5 == m_ConfigFileMD5 )
+	{
+		m_Initialized = true;
+		MVLOGGER( "root.lib.DataProxy.DataProxyClient.Initialize.CheckConfigFileMD5", "Config File MD5 did not change, skip re-initialization." );
+		return;
+	}
+
+	// obtain a lock & re-check
+	boost::unique_lock< boost::shared_mutex > lock( CONFIG_MUTEX );
+	if ( md5 == m_ConfigFileMD5 )
 	{
 		m_Initialized = true;
 		MVLOGGER( "root.lib.DataProxy.DataProxyClient.Initialize.CheckConfigFileMD5", "Config File MD5 did not change, skip re-initialization." );
@@ -135,6 +147,7 @@ void DataProxyClient::InitializeImplementation( const std::string& i_rConfigFile
 		MVLOGGER( "root.lib.DataProxy.DataProxyClient.Initialize.Clear", "Re-Initialize detected. Clearing previously stored nodes." );
 		m_Nodes.clear();
 		i_rDatabaseConnectionManager.ClearConnections();
+		PrivateRollback( false );
 	}
 	m_Initialized = true;
 
@@ -248,7 +261,7 @@ void DataProxyClient::InitializeImplementation( const std::string& i_rConfigFile
 		MV_THROW( DataProxyClientException, "Error parsing file: " << i_rConfigFileSpec << ": " << xercesc::XMLString::transcode( ex.getMessage() ) );
 	}
 
-	m_ConfigFileMD5 = FileUtilities::GetMD5( i_rConfigFileSpec );
+	m_ConfigFileMD5 = md5;
 }
 
 void DataProxyClient::CheckForCycles( const NodesMap::const_iterator& i_rNodeIter, int i_WhichPath, const std::vector< std::string >& i_rNamePath ) const
@@ -303,6 +316,7 @@ std::string DataProxyClient::ExtractName( xercesc::DOMNode* i_pNode ) const
 
 void DataProxyClient::Load( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData ) const
 {
+	boost::shared_lock< boost::shared_mutex > lock( CONFIG_MUTEX );
 	if( !m_Initialized )
 	{
 		MV_THROW( DataProxyClientException, "Attempted to issue Load request on uninitialized DataProxyClient" );
@@ -322,6 +336,7 @@ void DataProxyClient::Load( const std::string& i_rName, const std::map<std::stri
 
 void DataProxyClient::Store( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData ) const
 {
+	boost::shared_lock< boost::shared_mutex > lock( CONFIG_MUTEX );
 	if( !m_Initialized )
 	{
 		MV_THROW( DataProxyClientException, "Attempted to issue Store request on uninitialized DataProxyClient" );
@@ -395,6 +410,7 @@ void DataProxyClient::Store( const std::string& i_rName, const std::map<std::str
 
 void DataProxyClient::BeginTransaction()
 {
+	boost::shared_lock< boost::shared_mutex > lock( CONFIG_MUTEX );
 	if( !m_Initialized )
 	{
 		MV_THROW( DataProxyClientException, "Attempted to issue BeginTransaction request on uninitialized DataProxyClient" );
@@ -409,6 +425,7 @@ void DataProxyClient::BeginTransaction()
 
 void DataProxyClient::Commit()
 {
+	boost::shared_lock< boost::shared_mutex > lock( CONFIG_MUTEX );
 	if( !m_Initialized )
 	{
 		MV_THROW( DataProxyClientException, "Attempted to issue Commit request on uninitialized DataProxyClient" );
@@ -493,6 +510,16 @@ void DataProxyClient::Commit()
 
 void DataProxyClient::Rollback()
 {
+	PrivateRollback( true );
+}
+
+void DataProxyClient::PrivateRollback( bool i_ObtainLock )
+{
+	boost::scoped_ptr< boost::shared_lock< boost::shared_mutex > > pLock;
+	if( i_ObtainLock )
+	{
+		pLock.reset( new boost::shared_lock< boost::shared_mutex >( CONFIG_MUTEX ) );
+	}
 	if( !m_Initialized )
 	{
 		MV_THROW( DataProxyClientException, "Attempted to issue Rollback request on uninitialized DataProxyClient" );

@@ -17,8 +17,9 @@
 #include "HTTPResponse.hpp"
 #include "DataProxyService.hpp"
 
-StoreHandler::StoreHandler( const std::string& i_rDplConfig, bool i_EnableXForwardedFor )
-:	m_DplConfig( i_rDplConfig ),
+StoreHandler::StoreHandler( DataProxyClient& i_rDataProxyClient, const std::string& i_rDplConfig, bool i_EnableXForwardedFor )
+:	m_rDataProxyClient( i_rDataProxyClient ),
+	m_DplConfig( i_rDplConfig ),
 	m_EnableXForwardedFor( i_EnableXForwardedFor )
 {
 }
@@ -29,10 +30,9 @@ StoreHandler::~StoreHandler()
 
 void StoreHandler::Handle( HTTPRequest& i_rRequest, HTTPResponse& o_rResponse )
 {
-	DataProxyClient client( true );
 	try
 	{
-		client.Initialize( m_DplConfig );
+		m_rDataProxyClient.Initialize( m_DplConfig );
 	}
 	catch( const std::exception& i_rEx )
 	{
@@ -69,7 +69,7 @@ void StoreHandler::Handle( HTTPRequest& i_rRequest, HTTPResponse& o_rResponse )
 
 	try
 	{
-		client.Store( name, parameters, i_rRequest.GetPostData() );
+		m_rDataProxyClient.Store( name, parameters, i_rRequest.GetPostData() );
 	}
 	catch( const std::exception& i_rEx )
 	{

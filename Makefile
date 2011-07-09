@@ -221,8 +221,12 @@ DATABASEFILES=\
 	LargeScaleSelectStatement.cpp \
 	Statement.cpp \
 
+
 # Creating explicit paths to sets of source files
 PRIVATEFILESPEC			= $(PRIVATEFILES:%=$(PRIVATEDIR)/%)
+UTILITYFILESPEC			= $(UTILITYFILES:%=$(UTILITYDIR)/$(PRIVATEDIR)/%)
+SERVICEFILESPEC			= $(SERVICEFILES:%=$(SERVICEDIR)/$(PRIVATEDIR)/%)
+DATABASEFILESPEC		= $(DATABASEFILES:%=$(DATABASEDIR)/$(PRIVATEDIR)/%)
 TESTFILESPEC			= $(TESTFILES:%=$(TESTDIR)/%)
 MATLABTESTFILESPEC		= $(MATLABTESTFILES:%=$(TESTDIR)/%)
 MOCKFILESPEC			= $(MOCKFILES:%=$(MOCKDIR)/%)
@@ -248,7 +252,7 @@ COVERAGEOPTS	= -fprofile-arcs -ftest-coverage -Wall -Werror -fno-strict-aliasing
 
 # Executable targets
 BASE_NAME						= DataProxy
-PRIMARY_TARGET					= lib$(BASE_NAME).so.2.1.8
+PRIMARY_TARGET					= lib$(BASE_NAME).so.2.1.9
 VERSION_TARGET					= lib$(BASE_NAME).so.2
 FRIENDLY_TARGET					= lib$(BASE_NAME).so
 MOCK_TARGET						= libMockDataProxy.a
@@ -393,6 +397,9 @@ $(TESTDIR)/%.hpp:$(TESTDIR)/%.thpp
 -include Makefile.depend
 
 DEPENDFILES = $(PRIVATEFILESPEC) \
+			  $(SERVICEFILESPEC) \
+			  $(UTILITYFILESPEC) \
+			  $(DATABASEFILESPEC) \
 			  $(MATLABWRAPPERFILE) \
 			  $(TESTFILESPEC) \
 			  $(MOCKFILESPEC) \

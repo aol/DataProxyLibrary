@@ -15,6 +15,7 @@
 #include "AssertThrowWithMessage.hpp"
 #include "SimpleRestMockService.hpp"
 #include "MockDataProxyClient.hpp"
+#include "RESTClient.hpp"
 #include <fstream>
 #include <boost/regex.hpp>
 #include <boost/algorithm/string/replace.hpp>

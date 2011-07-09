@@ -11,6 +11,7 @@
 
 #include "StoreHandlerTest.hpp"
 #include "DataProxyService.hpp"
+#include "DataProxyClient.hpp"
 #include "StoreHandler.hpp"
 #include "TempDirectory.hpp"
 #include "FileUtilities.hpp"
@@ -58,6 +59,7 @@ void StoreHandlerTest::tearDown()
 
 void StoreHandlerTest::testStore()
 {
+	DataProxyClient client;
 	MockHTTPRequest request;
 	MockHTTPResponse response;
 
@@ -85,7 +87,7 @@ void StoreHandlerTest::testStore()
 
 	std::string dplConfigFileSpec = m_pTempDir->GetDirectoryName() + "/dplConfig.xml";
 
-	StoreHandler handler( dplConfigFileSpec, false );
+	StoreHandler handler( client, dplConfigFileSpec, false );
 	
 	request.SetQueryParams( paramsA );
 	request.SetPath( "n1" );
@@ -153,6 +155,7 @@ void StoreHandlerTest::testStore()
 
 void StoreHandlerTest::testStoreXForwardedForNew()
 {
+	DataProxyClient client;
 	MockHTTPRequest request;
 	MockHTTPResponse response;
 
@@ -173,7 +176,7 @@ void StoreHandlerTest::testStoreXForwardedForNew()
 
 	std::string dplConfigFileSpec = m_pTempDir->GetDirectoryName() + "/dplConfig.xml";
 
-	StoreHandler handler( dplConfigFileSpec, true );
+	StoreHandler handler( client, dplConfigFileSpec, true );
 	
 	request.SetQueryParams( paramsA );
 	request.SetPath( "n1" );
@@ -198,6 +201,7 @@ void StoreHandlerTest::testStoreXForwardedForNew()
 
 void StoreHandlerTest::testStoreXForwardedForAppend()
 {
+	DataProxyClient client;
 	MockHTTPRequest request;
 	MockHTTPResponse response;
 
@@ -219,7 +223,7 @@ void StoreHandlerTest::testStoreXForwardedForAppend()
 
 	std::string dplConfigFileSpec = m_pTempDir->GetDirectoryName() + "/dplConfig.xml";
 
-	StoreHandler handler( dplConfigFileSpec, true );
+	StoreHandler handler( client, dplConfigFileSpec, true );
 	
 	request.SetQueryParams( paramsA );
 	request.SetPath( "n1" );

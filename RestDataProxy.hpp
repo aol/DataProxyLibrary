@@ -12,7 +12,6 @@
 #define _REST_DATA_PROXY_HPP_
 
 #include "AbstractNode.hpp"
-#include "RESTClient.hpp"
 #include "RestTypes.hpp"
 #include "MVException.hpp"
 #include "Nullable.hpp"
@@ -24,7 +23,6 @@
 MV_MAKEEXCEPTIONCLASS( RestDataProxyException, MVException );
 MV_MAKEEXCEPTIONCLASS( UnrecognizedParameterException, MVException );
 
-class RESTClient;
 namespace xercesc_2_7 { class DOMNode; }
 namespace xercesc = xercesc_2_7;
 
@@ -45,7 +43,6 @@ public:
 	virtual void Rollback();
 
 private:
-	RESTClient m_RestClient;
 	std::string m_Location;
 	Dpl::RestConfigDatum m_ReadConfig;
 	Dpl::RestConfigDatum m_WriteConfig;

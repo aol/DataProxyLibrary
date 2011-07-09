@@ -13,6 +13,7 @@
 #include "LoadHandler.hpp"
 #include "TempDirectory.hpp"
 #include "DataProxyService.hpp"
+#include "DataProxyClient.hpp"
 #include "FileUtilities.hpp"
 #include "MockHTTPRequest.hpp"
 #include "MockHTTPResponse.hpp"
@@ -61,6 +62,7 @@ void LoadHandlerTest::tearDown()
 
 void LoadHandlerTest::testLoad()
 {
+	DataProxyClient client;
 	MockHTTPRequest request;
 	MockHTTPResponse response;
 
@@ -92,7 +94,7 @@ void LoadHandlerTest::testLoad()
 
 	std::string dplConfigFileSpec = m_pTempDir->GetDirectoryName() + "/dplConfig.xml";
 
-	LoadHandler handler( dplConfigFileSpec, -1, false );
+	LoadHandler handler( client, dplConfigFileSpec, -1, false );
 	
 	request.SetQueryParams( paramsA );
 	request.SetPath( "n1" );
@@ -158,6 +160,7 @@ void LoadHandlerTest::testLoad()
 
 void LoadHandlerTest::testLoadCompressed()
 {
+	DataProxyClient client;
 	MockHTTPRequest request;
 	MockHTTPResponse response;
 
@@ -193,7 +196,7 @@ void LoadHandlerTest::testLoadCompressed()
 
 	std::string dplConfigFileSpec = m_pTempDir->GetDirectoryName() + "/dplConfig.xml";
 
-	LoadHandler handler( dplConfigFileSpec, -1, false );
+	LoadHandler handler( client, dplConfigFileSpec, -1, false );
 	
 	std::ofstream file( dplConfigFileSpec.c_str() );
 	file << "<DplConfig>" << std::endl
@@ -299,6 +302,7 @@ void LoadHandlerTest::testLoadCompressed()
 
 void LoadHandlerTest::testLoadCompressedCustomLevel()
 {
+	DataProxyClient client;
 	MockHTTPRequest request;
 	MockHTTPResponse response;
 
@@ -334,7 +338,7 @@ void LoadHandlerTest::testLoadCompressedCustomLevel()
 
 	std::string dplConfigFileSpec = m_pTempDir->GetDirectoryName() + "/dplConfig.xml";
 
-	LoadHandler handler( dplConfigFileSpec, 9, false );
+	LoadHandler handler( client, dplConfigFileSpec, 9, false );
 	
 	std::ofstream file( dplConfigFileSpec.c_str() );
 	file << "<DplConfig>" << std::endl
@@ -370,7 +374,7 @@ void LoadHandlerTest::testLoadCompressedCustomLevel()
 
 	// server-side disable compression (0)
 	request.SetHTTPHeader( "Accept-Encoding", "gzip" );
-	LoadHandler handler2( dplConfigFileSpec, 0, false );
+	LoadHandler handler2( client, dplConfigFileSpec, 0, false );
 	CPPUNIT_ASSERT_NO_THROW( handler2.Handle( request, response ) );
 	expected << "SetHTTPStatusCode called with Code: 200 Message: " << std::endl
 			 << "WriteHeader called with Name: Server Value: " << DATA_PROXY_SERVICE_VERSION << std::endl
@@ -381,6 +385,7 @@ void LoadHandlerTest::testLoadCompressedCustomLevel()
 
 void LoadHandlerTest::testLoadXForwardedForNew()
 {
+	DataProxyClient client;
 	MockHTTPRequest request;
 	MockHTTPResponse response;
 
@@ -403,7 +408,7 @@ void LoadHandlerTest::testLoadXForwardedForNew()
 
 	std::string dplConfigFileSpec = m_pTempDir->GetDirectoryName() + "/dplConfig.xml";
 
-	LoadHandler handler( dplConfigFileSpec, -1, true );
+	LoadHandler handler( client, dplConfigFileSpec, -1, true );
 	
 	request.SetQueryParams( paramsA );
 	request.SetPath( "n1" );
@@ -427,6 +432,7 @@ void LoadHandlerTest::testLoadXForwardedForNew()
 
 void LoadHandlerTest::testLoadXForwardedForAppend()
 {
+	DataProxyClient client;
 	MockHTTPRequest request;
 	MockHTTPResponse response;
 
@@ -450,7 +456,7 @@ void LoadHandlerTest::testLoadXForwardedForAppend()
 
 	std::string dplConfigFileSpec = m_pTempDir->GetDirectoryName() + "/dplConfig.xml";
 
-	LoadHandler handler( dplConfigFileSpec, -1, true );
+	LoadHandler handler( client, dplConfigFileSpec, -1, true );
 	
 	request.SetQueryParams( paramsA );
 	request.SetPath( "n1" );

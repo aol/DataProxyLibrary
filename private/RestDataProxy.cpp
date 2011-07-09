@@ -9,6 +9,7 @@
 // UPDATED BY:      $Author$
 
 #include "RestDataProxy.hpp"
+#include "RESTClient.hpp"
 #include "RestRequestBuilder.hpp"
 #include "DPLCommon.hpp"
 #include "XMLUtilities.hpp"
@@ -360,7 +361,6 @@ namespace
 
 RestDataProxy::RestDataProxy( const std::string& i_rName, DataProxyClient& i_rParent, const xercesc::DOMNode& i_rNode )
 :	AbstractNode( i_rName, i_rParent, i_rNode ),
-	m_RestClient(),
 	m_Location( XMLUtilities::GetAttributeValue( &i_rNode, LOCATION_ATTRIBUTE ) ),
 	m_ReadConfig(),
 	m_WriteConfig()
@@ -418,7 +418,7 @@ void RestDataProxy::LoadImpl( const std::map<std::string,std::string>& i_rParame
 	RESTParameters restParameters( m_ReadConfig.GetValue< Dpl::RestParameters >() );
 	builder.BuildRequest( uri, restParameters );
 
-	m_RestClient.Get( uri, o_rData, restParameters );
+	RESTClient().Get( uri, o_rData, restParameters );
 }
 
 void RestDataProxy::StoreImpl( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData )
@@ -438,7 +438,7 @@ void RestDataProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 	RESTParameters restParameters( m_WriteConfig.GetValue< Dpl::RestParameters >() );
 	builder.BuildRequest( uri, restParameters );
 
-	m_RestClient.Post( uri, i_rData, restParameters );
+	RESTClient().Post( uri, i_rData, restParameters );
 }
 
 bool RestDataProxy::SupportsTransactions() const

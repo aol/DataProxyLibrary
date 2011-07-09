@@ -19,16 +19,18 @@
 
 class HTTPRequest;
 class HTTPResponse;
+class DataProxyClient;
 
 class LoadHandler : public boost::noncopyable, public IWebService
 {
 public:
-	LoadHandler( const std::string& i_rDplConfig, int i_ZLibCompressionLevel, bool i_EnableXForwardedFor );
+	LoadHandler( DataProxyClient& i_rDataProxyClient, const std::string& i_rDplConfig, int i_ZLibCompressionLevel, bool i_EnableXForwardedFor );
 	virtual ~LoadHandler();
 
 	virtual void Handle( HTTPRequest& i_rRequest, HTTPResponse& o_rResponse );
 
 private:
+	DataProxyClient& m_rDataProxyClient;
 	std::string m_DplConfig;
 	boost::iostreams::zlib_params m_GZipParams;
 	boost::iostreams::zlib_params m_DeflateParams;

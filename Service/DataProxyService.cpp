@@ -10,6 +10,7 @@
 
 #include "DataProxyService.hpp"
 #include "DataProxyServiceConfig.hpp"
+#include "DataProxyClient.hpp"
 #include "WebServer.hpp"
 #include "MVLogger.hpp"
 #include "XMLUtilities.hpp"
@@ -40,8 +41,9 @@ int main( int argc, char** argv )
 		WebServer& rWebServer = WebServer::GetInstance();
 
 		// create handlers
-		LoadHandler loadHandler( config.GetDplConfig(), config.GetZLibCompressionLevel(), config.GetEnableXForwardedFor() );
-		StoreHandler storeHandler( config.GetDplConfig(), config.GetEnableXForwardedFor() );
+		DataProxyClient client( true );
+		LoadHandler loadHandler( client, config.GetDplConfig(), config.GetZLibCompressionLevel(), config.GetEnableXForwardedFor() );
+		StoreHandler storeHandler( client, config.GetDplConfig(), config.GetEnableXForwardedFor() );
 
 		// register handlers
 		rWebServer.AddWebService( HTTP_POST, MATCH_ALL, storeHandler );

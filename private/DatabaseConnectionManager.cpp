@@ -17,6 +17,7 @@
 #include "XMLUtilities.hpp"
 #include "MVLogger.hpp"
 #include <boost/lexical_cast.hpp>
+#include <boost/thread/thread.hpp>
 
 namespace
 {
@@ -40,6 +41,9 @@ namespace
 
 	const std::string NODE_NAME_PREFIX( "__shard" );
 
+	boost::shared_mutex CONFIG_VERSION;
+	boost::shared_mutex CONNECT_MUTEX;
+
 	std::string GetConnectionName( const std::string& i_rNodeId, const std::string& i_rShardNode )
 	{
 		return NODE_NAME_PREFIX + "_" + i_rShardNode + "_" + i_rNodeId;
@@ -61,6 +65,7 @@ DatabaseConnectionManager::~DatabaseConnectionManager()
 
 void DatabaseConnectionManager::ParseConnectionsByTable( const xercesc::DOMNode& i_rDatabaseConnectionNode )
 {
+	boost::unique_lock< boost::shared_mutex > lock( CONFIG_VERSION );
 	std::vector<xercesc::DOMNode*> nodes;
 	XMLUtilities::GetChildrenByName( nodes, &i_rDatabaseConnectionNode, CONNECTIONS_BY_TABLE_NODE);
 	std::vector<xercesc::DOMNode*>::const_iterator iter = nodes.begin();
@@ -84,6 +89,7 @@ void DatabaseConnectionManager::ParseConnectionsByTable( const xercesc::DOMNode&
 
 void DatabaseConnectionManager::Parse( const xercesc::DOMNode& i_rDatabaseConnectionNode )
 {
+	boost::unique_lock< boost::shared_mutex > lock( CONFIG_VERSION );
 	std::set< std::string > allowedChildren;
 	allowedChildren.insert( DATABASE_NODE );
 	allowedChildren.insert( CONNECTIONS_BY_TABLE_NODE );
@@ -245,6 +251,7 @@ void DatabaseConnectionManager::FetchConnectionsByTable( const std::string& i_rN
 
 DatabaseConnectionDatum& DatabaseConnectionManager::PrivateGetConnection( const std::string& i_rConnectionName ) const
 {
+	boost::shared_lock< boost::shared_mutex > lock( CONFIG_VERSION );
 	DatabaseConnectionDatum datum;
 	datum.SetValue<ConnectionName>(i_rConnectionName);
 	DatabaseConnectionContainer::const_iterator iter = m_DatabaseConnectionContainer.find(datum);
@@ -269,6 +276,7 @@ void DatabaseConnectionManager::ValidateConnectionName(const std::string& i_Conn
 
 void DatabaseConnectionManager::RefreshConnectionsByTable() const
 {
+	boost::unique_lock< boost::shared_mutex > lock( CONFIG_VERSION );
 	//GetConnection( "master" ).Rollback();
 	m_ShardDatabaseConnectionContainer.clear();
 	m_ConnectionsByTableName.clear();
@@ -283,16 +291,20 @@ void DatabaseConnectionManager::RefreshConnectionsByTable() const
 
 Database& DatabaseConnectionManager::GetConnectionByTable( const std::string& i_rTableName ) const
 {
-	__gnu_cxx::hash_map< std::string, std::string >::const_iterator iter = m_ConnectionsByTableName.find( i_rTableName );
-	if( iter == m_ConnectionsByTableName.end() )
+	__gnu_cxx::hash_map< std::string, std::string >::const_iterator iter;
 	{
-		MVLOGGER("root.lib.DataProxy.DatabaseConnectionManager.GetConnectionByTable.LoadingShardCollections",
-			"Unable to find table name: " << i_rTableName << " in existing shard collections. Reloading shard collections..." );
-		RefreshConnectionsByTable();
+		boost::shared_lock< boost::shared_mutex > lock( CONNECT_MUTEX );
 		iter = m_ConnectionsByTableName.find( i_rTableName );
 		if( iter == m_ConnectionsByTableName.end() )
 		{
-			MV_THROW( DatabaseConnectionManagerException, "Unable to find a registered connection for table name: " << i_rTableName );
+			MVLOGGER("root.lib.DataProxy.DatabaseConnectionManager.GetConnectionByTable.LoadingShardCollections",
+				"Unable to find table name: " << i_rTableName << " in existing shard collections. Reloading shard collections..." );
+			RefreshConnectionsByTable();
+			iter = m_ConnectionsByTableName.find( i_rTableName );
+			if( iter == m_ConnectionsByTableName.end() )
+			{
+				MV_THROW( DatabaseConnectionManagerException, "Unable to find a registered connection for table name: " << i_rTableName );
+			}
 		}
 	}
 	return GetConnection( iter->second );
@@ -306,58 +318,69 @@ Database& DatabaseConnectionManager::GetConnection(const std::string& i_Connecti
 	{
 		return *rDatabase;
 	}
-	//the Connection hasn't been created yet, create it now and return it.
-	std::string connectionType = rDatum.GetValue<DatabaseConnectionType>();
-	if (connectionType == ORACLE_DB_TYPE)
+	// obtain a unique lock and re-check
 	{
-		MVLOGGER("root.lib.DataProxy.DatabaseConnectionManager.Connect.CreatingOracleDatabaseConnection",
-				 "Creating oracle database connection named " << rDatum.GetValue<ConnectionName>() << ".");
-		DatabaseConfigDatum datum = rDatum.GetValue<DatabaseConfig>();
-		Database *pDatabase = new Database( Database::DBCONN_OCI_ORACLE,
-											"",
-											datum.GetValue<DatabaseName>(),
-											datum.GetValue<DatabaseUserName>(),
-											datum.GetValue<DatabasePassword>(),
-											false,
-											datum.GetValue<DatabaseSchema>());
-		
-		boost::shared_ptr<Database>& rDatabaseHandle = rDatum.GetReference<DatabaseConnection>();
-		rDatabaseHandle.reset(pDatabase);
-		return *pDatabase;
+		boost::unique_lock< boost::shared_mutex > lock( CONNECT_MUTEX );
+		rDatabase = rDatum.GetReference<DatabaseConnection>();
+		if (rDatabase.get() != NULL)
+		{
+			return *rDatabase;
+		}
+
+		//the Connection hasn't been created yet, create it now and return it.
+		std::string connectionType = rDatum.GetValue<DatabaseConnectionType>();
+		if (connectionType == ORACLE_DB_TYPE)
+		{
+			MVLOGGER("root.lib.DataProxy.DatabaseConnectionManager.Connect.CreatingOracleDatabaseConnection",
+					 "Creating oracle database connection named " << rDatum.GetValue<ConnectionName>() << ".");
+			DatabaseConfigDatum datum = rDatum.GetValue<DatabaseConfig>();
+			Database *pDatabase = new Database( Database::DBCONN_OCI_ORACLE,
+												"",
+												datum.GetValue<DatabaseName>(),
+												datum.GetValue<DatabaseUserName>(),
+												datum.GetValue<DatabasePassword>(),
+												false,
+												datum.GetValue<DatabaseSchema>());
+			
+			boost::shared_ptr<Database>& rDatabaseHandle = rDatum.GetReference<DatabaseConnection>();
+			rDatabaseHandle.reset(pDatabase);
+			return *pDatabase;
+		}
+		else if (connectionType == MYSQL_DB_TYPE)
+		{
+			MVLOGGER("root.lib.DataProxy.DatabaseConnectionManager.Connect.CreatingMySQLDatabaseConnection",
+					 "Creating mysql database connection named " << rDatum.GetValue<ConnectionName>() << ".");
+			
+			DatabaseConfigDatum datum = rDatum.GetValue<DatabaseConfig>();
+			Database *pDatabase = new Database( Database::DBCONN_ODBC_MYSQL,
+												datum.GetValue<DatabaseServer>(),
+												"",
+												datum.GetValue<DatabaseUserName>(),
+												datum.GetValue<DatabasePassword>(),
+												datum.GetValue<DisableCache>(),
+												datum.GetValue<DatabaseName>());
+			
+			boost::shared_ptr<Database>& rDatabaseHandle = rDatum.GetReference<DatabaseConnection>();
+			rDatabaseHandle.reset(pDatabase);
+			return *pDatabase;
+		}
+		else
+		{
+			MV_THROW(DatabaseConnectionManagerException,
+					 "Invalid Database type: " << connectionType);
+		}
 	}
-	else if (connectionType == MYSQL_DB_TYPE)
-	{
-		MVLOGGER("root.lib.DataProxy.DatabaseConnectionManager.Connect.CreatingMySQLDatabaseConnection",
-				 "Creating mysql database connection named " << rDatum.GetValue<ConnectionName>() << ".");
-		
-		DatabaseConfigDatum datum = rDatum.GetValue<DatabaseConfig>();
-		Database *pDatabase = new Database( Database::DBCONN_ODBC_MYSQL,
-											datum.GetValue<DatabaseServer>(),
-											"",
-											datum.GetValue<DatabaseUserName>(),
-											datum.GetValue<DatabasePassword>(),
-											datum.GetValue<DisableCache>(),
-											datum.GetValue<DatabaseName>());
-		
-		boost::shared_ptr<Database>& rDatabaseHandle = rDatum.GetReference<DatabaseConnection>();
-		rDatabaseHandle.reset(pDatabase);
-		return *pDatabase;
-	}
-	else
-	{
-		MV_THROW(DatabaseConnectionManagerException,
-				 "Invalid Database type: " << connectionType);
-	}
-	
 }
 
 std::string DatabaseConnectionManager::GetDatabaseType(const std::string& i_ConnectionName) const
 {
+	boost::shared_lock< boost::shared_mutex > lock( CONFIG_VERSION );
 	return PrivateGetConnection(i_ConnectionName).GetValue< DatabaseConnectionType >();
 }
 
 std::string DatabaseConnectionManager::GetDatabaseTypeByTable( const std::string& i_rTableName ) const
 {
+	boost::shared_lock< boost::shared_mutex > lock( CONFIG_VERSION );
 	__gnu_cxx::hash_map< std::string, std::string >::const_iterator iter = m_ConnectionsByTableName.find( i_rTableName );
 	if( iter == m_ConnectionsByTableName.end() )
 	{
@@ -373,6 +396,7 @@ std::string DatabaseConnectionManager::GetDatabaseTypeByTable( const std::string
 
 void DatabaseConnectionManager::ClearConnections()
 {
+	boost::unique_lock< boost::shared_mutex > lock( CONFIG_VERSION );
 	m_DatabaseConnectionContainer.clear();
 	m_ShardDatabaseConnectionContainer.clear();
 	m_ShardCollections.clear();

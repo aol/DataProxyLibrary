@@ -14,6 +14,7 @@
 #include "MVCommon.hpp"
 #include "MVException.hpp"
 #include "DatabaseConnectionManager.hpp"
+#include "NodeFactory.hpp"
 #include <boost/shared_ptr.hpp>
 #include <boost/noncopyable.hpp>
 #include <map>
@@ -58,6 +59,7 @@ protected:
 private:
 	typedef std::map< std::string, boost::shared_ptr< AbstractNode > > NodesMap;
 
+	void PrivateRollback( bool i_ObtainLock );
 	void InitializeImplementation( const std::string& i_rConfigFileSpec, INodeFactory& i_rNodeFactory, DatabaseConnectionManager& i_rDatabaseConnectionManager );
 	std::string ExtractName( xercesc::DOMNode* i_pNode ) const;
 	void CheckForCycles( const NodesMap::const_iterator& i_rIter, int i_WhichPath, const std::vector< std::string >& i_rNamePath ) const;
@@ -69,6 +71,7 @@ private:
 	std::string m_ConfigFileMD5;
 
 	DatabaseConnectionManager m_DatabaseConnectionManager;
+	NodeFactory m_NodeFactory;
 	
 	mutable std::vector< std::string > m_PendingCommitNodes;
 	mutable std::vector< std::string > m_PendingRollbackNodes;

@@ -29,6 +29,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/thread/thread.hpp>
 
 namespace
 {
@@ -69,6 +70,10 @@ namespace
 
 	//Disclaimer: this max string length is pretty arbitary. Not sure of the performance implications of increasing it.
 	const int DEFAULT_MAX_BIND_SIZE ( 64 );
+
+	// mutexes
+	boost::mutex UPLOAD_MUTEX;
+	boost::shared_mutex PENDING_COMMITS_MUTEX;
 
 	void FillSet( const std::map< std::string, std::string >& i_rMap, std::set< std::string >& o_rSet )
 	{
@@ -717,26 +722,35 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 		WriteControlFile( controlFileSpec, dataFileSpec, columns, stagingTable );
 		SQLLoader loader( rDatabase.GetDBName(), rDatabase.GetUserName(), rDatabase.GetPassword(), controlFileSpec, logFileSpec );
 
-		// truncate the staging table
-		std::stringstream sql;
-		sql << "CALL sp_truncate_table( '" << stagingTable << "' )";
-		MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.TruncateStagingTable", "Truncating staging table: " << stagingTable );
-		Database::Statement( rDatabase, sql.str() ).Execute();
-
-		// upload!
-		MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Begin", "Uploading data to staging table: " << stagingTable );
-		if( loader.Upload( m_WriteDirectLoad ) )
+		// obtain a write-lock for staging table upload
 		{
-			MV_THROW( DatabaseProxyException, "SQLLoader failed! Standard output: " << loader.GetStandardOutput() << ". Standard error: " << loader.GetStandardError());
+			boost::mutex::scoped_lock lock( UPLOAD_MUTEX );
+
+			// truncate the staging table
+			std::stringstream sql;
+			sql << "CALL sp_truncate_table( '" << stagingTable << "' )";
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.TruncateStagingTable", "Truncating staging table: " << stagingTable );
+			Database::Statement( rDatabase, sql.str() ).Execute();
+
+			// upload!
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Begin", "Uploading data to staging table: " << stagingTable );
+			if( loader.Upload( m_WriteDirectLoad ) )
+			{
+				MV_THROW( DatabaseProxyException, "SQLLoader failed! Standard output: " << loader.GetStandardOutput() << ". Standard error: " << loader.GetStandardError());
+			}
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Finished", "Done uploading data to staging table: " << stagingTable );
+
+			// obtain write-lock for primary table
+			// merge staging table data into primary table
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Begin", "Merging data from staging table with query: " << oracleMergeQuery );
+			Database::Statement( rDatabase, oracleMergeQuery ).Execute();
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Finished", "Merge complete" );
 		}
-		MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Finished", "Done uploading data to staging table: " << stagingTable );
 
-		// merge staging table data into primary table
-		MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Begin", "Merging data from staging table with query: " << oracleMergeQuery );
-		Database::Statement( rDatabase, oracleMergeQuery ).Execute();
-		MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Finished", "Merge complete" );
-
-		m_PendingCommits.insert( &rDatabase );
+		{
+			boost::unique_lock< boost::shared_mutex >( PENDING_COMMITS_MUTEX );
+			m_PendingCommits.insert( &rDatabase );
+		}
 
 		// if cleaning up, remove files
 		if( !m_WriteNoCleanUp )
@@ -750,28 +764,35 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 	{
 		std::stringstream sql;
 
-		// truncate the staging table
-		sql << "TRUNCATE TABLE " << stagingTable;
-		MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.TruncateStagingTable", "Truncating staging table: " << stagingTable );
-		Database::Statement( rDatabase, sql.str() ).Execute();
+		// obtain a write-lock for staging table upload
+		{
+			boost::mutex::scoped_lock lock( UPLOAD_MUTEX );
+			// truncate the staging table
+			sql << "TRUNCATE TABLE " << stagingTable;
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.TruncateStagingTable", "Truncating staging table: " << stagingTable );
+			Database::Statement( rDatabase, sql.str() ).Execute();
 
-		// load the data into the table
-		sql.str("");
-		sql << "LOAD DATA" << ( m_WriteLocalDataFile ? " LOCAL" : "" ) << " INFILE '" << dataFileSpec << "'" << std::endl
-			<< "INTO TABLE " << stagingTable << std::endl
-			<< "FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"'" << std::endl
-			<< "IGNORE 1 LINES" << std::endl
-			<< "( " << columns << " )" << std::endl;
-		MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Begin", "Uploading data to staging table: " << stagingTable );
-		Database::Statement( rDatabase, sql.str() ).Execute();
-		MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Finished", "Done uploading data to staging table: " << stagingTable );
-	
-		// merge staging table data into primary table
-		MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Begin", "Merging data from staging table with query: " << mysqlMergeQuery );
-		Database::Statement( rDatabase, mysqlMergeQuery ).Execute();
-		MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Finished", "Merge complete" );
+			// load the data into the table
+			sql.str("");
+			sql << "LOAD DATA" << ( m_WriteLocalDataFile ? " LOCAL" : "" ) << " INFILE '" << dataFileSpec << "'" << std::endl
+				<< "INTO TABLE " << stagingTable << std::endl
+				<< "FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"'" << std::endl
+				<< "IGNORE 1 LINES" << std::endl
+				<< "( " << columns << " )" << std::endl;
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Begin", "Uploading data to staging table: " << stagingTable );
+			Database::Statement( rDatabase, sql.str() ).Execute();
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Finished", "Done uploading data to staging table: " << stagingTable );
 
-		m_PendingCommits.insert( &rDatabase );
+			// merge staging table data into primary table
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Begin", "Merging data from staging table with query: " << mysqlMergeQuery );
+			Database::Statement( rDatabase, mysqlMergeQuery ).Execute();
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Finished", "Merge complete" );
+		}
+
+		{
+			boost::unique_lock< boost::shared_mutex >( PENDING_COMMITS_MUTEX );
+			m_PendingCommits.insert( &rDatabase );
+		}
 	
 		// if cleaning up, remove file
 		if( !m_WriteNoCleanUp )
@@ -792,19 +813,29 @@ bool DatabaseProxy::SupportsTransactions() const
 
 void DatabaseProxy::Commit()
 {
+	boost::upgrade_lock< boost::shared_mutex > lock( PENDING_COMMITS_MUTEX );
 	std::set< Database* >::iterator iter = m_PendingCommits.begin();
-	for( ; iter != m_PendingCommits.end(); m_PendingCommits.erase( iter++ ) )
+	for( ; iter != m_PendingCommits.end(); )
 	{
 		(*iter)->Commit();
+		{
+			boost::upgrade_to_unique_lock< boost::shared_mutex > uniqueLock( lock );
+			m_PendingCommits.erase( iter++ );
+		}
 	}
 }
 
 void DatabaseProxy::Rollback()
 {
+	boost::upgrade_lock< boost::shared_mutex > lock( PENDING_COMMITS_MUTEX );
 	std::set< Database* >::iterator iter = m_PendingCommits.begin();
-	for( ; iter != m_PendingCommits.end(); m_PendingCommits.erase( iter++ ) )
+	for( ; iter != m_PendingCommits.end(); )
 	{
 		(*iter)->Rollback();
+		{
+			boost::upgrade_to_unique_lock< boost::shared_mutex > uniqueLock( lock );
+			m_PendingCommits.erase( iter++ );
+		}
 	}
 }
 

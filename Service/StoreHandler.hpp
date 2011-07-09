@@ -18,16 +18,18 @@
 
 class HTTPRequest;
 class HTTPResponse;
+class DataProxyClient;
 
 class StoreHandler : public boost::noncopyable, public IWebService
 {
 public:
-	StoreHandler( const std::string& i_rDplConfig, bool i_EnableXForwardedFor );
+	StoreHandler( DataProxyClient& i_rDataProxyClient, const std::string& i_rDplConfig, bool i_EnableXForwardedFor );
 	virtual ~StoreHandler();
 
 	virtual void Handle( HTTPRequest& i_rRequest, HTTPResponse& o_rResponse );
 
 private:
+	DataProxyClient& m_rDataProxyClient;
 	std::string m_DplConfig;
 	bool m_EnableXForwardedFor;
 };
