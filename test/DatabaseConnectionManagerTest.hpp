@@ -22,6 +22,7 @@ class DatabaseConnectionManagerTest : public CppUnit::TestFixture
 private:
 	CPPUNIT_TEST_SUITE( DatabaseConnectionManagerTest );
 	CPPUNIT_TEST( testNormal );
+	CPPUNIT_TEST( testNormalReconnect );
 	CPPUNIT_TEST( testParseMissingAttributes );
 	CPPUNIT_TEST( testParseExceptionInvalidValues );
 	CPPUNIT_TEST( testParseEmptyNode );
@@ -33,6 +34,7 @@ private:
 	CPPUNIT_TEST_SUITE_END();
 
 	void testNormal();
+	void testNormalReconnect();
 	void testParseMissingAttributes();
 	void testParseExceptionInvalidValues();
 	void testParseEmptyNode();

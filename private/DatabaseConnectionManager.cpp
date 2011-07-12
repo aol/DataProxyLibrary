@@ -13,6 +13,7 @@
 #include "DatabaseConnectionBinder.hpp"
 #include "CSVReader.hpp"
 #include "Database.hpp"
+#include "Stopwatch.hpp"
 #include "DPLCommon.hpp"
 #include "XMLUtilities.hpp"
 #include "MVLogger.hpp"
@@ -31,6 +32,7 @@ namespace
 	const std::string DATABASE_PASSWORD_ATTRIBUTE("password");
 	const std::string DATABASE_SCHEMA_ATTRIBUTE("schema");
 	const std::string DISABLE_CACHE_ATTRIBUTE("disableCache");
+	const std::string RECONNECT_TIMEOUT_ATTRIBUTE("reconnectTimeout");
 	
 	const std::string CONNECTION_NAME_ATTRIBUTE("connection");
 
@@ -47,6 +49,19 @@ namespace
 	std::string GetConnectionName( const std::string& i_rNodeId, const std::string& i_rShardNode )
 	{
 		return NODE_NAME_PREFIX + "_" + i_rShardNode + "_" + i_rNodeId;
+	}
+
+	void ReconnectIfNecessary( DatabaseConnectionDatum& i_rDatum )
+	{
+		double secondsElapsed = i_rDatum.GetReference< ConnectionTimer >()->GetElapsedSeconds();
+		if( secondsElapsed > i_rDatum.GetValue< ConnectionReconnect >() )
+		{
+			MVLOGGER( "root.lib.DataProxy.DatabaseConnectionManager.Reconnecting",
+				 "Connection named: " << i_rDatum.GetValue< ConnectionName >() << " has been active for: " << secondsElapsed << " seconds. "
+				 << "Reconnect timeout is set to: " << i_rDatum.GetValue< ConnectionReconnect >() << ". Reconnecting."  );
+			i_rDatum.GetReference< DatabaseConnection >()->Reconnect();
+			i_rDatum.GetReference< ConnectionTimer >()->Reset();
+		}
 	}
 }
 
@@ -101,85 +116,78 @@ void DatabaseConnectionManager::Parse( const xercesc::DOMNode& i_rDatabaseConnec
 	std::vector<xercesc::DOMNode*>::const_iterator iter = nodes.begin();
 	for (; iter != nodes.end(); ++iter)
 	{
-		
+		DatabaseConfigDatum databaseConfig;
+		DatabaseConnectionDatum datum;
+
 		std::string type = XMLUtilities::GetAttributeValue(*iter, TYPE_ATTRIBUTE);
-
-			if (type == ORACLE_DB_TYPE)
+		std::string databaseName = XMLUtilities::GetAttributeValue( *iter, DATABASE_NAME_ATTRIBUTE );
+		std::string databaseUserName = XMLUtilities::GetAttributeValue( *iter, DATABASE_USERNAME_ATTRIBUTE );
+		std::string databasePassword = XMLUtilities::GetAttributeValue( *iter, DATABASE_PASSWORD_ATTRIBUTE );
+		std::string connectionName = XMLUtilities::GetAttributeValue( *iter, CONNECTION_NAME_ATTRIBUTE );
+		double reconnectTimeout = 3600;	// by default, reconnect every hour
+		xercesc::DOMAttr* pAttribute = XMLUtilities::GetAttribute( *iter, RECONNECT_TIMEOUT_ATTRIBUTE );
+		if( pAttribute != NULL )
+		{
+			std::string reconnectString = XMLUtilities::XMLChToString( pAttribute->getValue() );
+			try
 			{
-				std::string databaseName = XMLUtilities::GetAttributeValue( *iter, DATABASE_NAME_ATTRIBUTE );
-				std::string databaseUserName = XMLUtilities::GetAttributeValue( *iter, DATABASE_USERNAME_ATTRIBUTE );
-				std::string databasePassword = XMLUtilities::GetAttributeValue( *iter, DATABASE_PASSWORD_ATTRIBUTE );
-				std::string databaseSchema = XMLUtilities::GetAttributeValue( *iter, DATABASE_SCHEMA_ATTRIBUTE );
-				std::string connectionName = XMLUtilities::GetAttributeValue( *iter, CONNECTION_NAME_ATTRIBUTE );
-				
-				DatabaseConfigDatum databaseConfig;
-				databaseConfig.SetValue<DatabaseName>(databaseName);
-				databaseConfig.SetValue<DatabaseUserName>(databaseUserName);
-				databaseConfig.SetValue<DatabasePassword>(databasePassword);
-				databaseConfig.SetValue<DatabaseSchema>(databaseSchema);
-
-				DatabaseConnectionDatum datum;
-				datum.SetValue<DatabaseConfig>(databaseConfig);
-				datum.SetValue<DatabaseConnectionType>(type);
-				datum.SetValue<ConnectionName>(connectionName);
-
-				//lets make sure there are not two connections with the same name
-				if (m_DatabaseConnectionContainer.find(datum) != m_DatabaseConnectionContainer.end())
-				{
-					MV_THROW(DatabaseConnectionManagerException, "Duplicate Connections named '" << datum.GetValue<ConnectionName>() << "' in the DatabaseConnections node");
-				}
-				
-				m_DatabaseConnectionContainer.InsertUpdate(datum);
+				reconnectTimeout = boost::lexical_cast< double >( reconnectString );
 			}
-			else if (type == MYSQL_DB_TYPE)
+			catch( const boost::bad_lexical_cast& i_rException )
 			{
-				std::string databaseServer = XMLUtilities::GetAttributeValue( *iter, DATABASE_SERVER_ATTRIBUTE );
-				std::string databaseUserName = XMLUtilities::GetAttributeValue( *iter, DATABASE_USERNAME_ATTRIBUTE );
-				std::string databasePassword = XMLUtilities::GetAttributeValue( *iter, DATABASE_PASSWORD_ATTRIBUTE );
-				std::string databaseName = XMLUtilities::GetAttributeValue( *iter, DATABASE_NAME_ATTRIBUTE );
-				std::string disableCache = XMLUtilities::GetAttributeValue( *iter, DISABLE_CACHE_ATTRIBUTE );
-				std::string connectionName = XMLUtilities::GetAttributeValue( *iter, CONNECTION_NAME_ATTRIBUTE );
-				bool bDisableCache = false;
-
-				if (disableCache == "true")
-				{
-					bDisableCache = true;
-				}
-				else if (disableCache == "false")
-				{
-					bDisableCache = false;
-				}
-				else 
-				{
-					MV_THROW(DatabaseConnectionManagerException, 
-							 "MySQL db connection has invalid value for disableCache attribute: " << disableCache << ". Valid values are 'true' and 'false'");
-				}
-
-				DatabaseConfigDatum databaseConfig;
-				databaseConfig.SetValue<DatabaseServer>(databaseServer);
-				databaseConfig.SetValue<DatabaseUserName>(databaseUserName);
-				databaseConfig.SetValue<DatabasePassword>(databasePassword);
-				databaseConfig.SetValue<DatabaseName>(databaseName);
-				databaseConfig.SetValue<DisableCache>(bDisableCache);
-
-				DatabaseConnectionDatum datum;
-				datum.SetValue<DatabaseConfig>(databaseConfig);
-				datum.SetValue<DatabaseConnectionType>(type);
-				datum.SetValue<ConnectionName>(connectionName);
-				//lets make sure there are not two connections with the same name
-				if (m_DatabaseConnectionContainer.find(datum) != m_DatabaseConnectionContainer.end())
-				{
-					MV_THROW(DatabaseConnectionManagerException,
-							 "Duplicate Connections named '" << datum.GetValue<ConnectionName>() << "' in the DatabaseConnections node");
-				}
-
-				m_DatabaseConnectionContainer.InsertUpdate(datum);
+				MV_THROW( DatabaseConnectionManagerException, "Error parsing " << RECONNECT_TIMEOUT_ATTRIBUTE << " attribute: " << reconnectString << " as double" );
 			}
-			else {
+		}
+
+		databaseConfig.SetValue<DatabaseName>(databaseName);
+		databaseConfig.SetValue<DatabaseUserName>(databaseUserName);
+		databaseConfig.SetValue<DatabasePassword>(databasePassword);
+
+		datum.SetValue<DatabaseConnectionType>(type);
+		datum.SetValue<ConnectionName>(connectionName);
+
+		if (type == ORACLE_DB_TYPE)
+		{
+			std::string databaseSchema = XMLUtilities::GetAttributeValue( *iter, DATABASE_SCHEMA_ATTRIBUTE );
+			databaseConfig.SetValue<DatabaseSchema>(databaseSchema);
+		}
+		else if (type == MYSQL_DB_TYPE)
+		{
+			std::string databaseServer = XMLUtilities::GetAttributeValue( *iter, DATABASE_SERVER_ATTRIBUTE );
+			std::string disableCache = XMLUtilities::GetAttributeValue( *iter, DISABLE_CACHE_ATTRIBUTE );
+			bool bDisableCache = false;
+
+			if (disableCache == "true")
+			{
+				bDisableCache = true;
+			}
+			else if (disableCache == "false")
+			{
+				bDisableCache = false;
+			}
+			else 
+			{
 				MV_THROW(DatabaseConnectionManagerException, 
-						 "Unrecognized type in DatabaseNode: " <<  type );
+						 "MySQL db connection has invalid value for disableCache attribute: " << disableCache << ". Valid values are 'true' and 'false'");
 			}
 
+			databaseConfig.SetValue<DatabaseServer>(databaseServer);
+			databaseConfig.SetValue<DisableCache>(bDisableCache);
+		}
+		else
+		{
+			MV_THROW(DatabaseConnectionManagerException, 
+					 "Unrecognized type in DatabaseNode: " <<  type );
+		}
+
+		if (m_DatabaseConnectionContainer.find(datum) != m_DatabaseConnectionContainer.end())
+		{
+			MV_THROW(DatabaseConnectionManagerException, "Duplicate Connections named '" << datum.GetValue<ConnectionName>() << "' in the DatabaseConnections node");
+		}
+
+		datum.SetValue< DatabaseConfig >( databaseConfig );
+		datum.SetValue< ConnectionReconnect >( reconnectTimeout );
+		m_DatabaseConnectionContainer.InsertUpdate(datum);
 	}
 }
 
@@ -274,10 +282,9 @@ void DatabaseConnectionManager::ValidateConnectionName(const std::string& i_Conn
 	PrivateGetConnection(i_ConnectionName);
 }
 
-void DatabaseConnectionManager::RefreshConnectionsByTable() const
+void DatabaseConnectionManager::RefreshConnectionsByTable( boost::upgrade_lock< boost::shared_mutex >& i_rLock ) const
 {
-	boost::unique_lock< boost::shared_mutex > lock( CONFIG_VERSION );
-	//GetConnection( "master" ).Rollback();
+	boost::upgrade_to_unique_lock< boost::shared_mutex > uniqueLock( i_rLock );
 	m_ShardDatabaseConnectionContainer.clear();
 	m_ConnectionsByTableName.clear();
 	ShardCollectionContainer::const_iterator shardIter = m_ShardCollections.begin();
@@ -293,13 +300,13 @@ Database& DatabaseConnectionManager::GetConnectionByTable( const std::string& i_
 {
 	__gnu_cxx::hash_map< std::string, std::string >::const_iterator iter;
 	{
-		boost::shared_lock< boost::shared_mutex > lock( CONNECT_MUTEX );
+		boost::upgrade_lock< boost::shared_mutex > lock( CONFIG_VERSION );
 		iter = m_ConnectionsByTableName.find( i_rTableName );
 		if( iter == m_ConnectionsByTableName.end() )
 		{
 			MVLOGGER("root.lib.DataProxy.DatabaseConnectionManager.GetConnectionByTable.LoadingShardCollections",
 				"Unable to find table name: " << i_rTableName << " in existing shard collections. Reloading shard collections..." );
-			RefreshConnectionsByTable();
+			RefreshConnectionsByTable( lock );
 			iter = m_ConnectionsByTableName.find( i_rTableName );
 			if( iter == m_ConnectionsByTableName.end() )
 			{
@@ -316,6 +323,7 @@ Database& DatabaseConnectionManager::GetConnection(const std::string& i_Connecti
 	boost::shared_ptr<Database>& rDatabase = rDatum.GetReference<DatabaseConnection>();
 	if (rDatabase.get() != NULL)
 	{
+		ReconnectIfNecessary( rDatum );
 		return *rDatabase;
 	}
 	// obtain a unique lock and re-check
@@ -324,6 +332,7 @@ Database& DatabaseConnectionManager::GetConnection(const std::string& i_Connecti
 		rDatabase = rDatum.GetReference<DatabaseConnection>();
 		if (rDatabase.get() != NULL)
 		{
+			ReconnectIfNecessary( rDatum );
 			return *rDatabase;
 		}
 
@@ -344,6 +353,7 @@ Database& DatabaseConnectionManager::GetConnection(const std::string& i_Connecti
 			
 			boost::shared_ptr<Database>& rDatabaseHandle = rDatum.GetReference<DatabaseConnection>();
 			rDatabaseHandle.reset(pDatabase);
+			rDatum.GetReference< ConnectionTimer >().reset( new Stopwatch() );
 			return *pDatabase;
 		}
 		else if (connectionType == MYSQL_DB_TYPE)
@@ -362,6 +372,7 @@ Database& DatabaseConnectionManager::GetConnection(const std::string& i_Connecti
 			
 			boost::shared_ptr<Database>& rDatabaseHandle = rDatum.GetReference<DatabaseConnection>();
 			rDatabaseHandle.reset(pDatabase);
+			rDatum.GetReference< ConnectionTimer >().reset( new Stopwatch() );
 			return *pDatabase;
 		}
 		else
@@ -380,11 +391,11 @@ std::string DatabaseConnectionManager::GetDatabaseType(const std::string& i_Conn
 
 std::string DatabaseConnectionManager::GetDatabaseTypeByTable( const std::string& i_rTableName ) const
 {
-	boost::shared_lock< boost::shared_mutex > lock( CONFIG_VERSION );
+	boost::upgrade_lock< boost::shared_mutex > lock( CONFIG_VERSION );
 	__gnu_cxx::hash_map< std::string, std::string >::const_iterator iter = m_ConnectionsByTableName.find( i_rTableName );
 	if( iter == m_ConnectionsByTableName.end() )
 	{
-		RefreshConnectionsByTable();
+		RefreshConnectionsByTable( lock );
 		iter = m_ConnectionsByTableName.find( i_rTableName );
 		if( iter == m_ConnectionsByTableName.end() )
 		{

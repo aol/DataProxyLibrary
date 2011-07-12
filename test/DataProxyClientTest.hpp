@@ -21,27 +21,27 @@ class DataProxyClientTest : public CppUnit::TestFixture
 {
 private:
 	CPPUNIT_TEST_SUITE( DataProxyClientTest );
-//	CPPUNIT_TEST( testUninitialized );
-//	CPPUNIT_TEST( testMissingName );
-//	CPPUNIT_TEST( testDuplicateName );
-//	CPPUNIT_TEST( testDatabaseConnectionsNode );
-//	CPPUNIT_TEST( testStoreUnsuccessfulRollback );
-//	CPPUNIT_TEST( testStoreUnsuccessfulRollback_WithTransactions );
-//	CPPUNIT_TEST( testTransactionException );
-//	CPPUNIT_TEST( testCommit );
-//	CPPUNIT_TEST( testCommitPartial );
-//	CPPUNIT_TEST( testRollback );
-//	CPPUNIT_TEST( testRollbackException );
-//	CPPUNIT_TEST( testAutoRollback );
-//	CPPUNIT_TEST( testForwardingOk );
-//	CPPUNIT_TEST( testReadCycles );
-//	CPPUNIT_TEST( testWriteCycles );
-//	CPPUNIT_TEST( testUndefinedReadForwards );
-//	CPPUNIT_TEST( testUndefinedWriteForwards );
-//	CPPUNIT_TEST( testEntityResolution );
-//	CPPUNIT_TEST( testConfigFileMD5 );
-//	CPPUNIT_TEST( testConfigFileMissing );
-	CPPUNIT_TEST( testMultithread );
+	CPPUNIT_TEST( testUninitialized );
+	CPPUNIT_TEST( testMissingName );
+	CPPUNIT_TEST( testDuplicateName );
+	CPPUNIT_TEST( testDatabaseConnectionsNode );
+	CPPUNIT_TEST( testStoreUnsuccessfulRollback );
+	CPPUNIT_TEST( testStoreUnsuccessfulRollback_WithTransactions );
+	CPPUNIT_TEST( testTransactionException );
+	CPPUNIT_TEST( testCommit );
+	CPPUNIT_TEST( testCommitPartial );
+	CPPUNIT_TEST( testRollback );
+	CPPUNIT_TEST( testRollbackException );
+	CPPUNIT_TEST( testAutoRollback );
+	CPPUNIT_TEST( testForwardingOk );
+	CPPUNIT_TEST( testReadCycles );
+	CPPUNIT_TEST( testWriteCycles );
+	CPPUNIT_TEST( testUndefinedReadForwards );
+	CPPUNIT_TEST( testUndefinedWriteForwards );
+	CPPUNIT_TEST( testEntityResolution );
+	CPPUNIT_TEST( testConfigFileMD5 );
+	CPPUNIT_TEST( testConfigFileMissing );
+//	CPPUNIT_TEST( testMultithread );
 	CPPUNIT_TEST_SUITE_END();
 
 public:

@@ -124,6 +124,63 @@ void DatabaseConnectionManagerTest::testNormal()
 		".*:\\d+: Connection referenced by db Data Node named name2 was not created in the DatabaseConnections node" );
 }
 
+void DatabaseConnectionManagerTest::testNormalReconnect()
+{
+	std::stringstream xmlContents;
+	boost::scoped_ptr<DatabaseConnectionManager> dbConnectionManager;
+
+	xmlContents << "<DatabaseConnections>" << std::endl;
+	xmlContents << " <Database type = \"oracle\"" << std::endl;
+	xmlContents << "  connection = \"name1\""   << std::endl;
+	xmlContents << "  name = \"ADLAPPD\""   << std::endl;
+	xmlContents << "  user = \"five0test\""   << std::endl;
+	xmlContents << "  password = \"five0test\""   << std::endl;
+	xmlContents << "  reconnectTimeout = \"0.0\""   << std::endl;
+	xmlContents << "  schema = \"\" />"   << std::endl;
+
+	xmlContents << " <Database type = \"mysql\""<< std::endl;
+	xmlContents << "  connection = \"name2\""  << std::endl;
+	xmlContents << "  server = \"localhost\""  << std::endl;
+	xmlContents << "  user = \"adlearn\""  << std::endl;
+	xmlContents << "  password = \"Adv.commv\""  << std::endl;
+	xmlContents << "  name = \"\""  << std::endl;
+	xmlContents << "  disableCache = \"false\" />"   << std::endl;
+	xmlContents << "  reconnectTimeout = \"0.0\""   << std::endl;
+	xmlContents << "</DatabaseConnections>" << std::endl;
+
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes(m_pTempDirectory->GetDirectoryName(), xmlContents.str(), "DatabaseConnections", nodes);
+
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	dbConnectionManager.reset(new DatabaseConnectionManager( DEFAULT_DATA_PROXY_CLIENT ));
+	dbConnectionManager->Parse(*nodes[0]);
+
+	CPPUNIT_ASSERT_NO_THROW (dbConnectionManager->GetConnection("name1"));
+	CPPUNIT_ASSERT_NO_THROW (dbConnectionManager->GetConnection("name2"));
+	CPPUNIT_ASSERT_NO_THROW (dbConnectionManager->GetConnection("name1"));
+	CPPUNIT_ASSERT_NO_THROW (dbConnectionManager->GetConnection("name2"));
+	CPPUNIT_ASSERT_NO_THROW (dbConnectionManager->GetConnection("name1"));
+	CPPUNIT_ASSERT_NO_THROW (dbConnectionManager->GetConnection("name2"));
+
+	std::stringstream expected;	
+	Database* pDatabase;
+
+	expected << "ADLAPPD, , five0test, five0test, five0test, 0" << std::endl;
+	pDatabase = &dbConnectionManager->GetConnection("name1");
+	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase)));
+
+	expected.str("");
+	expected << ", localhost, adlearn, adlearn, Adv.commv, 0" << std::endl;
+	pDatabase = &dbConnectionManager->GetConnection("name2");
+	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase)));
+
+	// check clear functionality
+	CPPUNIT_ASSERT_NO_THROW (dbConnectionManager->ValidateConnectionName("name2"));
+	CPPUNIT_ASSERT_NO_THROW( dbConnectionManager->ClearConnections() );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE (dbConnectionManager->ValidateConnectionName("name2"), DatabaseConnectionManagerException,
+		".*:\\d+: Connection referenced by db Data Node named name2 was not created in the DatabaseConnections node" );
+}
+
 void DatabaseConnectionManagerTest::testParseMissingAttributes()
 {
 	std::stringstream xmlContents;

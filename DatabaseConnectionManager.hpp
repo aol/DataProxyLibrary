@@ -16,8 +16,10 @@
 #include "GenericDataContainer.hpp"
 #include "GenericDataObject.hpp"
 #include <boost/shared_ptr.hpp>
+#include <boost/thread/thread.hpp>
 #include <map>
 
+class Stopwatch;
 class DataProxyClient;
 class Database;
 namespace xercesc_2_7 { class DOMNode; }
@@ -47,25 +49,31 @@ MV_MAKEEXCEPTIONCLASS(DatabaseConnectionManagerException, MVException);
 		RowEnd > > > > > >
 	DatabaseConfigDatum;
 
-	DATUMINFO( DatabaseConfig, DatabaseConfigDatum);
+	DATUMINFO( DatabaseConfig, DatabaseConfigDatum );
+	DATUMINFO( ConnectionTimer, boost::shared_ptr< Stopwatch > );
+	DATUMINFO( ConnectionReconnect, double );
 	DATUMINFO( NodeId, int );
 
 	typedef
 		GenericDatum< ConnectionName,
+		GenericDatum< ConnectionTimer,
+		GenericDatum< ConnectionReconnect,
 		GenericDatum< DatabaseConnectionType,
 		GenericDatum< DatabaseConfig,
 		GenericDatum< IsConnectionUsed,
 		GenericDatum< DatabaseConnection,
-					  RowEnd > > > > >
+					  RowEnd > > > > > > >
 	DatabaseConnectionDatum;
 
 	typedef
 		GenericDataContainerDescriptor< ConnectionName, KeyDatum,
+		GenericDataContainerDescriptor< ConnectionTimer, RetainFirstDatum,
+		GenericDataContainerDescriptor< ConnectionReconnect, RetainFirstDatum,
 		GenericDataContainerDescriptor< DatabaseConnectionType, RetainFirstDatum,
 		GenericDataContainerDescriptor< DatabaseConfig, RetainFirstDatum,
 		GenericDataContainerDescriptor< IsConnectionUsed, RetainFirstDatum,
 		GenericDataContainerDescriptor< DatabaseConnection, RetainFirstDatum,
-		RowEnd > > > > >
+		RowEnd > > > > > > >
 	DatabaseConnectionContainerDescription;
 
 	typedef GenericDataContainer< DatabaseConnectionDatum, DatabaseConnectionContainerDescription, std::map > DatabaseConnectionContainer;
@@ -113,7 +121,7 @@ protected:
 	DataProxyClient& m_rDataProxyClient;
 
 private:
-	void RefreshConnectionsByTable() const;
+	void RefreshConnectionsByTable( boost::upgrade_lock< boost::shared_mutex >& i_rLock ) const;
 	void FetchConnectionsByTable( const std::string& i_rName, const std::string& i_rConnectionsNode, const std::string& i_rTablesNode ) const;
 	DatabaseConnectionDatum& PrivateGetConnection(const std::string& i_rConnectionName ) const;
 };

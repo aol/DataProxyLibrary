@@ -263,7 +263,7 @@ void PartitionNodeTest::testStore()
 
 	std::stringstream data;
 	data << "media_id,campaign_id" << std::endl
-		 << "120\\,-9,1" << std::endl	// the escaped comma should validate that the CSVReader we're using allows escapes
+		 << "120,1" << std::endl
 		 << "121,1" << std::endl
 		 << "122,1" << std::endl
 		 << "123,2" << std::endl
@@ -278,7 +278,7 @@ void PartitionNodeTest::testStore()
 	std::stringstream dataCamp3;
 	std::stringstream dataCamp5;
 	dataCamp1 << "media_id,campaign_id" << std::endl
-		 	  << "120\\,-9,1" << std::endl
+		 	  << "120,1" << std::endl
 			  << "121,1" << std::endl
 			  << "122,1" << std::endl;
 	dataCamp2 << "media_id,campaign_id" << std::endl
