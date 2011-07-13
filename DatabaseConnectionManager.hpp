@@ -124,6 +124,9 @@ private:
 	void RefreshConnectionsByTable( boost::upgrade_lock< boost::shared_mutex >& i_rLock ) const;
 	void FetchConnectionsByTable( const std::string& i_rName, const std::string& i_rConnectionsNode, const std::string& i_rTablesNode ) const;
 	DatabaseConnectionDatum& PrivateGetConnection(const std::string& i_rConnectionName ) const;
+
+	mutable boost::shared_mutex m_ConfigVersion;
+	mutable boost::shared_mutex m_ConnectMutex;
 };
 
 #endif //_DATABASE_CONNECTION_MANAGER_HPP_

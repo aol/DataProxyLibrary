@@ -17,6 +17,7 @@
 #include "NodeFactory.hpp"
 #include <boost/shared_ptr.hpp>
 #include <boost/noncopyable.hpp>
+#include <boost/thread/thread.hpp>
 #include <map>
 #include <vector>
 
@@ -28,8 +29,6 @@ class ParameterTranslator;
 class TransformerManager;
 class Database;
 class AbstractNode;
-class DatabaseConnectionManager;
-class INodeFactory;
 namespace xercesc_2_7 { class DOMNode; }
 namespace xercesc = xercesc_2_7;
 
@@ -76,6 +75,8 @@ private:
 	mutable std::vector< std::string > m_PendingCommitNodes;
 	mutable std::vector< std::string > m_PendingRollbackNodes;
 	mutable std::vector< std::string > m_AutoCommittedNodes;
+
+	mutable boost::shared_mutex m_ConfigMutex;
 };
 
 #endif //_DATA_PROXY_CLIENT_HPP_

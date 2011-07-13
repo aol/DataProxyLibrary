@@ -14,6 +14,7 @@
 #include "AbstractNode.hpp"
 #include "MVException.hpp"
 #include "Nullable.hpp"
+#include <boost/thread/thread.hpp>
 #include <map>
 #include <set>
 
@@ -71,6 +72,9 @@ private:
 	DatabaseConnectionManager& m_rDatabaseConnectionManager;
 
 	std::set< Database* > m_PendingCommits;
+
+	boost::mutex m_UploadMutex;
+	boost::shared_mutex m_PendingCommitsMutex;
 };
 
 #endif //_DATABASE_PROXY_HPP_

@@ -29,7 +29,6 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/thread/thread.hpp>
 
 namespace
 {
@@ -70,10 +69,6 @@ namespace
 
 	//Disclaimer: this max string length is pretty arbitary. Not sure of the performance implications of increasing it.
 	const int DEFAULT_MAX_BIND_SIZE ( 64 );
-
-	// mutexes
-	boost::mutex UPLOAD_MUTEX;
-	boost::shared_mutex PENDING_COMMITS_MUTEX;
 
 	void FillSet( const std::map< std::string, std::string >& i_rMap, std::set< std::string >& o_rSet )
 	{
@@ -331,7 +326,9 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 	m_WriteRequiredColumns(),
 	m_WriteConnectionByTable( false ),
 	m_rDatabaseConnectionManager( i_rDatabaseConnectionManager ),
-	m_PendingCommits()
+	m_PendingCommits(),
+	m_UploadMutex(),
+	m_PendingCommitsMutex()
 {
 	std::set<std::string> allowedReadElements;
 	std::set<std::string> allowedWriteElements;
@@ -724,7 +721,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 
 		// obtain a write-lock for staging table upload
 		{
-			boost::mutex::scoped_lock lock( UPLOAD_MUTEX );
+			boost::mutex::scoped_lock lock( m_UploadMutex );
 
 			// truncate the staging table
 			std::stringstream sql;
@@ -748,7 +745,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 		}
 
 		{
-			boost::unique_lock< boost::shared_mutex >( PENDING_COMMITS_MUTEX );
+			boost::unique_lock< boost::shared_mutex >( m_PendingCommitsMutex );
 			m_PendingCommits.insert( &rDatabase );
 		}
 
@@ -766,7 +763,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 
 		// obtain a write-lock for staging table upload
 		{
-			boost::mutex::scoped_lock lock( UPLOAD_MUTEX );
+			boost::mutex::scoped_lock lock( m_UploadMutex );
 			// truncate the staging table
 			sql << "TRUNCATE TABLE " << stagingTable;
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.TruncateStagingTable", "Truncating staging table: " << stagingTable );
@@ -790,7 +787,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 		}
 
 		{
-			boost::unique_lock< boost::shared_mutex >( PENDING_COMMITS_MUTEX );
+			boost::unique_lock< boost::shared_mutex >( m_PendingCommitsMutex );
 			m_PendingCommits.insert( &rDatabase );
 		}
 	
@@ -813,7 +810,7 @@ bool DatabaseProxy::SupportsTransactions() const
 
 void DatabaseProxy::Commit()
 {
-	boost::upgrade_lock< boost::shared_mutex > lock( PENDING_COMMITS_MUTEX );
+	boost::upgrade_lock< boost::shared_mutex > lock( m_PendingCommitsMutex );
 	std::set< Database* >::iterator iter = m_PendingCommits.begin();
 	for( ; iter != m_PendingCommits.end(); )
 	{
@@ -827,7 +824,7 @@ void DatabaseProxy::Commit()
 
 void DatabaseProxy::Rollback()
 {
-	boost::upgrade_lock< boost::shared_mutex > lock( PENDING_COMMITS_MUTEX );
+	boost::upgrade_lock< boost::shared_mutex > lock( m_PendingCommitsMutex );
 	std::set< Database* >::iterator iter = m_PendingCommits.begin();
 	for( ; iter != m_PendingCommits.end(); )
 	{

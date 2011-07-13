@@ -14,6 +14,7 @@
 #include "AbstractNode.hpp"
 #include "MVException.hpp"
 #include "Nullable.hpp"
+#include <boost/thread/thread.hpp>
 #include <map>
 #include <vector>
 
@@ -56,6 +57,8 @@ private:
 	int m_SkipLines;
 	UniqueIdGenerator& m_rUniqueIdGenerator;
 	std::map< std::string, std::vector< std::string > > m_PendingRenames; // a map from destination -> temp filenames
+
+	boost::shared_mutex m_PendingRenamesMutex;
 };
 
 #endif //_LOCAL_DATA_PROXY_HPP_

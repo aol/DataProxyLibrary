@@ -26,7 +26,6 @@
 #include <unistd.h>
 #include <fstream>
 #include <boost/regex.hpp>
-#include <boost/thread/thread.hpp>
 #include <boost/algorithm/string/replace.hpp>
 
 CPPUNIT_TEST_SUITE_REGISTRATION( DataProxyClientTest );

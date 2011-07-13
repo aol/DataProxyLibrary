@@ -20,7 +20,6 @@
 #include "StringUtilities.hpp"
 #include "MVLogger.hpp"
 #include <boost/scoped_ptr.hpp>
-#include <boost/thread/thread.hpp>
 #include <string>
 #include <xercesc/dom/DOM.hpp>
 #include <xercesc/util/PlatformUtils.hpp>
@@ -34,7 +33,6 @@ namespace
 
 	const int READ_PATH = 1;
 	const int WRITE_PATH = 2;
-	boost::shared_mutex CONFIG_MUTEX;
 
 	void AddIfAbsent( const std::string& i_rName, std::vector< std::string >& o_rNodes )
 	{
@@ -66,11 +64,13 @@ DataProxyClient::DataProxyClient( bool i_DoNotInitializeXerces )
 	m_Nodes(),
 	m_DoNotInitializeXerces( i_DoNotInitializeXerces ),
 	m_InsideTransaction( false ),
+	m_ConfigFileMD5(),
 	m_DatabaseConnectionManager( *this ),
 	m_NodeFactory( *this ),
 	m_PendingCommitNodes(),
 	m_PendingRollbackNodes(),
-	m_AutoCommittedNodes()
+	m_AutoCommittedNodes(),
+	m_ConfigMutex()
 {
 	// Initialize Xerces if necessary
 	if( !m_DoNotInitializeXerces )
@@ -133,7 +133,7 @@ void DataProxyClient::InitializeImplementation( const std::string& i_rConfigFile
 	}
 
 	// obtain a lock & re-check
-	boost::unique_lock< boost::shared_mutex > lock( CONFIG_MUTEX );
+	boost::unique_lock< boost::shared_mutex > lock( m_ConfigMutex );
 	if ( md5 == m_ConfigFileMD5 )
 	{
 		m_Initialized = true;
@@ -316,7 +316,7 @@ std::string DataProxyClient::ExtractName( xercesc::DOMNode* i_pNode ) const
 
 void DataProxyClient::Load( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData ) const
 {
-	boost::shared_lock< boost::shared_mutex > lock( CONFIG_MUTEX );
+	boost::shared_lock< boost::shared_mutex > lock( m_ConfigMutex );
 	if( !m_Initialized )
 	{
 		MV_THROW( DataProxyClientException, "Attempted to issue Load request on uninitialized DataProxyClient" );
@@ -336,7 +336,7 @@ void DataProxyClient::Load( const std::string& i_rName, const std::map<std::stri
 
 void DataProxyClient::Store( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData ) const
 {
-	boost::shared_lock< boost::shared_mutex > lock( CONFIG_MUTEX );
+	boost::shared_lock< boost::shared_mutex > lock( m_ConfigMutex );
 	if( !m_Initialized )
 	{
 		MV_THROW( DataProxyClientException, "Attempted to issue Store request on uninitialized DataProxyClient" );
@@ -410,7 +410,7 @@ void DataProxyClient::Store( const std::string& i_rName, const std::map<std::str
 
 void DataProxyClient::BeginTransaction()
 {
-	boost::shared_lock< boost::shared_mutex > lock( CONFIG_MUTEX );
+	boost::shared_lock< boost::shared_mutex > lock( m_ConfigMutex );
 	if( !m_Initialized )
 	{
 		MV_THROW( DataProxyClientException, "Attempted to issue BeginTransaction request on uninitialized DataProxyClient" );
@@ -425,7 +425,7 @@ void DataProxyClient::BeginTransaction()
 
 void DataProxyClient::Commit()
 {
-	boost::shared_lock< boost::shared_mutex > lock( CONFIG_MUTEX );
+	boost::shared_lock< boost::shared_mutex > lock( m_ConfigMutex );
 	if( !m_Initialized )
 	{
 		MV_THROW( DataProxyClientException, "Attempted to issue Commit request on uninitialized DataProxyClient" );
@@ -518,7 +518,7 @@ void DataProxyClient::PrivateRollback( bool i_ObtainLock )
 	boost::scoped_ptr< boost::shared_lock< boost::shared_mutex > > pLock;
 	if( i_ObtainLock )
 	{
-		pLock.reset( new boost::shared_lock< boost::shared_mutex >( CONFIG_MUTEX ) );
+		pLock.reset( new boost::shared_lock< boost::shared_mutex >( m_ConfigMutex ) );
 	}
 	if( !m_Initialized )
 	{

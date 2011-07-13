@@ -18,7 +18,6 @@
 #include <fstream>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/thread/thread.hpp>
 #include <sstream>
 
 namespace
@@ -38,9 +37,6 @@ namespace
 	const std::string EMPTY_STRING("");
 	const std::string PENDING_SUFFIX("~~dpl.pending");
 	const std::string COMMIT_SUFFIX("~~dpl.commit");
-
-	boost::shared_mutex PENDING_RENAMES_MUTEX;
-	boost::mutex NAME_MUTEX;
 
 	std::string BuildFileSpec( const std::string& i_rBaseLocation, const Nullable< std::string >& i_rNameFormat, const std::map<std::string,std::string>& i_rParameters )
 	{
@@ -68,9 +64,11 @@ namespace
 		return i_rDestinationFileSpec + i_rSuffix + "." + i_rUniqueIdGenerator.GetUniqueId();
 	}
 
-	bool NeedUniqueDestinationFile( const std::string& i_rDestinationFileSpec, const std::map< std::string, std::vector< std::string > >& i_rPendingRenames )
+	bool NeedUniqueDestinationFile( const std::string& i_rDestinationFileSpec,
+									const std::map< std::string, std::vector< std::string > >& i_rPendingRenames,
+									boost::shared_mutex& i_rPendingRenamesMutex )
 	{
-		boost::shared_lock< boost::shared_mutex > lock( PENDING_RENAMES_MUTEX );
+		boost::shared_lock< boost::shared_mutex > lock( i_rPendingRenamesMutex );
 		return ( FileUtilities::DoesExist( i_rDestinationFileSpec ) || i_rPendingRenames.find( i_rDestinationFileSpec ) != i_rPendingRenames.end() );
 	}
 }
@@ -83,7 +81,8 @@ LocalFileProxy::LocalFileProxy( const std::string& i_rName, DataProxyClient& i_r
 	m_NewFileParam(),
 	m_SkipLines( 0 ),
 	m_rUniqueIdGenerator( i_rUniqueIdGenerator ),
-	m_PendingRenames()
+	m_PendingRenames(),
+	m_PendingRenamesMutex()
 {
 	// get base location & validate
 	m_BaseLocation = XMLUtilities::GetAttributeValue( &i_rNode, LOCATION_ATTRIBUTE );
@@ -169,7 +168,7 @@ void LocalFileProxy::StoreImpl( const std::map<std::string,std::string>& i_rPara
 	std::string destinationFileSpec( BuildFileSpec( m_BaseLocation, m_NameFormat, i_rParameters ) );
 	std::string pendingFileSpec;
 	// if we're set to create new, we may have to find a final destination file name
-	if( m_OpenMode == CREATE_NEW && NeedUniqueDestinationFile( destinationFileSpec, m_PendingRenames ) )
+	if( m_OpenMode == CREATE_NEW && NeedUniqueDestinationFile( destinationFileSpec, m_PendingRenames, m_PendingRenamesMutex ) )
 	{
 		std::map<std::string,std::string>::const_iterator iter = i_rParameters.find( m_NewFileParam );
 		if( iter != i_rParameters.end() )
@@ -182,7 +181,7 @@ void LocalFileProxy::StoreImpl( const std::map<std::string,std::string>& i_rPara
 
 		std::map< std::string, std::string > copyParameters( i_rParameters );
 		long id = 1L;
-		while( NeedUniqueDestinationFile( destinationFileSpec, m_PendingRenames ) )
+		while( NeedUniqueDestinationFile( destinationFileSpec, m_PendingRenames, m_PendingRenamesMutex ) )
 		{
 			copyParameters[ m_NewFileParam ] = boost::lexical_cast< std::string >( ++id );
 			destinationFileSpec = BuildFileSpec( m_BaseLocation, m_NameFormat, copyParameters );
@@ -209,7 +208,7 @@ void LocalFileProxy::StoreImpl( const std::map<std::string,std::string>& i_rPara
 	// if we're set to overwrite, have to iterate over the existing temp files & remove them
 	if( m_OpenMode == OVERWRITE )
 	{	
-		boost::unique_lock< boost::shared_mutex > lock( PENDING_RENAMES_MUTEX );
+		boost::unique_lock< boost::shared_mutex > lock( m_PendingRenamesMutex );
 		std::vector< std::string >& rFilesToRemove = m_PendingRenames[ destinationFileSpec ];
 		for_each( rFilesToRemove.begin(), rFilesToRemove.end(), FileUtilities::Remove );
 		rFilesToRemove.clear();
@@ -217,7 +216,7 @@ void LocalFileProxy::StoreImpl( const std::map<std::string,std::string>& i_rPara
 
 	// and push this on the pending-renames map
 	{
-		boost::unique_lock< boost::shared_mutex > lock( PENDING_RENAMES_MUTEX );
+		boost::unique_lock< boost::shared_mutex > lock( m_PendingRenamesMutex );
 		m_PendingRenames[ destinationFileSpec ].push_back( pendingFileSpec );
 	}
 }
@@ -229,7 +228,7 @@ bool LocalFileProxy::SupportsTransactions() const
 
 void LocalFileProxy::Commit()
 {
-	boost::upgrade_lock< boost::shared_mutex > lock( PENDING_RENAMES_MUTEX );
+	boost::upgrade_lock< boost::shared_mutex > lock( m_PendingRenamesMutex );
 	std::map< std::string, std::vector< std::string > >::iterator destinationIter = m_PendingRenames.begin();
 	while( destinationIter != m_PendingRenames.end() )
 	{
@@ -306,7 +305,7 @@ void LocalFileProxy::Commit()
 
 void LocalFileProxy::Rollback()
 {
-	boost::upgrade_lock< boost::shared_mutex > lock( PENDING_RENAMES_MUTEX );
+	boost::upgrade_lock< boost::shared_mutex > lock( m_PendingRenamesMutex );
 	std::map< std::string, std::vector< std::string > >::iterator destinationIter = m_PendingRenames.begin();
 	for( ; destinationIter != m_PendingRenames.end(); )
 	{

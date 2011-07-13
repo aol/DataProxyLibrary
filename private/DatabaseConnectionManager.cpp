@@ -18,7 +18,6 @@
 #include "XMLUtilities.hpp"
 #include "MVLogger.hpp"
 #include <boost/lexical_cast.hpp>
-#include <boost/thread/thread.hpp>
 
 namespace
 {
@@ -42,9 +41,6 @@ namespace
 	const std::string NODE_COLUMN( "node_id" );
 
 	const std::string NODE_NAME_PREFIX( "__shard" );
-
-	boost::shared_mutex CONFIG_VERSION;
-	boost::shared_mutex CONNECT_MUTEX;
 
 	std::string GetConnectionName( const std::string& i_rNodeId, const std::string& i_rShardNode )
 	{
@@ -70,7 +66,9 @@ DatabaseConnectionManager::DatabaseConnectionManager( DataProxyClient& i_rDataPr
 	m_ShardDatabaseConnectionContainer(),
 	m_ShardCollections(),
 	m_ConnectionsByTableName(),
-	m_rDataProxyClient( i_rDataProxyClient )
+	m_rDataProxyClient( i_rDataProxyClient ),
+	m_ConfigVersion(),
+	m_ConnectMutex()
 {
 }
 
@@ -80,7 +78,7 @@ DatabaseConnectionManager::~DatabaseConnectionManager()
 
 void DatabaseConnectionManager::ParseConnectionsByTable( const xercesc::DOMNode& i_rDatabaseConnectionNode )
 {
-	boost::unique_lock< boost::shared_mutex > lock( CONFIG_VERSION );
+	boost::unique_lock< boost::shared_mutex > lock( m_ConfigVersion );
 	std::vector<xercesc::DOMNode*> nodes;
 	XMLUtilities::GetChildrenByName( nodes, &i_rDatabaseConnectionNode, CONNECTIONS_BY_TABLE_NODE);
 	std::vector<xercesc::DOMNode*>::const_iterator iter = nodes.begin();
@@ -104,7 +102,7 @@ void DatabaseConnectionManager::ParseConnectionsByTable( const xercesc::DOMNode&
 
 void DatabaseConnectionManager::Parse( const xercesc::DOMNode& i_rDatabaseConnectionNode )
 {
-	boost::unique_lock< boost::shared_mutex > lock( CONFIG_VERSION );
+	boost::unique_lock< boost::shared_mutex > lock( m_ConfigVersion );
 	std::set< std::string > allowedChildren;
 	allowedChildren.insert( DATABASE_NODE );
 	allowedChildren.insert( CONNECTIONS_BY_TABLE_NODE );
@@ -259,7 +257,7 @@ void DatabaseConnectionManager::FetchConnectionsByTable( const std::string& i_rN
 
 DatabaseConnectionDatum& DatabaseConnectionManager::PrivateGetConnection( const std::string& i_rConnectionName ) const
 {
-	boost::shared_lock< boost::shared_mutex > lock( CONFIG_VERSION );
+	boost::shared_lock< boost::shared_mutex > lock( m_ConfigVersion );
 	DatabaseConnectionDatum datum;
 	datum.SetValue<ConnectionName>(i_rConnectionName);
 	DatabaseConnectionContainer::const_iterator iter = m_DatabaseConnectionContainer.find(datum);
@@ -300,7 +298,7 @@ Database& DatabaseConnectionManager::GetConnectionByTable( const std::string& i_
 {
 	__gnu_cxx::hash_map< std::string, std::string >::const_iterator iter;
 	{
-		boost::upgrade_lock< boost::shared_mutex > lock( CONFIG_VERSION );
+		boost::upgrade_lock< boost::shared_mutex > lock( m_ConfigVersion );
 		iter = m_ConnectionsByTableName.find( i_rTableName );
 		if( iter == m_ConnectionsByTableName.end() )
 		{
@@ -328,7 +326,7 @@ Database& DatabaseConnectionManager::GetConnection(const std::string& i_Connecti
 	}
 	// obtain a unique lock and re-check
 	{
-		boost::unique_lock< boost::shared_mutex > lock( CONNECT_MUTEX );
+		boost::unique_lock< boost::shared_mutex > lock( m_ConnectMutex );
 		rDatabase = rDatum.GetReference<DatabaseConnection>();
 		if (rDatabase.get() != NULL)
 		{
@@ -385,13 +383,13 @@ Database& DatabaseConnectionManager::GetConnection(const std::string& i_Connecti
 
 std::string DatabaseConnectionManager::GetDatabaseType(const std::string& i_ConnectionName) const
 {
-	boost::shared_lock< boost::shared_mutex > lock( CONFIG_VERSION );
+	boost::shared_lock< boost::shared_mutex > lock( m_ConfigVersion );
 	return PrivateGetConnection(i_ConnectionName).GetValue< DatabaseConnectionType >();
 }
 
 std::string DatabaseConnectionManager::GetDatabaseTypeByTable( const std::string& i_rTableName ) const
 {
-	boost::upgrade_lock< boost::shared_mutex > lock( CONFIG_VERSION );
+	boost::upgrade_lock< boost::shared_mutex > lock( m_ConfigVersion );
 	__gnu_cxx::hash_map< std::string, std::string >::const_iterator iter = m_ConnectionsByTableName.find( i_rTableName );
 	if( iter == m_ConnectionsByTableName.end() )
 	{
@@ -407,7 +405,7 @@ std::string DatabaseConnectionManager::GetDatabaseTypeByTable( const std::string
 
 void DatabaseConnectionManager::ClearConnections()
 {
-	boost::unique_lock< boost::shared_mutex > lock( CONFIG_VERSION );
+	boost::unique_lock< boost::shared_mutex > lock( m_ConfigVersion );
 	m_DatabaseConnectionContainer.clear();
 	m_ShardDatabaseConnectionContainer.clear();
 	m_ShardCollections.clear();
