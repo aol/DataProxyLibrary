@@ -110,7 +110,7 @@ CXXC = $(CXX) $(TARGETOPTS) -c $(INCS) $(DEFINE_FLAGS)		# compiling object files
 CXXT = $(CXX) $(TARGETOPTS) -c $(TESTINCS) $(DEFINE_FLAGS)	# compiling object files
 CXXL = $(CXX) $(TARGETOPTS) $(LIBLOC)						# linking executables
 CXXD = $(CXX) -MM $(TESTINCS) $(DEFINE_FLAGS)				# generating dependencies
-CXXS = $(CXX) -shared -Wl,-soname,$(MAJOR_VERSION_TARGET)
+CXXS = $(CXX) -shared -Wl,-soname,$(MINOR_VERSION_TARGET)
 MEX ?= mex
 
 # Source Directories
@@ -253,8 +253,8 @@ COVERAGEOPTS	= -fprofile-arcs -ftest-coverage -Wall -Werror -fno-strict-aliasing
 # Executable targets
 BASE_NAME						= DataProxy
 FRIENDLY_TARGET					= lib$(BASE_NAME).so
-MAJOR_VERSION_TARGET			= $(FRIENDLY_TARGET).2
-MINOR_VERSION_TARGET			= $(MAJOR_VERSION_TARGET).2
+MAJOR_VERSION_TARGET			= $(FRIENDLY_TARGET).3
+MINOR_VERSION_TARGET			= $(MAJOR_VERSION_TARGET).0
 FULL_VERSION_TARGET				= $(MINOR_VERSION_TARGET).0
 PRIMARY_TARGET					= $(FULL_VERSION_TARGET)
 MOCK_TARGET						= libMockDataProxy.a
