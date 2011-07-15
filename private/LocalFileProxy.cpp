@@ -228,7 +228,7 @@ bool LocalFileProxy::SupportsTransactions() const
 
 void LocalFileProxy::Commit()
 {
-	boost::upgrade_lock< boost::shared_mutex > lock( m_PendingRenamesMutex );
+	boost::unique_lock< boost::shared_mutex > lock( m_PendingRenamesMutex );
 	std::map< std::string, std::vector< std::string > >::iterator destinationIter = m_PendingRenames.begin();
 	while( destinationIter != m_PendingRenames.end() )
 	{
@@ -296,16 +296,13 @@ void LocalFileProxy::Commit()
 		destinationFileLock.ReleaseLock();
 
 		// and remove this entry from pending renames
-		{
-			boost::upgrade_to_unique_lock< boost::shared_mutex > uniqueLock( lock );
-			m_PendingRenames.erase( destinationIter++ );
-		}
+		m_PendingRenames.erase( destinationIter++ );
 	}
 }
 
 void LocalFileProxy::Rollback()
 {
-	boost::upgrade_lock< boost::shared_mutex > lock( m_PendingRenamesMutex );
+	boost::unique_lock< boost::shared_mutex > lock( m_PendingRenamesMutex );
 	std::map< std::string, std::vector< std::string > >::iterator destinationIter = m_PendingRenames.begin();
 	for( ; destinationIter != m_PendingRenames.end(); )
 	{
@@ -315,11 +312,7 @@ void LocalFileProxy::Rollback()
 			FileUtilities::Remove( *tempIter );
 		}
 
-		// lock to erase
-		{
-			boost::upgrade_to_unique_lock< boost::shared_mutex > uniqueLock( lock );
-			m_PendingRenames.erase( destinationIter++ );
-		}
+		m_PendingRenames.erase( destinationIter++ );
 	}
 }
 

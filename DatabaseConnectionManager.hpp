@@ -121,7 +121,7 @@ protected:
 	DataProxyClient& m_rDataProxyClient;
 
 private:
-	void RefreshConnectionsByTable( boost::upgrade_lock< boost::shared_mutex >& i_rLock ) const;
+	void RefreshConnectionsByTable() const;
 	void FetchConnectionsByTable( const std::string& i_rName, const std::string& i_rConnectionsNode, const std::string& i_rTablesNode ) const;
 	DatabaseConnectionDatum& PrivateGetConnection(const std::string& i_rConnectionName ) const;
 

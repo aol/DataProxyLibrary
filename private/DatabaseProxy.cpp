@@ -327,7 +327,7 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 	m_WriteConnectionByTable( false ),
 	m_rDatabaseConnectionManager( i_rDatabaseConnectionManager ),
 	m_PendingCommits(),
-	m_UploadMutex(),
+	m_TableMutex(),
 	m_PendingCommitsMutex()
 {
 	std::set<std::string> allowedReadElements;
@@ -568,7 +568,6 @@ void DatabaseProxy::LoadImpl( const std::map<std::string,std::string>& i_rParame
 
 	MVLOGGER("root.lib.DataProxy.DatabaseProxy.Load.ExecutingStmt.Finished", 
 			  "Finished Processing SQL results. Processed " << rowCount << " Rows. Memory usage: - " << MVUtility::MemCheck());
-
 }
 
 void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData )
@@ -712,16 +711,17 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 		pTempTable.reset( new ScopedTempTable( rDatabase, databaseType, table, stagingTable ) );
 	}
 	
-	// ORACLE
-	if( databaseType == ORACLE_DB_TYPE )
+	// obtain a write-lock for entire manipulation
 	{
-		// write the control file & prepare SQLLoader
-		WriteControlFile( controlFileSpec, dataFileSpec, columns, stagingTable );
-		SQLLoader loader( rDatabase.GetDBName(), rDatabase.GetUserName(), rDatabase.GetPassword(), controlFileSpec, logFileSpec );
+		boost::unique_lock< boost::shared_mutex > lock( m_TableMutex );
 
-		// obtain a write-lock for staging table upload
+		// ORACLE
+		if( databaseType == ORACLE_DB_TYPE )
 		{
-			boost::mutex::scoped_lock lock( m_UploadMutex );
+			// write the control file & prepare SQLLoader
+			WriteControlFile( controlFileSpec, dataFileSpec, columns, stagingTable );
+			SQLLoader loader( rDatabase.GetDBName(), rDatabase.GetUserName(), rDatabase.GetPassword(), controlFileSpec, logFileSpec );
+
 
 			// truncate the staging table
 			std::stringstream sql;
@@ -737,33 +737,23 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			}
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Finished", "Done uploading data to staging table: " << stagingTable );
 
-			// obtain write-lock for primary table
 			// merge staging table data into primary table
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Begin", "Merging data from staging table with query: " << oracleMergeQuery );
 			Database::Statement( rDatabase, oracleMergeQuery ).Execute();
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Finished", "Merge complete" );
-		}
 
-		{
-			boost::unique_lock< boost::shared_mutex >( m_PendingCommitsMutex );
-			m_PendingCommits.insert( &rDatabase );
+			// if cleaning up, remove files
+			if( !m_WriteNoCleanUp )
+			{
+				FileUtilities::Remove( dataFileSpec );
+				FileUtilities::Remove( controlFileSpec );
+				FileUtilities::Remove( logFileSpec );
+			}
 		}
-
-		// if cleaning up, remove files
-		if( !m_WriteNoCleanUp )
+		else if( databaseType == MYSQL_DB_TYPE )
 		{
-			FileUtilities::Remove( dataFileSpec );
-			FileUtilities::Remove( controlFileSpec );
-			FileUtilities::Remove( logFileSpec );
-		}
-	}
-	else if( databaseType == MYSQL_DB_TYPE )
-	{
-		std::stringstream sql;
+			std::stringstream sql;
 
-		// obtain a write-lock for staging table upload
-		{
-			boost::mutex::scoped_lock lock( m_UploadMutex );
 			// truncate the staging table
 			sql << "TRUNCATE TABLE " << stagingTable;
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.TruncateStagingTable", "Truncating staging table: " << stagingTable );
@@ -784,22 +774,22 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Begin", "Merging data from staging table with query: " << mysqlMergeQuery );
 			Database::Statement( rDatabase, mysqlMergeQuery ).Execute();
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Finished", "Merge complete" );
+		
+			// if cleaning up, remove file
+			if( !m_WriteNoCleanUp )
+			{
+				FileUtilities::Remove( dataFileSpec );
+			}
 		}
-
+		else
 		{
-			boost::unique_lock< boost::shared_mutex >( m_PendingCommitsMutex );
-			m_PendingCommits.insert( &rDatabase );
-		}
-	
-		// if cleaning up, remove file
-		if( !m_WriteNoCleanUp )
-		{
-			FileUtilities::Remove( dataFileSpec );
+			MV_THROW( DatabaseProxyException, "Unrecognized database type: " << databaseType );
 		}
 	}
-	else
+
 	{
-		MV_THROW( DatabaseProxyException, "Unrecognized database type: " << databaseType );
+		boost::unique_lock< boost::shared_mutex > lock( m_PendingCommitsMutex );
+		m_PendingCommits.insert( &rDatabase );
 	}
 }
 
@@ -810,29 +800,21 @@ bool DatabaseProxy::SupportsTransactions() const
 
 void DatabaseProxy::Commit()
 {
-	boost::upgrade_lock< boost::shared_mutex > lock( m_PendingCommitsMutex );
+	boost::unique_lock< boost::shared_mutex > lock( m_PendingCommitsMutex );
 	std::set< Database* >::iterator iter = m_PendingCommits.begin();
-	for( ; iter != m_PendingCommits.end(); )
+	for( ; iter != m_PendingCommits.end(); m_PendingCommits.erase( iter++ ))
 	{
 		(*iter)->Commit();
-		{
-			boost::upgrade_to_unique_lock< boost::shared_mutex > uniqueLock( lock );
-			m_PendingCommits.erase( iter++ );
-		}
 	}
 }
 
 void DatabaseProxy::Rollback()
 {
-	boost::upgrade_lock< boost::shared_mutex > lock( m_PendingCommitsMutex );
+	boost::unique_lock< boost::shared_mutex > lock( m_PendingCommitsMutex );
 	std::set< Database* >::iterator iter = m_PendingCommits.begin();
-	for( ; iter != m_PendingCommits.end(); )
+	for( ; iter != m_PendingCommits.end(); m_PendingCommits.erase( iter++ ) )
 	{
 		(*iter)->Rollback();
-		{
-			boost::upgrade_to_unique_lock< boost::shared_mutex > uniqueLock( lock );
-			m_PendingCommits.erase( iter++ );
-		}
 	}
 }
 

@@ -280,9 +280,8 @@ void DatabaseConnectionManager::ValidateConnectionName(const std::string& i_Conn
 	PrivateGetConnection(i_ConnectionName);
 }
 
-void DatabaseConnectionManager::RefreshConnectionsByTable( boost::upgrade_lock< boost::shared_mutex >& i_rLock ) const
+void DatabaseConnectionManager::RefreshConnectionsByTable() const
 {
-	boost::upgrade_to_unique_lock< boost::shared_mutex > uniqueLock( i_rLock );
 	m_ShardDatabaseConnectionContainer.clear();
 	m_ConnectionsByTableName.clear();
 	ShardCollectionContainer::const_iterator shardIter = m_ShardCollections.begin();
@@ -298,13 +297,13 @@ Database& DatabaseConnectionManager::GetConnectionByTable( const std::string& i_
 {
 	__gnu_cxx::hash_map< std::string, std::string >::const_iterator iter;
 	{
-		boost::upgrade_lock< boost::shared_mutex > lock( m_ConfigVersion );
+		boost::unique_lock< boost::shared_mutex > lock( m_ConfigVersion );
 		iter = m_ConnectionsByTableName.find( i_rTableName );
 		if( iter == m_ConnectionsByTableName.end() )
 		{
 			MVLOGGER("root.lib.DataProxy.DatabaseConnectionManager.GetConnectionByTable.LoadingShardCollections",
 				"Unable to find table name: " << i_rTableName << " in existing shard collections. Reloading shard collections..." );
-			RefreshConnectionsByTable( lock );
+			RefreshConnectionsByTable();
 			iter = m_ConnectionsByTableName.find( i_rTableName );
 			if( iter == m_ConnectionsByTableName.end() )
 			{
@@ -341,7 +340,8 @@ Database& DatabaseConnectionManager::GetConnection(const std::string& i_Connecti
 			MVLOGGER("root.lib.DataProxy.DatabaseConnectionManager.Connect.CreatingOracleDatabaseConnection",
 					 "Creating oracle database connection named " << rDatum.GetValue<ConnectionName>() << ".");
 			DatabaseConfigDatum datum = rDatum.GetValue<DatabaseConfig>();
-			Database *pDatabase = new Database( Database::DBCONN_OCI_ORACLE,
+			Database *pDatabase = new Database( Database::DBCONN_OCI_THREADSAFE_ORACLE,
+//			Database *pDatabase = new Database( Database::DBCONN_OCI_ORACLE,
 												"",
 												datum.GetValue<DatabaseName>(),
 												datum.GetValue<DatabaseUserName>(),
@@ -389,11 +389,13 @@ std::string DatabaseConnectionManager::GetDatabaseType(const std::string& i_Conn
 
 std::string DatabaseConnectionManager::GetDatabaseTypeByTable( const std::string& i_rTableName ) const
 {
-	boost::upgrade_lock< boost::shared_mutex > lock( m_ConfigVersion );
+	boost::shared_lock< boost::shared_mutex > lock( m_ConfigVersion );
 	__gnu_cxx::hash_map< std::string, std::string >::const_iterator iter = m_ConnectionsByTableName.find( i_rTableName );
 	if( iter == m_ConnectionsByTableName.end() )
 	{
-		RefreshConnectionsByTable( lock );
+		lock.unlock();
+		boost::unique_lock< boost::shared_mutex > writeLock( m_ConfigVersion );
+		RefreshConnectionsByTable();
 		iter = m_ConnectionsByTableName.find( i_rTableName );
 		if( iter == m_ConnectionsByTableName.end() )
 		{

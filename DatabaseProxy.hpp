@@ -73,7 +73,7 @@ private:
 
 	std::set< Database* > m_PendingCommits;
 
-	boost::mutex m_UploadMutex;
+	boost::shared_mutex m_TableMutex;
 	boost::shared_mutex m_PendingCommitsMutex;
 };
 
