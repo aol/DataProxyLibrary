@@ -192,6 +192,7 @@ MOCKFILES=\
 SERVICEFILES=\
 	RESTParameters.cpp \
 	RESTClient.cpp \
+	HttpException.cpp \
 
 UTILITYFILES=\
 	DateTime.cpp \
