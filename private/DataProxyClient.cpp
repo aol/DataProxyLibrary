@@ -128,140 +128,146 @@ void DataProxyClient::InitializeImplementation( const std::string& i_rConfigFile
 	if ( md5 == m_ConfigFileMD5 )
 	{
 		m_Initialized = true;
-		MVLOGGER( "root.lib.DataProxy.DataProxyClient.Initialize.CheckConfigFileMD5", "Config File MD5 did not change, skip re-initialization." );
+		MVLOGGER( "root.lib.DataProxy.DataProxyClient.Initialize.MD5Unchanged.NoLock", "Config File MD5 did not change, skip re-initialization." );
 		return;
 	}
 
 	// obtain a lock & re-check
-	boost::unique_lock< boost::shared_mutex > lock( m_ConfigMutex );
-	if ( md5 == m_ConfigFileMD5 )
 	{
+		boost::unique_lock< boost::shared_mutex > lock( m_ConfigMutex );
+		if ( md5 == m_ConfigFileMD5 )
+		{
+			m_Initialized = true;
+			MVLOGGER( "root.lib.DataProxy.DataProxyClient.Initialize.MD5Unchanged.PostLock", "Config File MD5 did not change, skip re-initialization." );
+			return;
+		}
+
+		// if already initialized, we need to clear & start over (re-initialize)
+		if( m_Initialized )
+		{
+			MVLOGGER( "root.lib.DataProxy.DataProxyClient.Initialize.MD5Changed", "MD5 has changed since previous initialization; re-initializing" );
+			m_Nodes.clear();
+			i_rDatabaseConnectionManager.ClearConnections();
+			PrivateRollback( false );
+		}
+		else
+		{
+			MVLOGGER( "root.lib.DataProxy.DataProxyClient.Initialize.FirstInitialization", "Initializing client for the first time" );
+		}
 		m_Initialized = true;
-		MVLOGGER( "root.lib.DataProxy.DataProxyClient.Initialize.CheckConfigFileMD5", "Config File MD5 did not change, skip re-initialization." );
-		return;
-	}
 
-	// if already initialized, we need to clear & start over (re-initialize)
-	if( m_Initialized )
-	{
-		MVLOGGER( "root.lib.DataProxy.DataProxyClient.Initialize.Clear", "Re-Initialize detected. Clearing previously stored nodes." );
-		m_Nodes.clear();
-		i_rDatabaseConnectionManager.ClearConnections();
-		PrivateRollback( false );
-	}
-	m_Initialized = true;
+		std::set< std::string > allowedChildren;
+		std::set< std::string > allowedAttributes;
 
-	std::set< std::string > allowedChildren;
-	std::set< std::string > allowedAttributes;
+		xercesc::XercesDOMParser parser;
+		xercesc::HandlerBase errorHandler;
+		CustomEntityResolver entityResolver;
+		xercesc::DOMDocument* pDocument = NULL;
+		xercesc::DOMElement* pConfig = NULL;
 
-	xercesc::XercesDOMParser parser;
-	xercesc::HandlerBase errorHandler;
-	CustomEntityResolver entityResolver;
-	xercesc::DOMDocument* pDocument = NULL;
-	xercesc::DOMElement* pConfig = NULL;
-
-	try
-	{
-		parser.setErrorHandler( &errorHandler );
-		parser.setEntityResolver( &entityResolver );
-		parser.setCreateEntityReferenceNodes( false );
-		parser.parse( i_rConfigFileSpec.c_str() );
-
-		pDocument = parser.getDocument();
-		pConfig = pDocument->getDocumentElement();
-		// validate config node
-		allowedChildren.insert( DATA_NODE );
-		allowedChildren.insert( ROUTER_NODE );
-		allowedChildren.insert( PARTITION_NODE );
-		allowedChildren.insert( DATABASE_CONNECTIONS_NODE );
-		XMLUtilities::ValidateNode( pConfig, allowedChildren );
-		XMLUtilities::ValidateAttributes( pConfig, std::set< std::string >() );
-		
-		// read the DatabaseConnections elements
-		std::vector<xercesc::DOMNode*> connectionNodes;
-		XMLUtilities::GetChildrenByName( connectionNodes, pConfig, DATABASE_CONNECTIONS_NODE );
-		std::vector<xercesc::DOMNode*>::const_iterator iter = connectionNodes.begin();
-		for( iter = connectionNodes.begin(); iter != connectionNodes.end(); ++iter )
+		try
 		{
-		 	i_rDatabaseConnectionManager.Parse( **iter );
+			parser.setErrorHandler( &errorHandler );
+			parser.setEntityResolver( &entityResolver );
+			parser.setCreateEntityReferenceNodes( false );
+			parser.parse( i_rConfigFileSpec.c_str() );
+
+			pDocument = parser.getDocument();
+			pConfig = pDocument->getDocumentElement();
+			// validate config node
+			allowedChildren.insert( DATA_NODE );
+			allowedChildren.insert( ROUTER_NODE );
+			allowedChildren.insert( PARTITION_NODE );
+			allowedChildren.insert( DATABASE_CONNECTIONS_NODE );
+			XMLUtilities::ValidateNode( pConfig, allowedChildren );
+			XMLUtilities::ValidateAttributes( pConfig, std::set< std::string >() );
+			
+			// read the DatabaseConnections elements
+			std::vector<xercesc::DOMNode*> connectionNodes;
+			XMLUtilities::GetChildrenByName( connectionNodes, pConfig, DATABASE_CONNECTIONS_NODE );
+			std::vector<xercesc::DOMNode*>::const_iterator iter = connectionNodes.begin();
+			for( iter = connectionNodes.begin(); iter != connectionNodes.end(); ++iter )
+			{
+				i_rDatabaseConnectionManager.Parse( **iter );
+			}
+
+			//register the newly populated connection container with the resource proxy factory
+			i_rNodeFactory.RegisterDatabaseConnections( i_rDatabaseConnectionManager );
+
+			// read all our DataNode elements
+			std::vector<xercesc::DOMNode*> dataNodes;
+			XMLUtilities::GetChildrenByName( dataNodes, pConfig, DATA_NODE );
+			iter = dataNodes.begin();
+			for( ; iter != dataNodes.end(); ++iter )
+			{
+				std::string name = ExtractName( *iter );
+				m_Nodes[ name ] = boost::shared_ptr< AbstractNode >( i_rNodeFactory.CreateNode( name, DATA_NODE, **iter ) );
+			}
+
+			// read all our RouterNode elements
+			std::vector<xercesc::DOMNode*> routerNodes;
+			XMLUtilities::GetChildrenByName( routerNodes, pConfig, ROUTER_NODE );
+			for( iter = routerNodes.begin(); iter != routerNodes.end(); ++iter )
+			{
+				std::string name = ExtractName( *iter );
+				m_Nodes[ name ] = boost::shared_ptr< AbstractNode >( i_rNodeFactory.CreateNode( name, ROUTER_NODE, **iter ) );
+			}
+
+			// read all our PartitionNode elements
+			std::vector<xercesc::DOMNode*> partitionNodes;
+			XMLUtilities::GetChildrenByName( partitionNodes, pConfig, PARTITION_NODE );
+			for( iter = partitionNodes.begin(); iter != partitionNodes.end(); ++iter )
+			{
+				std::string name = ExtractName( *iter );
+				m_Nodes[ name ] = boost::shared_ptr< AbstractNode >( i_rNodeFactory.CreateNode( name, PARTITION_NODE, **iter ) );
+			}
+		}
+		catch( const xercesc::SAXParseException& ex )
+		{
+			MV_THROW( DataProxyClientException, "Error parsing file: " << i_rConfigFileSpec << ": " << xercesc::XMLString::transcode( ex.getMessage() ) );
+		}
+		catch( const xercesc::XMLException& ex )
+		{
+			MV_THROW( DataProxyClientException, "Error parsing file: " << i_rConfigFileSpec << ": " << xercesc::XMLString::transcode( ex.getMessage() ) );
 		}
 
-		//register the newly populated connection container with the resource proxy factory
-		i_rNodeFactory.RegisterDatabaseConnections( i_rDatabaseConnectionManager );
-
-		// read all our DataNode elements
-		std::vector<xercesc::DOMNode*> dataNodes;
-		XMLUtilities::GetChildrenByName( dataNodes, pConfig, DATA_NODE );
-		iter = dataNodes.begin();
-		for( ; iter != dataNodes.end(); ++iter )
+		// ensure no cycles in dependencies
+		NodesMap::const_iterator nodeIter = m_Nodes.begin();
+		for( ; nodeIter != m_Nodes.end(); ++nodeIter )
 		{
-			std::string name = ExtractName( *iter );
-			m_Nodes[ name ] = boost::shared_ptr< AbstractNode >( i_rNodeFactory.CreateNode( name, DATA_NODE, **iter ) );
+			std::vector< std::string > pathStart;
+			pathStart.push_back( nodeIter->first );
+
+			// check read-side
+			CheckForCycles( nodeIter, READ_PATH, pathStart );
+
+			// check write-side
+			CheckForCycles( nodeIter, WRITE_PATH, pathStart );
 		}
 
-		// read all our RouterNode elements
-		std::vector<xercesc::DOMNode*> routerNodes;
-		XMLUtilities::GetChildrenByName( routerNodes, pConfig, ROUTER_NODE );
-		for( iter = routerNodes.begin(); iter != routerNodes.end(); ++iter )
+		// finally, add in all the database connections
+		try
 		{
-			std::string name = ExtractName( *iter );
-			m_Nodes[ name ] = boost::shared_ptr< AbstractNode >( i_rNodeFactory.CreateNode( name, ROUTER_NODE, **iter ) );
+			// read the DatabaseConnections elements
+			std::vector<xercesc::DOMNode*> connectionNodes;
+			XMLUtilities::GetChildrenByName( connectionNodes, pConfig, DATABASE_CONNECTIONS_NODE );
+			std::vector<xercesc::DOMNode*>::const_iterator iter = connectionNodes.begin();
+			for( iter = connectionNodes.begin(); iter != connectionNodes.end(); ++iter )
+			{
+				i_rDatabaseConnectionManager.ParseConnectionsByTable( **iter );
+			}
+		}
+		catch( const xercesc::SAXParseException& ex )
+		{
+			MV_THROW( DataProxyClientException, "Error parsing file: " << i_rConfigFileSpec << ": " << xercesc::XMLString::transcode( ex.getMessage() ) );
+		}
+		catch( const xercesc::XMLException& ex )
+		{
+			MV_THROW( DataProxyClientException, "Error parsing file: " << i_rConfigFileSpec << ": " << xercesc::XMLString::transcode( ex.getMessage() ) );
 		}
 
-		// read all our PartitionNode elements
-		std::vector<xercesc::DOMNode*> partitionNodes;
-		XMLUtilities::GetChildrenByName( partitionNodes, pConfig, PARTITION_NODE );
-		for( iter = partitionNodes.begin(); iter != partitionNodes.end(); ++iter )
-		{
-			std::string name = ExtractName( *iter );
-			m_Nodes[ name ] = boost::shared_ptr< AbstractNode >( i_rNodeFactory.CreateNode( name, PARTITION_NODE, **iter ) );
-		}
+		m_ConfigFileMD5 = md5;
 	}
-	catch( const xercesc::SAXParseException& ex )
-	{
-		MV_THROW( DataProxyClientException, "Error parsing file: " << i_rConfigFileSpec << ": " << xercesc::XMLString::transcode( ex.getMessage() ) );
-	}
-	catch( const xercesc::XMLException& ex )
-	{
-		MV_THROW( DataProxyClientException, "Error parsing file: " << i_rConfigFileSpec << ": " << xercesc::XMLString::transcode( ex.getMessage() ) );
-	}
-
-	// ensure no cycles in dependencies
-	NodesMap::const_iterator nodeIter = m_Nodes.begin();
-	for( ; nodeIter != m_Nodes.end(); ++nodeIter )
-	{
-		std::vector< std::string > pathStart;
-		pathStart.push_back( nodeIter->first );
-
-		// check read-side
-		CheckForCycles( nodeIter, READ_PATH, pathStart );
-
-		// check write-side
-		CheckForCycles( nodeIter, WRITE_PATH, pathStart );
-	}
-
-	// finally, add in all the database connections
-	try
-	{
-		// read the DatabaseConnections elements
-		std::vector<xercesc::DOMNode*> connectionNodes;
-		XMLUtilities::GetChildrenByName( connectionNodes, pConfig, DATABASE_CONNECTIONS_NODE );
-		std::vector<xercesc::DOMNode*>::const_iterator iter = connectionNodes.begin();
-		for( iter = connectionNodes.begin(); iter != connectionNodes.end(); ++iter )
-		{
-		 	i_rDatabaseConnectionManager.ParseConnectionsByTable( **iter );
-		}
-	}
-	catch( const xercesc::SAXParseException& ex )
-	{
-		MV_THROW( DataProxyClientException, "Error parsing file: " << i_rConfigFileSpec << ": " << xercesc::XMLString::transcode( ex.getMessage() ) );
-	}
-	catch( const xercesc::XMLException& ex )
-	{
-		MV_THROW( DataProxyClientException, "Error parsing file: " << i_rConfigFileSpec << ": " << xercesc::XMLString::transcode( ex.getMessage() ) );
-	}
-
-	m_ConfigFileMD5 = md5;
 }
 
 void DataProxyClient::CheckForCycles( const NodesMap::const_iterator& i_rNodeIter, int i_WhichPath, const std::vector< std::string >& i_rNamePath ) const
