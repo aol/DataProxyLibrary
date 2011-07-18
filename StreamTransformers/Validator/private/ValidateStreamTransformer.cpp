@@ -180,12 +180,6 @@ boost::shared_ptr< std::stringstream > Validate( std::istream& i_rInputStream, c
 
 	std::string command = GetFormatCommand( inputHeader, headerFields, discardIfRules, modifyIfRules, failIfRules, verbose );
 	
-	std::stringstream temp;
-	boost::iostreams::copy( i_rInputStream, temp );
-	size_t inputSize = temp.str().size();
-	i_rInputStream.clear();
-	i_rInputStream.seekg( 0L );
-
 	// execute!
 	std::stringstream standardError;
 	ShellExecutor executor( command );
@@ -199,10 +193,6 @@ boost::shared_ptr< std::stringstream > Validate( std::istream& i_rInputStream, c
 	{
 		MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.Validator.Validate.StandardError",
 			"Validator generated standard error output:" << std::endl << standardError.rdbuf() );
-	}
-	if( pResult->str().empty() )
-	{
-		std::cerr << "RETURNING EMPTY STREAM AFTER VALIDATION!!! INPUT WAS SIZE: " << inputSize << std::endl;
 	}
 
 	return pResult;
