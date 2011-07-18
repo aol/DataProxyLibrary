@@ -188,9 +188,10 @@ $(TARGETDIR)/$(PRIMARY_TARGET): $(PRIVATEOBJSPEC)
 	$(CXXS) -o $@ $^
 
 # if necessary, build external libraries.
-extlibs: $(MODULESPEC) $(TESTMODULESPEC)
+extlibs: $(MODULESPEC) $(TESTMODULESPEC) $(MOCKMODULESPEC)
 	$(MODULESPEC:%=(cd % && ${MAKE} $(SUBTARGET)) && ) true
 	${TESTMODULESPEC:%=(cd % && ${MAKE} ${SUBTARGET}) &&} true
+	${MOCKMODULESPEC:%=(cd % && ${MAKE} mock) &&} true
 
 # Default Builder rules
 $(ALLTARGETDIRS):
