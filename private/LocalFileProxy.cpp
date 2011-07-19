@@ -31,7 +31,6 @@ namespace
 	// behaviors
 	const std::string OVERWRITE_BEHAVIOR( "overwrite" );
 	const std::string APPEND_BEHAVIOR( "append" );
-	const std::string CREATE_NEW_BEHAVIOR( "createNew" );
 
 	// misc
 	const std::string EMPTY_STRING("");
@@ -63,14 +62,6 @@ namespace
 	{
 		return i_rDestinationFileSpec + i_rSuffix + "." + i_rUniqueIdGenerator.GetUniqueId();
 	}
-
-	bool NeedUniqueDestinationFile( const std::string& i_rDestinationFileSpec,
-									const std::map< std::string, std::vector< std::string > >& i_rPendingRenames,
-									boost::shared_mutex& i_rPendingRenamesMutex )
-	{
-		boost::shared_lock< boost::shared_mutex > lock( i_rPendingRenamesMutex );
-		return ( FileUtilities::DoesExist( i_rDestinationFileSpec ) || i_rPendingRenames.find( i_rDestinationFileSpec ) != i_rPendingRenames.end() );
-	}
 }
 
 LocalFileProxy::LocalFileProxy( const std::string& i_rName, DataProxyClient& i_rParent, const xercesc::DOMNode& i_rNode, UniqueIdGenerator& i_rUniqueIdGenerator )
@@ -78,7 +69,6 @@ LocalFileProxy::LocalFileProxy( const std::string& i_rName, DataProxyClient& i_r
 	m_BaseLocation(),
 	m_NameFormat(),
 	m_OpenMode( OVERWRITE ),
-	m_NewFileParam(),
 	m_SkipLines( 0 ),
 	m_rUniqueIdGenerator( i_rUniqueIdGenerator ),
 	m_PendingRenames(),
@@ -126,17 +116,6 @@ LocalFileProxy::LocalFileProxy( const std::string& i_rName, DataProxyClient& i_r
 					m_SkipLines = boost::lexical_cast< int >( XMLUtilities::XMLChToString(pAttribute->getValue()) );
 				}
 			}
-			else if( onFileExist == CREATE_NEW_BEHAVIOR )
-			{
-				m_OpenMode = CREATE_NEW;
-				m_NewFileParam = XMLUtilities::GetAttributeValue( pNode, NEW_FILE_PARAM_ATTRIBUTE );
-				// if name format is not null, then we might have a problem creating new copies... format must contain the new file param
-				if( !m_NameFormat.IsNull() )
-				{
-					MV_THROW( LocalFileProxyException, "" << ON_FILE_EXIST_ATTRIBUTE << " cannot be set to '" << CREATE_NEW_BEHAVIOR << "' when a custom " 
-						<< NAME_FORMAT_ATTRIBUTE << " has been specified" );
-				}
-			}
 			else
 			{
 				MV_THROW( LocalFileProxyException, "Unrecognized behavior for attribute: " << ON_FILE_EXIST_ATTRIBUTE << ": " << onFileExist );
@@ -167,27 +146,7 @@ void LocalFileProxy::StoreImpl( const std::map<std::string,std::string>& i_rPara
 
 	std::string destinationFileSpec( BuildFileSpec( m_BaseLocation, m_NameFormat, i_rParameters ) );
 	std::string pendingFileSpec;
-	// if we're set to create new, we may have to find a final destination file name
-	if( m_OpenMode == CREATE_NEW && NeedUniqueDestinationFile( destinationFileSpec, m_PendingRenames, m_PendingRenamesMutex ) )
-	{
-		std::map<std::string,std::string>::const_iterator iter = i_rParameters.find( m_NewFileParam );
-		if( iter != i_rParameters.end() )
-		{
-			MV_THROW( LocalFileProxyException, "Destination file already exists: " << destinationFileSpec 
-				<< ". Configured to create a new file with parameter named: "
-				<< m_NewFileParam << " but client parameters already define a value for this parameter: " 
-				<< iter->second << ". Unable to continue with store operation." );
-		}
-
-		std::map< std::string, std::string > copyParameters( i_rParameters );
-		long id = 1L;
-		while( NeedUniqueDestinationFile( destinationFileSpec, m_PendingRenames, m_PendingRenamesMutex ) )
-		{
-			copyParameters[ m_NewFileParam ] = boost::lexical_cast< std::string >( ++id );
-			destinationFileSpec = BuildFileSpec( m_BaseLocation, m_NameFormat, copyParameters );
-		}
-	}
-
+	
 	// in case the name format causes us to make directories, make it
 	FileUtilities::ValidateOrCreateDirectory( FileUtilities::GetDirName( destinationFileSpec ), W_OK | X_OK );
 
@@ -205,18 +164,17 @@ void LocalFileProxy::StoreImpl( const std::map<std::string,std::string>& i_rPara
 	file << i_rData.rdbuf();
 	file.close();
 
-	// if we're set to overwrite, have to iterate over the existing temp files & remove them
-	if( m_OpenMode == OVERWRITE )
-	{	
-		boost::unique_lock< boost::shared_mutex > lock( m_PendingRenamesMutex );
-		std::vector< std::string >& rFilesToRemove = m_PendingRenames[ destinationFileSpec ];
-		for_each( rFilesToRemove.begin(), rFilesToRemove.end(), FileUtilities::Remove );
-		rFilesToRemove.clear();
-	}
-
-	// and push this on the pending-renames map
 	{
 		boost::unique_lock< boost::shared_mutex > lock( m_PendingRenamesMutex );
+		// if we're set to overwrite, have to iterate over the existing temp files & remove them
+		if( m_OpenMode == OVERWRITE )
+		{	
+			std::vector< std::string >& rFilesToRemove = m_PendingRenames[ destinationFileSpec ];
+			for_each( rFilesToRemove.begin(), rFilesToRemove.end(), FileUtilities::Remove );
+			rFilesToRemove.clear();
+		}
+	
+		// and push this on the pending-renames map
 		m_PendingRenames[ destinationFileSpec ].push_back( pendingFileSpec );
 	}
 }

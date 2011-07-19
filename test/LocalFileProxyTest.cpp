@@ -447,21 +447,6 @@ void LocalFileProxyTest::testStoreNameFormatAll()
 	CPPUNIT_ASSERT_FILE_CONTENTS( data.str(), fileSpec );
 }
 
-void LocalFileProxyTest::testStoreNameFormatException()
-{
-	MockDataProxyClient client;
-	MockUniqueIdGenerator uniqueIdGenerator;
-	std::stringstream xmlContents;
-	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" format=\"key1_is_${key1}.txt\" >"
-				<< "  <Write onFileExist=\"createNew\" newFileParam=\"copy\" />"
-				<< "</DataNode>";
-	std::vector<xercesc::DOMNode*> nodes;
-	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
-	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator ), LocalFileProxyException,
-		".*\\.cpp:\\d+: onFileExist cannot be set to 'createNew' when a custom format has been specified" );
-}
-
 void LocalFileProxyTest::testStoreFileExistsBehavior()
 {
 	MockDataProxyClient client;
@@ -532,63 +517,6 @@ void LocalFileProxyTest::testStoreFileExistsBehavior()
 
 	CPPUNIT_ASSERT( FileUtilities::DoesExist( fileSpec ) );
 	CPPUNIT_ASSERT_FILE_CONTENTS( newData.str() + appendedData.str() + "line3\nline4", fileSpec );
-
-	// now create a proxy that is configured to create new but has no definition for the param identifier (this should throw)
-	xmlContents.str("");
-	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >"
-				<< "  <Write onFileExist=\"createNew\" />"
-				<< "</DataNode>";
-	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
-	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator ), XMLUtilitiesException, 
-		".*/XMLUtilities\\.cpp:\\d+: Unable to find attribute: 'newFileParam' in node: Write" );
-
-	// now create a proxy that is configured to create new and has a definition for the param identifier
-	xmlContents.str("");
-	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >"
-				<< "  <Write onFileExist=\"createNew\" newFileParam=\"my_copy\" />"
-				<< "</DataNode>";
-	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
-	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy3( "name", client, *nodes[0], uniqueIdGenerator );
-
-	std::stringstream copiedData1;
-	std::stringstream copiedData2;
-	std::stringstream copiedData3;
-	copiedData1 << "this is some data that will end up in the newly created file #1 only" << std::endl;
-	copiedData2 << "this is some data that will end up in the newly created file #2 only" << std::endl;
-	copiedData3 << "this is some data that will end up in the newly created file #3 only" << std::endl;
-
-	CPPUNIT_ASSERT_NO_THROW( proxy3.Store( parameters, copiedData1 ) );
-	CPPUNIT_ASSERT_NO_THROW( proxy3.Store( parameters, copiedData2 ) );
-	CPPUNIT_ASSERT_NO_THROW( proxy3.Store( parameters, copiedData3 ) );
-	CPPUNIT_ASSERT_NO_THROW( proxy3.Commit() );
-
-	// ensure previous file has been untouched
-	CPPUNIT_ASSERT_FILE_CONTENTS( newData.str() + appendedData.str() +"line3\nline4", fileSpec );
-
-	std::map< std::string, std::string > copyParameters( parameters );
-	copyParameters[ "my_copy" ] = "2";
-	CPPUNIT_ASSERT( FileUtilities::DoesExist( m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParameters ) ) );
-	CPPUNIT_ASSERT_FILE_CONTENTS( copiedData1.str(), m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParameters ) );
-	copyParameters[ "my_copy" ] = "3";
-	CPPUNIT_ASSERT( FileUtilities::DoesExist( m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParameters ) ) );
-	CPPUNIT_ASSERT_FILE_CONTENTS( copiedData2.str(), m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParameters ) );
-	copyParameters[ "my_copy" ] = "4";
-	CPPUNIT_ASSERT( FileUtilities::DoesExist( m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParameters ) ) );
-	CPPUNIT_ASSERT_FILE_CONTENTS( copiedData3.str(), m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParameters ) );
-
-	// now modify the parameters to actually HAVE a value for "my_copy"; attempts to store this when the file already exists will throw
-	std::stringstream dataGoesNowhere;
-	dataGoesNowhere << "this data should not end up anywhere!";
-	parameters[ "my_copy" ] = "set_by_client";
-	fileSpec = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( parameters );
-	file.open( fileSpec.c_str() );
-	file << "this is some pre-existing data";
-	file.close();
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy3.Store( parameters, dataGoesNowhere ), LocalFileProxyException,
-		".*/LocalFileProxy\\.cpp:\\d+: Destination file already exists: .* Configured to create a new file with parameter named: my_copy.*" );
-	CPPUNIT_ASSERT_FILE_CONTENTS( "this is some pre-existing data", fileSpec );
 }
 
 void LocalFileProxyTest::testStoreNoParameters()
@@ -765,91 +693,6 @@ void LocalFileProxyTest::testStoreCommitAppend()
 	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str() + data2.str() + data3.str(), fileCommitted );		// new contents
 }
 
-void LocalFileProxyTest::testStoreCommitCreateNew()
-{
-	MockDataProxyClient client;
-	MockUniqueIdGenerator uniqueIdGenerator;
-	AddUniqueIds( uniqueIdGenerator );
-	// case 1: overwrite behavior
-	std::stringstream xmlContents;
-	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >"
-				<< "  <Write onFileExist=\"createNew\" newFileParam=\"my_copy\" />"
-				<< "</DataNode>";
-	std::vector<xercesc::DOMNode*> nodes;
-	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
-	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
-
-	std::map< std::string, std::string > parameters;
-	parameters["key1"] = "value1";
-	parameters["key2"] = "value2";
-	std::map< std::string, std::string > copyParams2( parameters );
-	std::map< std::string, std::string > copyParams3( parameters );
-	std::map< std::string, std::string > copyParams4( parameters );
-	std::map< std::string, std::string > copyParams5( parameters );
-	copyParams2["my_copy"] = "2";
-	copyParams3["my_copy"] = "3";
-	copyParams4["my_copy"] = "4";
-	copyParams5["my_copy"] = "5";
-
-	std::stringstream data1;
-	std::stringstream data2;
-	std::stringstream data3;
-	std::stringstream data4;
-	std::stringstream data5;
-	data1 << "this is data #1";
-	data2 << "this is data #2";
-	data3 << "this is data #3";
-	data4 << "this is data #4";
-	data5 << "this is data #5";
-
-	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data1 ) );
-	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data2 ) );
-	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
-
-	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data3 ) );
-	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data4 ) );
-	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data5 ) );
-
-	// at this point, we should have five files in the temp directory: two committed and three pending
-	std::vector< std::string > dirFiles;
-	std::string fileCommitted1 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( parameters );
-	std::string fileCommitted2 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParams2 );
-	std::string filePending1 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParams3 ) + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000005";
-	std::string filePending2 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParams4 ) + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000006";
-	std::string filePending3 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParams5 ) + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000007";
-	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
-	CPPUNIT_ASSERT_EQUAL( size_t(5), dirFiles.size() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted1 ) != dirFiles.end() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted2 ) != dirFiles.end() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), filePending1 ) != dirFiles.end() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), filePending2 ) != dirFiles.end() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), filePending3 ) != dirFiles.end() );
-	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str(), fileCommitted1 );		// original contents
-	CPPUNIT_ASSERT_FILE_CONTENTS( data2.str(), fileCommitted2 );		// original contents
-	CPPUNIT_ASSERT_FILE_CONTENTS( data3.str(), filePending1 );		// new contents
-	CPPUNIT_ASSERT_FILE_CONTENTS( data4.str(), filePending2 );		// new contents
-	CPPUNIT_ASSERT_FILE_CONTENTS( data5.str(), filePending3 );		// new contents
-
-	// now we commit and we should have 5 files
-	std::string fileCommitted3 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParams3 );
-	std::string fileCommitted4 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParams4 );
-	std::string fileCommitted5 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParams5 );
-	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
-	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
-	CPPUNIT_ASSERT_EQUAL( size_t(5), dirFiles.size() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted1 ) != dirFiles.end() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted2 ) != dirFiles.end() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted3 ) != dirFiles.end() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted4 ) != dirFiles.end() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted5 ) != dirFiles.end() );
-	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str(), fileCommitted1 );
-	CPPUNIT_ASSERT_FILE_CONTENTS( data2.str(), fileCommitted2 );
-	CPPUNIT_ASSERT_FILE_CONTENTS( data3.str(), fileCommitted3 );
-	CPPUNIT_ASSERT_FILE_CONTENTS( data4.str(), fileCommitted4 );
-	CPPUNIT_ASSERT_FILE_CONTENTS( data5.str(), fileCommitted5 );
-}
-
 void LocalFileProxyTest::testStoreRollbackOverwrite()
 {
 	MockDataProxyClient client;
@@ -954,80 +797,4 @@ void LocalFileProxyTest::testStoreRollbackAppend()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), dirFiles.size() );
 	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted ) != dirFiles.end() );
 	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str(), fileCommitted );
-}
-
-void LocalFileProxyTest::testStoreRollbackCreateNew()
-{
-	MockDataProxyClient client;
-	MockUniqueIdGenerator uniqueIdGenerator;
-	AddUniqueIds( uniqueIdGenerator );
-	// case 1: overwrite behavior
-	std::stringstream xmlContents;
-	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >"
-				<< "  <Write onFileExist=\"createNew\" newFileParam=\"my_copy\" />"
-				<< "</DataNode>";
-	std::vector<xercesc::DOMNode*> nodes;
-	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
-	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
-
-	std::map< std::string, std::string > parameters;
-	parameters["key1"] = "value1";
-	parameters["key2"] = "value2";
-	std::map< std::string, std::string > copyParams2( parameters );
-	std::map< std::string, std::string > copyParams3( parameters );
-	std::map< std::string, std::string > copyParams4( parameters );
-	std::map< std::string, std::string > copyParams5( parameters );
-	copyParams2["my_copy"] = "2";
-	copyParams3["my_copy"] = "3";
-	copyParams4["my_copy"] = "4";
-	copyParams5["my_copy"] = "5";
-
-	std::stringstream data1;
-	std::stringstream data2;
-	std::stringstream data3;
-	std::stringstream data4;
-	std::stringstream data5;
-	data1 << "this is data #1";
-	data2 << "this is data #2";
-	data3 << "this is data #3";
-	data4 << "this is data #4";
-	data5 << "this is data #5";
-
-	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data1 ) );
-	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data2 ) );
-	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
-
-	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data3 ) );
-	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data4 ) );
-	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data5 ) );
-
-	// at this point, we should have five files in the temp directory: two committed and three pending
-	std::vector< std::string > dirFiles;
-	std::string fileCommitted1 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( parameters );
-	std::string fileCommitted2 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParams2 );
-	std::string filePending1 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParams3 ) + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000005";
-	std::string filePending2 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParams4 ) + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000006";
-	std::string filePending3 = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( copyParams5 ) + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000007";
-	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
-	CPPUNIT_ASSERT_EQUAL( size_t(5), dirFiles.size() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted1 ) != dirFiles.end() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted2 ) != dirFiles.end() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), filePending1 ) != dirFiles.end() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), filePending2 ) != dirFiles.end() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), filePending3 ) != dirFiles.end() );
-	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str(), fileCommitted1 );		// original contents
-	CPPUNIT_ASSERT_FILE_CONTENTS( data2.str(), fileCommitted2 );		// original contents
-	CPPUNIT_ASSERT_FILE_CONTENTS( data3.str(), filePending1 );		// new contents
-	CPPUNIT_ASSERT_FILE_CONTENTS( data4.str(), filePending2 );		// new contents
-	CPPUNIT_ASSERT_FILE_CONTENTS( data5.str(), filePending3 );		// new contents
-
-	// now we rollback and we should have 2 files
-	CPPUNIT_ASSERT_NO_THROW( proxy.Rollback() );
-	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
-	CPPUNIT_ASSERT_EQUAL( size_t(2), dirFiles.size() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted1 ) != dirFiles.end() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted2 ) != dirFiles.end() );
-	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str(), fileCommitted1 );
-	CPPUNIT_ASSERT_FILE_CONTENTS( data2.str(), fileCommitted2 );
 }

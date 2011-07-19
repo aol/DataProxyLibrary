@@ -46,14 +46,12 @@ private:
 	enum OpenMode
 	{
 		OVERWRITE = 0,
-		APPEND,
-		CREATE_NEW
+		APPEND
 	};
 	
 	std::string m_BaseLocation;
 	Nullable< std::string > m_NameFormat;
 	OpenMode m_OpenMode;
-	std::string m_NewFileParam;
 	int m_SkipLines;
 	UniqueIdGenerator& m_rUniqueIdGenerator;
 	std::map< std::string, std::vector< std::string > > m_PendingRenames; // a map from destination -> temp filenames

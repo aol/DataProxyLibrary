@@ -34,16 +34,13 @@ private:
 	CPPUNIT_TEST( testStore );
 	CPPUNIT_TEST( testStoreNameFormat );
 	CPPUNIT_TEST( testStoreNameFormatAll );
-	CPPUNIT_TEST( testStoreNameFormatException );
 	CPPUNIT_TEST( testStoreFileExistsBehavior );
 	CPPUNIT_TEST( testStoreNoParameters );
 	CPPUNIT_TEST( testRoundTrip );
 	CPPUNIT_TEST( testStoreCommitOverwrite );
 	CPPUNIT_TEST( testStoreCommitAppend );
-	CPPUNIT_TEST( testStoreCommitCreateNew );
 	CPPUNIT_TEST( testStoreRollbackOverwrite );
 	CPPUNIT_TEST( testStoreRollbackAppend );
-	CPPUNIT_TEST( testStoreRollbackCreateNew );
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -66,16 +63,13 @@ public:
 	void testStore();
 	void testStoreNameFormat();
 	void testStoreNameFormatAll();
-	void testStoreNameFormatException();
 	void testStoreFileExistsBehavior();
 	void testStoreNoParameters();
 	void testRoundTrip();
 	void testStoreCommitOverwrite();
 	void testStoreCommitAppend();
-	void testStoreCommitCreateNew();
 	void testStoreRollbackOverwrite();
 	void testStoreRollbackAppend();
-	void testStoreRollbackCreateNew();
 
 private:
 	boost::scoped_ptr<TempDirectory> m_pTempDir;
