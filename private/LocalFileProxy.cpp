@@ -200,7 +200,7 @@ void LocalFileProxy::Commit()
 		}
 
 		// have to obtain a lock on the file so that other DPL's trying to commit to this file will wait
-		MutexFileLock destinationFileLock( destinationIter->first, false );
+		MutexFileLock destinationFileLock( destinationIter->first, false, false );
 		if( FileUtilities::DoesExist( destinationIter->first ) )
 		{
 			destinationFileLock.ObtainLock( MutexFileLock::BLOCK );
