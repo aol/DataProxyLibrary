@@ -137,7 +137,7 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 			}
 			catch( const std::exception& ex )
 			{
-				MVLOGGER( "root.lib.DataProxy.DataProxyClient.Load.Exception", "Caught exception while issuing store request: " << ex.what() );
+				MVLOGGER( "root.lib.DataProxy.DataProxyClient.Load.Exception", "Caught exception while issuing load request: " << ex.what() );
 				// if we have some attempts left, clear & seek the output
 				if( i < m_ReadConfig.GetValue< RetryCount >() )
 				{
