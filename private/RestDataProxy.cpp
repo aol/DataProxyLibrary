@@ -31,6 +31,7 @@ namespace
 	const std::string GROUP_NODE( "Group" );
 
 	// attributes
+	const std::string METHOD_OVERRIDE_ATTRIBUTE( "methodOverride" );
 	const std::string URI_SUFFIX_ATTRIBUTE( "uriSuffix" );
 	const std::string TIMEOUT_ATTRIBUTE( "timeout" );
 	const std::string MAX_REDIRECTS_ATTRIBUTE( "maxRedirects" );
@@ -291,6 +292,13 @@ namespace
 	{
 		xercesc::DOMAttr* pAttribute;
 
+		// get method override (if it exists)
+		pAttribute = XMLUtilities::GetAttribute( &i_rNode, METHOD_OVERRIDE_ATTRIBUTE );
+		if( pAttribute != NULL )
+		{
+			o_rConfig.GetReference< Dpl::RestParameters >().SetMethodOverride( XMLUtilities::XMLChToString(pAttribute->getValue()) );
+		}
+
 		// get uri suffix (if it exists)
 		pAttribute = XMLUtilities::GetAttribute( &i_rNode, URI_SUFFIX_ATTRIBUTE );
 		if( pAttribute != NULL )
@@ -372,11 +380,13 @@ RestDataProxy::RestDataProxy( const std::string& i_rName, DataProxyClient& i_rPa
 	AbstractNode::ValidateXmlElements( i_rNode, allowedReadWriteChildren, allowedReadWriteChildren );
 
 	std::set< std::string > allowedReadAttributes;
+	allowedReadAttributes.insert( METHOD_OVERRIDE_ATTRIBUTE );
 	allowedReadAttributes.insert( TIMEOUT_ATTRIBUTE );
 	allowedReadAttributes.insert( URI_SUFFIX_ATTRIBUTE );
 	allowedReadAttributes.insert( COMPRESSION_ATTRIBUTE );
 	allowedReadAttributes.insert( MAX_REDIRECTS_ATTRIBUTE );
 	std::set< std::string > allowedWriteAttributes;
+	allowedWriteAttributes.insert( METHOD_OVERRIDE_ATTRIBUTE );
 	allowedWriteAttributes.insert( TIMEOUT_ATTRIBUTE );
 	allowedWriteAttributes.insert( URI_SUFFIX_ATTRIBUTE );
 	allowedWriteAttributes.insert( MAX_REDIRECTS_ATTRIBUTE );

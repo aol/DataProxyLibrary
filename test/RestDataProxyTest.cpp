@@ -26,16 +26,19 @@ CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( RestDataProxyTest, "RestDataProxyTest" );
 namespace
 {
 	std::vector< std::string > EMPTY_VECTOR;
+	const std::string GET_METHOD = "GET";
+	const std::string POST_METHOD = "POST";
 
     void VerifyServiceGetRequest( const SimpleRestMockService& i_rService,
 								  const std::string& i_rExpectedPath,
 								  const std::string& i_rExpectedQuery,
-								  const std::vector< std::string >& i_rCustomHeaders )
+								  const std::vector< std::string >& i_rCustomHeaders,
+								  const std::string& i_rMethod = GET_METHOD )
     {
         std::stringstream expectedOutput;
         CPPUNIT_ASSERT_EQUAL( expectedOutput.str(), i_rService.GetStandardError() );
         expectedOutput << "Service started" << std::endl
-                       << "GET" << std::endl
+                       << i_rMethod << std::endl
                        << "Path: " << i_rExpectedPath << std::endl
                        << "Query: " << i_rExpectedQuery << std::endl;
 		std::vector< std::string >::const_iterator iter = i_rCustomHeaders.begin();
@@ -50,12 +53,13 @@ namespace
                                    const std::string& i_rExpectedPath,
                                    const std::string& i_rExpectedQuery,
                                    const std::string& i_rPostData,
-								   const std::vector< std::string >& i_rCustomHeaders = EMPTY_VECTOR )
+								   const std::vector< std::string >& i_rCustomHeaders = EMPTY_VECTOR,
+								   const std::string& i_rMethod = POST_METHOD )
     {
         std::stringstream expectedOutput;
         CPPUNIT_ASSERT_EQUAL( expectedOutput.str(), i_rService.GetStandardError() );
         expectedOutput << "Service started" << std::endl
-                       << "POST" << std::endl
+                       << i_rMethod << std::endl
                        << "Path: " << i_rExpectedPath << std::endl
                        << "Query: " << i_rExpectedQuery << std::endl
                        << "ContentType: application/x-www-form-urlencoded" << std::endl;
@@ -566,6 +570,41 @@ void RestDataProxyTest::testLoadBasic()
 	CPPUNIT_ASSERT_EQUAL( data, results.str() );
 }
 
+void RestDataProxyTest::testLoadMethodOverride()
+{
+	MockDataProxyClient client;
+	std::string data = "This data should be returned\n";
+	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/results.dat" );
+	std::ofstream file( fileSpec.c_str() );
+	file << data;
+	file.close();
+
+	std::map< std::string, std::string > parameters;
+	parameters[ "ignoredParam" ] = "ignoredValue";
+
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode location=\"" << m_pService->GetEndpoint() + m_pTempDir->GetDirectoryName() << "\" >"
+				<< "	<Read methodOverride=\"BLAH\" />"
+				<< "</DataNode>";
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	RestDataProxy proxy( "name", client, *nodes[0] );
+
+	std::stringstream results;
+
+	// ensure RestDataProxy does not support commit or rollback
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Commit(), NotSupportedException, ".*/RestDataProxy.cpp:\\d+: RestDataProxy does not support transactions" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Rollback(), NotSupportedException, ".*/RestDataProxy.cpp:\\d+: RestDataProxy does not support transactions" );
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Load( parameters, results ) );
+
+	std::vector< std::string > expectedHeaders;
+
+	VerifyServiceGetRequest( *m_pService, m_pTempDir->GetDirectoryName(), "", expectedHeaders, "BLAH" );
+	CPPUNIT_ASSERT_EQUAL( data, results.str() );
+}
+
 void RestDataProxyTest::testLoadTimeout()
 {
 	MockDataProxyClient client;
@@ -718,6 +757,31 @@ void RestDataProxyTest::testStoreBasic()
 	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data ) );
 
 	VerifyServicePostRequest( *m_pService, path, "", data.str() );
+}
+
+void RestDataProxyTest::testStoreMethodOverride()
+{
+	MockDataProxyClient client;
+	std::stringstream data;
+	data << "This data should be posted";
+	std::string path = "/some/path/to/nowhere/";
+
+	std::map< std::string, std::string > parameters;
+	parameters[ "ignoredParam" ] = "ignoredValue";
+
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode location=\"" << m_pService->GetEndpoint() + path << "\" >"
+				<< "	<Write methodOverride=\"PUT\" />"
+				<< "</DataNode>";
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	RestDataProxy proxy( "name", client, *nodes[0] );
+	CPPUNIT_ASSERT( !proxy.SupportsTransactions() );
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data ) );
+
+	VerifyServicePostRequest( *m_pService, path, "", data.str(), EMPTY_VECTOR, "PUT" );
 }
 
 void RestDataProxyTest::testStoreComplex()

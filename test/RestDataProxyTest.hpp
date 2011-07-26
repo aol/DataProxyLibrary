@@ -36,9 +36,11 @@ private:
 	CPPUNIT_TEST( testDuplicateParameters );
 	CPPUNIT_TEST( testLoadTimeout );
 	CPPUNIT_TEST( testLoadBasic );
+	CPPUNIT_TEST( testLoadMethodOverride );
 	CPPUNIT_TEST( testLoadComplex );
 	CPPUNIT_TEST( testStoreTimeout );
 	CPPUNIT_TEST( testStoreBasic );
+	CPPUNIT_TEST( testStoreMethodOverride );
 	CPPUNIT_TEST( testStoreComplex );
 	CPPUNIT_TEST_SUITE_END();
 
@@ -63,9 +65,11 @@ public:
 	void testDuplicateParameters();
 	void testLoadTimeout();
 	void testLoadBasic();
+	void testLoadMethodOverride();
 	void testLoadComplex();
 	void testStoreTimeout();
 	void testStoreBasic();
+	void testStoreMethodOverride();
 	void testStoreComplex();
 
 private:
