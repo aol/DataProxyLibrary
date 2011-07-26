@@ -447,8 +447,14 @@ void RestDataProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 	// take a copy of the stored rest parameters so we can modify the copy
 	RESTParameters restParameters( m_WriteConfig.GetValue< Dpl::RestParameters >() );
 	builder.BuildRequest( uri, restParameters );
+	std::stringstream responseBody;
 
-	RESTClient().Post( uri, i_rData, restParameters );
+	RESTClient().Post( uri, i_rData, responseBody, restParameters );
+
+	if( responseBody.tellp() > 0L )
+	{
+		MVLOGGER( "root.lib.DataProxy.RestDataProxy.Store.ResponseBody", responseBody.str() );
+	}
 }
 
 bool RestDataProxy::SupportsTransactions() const
