@@ -623,11 +623,11 @@ void LocalFileProxyTest::testStoreCommitOverwrite()
 	// at this point, we should have two files in the temp directory: data1 (committed) and data3 (still pending)
 	std::vector< std::string > dirFiles;
 	std::string fileCommitted = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( parameters );
-	std::string filePending = fileCommitted + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000005";
+	std::string filePending = fileCommitted + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000004";
 	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
 	CPPUNIT_ASSERT_EQUAL( size_t(2), dirFiles.size() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted ) != dirFiles.end() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), filePending ) != dirFiles.end() );
+	CPPUNIT_ASSERT_EQUAL( filePending, dirFiles[0] );
+	CPPUNIT_ASSERT_EQUAL( fileCommitted, dirFiles[1] );
 	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str(), fileCommitted );		// original contents
 	CPPUNIT_ASSERT_FILE_CONTENTS( data3.str(), filePending );		// new contents
 
@@ -674,13 +674,13 @@ void LocalFileProxyTest::testStoreCommitAppend()
 	// at this point, we should have three files in the temp directory: data1 (committed), data2 (still pending), and data3 (still pending)
 	std::vector< std::string > dirFiles;
 	std::string fileCommitted = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( parameters );
-	std::string filePending1 = fileCommitted + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000003";
-	std::string filePending2 = fileCommitted + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000004";
+	std::string filePending1 = fileCommitted + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000002";
+	std::string filePending2 = fileCommitted + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000003";
 	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
 	CPPUNIT_ASSERT_EQUAL( size_t(3), dirFiles.size() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted ) != dirFiles.end() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), filePending1 ) != dirFiles.end() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), filePending2 ) != dirFiles.end() );
+	CPPUNIT_ASSERT_EQUAL( filePending1, dirFiles[0] );
+	CPPUNIT_ASSERT_EQUAL( filePending2, dirFiles[1] );
+	CPPUNIT_ASSERT_EQUAL( fileCommitted, dirFiles[2] );
 	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str(), fileCommitted );		// original contents
 	CPPUNIT_ASSERT_FILE_CONTENTS( data2.str(), filePending1 );		// new contents
 	CPPUNIT_ASSERT_FILE_CONTENTS( data3.str(), filePending2 );		// new contents
@@ -691,6 +691,64 @@ void LocalFileProxyTest::testStoreCommitAppend()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), dirFiles.size() );
 	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted ) != dirFiles.end() );
 	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str() + data2.str() + data3.str(), fileCommitted );		// new contents
+}
+
+void LocalFileProxyTest::testStoreCommitAppendSkipLines()
+{
+	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
+	AddUniqueIds( uniqueIdGenerator );
+	// case 1: overwrite behavior
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >"
+				<< "  <Write onFileExist=\"append\" skipLinesOnAppend=\"2\" />"
+				<< "</DataNode>";
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+
+	std::map< std::string, std::string > parameters;
+	parameters["key1"] = "value1";
+	parameters["key2"] = "value2";
+
+	std::stringstream data1;
+	std::stringstream data2;
+	std::stringstream data3;
+	std::stringstream data2Full;
+	std::stringstream data3Full;
+	data1 << "this is data #1";
+	data2 << "this is data #2";
+	data3 << "this is data #3";
+	data2Full << "ignored\nlines\n" << data2.str();
+	data3Full << "blah\ngarbage\n" << data3.str();
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data1 ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data2Full ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data3Full ) );
+
+	// at this point, we should have three files in the temp directory: data1 (committed), data2 (still pending), and data3 (still pending)
+	std::vector< std::string > dirFiles;
+	std::string fileCommitted = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( parameters );
+	std::string filePending1 = fileCommitted + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000002";
+	std::string filePending2 = fileCommitted + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000003";
+	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
+	CPPUNIT_ASSERT_EQUAL( size_t(3), dirFiles.size() );
+	CPPUNIT_ASSERT_EQUAL( filePending1, dirFiles[0] );
+	CPPUNIT_ASSERT_EQUAL( filePending2, dirFiles[1] );
+	CPPUNIT_ASSERT_EQUAL( fileCommitted, dirFiles[2] );
+	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str(), fileCommitted );		// original contents
+	CPPUNIT_ASSERT_FILE_CONTENTS( data2Full.str(), filePending1 );		// new contents
+	CPPUNIT_ASSERT_FILE_CONTENTS( data3Full.str(), filePending2 );		// new contents
+
+	// now we commit and we should have 1 file
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), dirFiles.size() );
+	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted ) != dirFiles.end() );
+	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str() + data2.str() + data3.str(), fileCommitted );		// new contents WITHOUT the skipped lines
 }
 
 void LocalFileProxyTest::testStoreRollbackOverwrite()
@@ -729,11 +787,11 @@ void LocalFileProxyTest::testStoreRollbackOverwrite()
 	// at this point, we should have two files in the temp directory: data1 (committed) and data3 (still pending)
 	std::vector< std::string > dirFiles;
 	std::string fileCommitted = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( parameters );
-	std::string filePending = fileCommitted + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000005";
+	std::string filePending = fileCommitted + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000004";
 	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
 	CPPUNIT_ASSERT_EQUAL( size_t(2), dirFiles.size() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted ) != dirFiles.end() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), filePending ) != dirFiles.end() );
+	CPPUNIT_ASSERT_EQUAL( filePending, dirFiles[0] );
+	CPPUNIT_ASSERT_EQUAL( fileCommitted, dirFiles[1] );
 	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str(), fileCommitted );		// original contents
 	CPPUNIT_ASSERT_FILE_CONTENTS( data3.str(), filePending );		// new contents
 
@@ -780,13 +838,13 @@ void LocalFileProxyTest::testStoreRollbackAppend()
 	// at this point, we should have three files in the temp directory: data1 (committed), data2 (still pending), and data3 (still pending)
 	std::vector< std::string > dirFiles;
 	std::string fileCommitted = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( parameters );
-	std::string filePending1 = fileCommitted + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000003";
-	std::string filePending2 = fileCommitted + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000004";
+	std::string filePending1 = fileCommitted + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000002";
+	std::string filePending2 = fileCommitted + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000003";
 	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
 	CPPUNIT_ASSERT_EQUAL( size_t(3), dirFiles.size() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted ) != dirFiles.end() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), filePending1 ) != dirFiles.end() );
-	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), filePending2 ) != dirFiles.end() );
+	CPPUNIT_ASSERT_EQUAL( filePending1, dirFiles[0] );
+	CPPUNIT_ASSERT_EQUAL( filePending2, dirFiles[1] );
+	CPPUNIT_ASSERT_EQUAL( fileCommitted, dirFiles[2] );
 	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str(), fileCommitted );		// original contents
 	CPPUNIT_ASSERT_FILE_CONTENTS( data2.str(), filePending1 );		// new contents
 	CPPUNIT_ASSERT_FILE_CONTENTS( data3.str(), filePending2 );		// new contents

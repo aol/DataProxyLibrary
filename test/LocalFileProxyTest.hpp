@@ -39,6 +39,7 @@ private:
 	CPPUNIT_TEST( testRoundTrip );
 	CPPUNIT_TEST( testStoreCommitOverwrite );
 	CPPUNIT_TEST( testStoreCommitAppend );
+	CPPUNIT_TEST( testStoreCommitAppendSkipLines );
 	CPPUNIT_TEST( testStoreRollbackOverwrite );
 	CPPUNIT_TEST( testStoreRollbackAppend );
 	CPPUNIT_TEST_SUITE_END();
@@ -68,6 +69,7 @@ public:
 	void testRoundTrip();
 	void testStoreCommitOverwrite();
 	void testStoreCommitAppend();
+	void testStoreCommitAppendSkipLines();
 	void testStoreRollbackOverwrite();
 	void testStoreRollbackAppend();
 

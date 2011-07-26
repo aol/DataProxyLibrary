@@ -14,10 +14,12 @@
 #include "ProxyUtilities.hpp"
 #include "FileUtilities.hpp"
 #include "UniqueIdGenerator.hpp"
-#include "MutexFileLock.hpp"
 #include <fstream>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/interprocess/sync/file_lock.hpp>
+#include <boost/interprocess/sync/sharable_lock.hpp>
+#include <boost/interprocess/sync/scoped_lock.hpp>
 #include <sstream>
 
 namespace
@@ -35,7 +37,6 @@ namespace
 	// misc
 	const std::string EMPTY_STRING("");
 	const std::string PENDING_SUFFIX("~~dpl.pending");
-	const std::string COMMIT_SUFFIX("~~dpl.commit");
 
 	std::string BuildFileSpec( const std::string& i_rBaseLocation, const Nullable< std::string >& i_rNameFormat, const std::map<std::string,std::string>& i_rParameters )
 	{
@@ -137,7 +138,12 @@ void LocalFileProxy::LoadImpl( const std::map<std::string,std::string>& i_rParam
 		MV_THROW( LocalFileMissingException, "Could not locate file: " << fileSpec );
 	}
 
-	o_rData << std::ifstream( fileSpec.c_str() ).rdbuf();
+	// need to obtain a shared file lock before reading
+	boost::interprocess::file_lock fileLock( fileSpec.c_str() );
+	{
+		boost::interprocess::sharable_lock< boost::interprocess::file_lock > lock( fileLock );
+		o_rData << std::ifstream( fileSpec.c_str() ).rdbuf();
+	}
 }
 
 void LocalFileProxy::StoreImpl( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData )
@@ -187,74 +193,52 @@ bool LocalFileProxy::SupportsTransactions() const
 void LocalFileProxy::Commit()
 {
 	boost::unique_lock< boost::shared_mutex > lock( m_PendingRenamesMutex );
-	std::map< std::string, std::vector< std::string > >::iterator destinationIter = m_PendingRenames.begin();
-	while( destinationIter != m_PendingRenames.end() )
+	std::ios_base::openmode openMode = std::ios_base::out;
+	if( m_OpenMode == APPEND )
 	{
-		// open a file for writing
-		std::string tempFileSpec = GetSuffixedFileSpec( destinationIter->first, COMMIT_SUFFIX, m_rUniqueIdGenerator );
-		std::ofstream file( tempFileSpec.c_str() );
-		if( !file.good() )
-		{
-			MV_THROW( LocalFileProxyException, "Temporary commit file: " << tempFileSpec << " could not be opened for writing. "
-				<< " eof(): " << file.eof() << ", fail(): " << file.fail() << ", bad(): " << file.bad() );
-		}
+		openMode |= std::ios_base::app;
+	}
 
-		// have to obtain a lock on the file so that other DPL's trying to commit to this file will wait
-		MutexFileLock destinationFileLock( destinationIter->first, false, false );
-		if( FileUtilities::DoesExist( destinationIter->first ) )
+	std::map< std::string, std::vector< std::string > >::iterator destinationIter = m_PendingRenames.begin();
+	for( ; destinationIter != m_PendingRenames.end(); m_PendingRenames.erase( destinationIter++ ) )
+	{
+		// open the destination file in the appropriate mode
+		std::ofstream file( destinationIter->first.c_str(), openMode );
+		boost::interprocess::file_lock fileLock( destinationIter->first.c_str() );
 		{
-			destinationFileLock.ObtainLock( MutexFileLock::BLOCK );
-		}
+			// need to obtain a file lock on the destination file after it's been opened
+			boost::interprocess::scoped_lock< boost::interprocess::file_lock > lock( fileLock );
+			// ...and detect if we're appending data or starting from 0
+			file.seekp( 0L, std::ios_base::end );
+			bool appending = file.tellp() > 0L;
 
-		// if we are appending previous data, we first have to read our input & write it to the temp file
-		if( m_OpenMode == APPEND && FileUtilities::DoesExist( destinationIter->first ) )
-		{
-			std::ifstream existingFile( destinationIter->first.c_str() );
-			if( !existingFile.good() )
+			std::vector< std::string >::iterator tempIter = destinationIter->second.begin();
+			for( ; tempIter != destinationIter->second.end(); tempIter = destinationIter->second.erase( tempIter ) )
 			{
-				MV_THROW( LocalFileProxyException, "Existing file: " << destinationIter->first << " could not be opened for reading (needed because "
-					<< ON_FILE_EXIST_ATTRIBUTE << " behavior set to " << APPEND_BEHAVIOR << ")."
-					<< " eof(): " << existingFile.eof() << ", fail(): " << existingFile.fail() << ", bad(): " << existingFile.bad() );
-			}
-			file << existingFile.rdbuf();
-			existingFile.close();
-		}
-		
-		// now append all the data from the temporary files
-		// (there will only be more than one if the openmode was set to append)
-		std::vector< std::string >::iterator tempIter = destinationIter->second.begin();
-		for( ; tempIter != destinationIter->second.end(); tempIter = destinationIter->second.erase( tempIter ) )
-		{
-			std::ifstream tempFile( tempIter->c_str() );
-			if( !tempFile.good() )
-			{
-				MV_THROW( LocalFileProxyException, "Temporary file: " << *tempIter << " could not be opened for reading. "
-					<< "eof(): " << tempFile.eof() << ", fail(): " << tempFile.fail() << ", bad(): " << tempFile.bad() );
-			}
-			if( m_OpenMode == APPEND && FileUtilities::DoesExist( destinationIter->first ) )
-			{
-				std::string line;
-				// discard rows
-				for( int i=0; i < m_SkipLines; ++i )
+				std::ifstream tempFile( tempIter->c_str() );
+				if( !tempFile.good() )
 				{
-					std::getline( tempFile, line );
+					MV_THROW( LocalFileProxyException, "Temporary file: " << *tempIter << " could not be opened for reading. "
+						<< "eof(): " << tempFile.eof() << ", fail(): " << tempFile.fail() << ", bad(): " << tempFile.bad() );
 				}
+				if( m_OpenMode == APPEND && appending )
+				{
+					std::string line;
+					// discard rows
+					for( int i=0; i < m_SkipLines; ++i )
+					{
+						std::getline( tempFile, line );
+					}
+				}
+				file << tempFile.rdbuf();
+				tempFile.close();
+				FileUtilities::Remove( *tempIter );
+				appending = true;
 			}
-			file << tempFile.rdbuf();
-			tempFile.close();
-			FileUtilities::Remove( *tempIter );
+			destinationIter->second.clear();
+			file.flush();
 		}
-		destinationIter->second.clear();
-
-		// close out our temp file and move it to the real thing
 		file.close();
-		FileUtilities::Move( tempFileSpec, destinationIter->first );
-
-		// now release the lock
-		destinationFileLock.ReleaseLock();
-
-		// and remove this entry from pending renames
-		m_PendingRenames.erase( destinationIter++ );
 	}
 }
 
