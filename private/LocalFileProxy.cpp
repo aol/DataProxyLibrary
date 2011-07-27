@@ -72,7 +72,9 @@ LocalFileProxy::LocalFileProxy( const std::string& i_rName, DataProxyClient& i_r
 	m_OpenMode( OVERWRITE ),
 	m_SkipLines( 0 ),
 	m_rUniqueIdGenerator( i_rUniqueIdGenerator ),
+	m_PendingLocks(),
 	m_PendingRenames(),
+	m_PendingLockMutex(),
 	m_PendingRenamesMutex()
 {
 	// get base location & validate
@@ -138,6 +140,17 @@ void LocalFileProxy::LoadImpl( const std::map<std::string,std::string>& i_rParam
 		MV_THROW( LocalFileMissingException, "Could not locate file: " << fileSpec );
 	}
 
+	// need to potentially obtain a thread lock for the destination file (if it is currently being committed)
+	// start by obtaining a read lock on the pending mutex parent mutex so we can search the map
+	boost::shared_lock< boost::shared_mutex > mutexLookupLock( m_PendingLockMutex );
+	boost::shared_ptr< boost::shared_lock< boost::shared_mutex > > pLock;
+	std::map< std::string, boost::shared_ptr< boost::shared_mutex > >::iterator iter = m_PendingLocks.find( fileSpec );
+	if( iter != m_PendingLocks.end() )
+	{
+		// if there is a mutex for this file, obtain a shared lock
+		pLock.reset( new boost::shared_lock< boost::shared_mutex >( *iter->second ) );
+	}
+
 	// need to obtain a shared file lock before reading
 	boost::interprocess::file_lock fileLock( fileSpec.c_str() );
 	{
@@ -171,7 +184,8 @@ void LocalFileProxy::StoreImpl( const std::map<std::string,std::string>& i_rPara
 	file.close();
 
 	{
-		boost::unique_lock< boost::shared_mutex > lock( m_PendingRenamesMutex );
+		boost::unique_lock< boost::shared_mutex > renameLock( m_PendingRenamesMutex );
+		boost::unique_lock< boost::shared_mutex > mutexLookupLock( m_PendingLockMutex );
 		// if we're set to overwrite, have to iterate over the existing temp files & remove them
 		if( m_OpenMode == OVERWRITE )
 		{	
@@ -182,6 +196,7 @@ void LocalFileProxy::StoreImpl( const std::map<std::string,std::string>& i_rPara
 	
 		// and push this on the pending-renames map
 		m_PendingRenames[ destinationFileSpec ].push_back( pendingFileSpec );
+		m_PendingLocks[ destinationFileSpec ].reset( new boost::shared_mutex() );
 	}
 }
 
@@ -192,59 +207,73 @@ bool LocalFileProxy::SupportsTransactions() const
 
 void LocalFileProxy::Commit()
 {
-	boost::unique_lock< boost::shared_mutex > lock( m_PendingRenamesMutex );
-	std::ios_base::openmode openMode = std::ios_base::out;
-	if( m_OpenMode == APPEND )
 	{
-		openMode |= std::ios_base::app;
+		boost::unique_lock< boost::shared_mutex > renameLock( m_PendingRenamesMutex );		// unique because we're modifying this map
+		boost::shared_lock< boost::shared_mutex > mutexLookupLock( m_PendingLockMutex );	// shared because we're not modifying this map, just using it for lookups
+
+		std::ios_base::openmode openMode = std::ios_base::out;
+		if( m_OpenMode == APPEND )
+		{
+			openMode |= std::ios_base::app;
+		}
+
+		std::map< std::string, boost::shared_ptr< boost::shared_mutex > >::iterator mutexIter = m_PendingLocks.begin();
+		std::map< std::string, std::vector< std::string > >::iterator destinationIter = m_PendingRenames.begin();
+		for( ; destinationIter != m_PendingRenames.end(); m_PendingRenames.erase( destinationIter++ ), ++mutexIter )
+		{
+			// obtain a thread lock on the destination file
+			boost::unique_lock< boost::shared_mutex > lock( *mutexIter->second );
+
+			// open the destination file in the appropriate mode
+			std::ofstream file( destinationIter->first.c_str(), openMode );
+			boost::interprocess::file_lock fileLock( destinationIter->first.c_str() );
+			{
+				// need to obtain a file lock on the destination file after it's been opened
+				boost::interprocess::scoped_lock< boost::interprocess::file_lock > lock( fileLock );
+				// ...and detect if we're appending data or starting from 0
+				file.seekp( 0L, std::ios_base::end );
+				bool appending = file.tellp() > 0L;
+
+				std::vector< std::string >::iterator tempIter = destinationIter->second.begin();
+				for( ; tempIter != destinationIter->second.end(); tempIter = destinationIter->second.erase( tempIter ) )
+				{
+					std::ifstream tempFile( tempIter->c_str() );
+					if( !tempFile.good() )
+					{
+						MV_THROW( LocalFileProxyException, "Temporary file: " << *tempIter << " could not be opened for reading. "
+							<< "eof(): " << tempFile.eof() << ", fail(): " << tempFile.fail() << ", bad(): " << tempFile.bad() );
+					}
+					if( m_OpenMode == APPEND && appending )
+					{
+						std::string line;
+						// discard rows
+						for( int i=0; i < m_SkipLines; ++i )
+						{
+							std::getline( tempFile, line );
+						}
+					}
+					file << tempFile.rdbuf();
+					tempFile.close();
+					FileUtilities::Remove( *tempIter );
+					appending = true;
+				}
+				destinationIter->second.clear();
+				file.flush();
+			}
+			file.close();
+		}
 	}
 
-	std::map< std::string, std::vector< std::string > >::iterator destinationIter = m_PendingRenames.begin();
-	for( ; destinationIter != m_PendingRenames.end(); m_PendingRenames.erase( destinationIter++ ) )
+	// now clear all the pending locks
 	{
-		// open the destination file in the appropriate mode
-		std::ofstream file( destinationIter->first.c_str(), openMode );
-		boost::interprocess::file_lock fileLock( destinationIter->first.c_str() );
-		{
-			// need to obtain a file lock on the destination file after it's been opened
-			boost::interprocess::scoped_lock< boost::interprocess::file_lock > lock( fileLock );
-			// ...and detect if we're appending data or starting from 0
-			file.seekp( 0L, std::ios_base::end );
-			bool appending = file.tellp() > 0L;
-
-			std::vector< std::string >::iterator tempIter = destinationIter->second.begin();
-			for( ; tempIter != destinationIter->second.end(); tempIter = destinationIter->second.erase( tempIter ) )
-			{
-				std::ifstream tempFile( tempIter->c_str() );
-				if( !tempFile.good() )
-				{
-					MV_THROW( LocalFileProxyException, "Temporary file: " << *tempIter << " could not be opened for reading. "
-						<< "eof(): " << tempFile.eof() << ", fail(): " << tempFile.fail() << ", bad(): " << tempFile.bad() );
-				}
-				if( m_OpenMode == APPEND && appending )
-				{
-					std::string line;
-					// discard rows
-					for( int i=0; i < m_SkipLines; ++i )
-					{
-						std::getline( tempFile, line );
-					}
-				}
-				file << tempFile.rdbuf();
-				tempFile.close();
-				FileUtilities::Remove( *tempIter );
-				appending = true;
-			}
-			destinationIter->second.clear();
-			file.flush();
-		}
-		file.close();
+		boost::unique_lock< boost::shared_mutex > mutexLookupLock( m_PendingLockMutex );
+		m_PendingLocks.clear();
 	}
 }
 
 void LocalFileProxy::Rollback()
 {
-	boost::unique_lock< boost::shared_mutex > lock( m_PendingRenamesMutex );
+	boost::unique_lock< boost::shared_mutex > renameLock( m_PendingRenamesMutex );
 	std::map< std::string, std::vector< std::string > >::iterator destinationIter = m_PendingRenames.begin();
 	for( ; destinationIter != m_PendingRenames.end(); )
 	{
@@ -255,6 +284,12 @@ void LocalFileProxy::Rollback()
 		}
 
 		m_PendingRenames.erase( destinationIter++ );
+	}
+
+	// now clear all the pending locks
+	{
+		boost::unique_lock< boost::shared_mutex > mutexLookupLock( m_PendingLockMutex );
+		m_PendingLocks.clear();
 	}
 }
 
