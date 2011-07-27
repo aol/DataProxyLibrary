@@ -230,8 +230,12 @@ void LocalFileProxy::Commit()
 			{
 				// need to obtain a file lock on the destination file after it's been opened
 				boost::interprocess::scoped_lock< boost::interprocess::file_lock > lock( fileLock );
+				// seek to the end if necessary after getting the lock
+				if( m_OpenMode == APPEND )
+				{
+					file.seekp( 0L, std::ios_base::end );
+				}
 				// ...and detect if we're appending data or starting from 0
-				file.seekp( 0L, std::ios_base::end );
 				bool appending = file.tellp() > 0L;
 
 				std::vector< std::string >::iterator tempIter = destinationIter->second.begin();
