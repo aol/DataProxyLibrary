@@ -27,6 +27,7 @@ private:
 	CPPUNIT_TEST( testLoadNonexistent );
 	CPPUNIT_TEST( testLoadUnreadable );
 	CPPUNIT_TEST( testLoad );
+	CPPUNIT_TEST( testLoadEmpty );
 	CPPUNIT_TEST( testLoadNameFormat );
 	CPPUNIT_TEST( testLoadNameFormatAll );
 	CPPUNIT_TEST( testLoadNoParameters );
@@ -42,6 +43,7 @@ private:
 	CPPUNIT_TEST( testStoreCommitAppendSkipLines );
 	CPPUNIT_TEST( testStoreRollbackOverwrite );
 	CPPUNIT_TEST( testStoreRollbackAppend );
+	CPPUNIT_TEST( testStoreEmpties );
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -57,6 +59,7 @@ public:
 	void testLoadNonexistent();
 	void testLoadUnreadable();
 	void testLoad();
+	void testLoadEmpty();
 	void testLoadNameFormat();
 	void testLoadNameFormatAll();
 	void testLoadNoParameters();
@@ -72,6 +75,7 @@ public:
 	void testStoreCommitAppendSkipLines();
 	void testStoreRollbackOverwrite();
 	void testStoreRollbackAppend();
+	void testStoreEmpties();
 
 private:
 	boost::scoped_ptr<TempDirectory> m_pTempDir;

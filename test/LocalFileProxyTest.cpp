@@ -194,10 +194,43 @@ void LocalFileProxyTest::testLoad()
 	file << dataInFile.str();
 	file.close();
 
+	// make the directory and file unwritable
+	std::stringstream cmd;
+	cmd << "chmod -w " << m_pTempDir->GetDirectoryName() << ' ' << fileSpec;
+	::system( cmd.str().c_str() );
+
 	std::stringstream results;
 	CPPUNIT_ASSERT_NO_THROW( proxy.Load( parameters, results ) );
+	CPPUNIT_ASSERT( results.good() );
 
 	CPPUNIT_ASSERT_EQUAL( dataInFile.str(), results.str() );
+}
+
+void LocalFileProxyTest::testLoadEmpty()
+{
+	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >"
+				<< "</DataNode>";
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+
+	std::map< std::string, std::string > parameters;
+	parameters["key1"] = "value1";
+	parameters["key2"] = "value2";
+	parameters["key3"] = "value3";
+
+	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( parameters ) );
+	FileUtilities::Touch( fileSpec );
+
+	std::stringstream results;
+	CPPUNIT_ASSERT_NO_THROW( proxy.Load( parameters, results ) );
+	CPPUNIT_ASSERT( results.good() );
+
+	CPPUNIT_ASSERT_EQUAL( std::string(""), results.str() );
 }
 
 void LocalFileProxyTest::testLoadNameFormat()
@@ -227,6 +260,7 @@ void LocalFileProxyTest::testLoadNameFormat()
 
 	std::stringstream results;
 	CPPUNIT_ASSERT_NO_THROW( proxy.Load( parameters, results ) );
+	CPPUNIT_ASSERT( results.good() );
 
 	CPPUNIT_ASSERT_EQUAL( dataInFile.str(), results.str() );
 	
@@ -275,6 +309,7 @@ void LocalFileProxyTest::testLoadNameFormatAll()
 
 	std::stringstream results;
 	CPPUNIT_ASSERT_NO_THROW( proxy.Load( parameters, results ) );
+	CPPUNIT_ASSERT( results.good() );
 
 	CPPUNIT_ASSERT_EQUAL( dataInFile.str(), results.str() );
 }
@@ -302,6 +337,7 @@ void LocalFileProxyTest::testLoadNoParameters()
 
 	std::stringstream results;
 	CPPUNIT_ASSERT_NO_THROW( proxy.Load( parameters, results ) );
+	CPPUNIT_ASSERT( results.good() );
 
 	CPPUNIT_ASSERT_EQUAL( dataInFile.str(), results.str() );
 }
@@ -584,6 +620,7 @@ void LocalFileProxyTest::testRoundTrip()
 
 	std::stringstream actual;
 	CPPUNIT_ASSERT_NO_THROW( proxy.Load( parameters, actual ) );
+	CPPUNIT_ASSERT( actual.good() );
 	CPPUNIT_ASSERT_EQUAL( newData.str(), actual.str() );
 }
 
@@ -855,4 +892,66 @@ void LocalFileProxyTest::testStoreRollbackAppend()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), dirFiles.size() );
 	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted ) != dirFiles.end() );
 	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str(), fileCommitted );
+}
+
+void LocalFileProxyTest::testStoreEmpties()
+{
+	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
+	AddUniqueIds( uniqueIdGenerator );
+	// case 1: overwrite behavior
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >"
+				<< "  <Write onFileExist=\"append\" skipLinesOnAppend=\"2\" />"
+				<< "</DataNode>";
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+
+	std::map< std::string, std::string > parameters;
+	parameters["key1"] = "value1";
+	parameters["key2"] = "value2";
+	std::string fileCommitted = m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( parameters );
+	// create an empty file to begin with
+	FileUtilities::Touch( fileCommitted );
+
+	std::stringstream data1;
+	std::stringstream data2;
+	std::stringstream data3;
+	std::stringstream data1Full;
+	std::stringstream data2Full;
+	std::stringstream data3Full;
+	data1 << "this is data #1";
+	data2 << "this is data #2";
+	data3 << "this is data #3";
+	data1Full << "line1\nline2\n" << data1.str();
+	data2Full << "line1\n" << data2.str();	// only ONE line extra!!
+	data3Full << "line1\nline2\n" << data3.str();
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data1Full ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data2Full ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data3Full ) );
+
+	// at this point, we should have three files in the temp directory: data1 (committed), data2 (still pending), and data3 (still pending)
+	std::vector< std::string > dirFiles;
+	std::string filePending1 = fileCommitted + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000002";
+	std::string filePending2 = fileCommitted + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000003";
+	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
+	CPPUNIT_ASSERT_EQUAL( size_t(3), dirFiles.size() );
+	CPPUNIT_ASSERT_EQUAL( filePending1, dirFiles[0] );
+	CPPUNIT_ASSERT_EQUAL( filePending2, dirFiles[1] );
+	CPPUNIT_ASSERT_EQUAL( fileCommitted, dirFiles[2] );
+	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str(), fileCommitted );		// original contents
+	CPPUNIT_ASSERT_FILE_CONTENTS( data2Full.str(), filePending1 );		// new contents
+	CPPUNIT_ASSERT_FILE_CONTENTS( data3Full.str(), filePending2 );		// new contents
+
+	// now we commit and we should have 1 file
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), dirFiles.size() );
+	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted ) != dirFiles.end() );
+	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str() + data3.str(), fileCommitted );
 }

@@ -54,10 +54,8 @@ private:
 	OpenMode m_OpenMode;
 	int m_SkipLines;
 	UniqueIdGenerator& m_rUniqueIdGenerator;
-	std::map< std::string, boost::shared_ptr< boost::shared_mutex > > m_PendingLocks; // a map from destination -> thread lock
 	std::map< std::string, std::vector< std::string > > m_PendingRenames; // a map from destination -> temp filenames
 
-	boost::shared_mutex m_PendingLockMutex;
 	boost::shared_mutex m_PendingRenamesMutex;
 };
 
