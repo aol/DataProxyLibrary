@@ -204,71 +204,94 @@ void LocalFileProxy::Commit()
 	std::map< std::string, std::vector< std::string > >::iterator destinationIter = m_PendingRenames.begin();
 	for( ; destinationIter != m_PendingRenames.end(); m_PendingRenames.erase( destinationIter++ ) )
 	{
-		// obtain a lock on the commit file, creating it if it doesn't exist
-		std::string destinationCommitFileSpec( destinationIter->first + COMMIT_SUFFIX );
-		std::string destinationLockFileSpec( destinationIter->first + LOCK_SUFFIX );
-		MutexFileLock commitLockFile( destinationLockFileSpec, true, true );
-		commitLockFile.ObtainLock( MutexFileLock::BLOCK );
-
-		std::ofstream destinationCommitFile( destinationCommitFileSpec.c_str() );
-		if( !destinationCommitFile.good() )
+		// if we're in overwrite mode, we simply have to move the single pending file to the final destination
+		if( m_OpenMode == OVERWRITE )
 		{
-			MV_THROW( LocalFileProxyException, "Destination commit file: " << destinationLockFileSpec << " could not be opened for writing. "
-				<< "eof(): " << destinationCommitFile.eof() << ", fail(): " << destinationCommitFile.fail() << ", bad(): " << destinationCommitFile.bad() );
+			size_t countItems = destinationIter->second.size();
+			if( countItems > 1 )
+			{
+				// this is impossible to hit, but just to be safe...
+				MV_THROW( LocalFileProxyException, "OpenMode is set to OVERWRITE, but there are multiple pending files" );
+			}
+			if( countItems == 0 )
+			{
+				continue;
+			}
+			FileUtilities::Move( *destinationIter->second.begin(), destinationIter->first );
 		}
-
-		// if we're in append mode, grab the data from the already committed file
-		bool appending = false;
-		if( m_OpenMode == APPEND && FileUtilities::DoesExist( destinationIter->first ) )
+		else if( m_OpenMode == APPEND )
 		{
-			std::ifstream input( destinationIter->first.c_str() );
-			if( !input.good() )
+			// obtain a lock on the commit file, creating it if it doesn't exist
+			std::string destinationCommitFileSpec( destinationIter->first + COMMIT_SUFFIX );
+			std::string destinationLockFileSpec( destinationIter->first + LOCK_SUFFIX );
+			MutexFileLock commitLockFile( destinationLockFileSpec, true, true );
+			commitLockFile.ObtainLock( MutexFileLock::BLOCK );
+	
+			std::ofstream destinationCommitFile( destinationCommitFileSpec.c_str() );
+			if( !destinationCommitFile.good() )
 			{
-				MV_THROW( LocalFileProxyException, "Existing file (needed for append behavior): " << destinationIter->first << " could not be opened for reading. "
-					<< "eof(): " << input.eof() << ", fail(): " << input.fail() << ", bad(): " << input.bad() );
+				MV_THROW( LocalFileProxyException, "Destination commit file: " << destinationLockFileSpec << " could not be opened for writing. "
+					<< "eof(): " << destinationCommitFile.eof() << ", fail(): " << destinationCommitFile.fail() << ", bad(): " << destinationCommitFile.bad() );
 			}
-			if( input.peek() != EOF )
+	
+			// if we're in append mode, grab the data from the already committed file
+			bool appending = false;
+			if( FileUtilities::DoesExist( destinationIter->first ) )
 			{
-				destinationCommitFile << input.rdbuf();
-			}
-			input.close();
-			appending = true;
-		}
-
-		// now go through every temp file and add that data
-		std::vector< std::string >::iterator tempIter = destinationIter->second.begin();
-		for( ; tempIter != destinationIter->second.end(); tempIter = destinationIter->second.erase( tempIter ) )
-		{
-			std::ifstream input( tempIter->c_str() );
-			if( !input.good() )
-			{
-				MV_THROW( LocalFileProxyException, "Existing file (needed for append behavior): " << destinationIter->first << " could not be opened for reading. "
-					<< "eof(): " << input.eof() << ", fail(): " << input.fail() << ", bad(): " << input.bad() );
-			}
-			if( m_OpenMode == APPEND && appending )
-			{
-				std::string line;
-				for( int i=0; i<m_SkipLines; ++i )
+				std::ifstream input( destinationIter->first.c_str() );
+				if( !input.good() )
 				{
-					std::getline( input, line );
+					MV_THROW( LocalFileProxyException, "Existing file (needed for append behavior): " << destinationIter->first << " could not be opened for reading. "
+						<< "eof(): " << input.eof() << ", fail(): " << input.fail() << ", bad(): " << input.bad() );
 				}
+				if( input.peek() != EOF )
+				{
+					destinationCommitFile << input.rdbuf();
+				}
+				input.close();
+				appending = true;
 			}
-			if( input.peek() != EOF )
+	
+			// now go through every temp file and add that data
+			std::vector< std::string >::iterator tempIter = destinationIter->second.begin();
+			for( ; tempIter != destinationIter->second.end(); tempIter = destinationIter->second.erase( tempIter ) )
 			{
-				destinationCommitFile << input.rdbuf();
+				std::ifstream input( tempIter->c_str() );
+				if( !input.good() )
+				{
+					MV_THROW( LocalFileProxyException, "Existing file (needed for append behavior): " << destinationIter->first << " could not be opened for reading. "
+						<< "eof(): " << input.eof() << ", fail(): " << input.fail() << ", bad(): " << input.bad() );
+				}
+				if( appending )
+				{
+					std::string line;
+					for( int i=0; i<m_SkipLines; ++i )
+					{
+						std::getline( input, line );
+					}
+				}
+				if( input.peek() != EOF )
+				{
+					destinationCommitFile << input.rdbuf();
+				}
+				input.close();
+				FileUtilities::Remove( *tempIter );
+				appending = true;
 			}
-			input.close();
-			FileUtilities::Remove( *tempIter );
-			appending = true;
+	
+			// finally, move the commit file into the final file
+			destinationCommitFile.close();
+			FileUtilities::Move( destinationCommitFileSpec, destinationIter->first );
+	
+			// remove the lockfile and THEN release it
+			FileUtilities::Remove( destinationLockFileSpec );
+			commitLockFile.ReleaseLock();
 		}
-
-		// finally, move the commit file into the final file
-		destinationCommitFile.close();
-		FileUtilities::Move( destinationCommitFileSpec, destinationIter->first );
-
-		// remove the lockfile and THEN release it
-		FileUtilities::Remove( destinationLockFileSpec );
-		commitLockFile.ReleaseLock();
+		else
+		{
+			// impossible to hit this case...
+			MV_THROW( LocalFileProxyException, "Unsupported open mode set: " << m_OpenMode );
+		}
 	}
 }
 
