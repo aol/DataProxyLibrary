@@ -715,9 +715,10 @@ void LocalFileProxyTest::testStoreCommitAppend()
 	std::string filePending2 = fileCommitted + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000003";
 	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
 	CPPUNIT_ASSERT_EQUAL( size_t(3), dirFiles.size() );
-	CPPUNIT_ASSERT_EQUAL( filePending1, dirFiles[0] );
-	CPPUNIT_ASSERT_EQUAL( filePending2, dirFiles[1] );
-	CPPUNIT_ASSERT_EQUAL( fileCommitted, dirFiles[2] );
+	std::sort( dirFiles.begin(), dirFiles.end() );
+	CPPUNIT_ASSERT_EQUAL( fileCommitted, dirFiles[0] );
+	CPPUNIT_ASSERT_EQUAL( filePending1, dirFiles[1] );
+	CPPUNIT_ASSERT_EQUAL( filePending2, dirFiles[2] );
 	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str(), fileCommitted );		// original contents
 	CPPUNIT_ASSERT_FILE_CONTENTS( data2.str(), filePending1 );		// new contents
 	CPPUNIT_ASSERT_FILE_CONTENTS( data3.str(), filePending2 );		// new contents
@@ -773,9 +774,10 @@ void LocalFileProxyTest::testStoreCommitAppendSkipLines()
 	std::string filePending2 = fileCommitted + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000003";
 	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
 	CPPUNIT_ASSERT_EQUAL( size_t(3), dirFiles.size() );
-	CPPUNIT_ASSERT_EQUAL( filePending1, dirFiles[0] );
-	CPPUNIT_ASSERT_EQUAL( filePending2, dirFiles[1] );
-	CPPUNIT_ASSERT_EQUAL( fileCommitted, dirFiles[2] );
+	std::sort( dirFiles.begin(), dirFiles.end() );
+	CPPUNIT_ASSERT_EQUAL( fileCommitted, dirFiles[0] );
+	CPPUNIT_ASSERT_EQUAL( filePending1, dirFiles[1] );
+	CPPUNIT_ASSERT_EQUAL( filePending2, dirFiles[2] );
 	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str(), fileCommitted );		// original contents
 	CPPUNIT_ASSERT_FILE_CONTENTS( data2Full.str(), filePending1 );		// new contents
 	CPPUNIT_ASSERT_FILE_CONTENTS( data3Full.str(), filePending2 );		// new contents
@@ -879,9 +881,10 @@ void LocalFileProxyTest::testStoreRollbackAppend()
 	std::string filePending2 = fileCommitted + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000003";
 	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
 	CPPUNIT_ASSERT_EQUAL( size_t(3), dirFiles.size() );
-	CPPUNIT_ASSERT_EQUAL( filePending1, dirFiles[0] );
-	CPPUNIT_ASSERT_EQUAL( filePending2, dirFiles[1] );
-	CPPUNIT_ASSERT_EQUAL( fileCommitted, dirFiles[2] );
+	std::sort( dirFiles.begin(), dirFiles.end() );
+	CPPUNIT_ASSERT_EQUAL( fileCommitted, dirFiles[0] );
+	CPPUNIT_ASSERT_EQUAL( filePending1, dirFiles[1] );
+	CPPUNIT_ASSERT_EQUAL( filePending2, dirFiles[2] );
 	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str(), fileCommitted );		// original contents
 	CPPUNIT_ASSERT_FILE_CONTENTS( data2.str(), filePending1 );		// new contents
 	CPPUNIT_ASSERT_FILE_CONTENTS( data3.str(), filePending2 );		// new contents
@@ -941,9 +944,10 @@ void LocalFileProxyTest::testStoreEmpties()
 	std::string filePending2 = fileCommitted + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000003";
 	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
 	CPPUNIT_ASSERT_EQUAL( size_t(3), dirFiles.size() );
-	CPPUNIT_ASSERT_EQUAL( filePending1, dirFiles[0] );
-	CPPUNIT_ASSERT_EQUAL( filePending2, dirFiles[1] );
-	CPPUNIT_ASSERT_EQUAL( fileCommitted, dirFiles[2] );
+	std::sort( dirFiles.begin(), dirFiles.end() );
+	CPPUNIT_ASSERT_EQUAL( fileCommitted, dirFiles[0] );
+	CPPUNIT_ASSERT_EQUAL( filePending1, dirFiles[1] );
+	CPPUNIT_ASSERT_EQUAL( filePending2, dirFiles[2] );
 	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str(), fileCommitted );		// original contents
 	CPPUNIT_ASSERT_FILE_CONTENTS( data2Full.str(), filePending1 );		// new contents
 	CPPUNIT_ASSERT_FILE_CONTENTS( data3Full.str(), filePending2 );		// new contents
