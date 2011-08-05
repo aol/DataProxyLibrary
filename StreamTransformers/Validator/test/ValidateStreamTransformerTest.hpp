@@ -27,6 +27,7 @@ private:
 	CPPUNIT_TEST( testBadModifyFormat );
 	CPPUNIT_TEST( testValidate_DiscardModifyRecords );
 	CPPUNIT_TEST( testValidate_Fail );
+	CPPUNIT_TEST( testMakeSet );
 	CPPUNIT_TEST_SUITE_END();
 public:
 	ValidateStreamTransformerTest();
@@ -41,6 +42,7 @@ public:
 	void testBadModifyFormat();
 	void testValidate_DiscardModifyRecords();
 	void testValidate_Fail();
+	void testMakeSet();
 };
 
 #endif //_VALIDATE_STREAM_TRANSFORMER_TEST_HPP_

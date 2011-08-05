@@ -169,3 +169,29 @@ void ValidateStreamTransformerTest::testValidate_Fail()
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( Validate( inputStream, parameters ), ValidationFailedException,
 		".*:\\d+: Validation failed\\. Return code: 3:\nLine number: 5 failed critical validation criteria: .*\\. Violating row: \\{55,52,53,54,55,56,57\\}\\. Exiting\\.\n" );
 }
+
+void ValidateStreamTransformerTest::testMakeSet()
+{
+	std::stringstream inputStream;
+	inputStream << "col1,col2,col3,col4,col5,col6,col7" << std::endl
+				<< "11,12,13,14,15,16,17" << std::endl	// good col3 good col5 *
+				<< "21,22,23,24,25,26,27" << std::endl	//  BAD col3  BAD col5
+				<< "33,32,33,34,35,36,37" << std::endl	// good col3  BAD col5
+				<< "44,42,43,44,45,46,47" << std::endl	// good col3  BAD col5
+				<< "55,52,53,54,55,56,57" << std::endl	// good col3 good col5 *
+				<< "66,62,63,64,65,66,67" << std::endl;	//  BAD col3 good col5
+	
+	std::map<std::string, std::string> parameters;
+	parameters["timeout"] = "5";
+	parameters["globals"] = "make_set( \"13,33,43,53\", col3goods ); make_set( \"25,35,45\", col5bads );";
+	parameters["discardIf"] = "!(col3 in col3goods) || (col5 in col5bads)";
+
+	std::stringstream expected;
+	expected << "col1,col2,col3,col4,col5,col6,col7" << std::endl
+			 << "11,12,13,14,15,16,17" << std::endl		// good col3 good col5 *
+			 << "55,52,53,54,55,56,57" << std::endl;	// good col3 good col5 *
+	
+	boost::shared_ptr< std::stringstream > pResult = Validate( inputStream, parameters );
+	CPPUNIT_ASSERT( pResult != NULL );
+	CPPUNIT_ASSERT_EQUAL( expected.str(), pResult->str() );
+}

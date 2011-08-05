@@ -22,6 +22,7 @@
 namespace
 {
 	const std::string TIMEOUT( "timeout" );
+	const std::string GLOBALS( "globals" );
 	const std::string DISCARD_IF( "discardIf" );
 	const std::string MODIFY_IF( "modifyIf" );
 	const std::string FAIL_IF( "failIf" );
@@ -32,6 +33,7 @@ namespace
 
 	// this function returns the awk command to order & format each field
 	std::string GetFormatCommand( const std::string& i_rHeader,
+								  const std::vector< std::string >& i_rGlobals,
 								  const std::vector< std::string >& i_rHeaderFields,
 								  const std::vector< std::string >& i_rDiscardIfRules,
 								  const std::vector< Rule >& i_rModifyIfRules,
@@ -39,13 +41,25 @@ namespace
 								  bool i_Verbose )
 	{
 		std::stringstream result;
-		result << "gawk -F, 'BEGIN { print \"" << i_rHeader << "\"; } {";
+		result << "gawk -F, '";
+		// register the make_set function to be used by users
+		result << "function make_set( str, hash ){ split( str, array, \",\" ); for( elem in array ) { hash[array[elem]] = 1; } }" << std::endl;
+
+		// write the BEGIN block
+		result << "BEGIN { ";
+		// first include all globals
+		std::vector< std::string >::const_iterator iter = i_rGlobals.begin();
+		for( ; iter != i_rGlobals.end(); ++iter )
+		{
+			result << *iter << "; ";
+		}
+		result << "print \"" << i_rHeader << "\"; } {";
 
 		std::stringstream printStatement;
 		printStatement << "print ";
 
 		// form variable names & align them with their awk indeces
-		std::vector< std::string >::const_iterator iter = i_rHeaderFields.begin();
+		iter = i_rHeaderFields.begin();
 		for( int count=1; iter != i_rHeaderFields.end(); ++iter, ++count )
 		{
 			std::string variableName( *iter );
@@ -156,9 +170,11 @@ boost::shared_ptr< std::stringstream > Validate( std::istream& i_rInputStream, c
 	boost::shared_ptr< std::stringstream > pResult( new std::stringstream() );
 
 	// parse out rules
+	std::vector< std::string > globals;
 	std::vector< std::string > discardIfRules;
 	std::vector< std::string > failIfRules;
 	std::vector< Rule > modifyIfRules;
+	ParseRules( globals, GLOBALS, i_rParameters );
 	ParseRules( discardIfRules, DISCARD_IF, i_rParameters );
 	ParseRules( failIfRules, FAIL_IF, i_rParameters );
 	ParseModifyRules( modifyIfRules, i_rParameters );
@@ -178,7 +194,7 @@ boost::shared_ptr< std::stringstream > Validate( std::istream& i_rInputStream, c
 	std::vector< std::string > headerFields;
 	boost::iter_split( headerFields, inputHeader, boost::first_finder(COMMA) );
 
-	std::string command = GetFormatCommand( inputHeader, headerFields, discardIfRules, modifyIfRules, failIfRules, verbose );
+	std::string command = GetFormatCommand( inputHeader, globals, headerFields, discardIfRules, modifyIfRules, failIfRules, verbose );
 	
 	// execute!
 	std::stringstream standardError;
