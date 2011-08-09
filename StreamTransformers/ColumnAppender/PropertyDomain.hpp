@@ -15,6 +15,7 @@
 #include <string>
 #include "Hashers.hpp"
 #include <boost/noncopyable.hpp>
+#include <map>
 
 class DataProxyClient;
 
@@ -24,7 +25,7 @@ public :
 	PropertyDomain();
 	virtual ~PropertyDomain();
 	// Load will use DPLProxyClient object to load data node and then store properties
-	void Load( DataProxyClient& i_rDPLClient, const std::string& i_rPropertyNodeName, const std::string& i_rPropertyKeyValueName, const std::string& i_rPropertiesToAppend );
+	void Load( DataProxyClient& i_rDPLClient, const std::string& i_rPropertyNodeName, const std::string& i_rPropertyKeyValueName, const std::string& i_rPropertiesToAppend, const std::map< std::string, std::string >& i_rParameters );
 
 	// Get Properties return properties mapped to property key value
 	const std::string* GetProperties( const std::string& i_rPropertyKeyValue ) const;

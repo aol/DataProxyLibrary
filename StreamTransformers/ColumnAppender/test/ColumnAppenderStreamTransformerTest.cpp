@@ -45,7 +45,7 @@ void ColumnAppenderStreamTransformerTest::tearDown()
 
 void ColumnAppenderStreamTransformerTest::PrepareDatafile()
 {
-	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/null" );
+	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/columnappender.csv" );
 	std::ofstream file( fileSpec.c_str() );
 			
 	file << "media_id"<< "," << "rtd_id" << "," << "col_id1" << "," << "campaign_id"<< std::endl
@@ -69,7 +69,7 @@ void ColumnAppenderStreamTransformerTest::testColumnAppender()
 	// Create DPL Config file
 	std::ofstream file( dplConfigFileName.c_str() );
 	file << "<DPLConfig>" << std::endl;
-	file << "   <DataNode name=\"MediaProperties\" type=\"local\" location=\"" << m_pTempDir->GetDirectoryName() <<"\"/>" << std::endl;
+	file << "   <DataNode name=\"MediaProperties\" type=\"local\" location=\"" << m_pTempDir->GetDirectoryName() <<"\" format=\"columnappender.csv\"/> " << std::endl;
 	file << "</DPLConfig>" << std::endl;
 	file.close();
 

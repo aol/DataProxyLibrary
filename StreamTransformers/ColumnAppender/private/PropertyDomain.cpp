@@ -28,14 +28,13 @@ PropertyDomain::~PropertyDomain()
 }
 
 // Uses initialized DPLClient Object and loads datanode to store requested properties
-void PropertyDomain::Load( DataProxyClient& i_rDPLClient, const std::string& i_rPropertyNodeName, const std::string& i_rPropertyKeyValueName, const std::string& i_rPropertiesToAppend )
+void PropertyDomain::Load( DataProxyClient& i_rDPLClient, const std::string& i_rPropertyNodeName, const std::string& i_rPropertyKeyValueName, const std::string& i_rPropertiesToAppend, const std::map< std::string, std::string >& i_rParameters )
 {
 	std::vector< std::string > propertiesToAppend;
 	boost::iter_split ( propertiesToAppend, i_rPropertiesToAppend, boost::first_finder( "," ) );
 	
 	std::stringstream datastream;
-	std::map<std::string, std::string > parameters;
- 	i_rDPLClient.Load( i_rPropertyNodeName, parameters, datastream );
+ 	i_rDPLClient.Load( i_rPropertyNodeName, i_rParameters, datastream );
 
 	CSVReader reader( datastream, ',', true );
 	

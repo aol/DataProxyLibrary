@@ -56,7 +56,7 @@ boost::shared_ptr< std::stringstream > AppendColumns( std::istream& i_rInputStre
 	DataProxyClient client;
 	client.Initialize( dplConfig );
 	PropertyDomain propDomain;
-	propDomain.Load( client, propertyNodeName, propertiesKeyColumnName, propertiesToAppend );
+	propDomain.Load( client, propertyNodeName, propertiesKeyColumnName, propertiesToAppend, i_rParameters );
 
 	// Reading from input stream 
 	CSVReader reader( i_rInputStream );
