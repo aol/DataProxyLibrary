@@ -183,7 +183,7 @@ void ValidateStreamTransformerTest::testMakeSet()
 	
 	std::map<std::string, std::string> parameters;
 	parameters["timeout"] = "5";
-	parameters["globals"] = "make_set( \"13,33,43,53\", col3goods ); make_set( \"25,35,45\", col5bads );";
+	parameters["globals"] = "make_set( \"13;33;43;53;\", col3goods, \";\" ); make_set( \"25,35,45\", col5bads );";
 	parameters["discardIf"] = "!(col3 in col3goods) || (col5 in col5bads)";
 
 	std::stringstream expected;

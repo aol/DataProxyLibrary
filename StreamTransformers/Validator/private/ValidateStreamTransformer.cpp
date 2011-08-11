@@ -43,7 +43,7 @@ namespace
 		std::stringstream result;
 		result << "gawk -F, '";
 		// register the make_set function to be used by users
-		result << "function make_set( str, hash ){ split( str, array, \",\" ); for( elem in array ) { hash[array[elem]] = 1; } }" << std::endl;
+		result << "function make_set( str, hash, delim ){ if( delim == \"\" ){ delim = \",\"; } split( str, array, delim ); for( elem in array ) { hash[array[elem]] = 1; } }" << std::endl;
 
 		// write the BEGIN block
 		result << "BEGIN { ";
