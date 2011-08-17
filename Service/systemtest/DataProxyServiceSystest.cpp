@@ -75,25 +75,40 @@ void DataProxyServiceSystest::testHappyPath( void )
 	endpoint << "http://localhost:" << port << "/my/path/?query1=value1&query2=value2";
 
 	// POST data to the service
-	std::stringstream data;
-	data << "This is some data that will eventually be returned via GET";
+	std::istringstream data( "This is some data that will eventually be returned via GET" );
 	RESTParameters params;
 	params.SetCompression( IDENTITY );
+	params.SetMethod( std::string( "POST" ) );
 	RESTClient client;
-	CPPUNIT_ASSERT_NO_THROW( client.Post( endpoint.str(), data ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Execute( endpoint.str(), data, params ) );
 
 	// now GET it back
-	std::stringstream results;
-	CPPUNIT_ASSERT_NO_THROW( client.Get( endpoint.str(), results, params ) );
+	std::ostringstream results;
+	params.SetMethod( std::string( "GET" ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Execute( endpoint.str(), results, params ) );
 	CPPUNIT_ASSERT_EQUAL( data.str(), results.str() );
 
 	results.str("");
 	params.SetCompression( DEFLATE );
-	CPPUNIT_ASSERT_NO_THROW( client.Get( endpoint.str(), results, params ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Execute( endpoint.str(), results, params ) );
 	CPPUNIT_ASSERT_EQUAL( data.str(), results.str() );
 
 	results.str("");
 	params.SetCompression( GZIP );
-	CPPUNIT_ASSERT_NO_THROW( client.Get( endpoint.str(), results, params ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Execute( endpoint.str(), results, params ) );
 	CPPUNIT_ASSERT_EQUAL( data.str(), results.str() );
+
+	// DELETE the file
+	results.str("");
+	params.SetMethod( std::string( "DELETE" ) );
+	params.SetCompression( IDENTITY );
+	CPPUNIT_ASSERT_NO_THROW( client.Execute( endpoint.str(), results, params ) );
+	CPPUNIT_ASSERT_EQUAL( std::string(""), results.str() );
+	CPPUNIT_ASSERT( !FileUtilities::DoesFileExist( nodeDir + "query1~value1^query2~value2" ) );
+
+	// DELETE the file again
+	results.str("");
+	CPPUNIT_ASSERT_NO_THROW( client.Execute( endpoint.str(), results, params ) );
+	CPPUNIT_ASSERT_EQUAL( std::string(""), results.str() );
+	CPPUNIT_ASSERT( !FileUtilities::DoesFileExist( nodeDir + "query1~value1^query2~value2" ) );
 }

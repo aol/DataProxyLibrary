@@ -64,8 +64,9 @@ void DataProxyClientTest::testUninitialized()
 	std::map<std::string, std::string> params;
 	std::stringstream data;
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( client.Load("service1", params, data), DataProxyClientException, ".*/DataProxyClient.cpp:\\d+: Attempted to issue Load request on uninitialized DataProxyClient" );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( client.Store("service1", params, data), DataProxyClientException, ".*/DataProxyClient.cpp:\\d+: Attempted to issue Store request on uninitialized DataProxyClient" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( client.Load( "service1", params, data ), DataProxyClientException, ".*/DataProxyClient.cpp:\\d+: Attempted to issue Load request on uninitialized DataProxyClient" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( client.Store( "service1", params, data ), DataProxyClientException, ".*/DataProxyClient.cpp:\\d+: Attempted to issue Store request on uninitialized DataProxyClient" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( client.Delete( "service1", params ), DataProxyClientException, ".*/DataProxyClient.cpp:\\d+: Attempted to issue Delete request on uninitialized DataProxyClient" );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( client.BeginTransaction(), DataProxyClientException, ".*/DataProxyClient.cpp:\\d+: Attempted to issue BeginTransaction request on uninitialized DataProxyClient" );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( client.Commit(), DataProxyClientException, ".*/DataProxyClient.cpp:\\d+: Attempted to issue Commit request on uninitialized DataProxyClient" );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( client.Rollback(), DataProxyClientException, ".*/DataProxyClient.cpp:\\d+: Attempted to issue Rollback request on uninitialized DataProxyClient" );
@@ -148,7 +149,6 @@ void DataProxyClientTest::testDatabaseConnectionsNode()
 	file << "</DPLConfig>" << std::endl;
 	file.close();
 
-
 	TestableDataProxyClient client;
 	MockDatabaseConnectionManager databaseConnectionManager;
 	MockNodeFactory factory;
@@ -174,7 +174,7 @@ void DataProxyClientTest::testDatabaseConnectionsNode()
 	CPPUNIT_ASSERT_EQUAL( expected.str(), factory.GetLog() );
 }
 
-void DataProxyClientTest::testStoreUnsuccessfulRollback()
+void DataProxyClientTest::testStoreDeleteUnsuccessfulRollback()
 {
 	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/dataProxyConfig.xml" );
 	std::ofstream file( fileSpec.c_str() );
@@ -183,14 +183,18 @@ void DataProxyClientTest::testStoreUnsuccessfulRollback()
 	file << "  <DataNode name=\"name2\" type=\"dummy\" />" << std::endl;
 	file << "  <DataNode name=\"name3\" type=\"dummy\" />" << std::endl;
 	file << "  <DataNode name=\"name4\" type=\"dummy\" />" << std::endl;
+	file << "  <DataNode name=\"name5\" type=\"dummy\" />" << std::endl;
+	file << "  <DataNode name=\"name6\" type=\"dummy\" />" << std::endl;
 	file << "</DPLConfig>" << std::endl;
 	file.close();
 
 	MockNodeFactory factory;
 	factory.SetStoreResult( "name1", false );
-	factory.SetStoreResult( "name2", false );
+	factory.SetDeleteResult( "name2", false );
 	factory.SetStoreResult( "name3", false );
-	factory.SetStoreResult( "name4", true );
+	factory.SetDeleteResult( "name4", false );
+	factory.SetStoreResult( "name5", true );
+	factory.SetDeleteResult( "name6", true );
 
 	std::map< std::string, std::string > parameters;
 	parameters["param1"] = "value1";
@@ -204,11 +208,15 @@ void DataProxyClientTest::testStoreUnsuccessfulRollback()
 	CPPUNIT_ASSERT_NO_THROW( client.Initialize( fileSpec, factory ) );
 	CPPUNIT_ASSERT_NO_THROW( client.Store( "name1", parameters, data ) );
 	data.clear(); data.seekg(0);
-	CPPUNIT_ASSERT_NO_THROW( client.Store( "name2", parameters, data ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Delete( "name2", parameters ) );
 	data.clear(); data.seekg(0);
 	CPPUNIT_ASSERT_NO_THROW( client.Store( "name3", parameters, data ) );
 	data.clear(); data.seekg(0);
-	CPPUNIT_ASSERT_NO_THROW( client.Store( "name4", parameters, data ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Delete( "name4", parameters ) );
+	data.clear(); data.seekg(0);
+	CPPUNIT_ASSERT_NO_THROW( client.Store( "name5", parameters, data ) );
+	data.clear(); data.seekg(0);
+	CPPUNIT_ASSERT_NO_THROW( client.Delete( "name6", parameters ) );
 
 	std::stringstream expected;
 	expected << "RegisterDatabaseConnections called" << std::endl;
@@ -216,18 +224,24 @@ void DataProxyClientTest::testStoreUnsuccessfulRollback()
 	expected << "CreateNode called with Name: name2 NodeType: DataNode" << std::endl;
 	expected << "CreateNode called with Name: name3 NodeType: DataNode" << std::endl;
 	expected << "CreateNode called with Name: name4 NodeType: DataNode" << std::endl;
+	expected << "CreateNode called with Name: name5 NodeType: DataNode" << std::endl;
+	expected << "CreateNode called with Name: name6 NodeType: DataNode" << std::endl;
 	expected << "Store called on: name1 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data.str() << std::endl;
 	expected << "Rollback called on: name1" << std::endl;
-	expected << "Store called on: name2 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data.str() << std::endl;
+	expected << "Delete called on: name2 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
 	expected << "Rollback called on: name2" << std::endl;
 	expected << "Store called on: name3 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data.str() << std::endl;
 	expected << "Rollback called on: name3" << std::endl;
-	expected << "Store called on: name4 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data.str() << std::endl;
-	expected << "Commit called on: name4" << std::endl;
+	expected << "Delete called on: name4 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	expected << "Rollback called on: name4" << std::endl;
+	expected << "Store called on: name5 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data.str() << std::endl;
+	expected << "Commit called on: name5" << std::endl;
+	expected << "Delete called on: name6 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	expected << "Commit called on: name6" << std::endl;
 	CPPUNIT_ASSERT_EQUAL( expected.str(), factory.GetLog() );
 }
 
-void DataProxyClientTest::testStoreUnsuccessfulRollback_WithTransactions()
+void DataProxyClientTest::testStoreDeleteUnsuccessfulRollback_WithTransactions()
 {
 	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/dataProxyConfig.xml" );
 	std::ofstream file( fileSpec.c_str() );
@@ -236,14 +250,18 @@ void DataProxyClientTest::testStoreUnsuccessfulRollback_WithTransactions()
 	file << "  <DataNode name=\"name2\" type=\"dummy\" />" << std::endl;
 	file << "  <DataNode name=\"name3\" type=\"dummy\" />" << std::endl;
 	file << "  <DataNode name=\"name4\" type=\"dummy\" />" << std::endl;
+	file << "  <DataNode name=\"name5\" type=\"dummy\" />" << std::endl;
+	file << "  <DataNode name=\"name6\" type=\"dummy\" />" << std::endl;
 	file << "</DPLConfig>" << std::endl;
 	file.close();
 
 	MockNodeFactory factory;
 	factory.SetStoreResult( "name1", false );
-	factory.SetStoreResult( "name2", false );
+	factory.SetDeleteResult( "name2", false );
 	factory.SetStoreResult( "name3", false );
-	factory.SetStoreResult( "name4", true );
+	factory.SetDeleteResult( "name4", false );
+	factory.SetStoreResult( "name5", true );
+	factory.SetDeleteResult( "name6", true );
 
 	std::map< std::string, std::string > parameters;
 	parameters["param1"] = "value1";
@@ -258,11 +276,13 @@ void DataProxyClientTest::testStoreUnsuccessfulRollback_WithTransactions()
 	CPPUNIT_ASSERT_NO_THROW( client.BeginTransaction() );
 	CPPUNIT_ASSERT_NO_THROW( client.Store( "name1", parameters, data ) );
 	data.clear(); data.seekg(0);
-	CPPUNIT_ASSERT_NO_THROW( client.Store( "name2", parameters, data ) );
-	data.clear(); data.seekg(0);
+	CPPUNIT_ASSERT_NO_THROW( client.Delete( "name2", parameters ) );
 	CPPUNIT_ASSERT_NO_THROW( client.Store( "name3", parameters, data ) );
 	data.clear(); data.seekg(0);
-	CPPUNIT_ASSERT_NO_THROW( client.Store( "name4", parameters, data ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Delete( "name4", parameters ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Store( "name5", parameters, data ) );
+	data.clear(); data.seekg(0);
+	CPPUNIT_ASSERT_NO_THROW( client.Delete( "name6", parameters ) );
 	CPPUNIT_ASSERT_NO_THROW( client.Commit() );
 
 	std::stringstream expected;
@@ -271,14 +291,21 @@ void DataProxyClientTest::testStoreUnsuccessfulRollback_WithTransactions()
 	expected << "CreateNode called with Name: name2 NodeType: DataNode" << std::endl;
 	expected << "CreateNode called with Name: name3 NodeType: DataNode" << std::endl;
 	expected << "CreateNode called with Name: name4 NodeType: DataNode" << std::endl;
+	expected << "CreateNode called with Name: name5 NodeType: DataNode" << std::endl;
+	expected << "CreateNode called with Name: name6 NodeType: DataNode" << std::endl;
 	expected << "Store called on: name1 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data.str() << std::endl;
-	expected << "Store called on: name2 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data.str() << std::endl;
+	expected << "Delete called on: name2 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
 	expected << "Store called on: name3 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data.str() << std::endl;
-	expected << "Store called on: name4 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data.str() << std::endl;
-	expected << "Commit called on: name4" << std::endl;
+	expected << "Delete called on: name4 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	expected << "Store called on: name5 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data.str() << std::endl;
+	expected << "Delete called on: name6 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	expected << "Commit called on: name5" << std::endl;
+	expected << "Commit called on: name6" << std::endl;
 	expected << "Rollback called on: name1" << std::endl;
 	expected << "Rollback called on: name2" << std::endl;
 	expected << "Rollback called on: name3" << std::endl;
+	expected << "Rollback called on: name4" << std::endl;
+
 	CPPUNIT_ASSERT_EQUAL( expected.str(), factory.GetLog() );
 }
 	
@@ -318,6 +345,8 @@ void DataProxyClientTest::testCommit()
 		 << "  <DataNode name=\"name3\" type=\"type3\" />" << std::endl
 		 << "  <DataNode name=\"name4\" type=\"type4\" />" << std::endl
 		 << "  <DataNode name=\"name5\" type=\"type5\" />" << std::endl
+		 << "  <DataNode name=\"name6\" type=\"type6\" />" << std::endl
+		 << "  <DataNode name=\"name7\" type=\"type7\" />" << std::endl
 		 << "</DPLConfig>" << std::endl;
 	file.close();
 
@@ -327,6 +356,8 @@ void DataProxyClientTest::testCommit()
 	factory.SetSupportsTransactions( "name3", false );
 	factory.SetSupportsTransactions( "name4", true );
 	factory.SetSupportsTransactions( "name5", true );
+	factory.SetSupportsTransactions( "name6", true );
+	factory.SetSupportsTransactions( "name7", true );
 	factory.SetCommitException( "name3", true );
 
 	std::stringstream expected;
@@ -339,6 +370,8 @@ void DataProxyClientTest::testCommit()
 	expected << "CreateNode called with Name: name3 NodeType: DataNode" << std::endl;
 	expected << "CreateNode called with Name: name4 NodeType: DataNode" << std::endl;
 	expected << "CreateNode called with Name: name5 NodeType: DataNode" << std::endl;
+	expected << "CreateNode called with Name: name6 NodeType: DataNode" << std::endl;
+	expected << "CreateNode called with Name: name7 NodeType: DataNode" << std::endl;
 	CPPUNIT_ASSERT_EQUAL( expected.str(), factory.GetLog() );
 
 	std::stringstream result;
@@ -357,6 +390,10 @@ void DataProxyClientTest::testCommit()
 	CPPUNIT_ASSERT_NO_THROW( client.Store( "name5", parameters, data5_1 ) );
 	CPPUNIT_ASSERT_NO_THROW( client.Store( "name4", parameters, data4_2 ) );
 	CPPUNIT_ASSERT_NO_THROW( client.Store( "name3", parameters, data3_1 ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Delete( "name6", parameters ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Delete( "name4", parameters ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Delete( "name7", parameters ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Delete( "name3", parameters ) );
 	CPPUNIT_ASSERT_NO_THROW( client.Commit() );
 
 	expected << "Load called on: name2 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
@@ -365,9 +402,15 @@ void DataProxyClientTest::testCommit()
 			 << "Store called on: name5 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data5_1.str() << std::endl
 			 << "Store called on: name4 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data4_2.str() << std::endl
 			 << "Store called on: name3 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data3_1.str() << std::endl
+			 << "Delete called on: name6 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
+			 << "Delete called on: name4 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
+			 << "Delete called on: name7 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
+			 << "Delete called on: name3 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
 			 << "Commit called on: name4" << std::endl
 			 << "Commit called on: name1" << std::endl
-			 << "Commit called on: name5" << std::endl;
+			 << "Commit called on: name5" << std::endl
+			 << "Commit called on: name6" << std::endl
+			 << "Commit called on: name7" << std::endl;
 
 	CPPUNIT_ASSERT_EQUAL( expected.str(), factory.GetLog() );
 }
@@ -383,6 +426,8 @@ void DataProxyClientTest::testCommitPartial()
 		 << "  <DataNode name=\"name3\" type=\"type3\" />" << std::endl
 		 << "  <DataNode name=\"name4\" type=\"type4\" />" << std::endl
 		 << "  <DataNode name=\"name5\" type=\"type5\" />" << std::endl
+		 << "  <DataNode name=\"name6\" type=\"type6\" />" << std::endl
+		 << "  <DataNode name=\"name7\" type=\"type7\" />" << std::endl
 		 << "</DPLConfig>" << std::endl;
 	file.close();
 
@@ -392,9 +437,12 @@ void DataProxyClientTest::testCommitPartial()
 	factory.SetSupportsTransactions( "name3", false );
 	factory.SetSupportsTransactions( "name4", true );
 	factory.SetSupportsTransactions( "name5", true );
+	factory.SetSupportsTransactions( "name6", true );
+	factory.SetSupportsTransactions( "name7", true );
 	factory.SetCommitException( "name3", true );
 	factory.SetCommitException( "name4", true );
 	factory.SetCommitException( "name1", true );
+	factory.SetCommitException( "name6", true );
 
 	std::stringstream expected;
 
@@ -406,6 +454,8 @@ void DataProxyClientTest::testCommitPartial()
 	expected << "CreateNode called with Name: name3 NodeType: DataNode" << std::endl;
 	expected << "CreateNode called with Name: name4 NodeType: DataNode" << std::endl;
 	expected << "CreateNode called with Name: name5 NodeType: DataNode" << std::endl;
+	expected << "CreateNode called with Name: name6 NodeType: DataNode" << std::endl;
+	expected << "CreateNode called with Name: name7 NodeType: DataNode" << std::endl;
 	CPPUNIT_ASSERT_EQUAL( expected.str(), factory.GetLog() );
 
 	std::stringstream result;
@@ -424,10 +474,14 @@ void DataProxyClientTest::testCommitPartial()
 	CPPUNIT_ASSERT_NO_THROW( client.Store( "name5", parameters, data5_1 ) );
 	CPPUNIT_ASSERT_NO_THROW( client.Store( "name4", parameters, data4_2 ) );
 	CPPUNIT_ASSERT_NO_THROW( client.Store( "name3", parameters, data3_1 ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Delete( "name6", parameters ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Delete( "name2", parameters ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Delete( "name7", parameters ) );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( client.Commit(), PartialCommitException,
 		".*:\\d+: Errors were encountered during commit operation, resulting in a partial commit: "
 		"\nNode: name4: .*:\\d+: Set to throw exception"
-		"\nNode: name1: .*:\\d+: Set to throw exception" );
+		"\nNode: name1: .*:\\d+: Set to throw exception"
+		"\nNode: name6: .*:\\d+: Set to throw exception" );
 
 	expected << "Load called on: name2 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
 			 << "Store called on: name4 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data4_1.str() << std::endl
@@ -435,9 +489,15 @@ void DataProxyClientTest::testCommitPartial()
 			 << "Store called on: name5 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data5_1.str() << std::endl
 			 << "Store called on: name4 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data4_2.str() << std::endl
 			 << "Store called on: name3 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data3_1.str() << std::endl
+			 << "Delete called on: name6 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
+			 << "Delete called on: name2 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
+			 << "Delete called on: name7 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
 			 << "Commit called on: name4" << std::endl
 			 << "Commit called on: name1" << std::endl
-			 << "Commit called on: name5" << std::endl;
+			 << "Commit called on: name5" << std::endl
+			 << "Commit called on: name6" << std::endl
+			 << "Commit called on: name2" << std::endl
+			 << "Commit called on: name7" << std::endl;
 
 	CPPUNIT_ASSERT_EQUAL( expected.str(), factory.GetLog() );
 }
@@ -453,6 +513,8 @@ void DataProxyClientTest::testRollback()
 		 << "  <DataNode name=\"name3\" type=\"type3\" />" << std::endl
 		 << "  <DataNode name=\"name4\" type=\"type4\" />" << std::endl
 		 << "  <DataNode name=\"name5\" type=\"type5\" />" << std::endl
+		 << "  <DataNode name=\"name6\" type=\"type6\" />" << std::endl
+		 << "  <DataNode name=\"name7\" type=\"type7\" />" << std::endl
 		 << "</DPLConfig>" << std::endl;
 	file.close();
 
@@ -462,6 +524,8 @@ void DataProxyClientTest::testRollback()
 	factory.SetSupportsTransactions( "name3", false );
 	factory.SetSupportsTransactions( "name4", true );
 	factory.SetSupportsTransactions( "name5", true );
+	factory.SetSupportsTransactions( "name6", true );
+	factory.SetSupportsTransactions( "name7", true );
 	factory.SetRollbackException( "name3", true );
 
 	std::stringstream expected;
@@ -474,6 +538,8 @@ void DataProxyClientTest::testRollback()
 	expected << "CreateNode called with Name: name3 NodeType: DataNode" << std::endl;
 	expected << "CreateNode called with Name: name4 NodeType: DataNode" << std::endl;
 	expected << "CreateNode called with Name: name5 NodeType: DataNode" << std::endl;
+	expected << "CreateNode called with Name: name6 NodeType: DataNode" << std::endl;
+	expected << "CreateNode called with Name: name7 NodeType: DataNode" << std::endl;
 	CPPUNIT_ASSERT_EQUAL( expected.str(), factory.GetLog() );
 
 	std::stringstream result;
@@ -492,6 +558,10 @@ void DataProxyClientTest::testRollback()
 	CPPUNIT_ASSERT_NO_THROW( client.Store( "name5", parameters, data5_1 ) );
 	CPPUNIT_ASSERT_NO_THROW( client.Store( "name4", parameters, data4_2 ) );
 	CPPUNIT_ASSERT_NO_THROW( client.Store( "name3", parameters, data3_1 ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Delete( "name6", parameters ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Delete( "name4", parameters ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Delete( "name7", parameters ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Delete( "name3", parameters ) );
 	CPPUNIT_ASSERT_NO_THROW( client.Rollback() );
 
 	expected << "Load called on: name2 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
@@ -500,9 +570,15 @@ void DataProxyClientTest::testRollback()
 			 << "Store called on: name5 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data5_1.str() << std::endl
 			 << "Store called on: name4 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data4_2.str() << std::endl
 			 << "Store called on: name3 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data3_1.str() << std::endl
+			 << "Delete called on: name6 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
+			 << "Delete called on: name4 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
+			 << "Delete called on: name7 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
+			 << "Delete called on: name3 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
 			 << "Rollback called on: name4" << std::endl
 			 << "Rollback called on: name1" << std::endl
-			 << "Rollback called on: name5" << std::endl;
+			 << "Rollback called on: name5" << std::endl
+			 << "Rollback called on: name6" << std::endl
+			 << "Rollback called on: name7" << std::endl;
 
 	CPPUNIT_ASSERT_EQUAL( expected.str(), factory.GetLog() );
 }
@@ -518,6 +594,8 @@ void DataProxyClientTest::testRollbackException()
 		 << "  <DataNode name=\"name3\" type=\"type3\" />" << std::endl
 		 << "  <DataNode name=\"name4\" type=\"type4\" />" << std::endl
 		 << "  <DataNode name=\"name5\" type=\"type5\" />" << std::endl
+		 << "  <DataNode name=\"name6\" type=\"type6\" />" << std::endl
+		 << "  <DataNode name=\"name7\" type=\"type7\" />" << std::endl
 		 << "</DPLConfig>" << std::endl;
 	file.close();
 
@@ -527,9 +605,12 @@ void DataProxyClientTest::testRollbackException()
 	factory.SetSupportsTransactions( "name3", false );
 	factory.SetSupportsTransactions( "name4", true );
 	factory.SetSupportsTransactions( "name5", true );
+	factory.SetSupportsTransactions( "name6", true );
+	factory.SetSupportsTransactions( "name7", true );
 	factory.SetRollbackException( "name3", true );
 	factory.SetRollbackException( "name1", true );
 	factory.SetRollbackException( "name4", true );
+	factory.SetRollbackException( "name6", true );
 
 	std::stringstream expected;
 
@@ -541,6 +622,8 @@ void DataProxyClientTest::testRollbackException()
 	expected << "CreateNode called with Name: name3 NodeType: DataNode" << std::endl;
 	expected << "CreateNode called with Name: name4 NodeType: DataNode" << std::endl;
 	expected << "CreateNode called with Name: name5 NodeType: DataNode" << std::endl;
+	expected << "CreateNode called with Name: name6 NodeType: DataNode" << std::endl;
+	expected << "CreateNode called with Name: name7 NodeType: DataNode" << std::endl;
 	CPPUNIT_ASSERT_EQUAL( expected.str(), factory.GetLog() );
 
 	std::stringstream result;
@@ -559,6 +642,9 @@ void DataProxyClientTest::testRollbackException()
 	CPPUNIT_ASSERT_NO_THROW( client.Store( "name5", parameters, data5_1 ) );
 	CPPUNIT_ASSERT_NO_THROW( client.Store( "name4", parameters, data4_2 ) );
 	CPPUNIT_ASSERT_NO_THROW( client.Store( "name3", parameters, data3_1 ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Delete( "name7", parameters ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Delete( "name6", parameters ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Delete( "name3", parameters ) );
 	// rollback succeeds even if:
 	// 1. some stores were already auto-committed
 	// 2. some rollbacks failed
@@ -570,9 +656,14 @@ void DataProxyClientTest::testRollbackException()
 			 << "Store called on: name5 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data5_1.str() << std::endl
 			 << "Store called on: name4 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data4_2.str() << std::endl
 			 << "Store called on: name3 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data3_1.str() << std::endl
+			 << "Delete called on: name7 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
+			 << "Delete called on: name6 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
+			 << "Delete called on: name3 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
 			 << "Rollback called on: name4" << std::endl
 			 << "Rollback called on: name1" << std::endl
-			 << "Rollback called on: name5" << std::endl;
+			 << "Rollback called on: name5" << std::endl
+			 << "Rollback called on: name7" << std::endl
+			 << "Rollback called on: name6" << std::endl;
 
 	CPPUNIT_ASSERT_EQUAL( expected.str(), factory.GetLog() );
 }
@@ -627,6 +718,9 @@ void DataProxyClientTest::testAutoRollback()
 	CPPUNIT_ASSERT_NO_THROW( pClient->Store( "name5", parameters, data5_1 ) );
 	CPPUNIT_ASSERT_NO_THROW( pClient->Store( "name4", parameters, data4_2 ) );
 	CPPUNIT_ASSERT_NO_THROW( pClient->Store( "name3", parameters, data3_1 ) );
+	CPPUNIT_ASSERT_NO_THROW( pClient->Delete( "name2", parameters ) );
+	CPPUNIT_ASSERT_NO_THROW( pClient->Delete( "name3", parameters ) );
+	CPPUNIT_ASSERT_NO_THROW( pClient->Delete( "name4", parameters ) );
 
 	// destroy the client without calling commit or rollback; rollback should be called
 	CPPUNIT_ASSERT_NO_THROW( pClient.reset( NULL ) );
@@ -637,10 +731,14 @@ void DataProxyClientTest::testAutoRollback()
 			 << "Store called on: name5 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data5_1.str() << std::endl
 			 << "Store called on: name4 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data4_2.str() << std::endl
 			 << "Store called on: name3 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data3_1.str() << std::endl
+			 << "Delete called on: name2 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
+			 << "Delete called on: name3 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
+			 << "Delete called on: name4 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
 			 << "Rollback called on: name4" << std::endl
 			 << "Rollback called on: name1" << std::endl
 			 << "Rollback called on: name5" << std::endl
-			 << "Rollback called on: name3" << std::endl;
+			 << "Rollback called on: name3" << std::endl
+			 << "Rollback called on: name2" << std::endl;
 
 	CPPUNIT_ASSERT_EQUAL( expected.str(), factory.GetLog() );
 }
@@ -688,11 +786,22 @@ void DataProxyClientTest::testForwardingOk()
 
 	factory.AddWriteForward( "name2", "name1" );
 
-	std::stringstream expected;
+	factory.AddDeleteForward( "name1", "name2" );
+	factory.AddDeleteForward( "name1", "name3" );
+	factory.AddDeleteForward( "name1", "name4" );
+	factory.AddDeleteForward( "name1", "name5" );
 
-	boost::scoped_ptr< TestableDataProxyClient > pClient;
-	pClient.reset( new TestableDataProxyClient() );
-	CPPUNIT_ASSERT_NO_THROW( pClient->Initialize( fileSpec, factory ) );
+	factory.AddDeleteForward( "name2", "name3" );
+	factory.AddDeleteForward( "name2", "name4" );
+	factory.AddDeleteForward( "name2", "name5" );
+
+	factory.AddDeleteForward( "name3", "name4" );
+	factory.AddDeleteForward( "name3", "name5" );
+	
+	factory.AddDeleteForward( "name4", "name5" );
+
+	TestableDataProxyClient client;
+	CPPUNIT_ASSERT_NO_THROW( client.Initialize( fileSpec, factory ) );
 }
 
 void DataProxyClientTest::testReadCycles()
@@ -716,11 +825,8 @@ void DataProxyClientTest::testReadCycles()
 	factory.AddReadForward( "name4", "name5" );
 	factory.AddReadForward( "name5", "name1" );
 
-	std::stringstream expected;
-
-	boost::scoped_ptr< TestableDataProxyClient > pClient;
-	pClient.reset( new TestableDataProxyClient() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pClient->Initialize( fileSpec, factory ), DataProxyClientException,
+	TestableDataProxyClient client;
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( client.Initialize( fileSpec, factory ), DataProxyClientException,
 		".*:\\d+: Detected a cycle in the read forward-to path: name1->name2->name3->name4->name5 leading back to: name1" );
 }
 
@@ -745,12 +851,35 @@ void DataProxyClientTest::testWriteCycles()
 	factory.AddWriteForward( "name4", "name5" );
 	factory.AddWriteForward( "name5", "name1" );
 
-	std::stringstream expected;
-
-	boost::scoped_ptr< TestableDataProxyClient > pClient;
-	pClient.reset( new TestableDataProxyClient() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pClient->Initialize( fileSpec, factory ), DataProxyClientException,
+	TestableDataProxyClient client;
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( client.Initialize( fileSpec, factory ), DataProxyClientException,
 		".*:\\d+: Detected a cycle in the write forward-to path: name1->name2->name3->name4->name5 leading back to: name1" );
+}
+
+void DataProxyClientTest::testDeleteCycles()
+{
+	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/dataProxyConfig.xml" );
+	std::ofstream file( fileSpec.c_str() );
+
+	file << "<DPLConfig>" << std::endl
+		 << "  <DataNode name=\"name1\" type=\"type1\" />" << std::endl
+		 << "  <DataNode name=\"name2\" type=\"type2\" />" << std::endl
+		 << "  <DataNode name=\"name3\" type=\"type3\" />" << std::endl
+		 << "  <DataNode name=\"name4\" type=\"type4\" />" << std::endl
+		 << "  <DataNode name=\"name5\" type=\"type5\" />" << std::endl
+		 << "</DPLConfig>" << std::endl;
+	file.close();
+
+	MockNodeFactory factory;
+	factory.AddDeleteForward( "name1", "name2" );
+	factory.AddDeleteForward( "name2", "name3" );
+	factory.AddDeleteForward( "name3", "name4" );
+	factory.AddDeleteForward( "name4", "name5" );
+	factory.AddDeleteForward( "name5", "name1" );
+
+	TestableDataProxyClient client;
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( client.Initialize( fileSpec, factory ), DataProxyClientException,
+		".*:\\d+: Detected a cycle in the delete forward-to path: name1->name2->name3->name4->name5 leading back to: name1" );
 }
 
 void DataProxyClientTest::testUndefinedReadForwards()
@@ -773,11 +902,8 @@ void DataProxyClientTest::testUndefinedReadForwards()
 	factory.AddReadForward( "name3", "name4" );
 	factory.AddReadForward( "name4", "unknown" );
 
-	std::stringstream expected;
-
-	boost::scoped_ptr< TestableDataProxyClient > pClient;
-	pClient.reset( new TestableDataProxyClient() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pClient->Initialize( fileSpec, factory ), DataProxyClientException,
+	TestableDataProxyClient client;
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( client.Initialize( fileSpec, factory ), DataProxyClientException,
 		".*:\\d+: Node: name4 has a read-side forward-to node that doesn't exist: 'unknown'" );
 }
 
@@ -801,12 +927,34 @@ void DataProxyClientTest::testUndefinedWriteForwards()
 	factory.AddWriteForward( "name3", "name4" );
 	factory.AddWriteForward( "name4", "unknown" );
 
-	std::stringstream expected;
-
-	boost::scoped_ptr< TestableDataProxyClient > pClient;
-	pClient.reset( new TestableDataProxyClient() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pClient->Initialize( fileSpec, factory ), DataProxyClientException,
+	TestableDataProxyClient client;
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( client.Initialize( fileSpec, factory ), DataProxyClientException,
 		".*:\\d+: Node: name4 has a write-side forward-to node that doesn't exist: 'unknown'" );
+}
+
+void DataProxyClientTest::testUndefinedDeleteForwards()
+{
+	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/dataProxyConfig.xml" );
+	std::ofstream file( fileSpec.c_str() );
+
+	file << "<DPLConfig>" << std::endl
+		 << "  <DataNode name=\"name1\" type=\"type1\" />" << std::endl
+		 << "  <DataNode name=\"name2\" type=\"type2\" />" << std::endl
+		 << "  <DataNode name=\"name3\" type=\"type3\" />" << std::endl
+		 << "  <DataNode name=\"name4\" type=\"type4\" />" << std::endl
+		 << "  <DataNode name=\"name5\" type=\"type5\" />" << std::endl
+		 << "</DPLConfig>" << std::endl;
+	file.close();
+
+	MockNodeFactory factory;
+	factory.AddDeleteForward( "name1", "name2" );
+	factory.AddDeleteForward( "name2", "name3" );
+	factory.AddDeleteForward( "name3", "name4" );
+	factory.AddDeleteForward( "name4", "unknown" );
+
+	TestableDataProxyClient client;
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( client.Initialize( fileSpec, factory ), DataProxyClientException,
+		".*:\\d+: Node: name4 has a delete-side forward-to node that doesn't exist: 'unknown'" );
 }
 
 void DataProxyClientTest::testEntityResolution()
@@ -837,9 +985,9 @@ void DataProxyClientTest::testEntityResolution()
 
 	MockNodeFactory factory;
 	factory.SetDataToReturn( "n", data );
-	boost::scoped_ptr< TestableDataProxyClient > pClient( new TestableDataProxyClient() );
-	CPPUNIT_ASSERT_NO_THROW( pClient->Initialize( configFileSpec, factory ) );
-	CPPUNIT_ASSERT_NO_THROW( pClient->Load( "n", parameters, result ) );
+	TestableDataProxyClient client;
+	CPPUNIT_ASSERT_NO_THROW( client.Initialize( configFileSpec, factory ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Load( "n", parameters, result ) );
 	CPPUNIT_ASSERT_EQUAL( data, result.str() );
 }
 

@@ -26,6 +26,7 @@ namespace
 	const char* INIT( "init" );
 	const char* NAME( "name" );
 	const char* PARAMS( "params" );
+	const char* DELETE( "Delete" );
 	const char* DATA( "data" );
 	const char* VERBOSE( "Verbose" );
 	const char* LOG_CONFIG( "log_config" );
@@ -53,6 +54,7 @@ DataProxyShellConfig::DataProxyShellConfig( int argc, char** argv )
 		( INIT, boost::program_options::value<std::string>(), "* file spec to initialize dpl with." )
 		( NAME, boost::program_options::value<std::string>(), "* name of data node to perform a dpl operation on.\n* if absent, only validate config", false )
 		( PARAMS, boost::program_options::value< std::vector< std::string > >(), "* parameters associated with this request.\n* format: 'key1~value1^key2~value2^...^keyN~valueN.\n* if absent, no parameters will be used", false )
+		( DELETE, "* issue a Delete request. If this flag is set, data with the --data flag should not be supplied", false )
 		( DATA, boost::program_options::value< std::vector< std::string > >(), "* if supplied, data to store (default op is load).\n* prepend with the '@' symbol to use data from a file.\n* use '-' to read from standard in.\n* if this option is used multiple times, each one\n  after the first will append data in order.", false )
 		( LOG_CONFIG, boost::program_options::value<std::string>()->default_value(""), "* If logging is desired, use this to configure log4cxx" )
 		( INSTANCE_ID, boost::program_options::value<std::string>()->default_value(""), "* If logging, use this instance id for tracking" )
@@ -87,6 +89,10 @@ DataProxyShellConfig::DataProxyShellConfig( int argc, char** argv )
 	}
 	if( m_Options.Exists( DATA ) )
 	{
+		if( m_Options.Exists( DELETE ) )
+		{
+			MV_THROW( DataProxyShellConfigException, "Invalid argument: data cannot be supplied with a Delete request" );
+		}
 		std::vector< std::string > dataInputs = m_Options[DATA].as< std::vector< std::string > >();
 		if( dataInputs.size() == 1 )	// if we can just hold onto cin or a single file handle, do so
 		{
@@ -157,7 +163,15 @@ const std::string& DataProxyShellConfig::GetDplConfig() const
 
 const std::string& DataProxyShellConfig::GetOperation() const
 {
-	return ( m_Options.Exists( NAME ) || m_Options.Exists( DATA ) || m_Options.Exists( PARAMS ) ? ( m_pData == NULL ? LOAD_OPERATION : STORE_OPERATION ) : INIT_OPERATION );
+	if( m_Options.Exists( NAME ) || m_Options.Exists( DATA ) || m_Options.Exists( PARAMS ) || m_Options.Exists( DELETE ) )
+	{
+		if( m_Options.Exists( DELETE ) )
+		{
+			return DELETE_OPERATION;
+		}
+		return ( m_pData == NULL ? LOAD_OPERATION : STORE_OPERATION );
+	}
+	return INIT_OPERATION;
 }
 
 const std::string& DataProxyShellConfig::GetName() const

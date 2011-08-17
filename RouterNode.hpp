@@ -28,6 +28,7 @@ public:
 	// load & store
 	virtual void LoadImpl( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData );
 	virtual void StoreImpl( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData );
+	virtual void DeleteImpl( const std::map<std::string,std::string>& i_rParameters );
 
 	// transaction support
 	virtual bool SupportsTransactions() const;
@@ -37,8 +38,10 @@ public:
 	// cycle-checking support
 	virtual void InsertImplReadForwards( std::set< std::string >& o_rForwards ) const;
 	virtual void InsertImplWriteForwards( std::set< std::string >& o_rForwards ) const;
+	virtual void InsertImplDeleteForwards( std::set< std::string >& o_rForwards ) const;
 
 private:
+
 	DATUMINFO( NodeName, std::string );
 	DATUMINFO( IsCritical, bool );
 
@@ -55,13 +58,20 @@ private:
 		RowEnd > >
 	RouteConfig;
 
+	void SetWriteDeleteConfig( const xercesc::DOMNode* i_pNode, CriticalErrorBehavior& o_rOnCriticalError, std::vector< RouteConfig >& o_rRoute  );
+	void StoreDeleteImpl( bool i_bIsWrite, const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData ); 
+
 	std::string m_Name;
 	DataProxyClient& m_rParent;
 	Nullable< std::string > m_ReadRoute;
 	bool m_ReadEnabled;
 	std::vector< RouteConfig > m_WriteRoute;
 	bool m_WriteEnabled;
-	CriticalErrorBehavior m_OnCriticalError;
+	CriticalErrorBehavior m_OnCriticalWriteError;
+	std::vector< RouteConfig > m_DeleteRoute;
+	bool m_DeleteEnabled;
+	CriticalErrorBehavior m_OnCriticalDeleteError;
+
 };
 
 #endif //_ROUTER_NODE_HPP_

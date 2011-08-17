@@ -31,6 +31,10 @@ private:
 	CPPUNIT_TEST(testStoreWithParams);
 	CPPUNIT_TEST(testStoreWithMultiParams);
 	CPPUNIT_TEST(testStoreWithMultiData);
+	CPPUNIT_TEST(testDeleteNoParams);
+	CPPUNIT_TEST(testDeleteWithParams);
+	CPPUNIT_TEST(testDeleteWithMultiParams);
+	CPPUNIT_TEST(testDeleteWithData);
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -49,6 +53,10 @@ public:
 	void testStoreWithParams();
 	void testStoreWithMultiParams();
 	void testStoreWithMultiData();
+	void testDeleteNoParams();
+	void testDeleteWithParams();
+	void testDeleteWithMultiParams();
+	void testDeleteWithData();
 
 private:
 	boost::scoped_ptr< TempDirectory > m_pTempDir;

@@ -116,6 +116,26 @@ void LocalFileProxyTest::testGarbageChildren()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: Write" );
+
+	xmlContents.str("");
+	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl;
+	xmlContents << "<Delete>" << std::endl;
+	xmlContents << "<garbage>" << std::endl;
+	xmlContents << "</Delete>" << std::endl;
+	xmlContents << "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: Delete" );
+
+	xmlContents.str("");
+	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl;
+	xmlContents << "<Delete>" << std::endl;
+	xmlContents << "<StreamTransformers/>" << std::endl;
+	xmlContents << "</Delete>" << std::endl;
+	xmlContents << "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Found invalid child: StreamTransformers in node: Delete" );
 }
 
 void LocalFileProxyTest::testLoadNonexistent()
@@ -895,6 +915,524 @@ void LocalFileProxyTest::testStoreRollbackAppend()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), dirFiles.size() );
 	CPPUNIT_ASSERT( find( dirFiles.begin(), dirFiles.end(), fileCommitted ) != dirFiles.end() );
 	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str(), fileCommitted );
+}
+
+
+
+void LocalFileProxyTest::testDeleteUnremovable()
+{
+	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" />";
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+
+	std::map< std::string, std::string > parameters;
+	parameters["key1"] = "value1";
+	parameters["key2"] = "value2";
+	parameters["key3"] = "value3";
+
+	// make the directory unwritable
+	::system( ( std::string( "chmod 555 " ) + m_pTempDir->GetDirectoryName() ).c_str() );
+	// Calling delete throw, even if the file does not exist yet
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Delete( parameters ), InvalidDirectoryException,
+		".*/FileUtilities\\.cpp:\\d+: The directory " << m_pTempDir->GetDirectoryName() << " does not have the requested file access permissions." );
+
+	// make the directory writable again to create our file
+	::system( ( std::string( "chmod 777 " ) + m_pTempDir->GetDirectoryName() ).c_str() );
+	//Create a file to be removed in the temp directory
+	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( parameters ) );
+	FileUtilities::Touch( fileSpec );
+
+	// now we make the directory unwritable
+	::system( ( std::string( "chmod 555 " ) + m_pTempDir->GetDirectoryName() ).c_str() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Delete( parameters ), InvalidDirectoryException,
+		".*/FileUtilities\\.cpp:\\d+: The directory " << m_pTempDir->GetDirectoryName() << " does not have the requested file access permissions." );
+
+	// try again but this time un-executable
+	::system( ( std::string( "chmod 666 " ) + m_pTempDir->GetDirectoryName() ).c_str() );
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+}
+
+void LocalFileProxyTest::testDelete()
+{
+	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" />";
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	CPPUNIT_ASSERT( proxy.SupportsTransactions() );
+
+	std::map< std::string, std::string > parameters;
+	parameters["key1"] = "value1";
+	parameters["key2"] = "value2";
+	parameters["key3"] = "value3";
+
+	//Create a file to be removed in the temp directory
+	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( parameters ) );
+	FileUtilities::Touch( fileSpec );
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+
+	CPPUNIT_ASSERT( !FileUtilities::DoesExist( fileSpec ) );
+}
+
+void LocalFileProxyTest::testDeleteNameFormat()
+{
+	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" format=\"subdir1_${key1}/subdir2_${key2}/filename_is_${key3}.txt\" />";
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+
+	std::map< std::string, std::string > parameters;
+	parameters["key1"] = "value1";
+	parameters["key2"] = "value2";
+	parameters["key3"] = "value3";
+	parameters["key4"] = "value4";
+
+	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/subdir1_value1/subdir2_value2/filename_is_value3.txt" );
+	CPPUNIT_ASSERT_NO_THROW( FileUtilities::CreateDirectory( FileUtilities::GetDirName( fileSpec ) ) );
+	FileUtilities::Touch( fileSpec );
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+	CPPUNIT_ASSERT( !FileUtilities::DoesExist( fileSpec ) );
+
+	// now ensure that a missing key throws an exception
+	parameters.erase( "key3" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Delete( parameters ), ProxyUtilitiesException,
+		"private/ProxyUtilities.cpp:\\d+: The following parameters are referenced, but are not specified in the parameters: key3" );
+	parameters["key3"] = "value3";
+
+	// now disallow writes to the directory alongside
+	::system( ( std::string( "chmod 555 " ) + FileUtilities::GetDirName( fileSpec ) ).c_str() );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Delete( parameters ), InvalidDirectoryException,
+		".*\\.cpp:\\d+: The directory " << FileUtilities::GetDirName( fileSpec ) << " does not have the requested file access permissions\\." );
+}
+
+void LocalFileProxyTest::testDeleteNameFormatAll()
+{
+	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" format=\"subdir1_${key1}/subdir2_${key2}/*\" />";
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+
+	std::map< std::string, std::string > parameters;
+	parameters["key1"] = "value1";
+	parameters["key2"] = "value2";
+	parameters["key3"] = "value3";
+	parameters["key4"] = "value4";
+
+	std::string parametersString = ProxyUtilities::ToString( parameters );
+
+	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/subdir1_value1/subdir2_value2/" + parametersString );
+	CPPUNIT_ASSERT_NO_THROW( FileUtilities::CreateDirectory( FileUtilities::GetDirName( fileSpec ) ) );
+	FileUtilities::Touch( fileSpec );
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+	CPPUNIT_ASSERT( !FileUtilities::DoesExist( fileSpec ) );
+}
+
+void LocalFileProxyTest::testDeleteNoParameters()
+{
+	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" />";
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+
+	std::map< std::string, std::string > parameters;
+
+	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( parameters ) );
+	FileUtilities::Touch( fileSpec );
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+	CPPUNIT_ASSERT( !FileUtilities::DoesExist( fileSpec ) );
+}
+
+void LocalFileProxyTest::testDeleteNonexistent()
+{
+	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
+	std::stringstream xmlContents;
+	// Case 1: If a parent directory on the path does not exist, then an error should not be thrown. 
+	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" format=\"${key1}/${key2}.txt\" />";
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+
+	std::map< std::string, std::string > parameters;
+	parameters["key1"] = "my_subdir";
+	parameters["key2"] = "my_file";
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+
+	// Case 2: If we try to delete a non-existent file, no error should be thrown. 
+	std::string parametersString = ProxyUtilities::ToString( parameters );
+	// create the directory, but not the file
+	CPPUNIT_ASSERT_NO_THROW( FileUtilities::CreateDirectory( m_pTempDir->GetDirectoryName() + "/my_subdir" ) );
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+
+	// Case 3: If we call delete twice before the commit, no error should be thrown. 
+	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/my_subdir/my_file.txt" );
+	FileUtilities::Touch( fileSpec );
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+	CPPUNIT_ASSERT( FileUtilities::DoesExist( fileSpec ) ); // Commit was not called yet
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+	CPPUNIT_ASSERT( FileUtilities::DoesExist( fileSpec ) ); // Commit was not called yet
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+	CPPUNIT_ASSERT( !FileUtilities::DoesExist( fileSpec ) );
+	
+	// Case 4: If we delete and commit twice in a row no error should be thrown. 
+	FileUtilities::Touch( fileSpec );
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+	CPPUNIT_ASSERT( FileUtilities::DoesExist( fileSpec ) ); // Commit was not called yet
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+	CPPUNIT_ASSERT( !FileUtilities::DoesExist( fileSpec ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+	CPPUNIT_ASSERT( !FileUtilities::DoesExist( fileSpec ) ); // Commit was not called yet
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+	CPPUNIT_ASSERT( !FileUtilities::DoesExist( fileSpec ) );
+}
+
+void LocalFileProxyTest::testDeleteStoreCommit()
+{
+	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
+
+	// Case 1: Issuing a store after a delete when in overwrite mode effectively cancels
+	// the delete.
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >"
+			<< "  <Write/>"
+			<< "</DataNode>";
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	boost::scoped_ptr< LocalFileProxy > pProxy;
+	pProxy.reset( new LocalFileProxy( "name", client, *nodes[0], uniqueIdGenerator ) );
+
+	std::map< std::string, std::string > parameters;
+	parameters["key1"] = "value1";
+	
+	std::stringstream data1;
+	data1 << "this is data #1" << std::endl;
+	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( parameters ) );
+	std::ofstream file( fileSpec.c_str() );
+	file << data1.str();
+	file.close();
+	
+	// Check that delete leaves the file untouched until committed.
+	CPPUNIT_ASSERT_NO_THROW( pProxy->Delete( parameters ) );
+	CPPUNIT_ASSERT( FileUtilities::DoesExist( fileSpec ) );
+	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str(), fileSpec );
+
+	// Issuing a store and commit at this point should cancel the delete	
+	std::stringstream data2;
+	data2 << "this is data #2" << std::endl;
+	CPPUNIT_ASSERT_NO_THROW( pProxy->Store( parameters, data2 ) );
+	CPPUNIT_ASSERT( FileUtilities::DoesExist( fileSpec ) );
+	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str(), fileSpec );
+
+	CPPUNIT_ASSERT_NO_THROW( pProxy->Commit() );
+	CPPUNIT_ASSERT( FileUtilities::DoesExist( fileSpec ) );
+	CPPUNIT_ASSERT_FILE_CONTENTS( data2.str(), fileSpec );
+
+	// Case 2: Issuing an append after a delete creates a new file, with
+	// all the appended data, even when skip lines is configured. This is
+	// different from issuing an append to an empty file, in which case
+	// the skiplines attribute is not ignored ( see testStoreEmpties ) 
+
+	xmlContents.str("");	
+	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >"
+				<< "  <Write onFileExist=\"append\" skipLinesOnAppend=\"2\" />"
+				<< "</DataNode>";
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	pProxy.reset( new LocalFileProxy( "name", client, *nodes[0], uniqueIdGenerator ) );
+
+	// Check that delete leaves the file untouched until committed.
+	CPPUNIT_ASSERT_NO_THROW( pProxy->Delete( parameters ) );
+	CPPUNIT_ASSERT( FileUtilities::DoesExist( fileSpec ) );
+	CPPUNIT_ASSERT_FILE_CONTENTS( data2.str(), fileSpec );
+
+	// Issuing a store and commit at this point should delete the file
+	// and recreate it with the full, appended data
+	std::stringstream dataFull;
+	dataFull << "line1\nline2\nline3" << std::endl;
+	CPPUNIT_ASSERT_NO_THROW( pProxy->Store( parameters, dataFull ) );
+	CPPUNIT_ASSERT( FileUtilities::DoesExist( fileSpec ) );
+	CPPUNIT_ASSERT_FILE_CONTENTS( data2.str(), fileSpec );
+
+	CPPUNIT_ASSERT_NO_THROW( pProxy->Commit() );
+	CPPUNIT_ASSERT( FileUtilities::DoesExist( fileSpec ) );
+	CPPUNIT_ASSERT_FILE_CONTENTS( dataFull.str(), fileSpec );
+}
+
+void LocalFileProxyTest::testAppendStoreDeleteStore()
+{
+	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
+	AddUniqueIds( uniqueIdGenerator );
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >"
+			<< "<Write onFileExist=\"append\" />"
+			<< "</DataNode>";
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	
+	std::map< std::string, std::string > parameters;
+	parameters["key1"] = "value1";
+	
+	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( parameters ) );
+	FileUtilities::Touch( fileSpec );
+
+	// Case 1: Test store(s) delete commit store
+	std::stringstream data1;
+	std::stringstream data2;
+	data1 << " This is appended data #1." << std::endl;
+	data2 << " This is appended data #2." << std::endl;
+	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data1 ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data2 ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+	
+	// At this point, there should be no pending data files.
+	std::vector< std::string > dirFiles;
+	dirFiles.clear();
+	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), dirFiles.size() );
+	CPPUNIT_ASSERT_EQUAL( fileSpec, dirFiles[0] );
+	
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+
+	// No files should be in the directory now
+	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
+	CPPUNIT_ASSERT_EQUAL( size_t(0), dirFiles.size() );
+	CPPUNIT_ASSERT( !FileUtilities::DoesExist( fileSpec ) );
+
+	// Store still works properly now
+	data1.seekg(0);
+	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data1 ) );
+	std::string filePending = fileSpec + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000003";
+	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), dirFiles.size() );
+	CPPUNIT_ASSERT_EQUAL( filePending, dirFiles[0] );
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+	dirFiles.clear();
+	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), dirFiles.size() );
+	CPPUNIT_ASSERT_EQUAL( fileSpec, dirFiles[0] );
+	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str(), fileSpec );
+
+	// Now remove the file for case 2
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+	dirFiles.clear();
+	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
+	CPPUNIT_ASSERT_EQUAL( size_t(0), dirFiles.size() );
+	CPPUNIT_ASSERT( !FileUtilities::DoesExist( fileSpec ) );
+	
+	// Case 2: Store delete store commit should result in the same thing as
+	// the store delete commit store commit seen before
+	data1.seekg(0);
+	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data1 ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+	dirFiles.clear();
+	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
+	CPPUNIT_ASSERT_EQUAL( size_t(0), dirFiles.size() );
+
+	data1.seekg(0);
+	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data1 ) );
+	filePending = fileSpec + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000005";
+	dirFiles.clear();
+	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), dirFiles.size() );
+	CPPUNIT_ASSERT_EQUAL( filePending, dirFiles[0] );
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+
+	// State of the directory should be identical to after the store delete commit store commit
+	// from the previous case
+	dirFiles.clear();
+	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), dirFiles.size() );
+	CPPUNIT_ASSERT_EQUAL( fileSpec, dirFiles[0] );
+	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str(), fileSpec );
+}
+
+void LocalFileProxyTest::testOverwriteStoreDeleteStore()
+{
+	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
+	AddUniqueIds( uniqueIdGenerator );
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >"
+			<< "<Write onFileExist=\"overwrite\" />"
+			<< "</DataNode>";
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	
+	std::map< std::string, std::string > parameters;
+	parameters["key1"] = "value1";
+	
+	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( parameters ) );
+	FileUtilities::Touch( fileSpec );
+
+	// Case 1: Test store(s) delete commit store
+	std::stringstream data1;
+	std::stringstream data2;
+	data1 << " This is some data #1." << std::endl;
+	data2 << " This is some data #2." << std::endl;
+	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data1 ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data2 ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+	
+	// At this point, there should be no pending data files.
+	std::vector< std::string > dirFiles;
+	dirFiles.clear();
+	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), dirFiles.size() );
+	CPPUNIT_ASSERT_EQUAL( fileSpec, dirFiles[0] );
+	
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+
+	// No files should be in the directory now
+	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
+	CPPUNIT_ASSERT_EQUAL( size_t(0), dirFiles.size() );
+	CPPUNIT_ASSERT( !FileUtilities::DoesExist( fileSpec ) );
+
+	// Store still works properly now
+	data1.seekg(0);
+	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data1 ) );
+	std::string filePending = fileSpec + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000003";
+	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), dirFiles.size() );
+	CPPUNIT_ASSERT_EQUAL( filePending, dirFiles[0] );
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+	dirFiles.clear();
+	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), dirFiles.size() );
+	CPPUNIT_ASSERT_EQUAL( fileSpec, dirFiles[0] );
+	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str(), fileSpec );
+
+	// Now remove the file for case 2
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+	dirFiles.clear();
+	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
+	CPPUNIT_ASSERT_EQUAL( size_t(0), dirFiles.size() );
+	CPPUNIT_ASSERT( !FileUtilities::DoesExist( fileSpec ) );
+	
+	// Case 2: Store delete store commit should result in the same thing as
+	// the store delete commit store commit seen before
+	data1.seekg(0);
+	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data1 ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+	dirFiles.clear();
+	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
+	CPPUNIT_ASSERT_EQUAL( size_t(0), dirFiles.size() );
+
+	data1.seekg(0);
+	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data1 ) );
+	filePending = fileSpec + "~~dpl.pending" + ".00000000-0000-0000-0000-000000000005";
+	dirFiles.clear();
+	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), dirFiles.size() );
+	CPPUNIT_ASSERT_EQUAL( filePending, dirFiles[0] );
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+
+	// State of the directory should be identical to after the store delete commit store commit
+	// from the previous case
+	dirFiles.clear();
+	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirFiles );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), dirFiles.size() );
+	CPPUNIT_ASSERT_EQUAL( fileSpec, dirFiles[0] );
+	CPPUNIT_ASSERT_FILE_CONTENTS( data1.str(), fileSpec );
+}
+
+void LocalFileProxyTest::testDeleteRollback()
+{
+	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >"
+			<< "  <Write/>"
+			<< "</DataNode>";
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+
+	std::map< std::string, std::string > parameters;
+	parameters["key1"] = "value1";
+
+	std::stringstream dataInFile;
+	dataInFile << "This is original data." << std::endl;
+	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( parameters ) );
+	std::ofstream file( fileSpec.c_str() );
+	file << dataInFile.str();
+	file.close();
+
+	// Case 1: Delete, then rollback
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Rollback() );
+	CPPUNIT_ASSERT( FileUtilities::DoesExist( fileSpec ) );
+
+	// Case 2: Multiple deletes, then rollback
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Rollback() );
+	CPPUNIT_ASSERT( FileUtilities::DoesExist( fileSpec ) );
+
+	// Case 3: Deletes and Stores, then rollback.
+	std::stringstream data1;
+	std::stringstream data2;
+	data1 << " This is data #1." << std::endl;
+	data2 << " This is data #2." << std::endl;
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data1 ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data2 ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Rollback() );
+	CPPUNIT_ASSERT( FileUtilities::DoesExist( fileSpec ) );
+	
+	CPPUNIT_ASSERT_FILE_CONTENTS( dataInFile.str(), fileSpec );
 }
 
 void LocalFileProxyTest::testStoreEmpties()

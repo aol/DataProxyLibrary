@@ -383,7 +383,7 @@ void LoadHandlerTest::testLoadCompressedCustomLevel()
 	CPPUNIT_ASSERT_EQUAL( expected.str(), response.GetLog() );
 }
 
-void LoadHandlerTest::testLoadXForwardedForNew()
+void LoadHandlerTest::testLoadXForwardedFor()
 {
 	DataProxyClient client;
 	MockHTTPRequest request;
@@ -428,53 +428,21 @@ void LoadHandlerTest::testLoadXForwardedForNew()
 			 << "WriteHeader called with Name: Content-Length Value: " << data1a.size() << std::endl
 			 << "WriteData called with Data: " << data1a << std::endl;
 	CPPUNIT_ASSERT_EQUAL( expected.str(), response.GetLog() );
-}
 
-void LoadHandlerTest::testLoadXForwardedForAppend()
-{
-	DataProxyClient client;
-	MockHTTPRequest request;
-	MockHTTPResponse response;
-
-	std::map< std::string, std::string > paramsA;
-	paramsA[ "param1" ] = "VALUE1";
-	paramsA[ "PARAM2" ] = "value2";
-	paramsA[ "param3" ] = "VALUE3";
-
-	// create paramsX, which are the existing parameters + the X-Forwarded-For information
-	std::map< std::string, std::string > paramsX( paramsA );
 	std::string previousForwards = "client1, client2";	// this is the data that comes in
-	std::string ipAddress = "my_ip_address";	// this is incoming ip address that we will add to the previous forwards
 	paramsX[ "X-Forwarded-For" ] = previousForwards + ", " + ipAddress;	// this is the data that is passed along (previous + new IP)
-
-	std::string dir1( m_pTempDir->GetDirectoryName() + "/dir1" );
-	CPPUNIT_ASSERT_NO_THROW( FileUtilities::CreateDirectory( dir1 ) );
-
-	std::string file1a( dir1 + "/" + ProxyUtilities::ToString( paramsX ) );	// note we construct this file w/ the x-forwarded-for params! we will only find this data if this field was passed on
-	std::string data1a( "this is some data in file 1a" );
-	WriteFile( file1a, data1a );
-
-	std::string dplConfigFileSpec = m_pTempDir->GetDirectoryName() + "/dplConfig.xml";
-
-	LoadHandler handler( client, dplConfigFileSpec, -1, true );
 	
-	request.SetQueryParams( paramsA );
-	request.SetPath( "n1" );
-	request.SetIPAddress( ipAddress );
+	std::string file2a( dir1 + "/" + ProxyUtilities::ToString( paramsX ) );	// note we construct this file w/ the x-forwarded-for params! we will only find this data if this field was passed on
+	std::string data2a( "this is some data in file 2a" );
+	WriteFile( file2a, data2a );
 	request.SetHTTPHeader( "X-Forwarded-For", previousForwards );
-
-	std::ofstream file( dplConfigFileSpec.c_str() );
-	file << "<DplConfig>" << std::endl
-		 << "  <DataNode name=\"n1\" type=\"local\" location=\"" << dir1 << "\" />" << std::endl
-		 << "</DplConfig>" << std::endl;
-	file.close();
 
 	// successful load
 	CPPUNIT_ASSERT_NO_THROW( handler.Handle( request, response ) );
-	std::stringstream expected;
 	expected << "SetHTTPStatusCode called with Code: 200 Message: " << std::endl
 			 << "WriteHeader called with Name: Server Value: " << DATA_PROXY_SERVICE_VERSION << std::endl
-			 << "WriteHeader called with Name: Content-Length Value: " << data1a.size() << std::endl
-			 << "WriteData called with Data: " << data1a << std::endl;
+			 << "WriteHeader called with Name: Content-Length Value: " << data2a.size() << std::endl
+			 << "WriteData called with Data: " << data2a << std::endl;
 	CPPUNIT_ASSERT_EQUAL( expected.str(), response.GetLog() );
 }
+

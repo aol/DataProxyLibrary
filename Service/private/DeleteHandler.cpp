@@ -1,51 +1,50 @@
 //
-// FILE NAME:		$RCSfile: StoreHandler.cpp,v $
+// FILE NAME:		$RCSfile: DeleteHandler.cpp,v $
 //
-// REVISION:		$Revision$
+// REVISION:		$Revision: 215839 $
 //
 // COPYRIGHT:		(c) 2007 Advertising.com All Rights Reserved.
 //
-// LAST UPDATED:	$Date$
-// UPDATED BY:		$Author$
+// LAST UPDATED:	$Date: 2011-07-15 04:36:00 -0400 (Fri, 15 Jul 2011) $
+// UPDATED BY:		$Author: bhh1988 $
 //
 
-#include "StoreHandler.hpp"
+#include "DeleteHandler.hpp"
 #include "DataProxyClient.hpp"
 #include "MVLogger.hpp"
-#include "WebServerCommon.hpp"
 #include "HTTPRequest.hpp"
 #include "HTTPResponse.hpp"
 #include "DataProxyService.hpp"
 
-StoreHandler::StoreHandler( DataProxyClient& i_rDataProxyClient, const std::string& i_rDplConfig, bool i_EnableXForwardedFor )
+DeleteHandler::DeleteHandler( DataProxyClient& i_rDataProxyClient, const std::string& i_rDplConfig, bool i_EnableXForwardedFor )
 :	AbstractHandler( i_rDataProxyClient, i_rDplConfig, i_EnableXForwardedFor )
 {
 }
 
-StoreHandler::~StoreHandler()
+DeleteHandler::~DeleteHandler()
 {
 }
 
-void StoreHandler::Handle( HTTPRequest& i_rRequest, HTTPResponse& o_rResponse )
+void DeleteHandler::Handle( HTTPRequest& i_rRequest, HTTPResponse& o_rResponse )
 {
-	if( !AbstractHandler::CheckConfig( o_rResponse ) )
+	if( !CheckConfig( o_rResponse ) )
 	{
 		return;
 	}
 
 	std::map< std::string, std::string > parameters;
 	std::string name;
-	AbstractHandler::GetParams( i_rRequest, name, parameters ); 
-	
+	GetParams( i_rRequest, name, parameters ); 
+
 	try
 	{
-		AbstractHandler::GetDataProxyClient().Store( name, parameters, i_rRequest.GetPostData() );
+		AbstractHandler::GetDataProxyClient().Delete( name, parameters );
 	}
 	catch( const std::exception& i_rEx )
 	{
 		std::stringstream msg;
-		msg << "Error storing data to node: " << name << ": " << i_rEx.what();
-		MVLOGGER( "root.lib.DataProxy.Service.StoreHandler.ErrorStoring", msg.str() );
+		msg << "Error deleting data to node: " << name << ": " << i_rEx.what();
+		MVLOGGER( "root.lib.DataProxy.Service.DeleteHandler.ErrorDeleting", msg.str() );
 		o_rResponse.SetHTTPStatusCode( HTTP_STATUS_INTERNAL_SERVER_ERROR );
 		o_rResponse.WriteHeader( SERVER, DATA_PROXY_SERVICE_VERSION );
 		o_rResponse.WriteData( msg.str() + "\n" );

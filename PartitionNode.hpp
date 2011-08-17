@@ -28,6 +28,7 @@ public:
 	// load & store
 	virtual void LoadImpl( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData );
 	virtual void StoreImpl( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData );
+	virtual void DeleteImpl( const std::map<std::string,std::string>& i_rParameters );
 
 	// transaction support
 	virtual bool SupportsTransactions() const;
@@ -37,12 +38,14 @@ public:
 	// cycle-checking support
 	virtual void InsertImplReadForwards( std::set< std::string >& o_rForwards ) const;
 	virtual void InsertImplWriteForwards( std::set< std::string >& o_rForwards ) const;
+	virtual void InsertImplDeleteForwards( std::set< std::string >& o_rForwards ) const;
 
 private:
 	std::string m_Name;
 	DataProxyClient& m_rParent;
 	Nullable< std::string > m_ReadRoute;
 	std::string m_WriteRoute;
+	Nullable< std::string > m_DeleteRoute;
 	std::string m_WritePartitionKey;
 	bool m_WriteSkipSort;
 	double m_WriteSortTimeout;

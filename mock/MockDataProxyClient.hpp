@@ -23,6 +23,7 @@ public:
 	virtual void Initialize( const std::string& i_rConfigFileSpec );
 	virtual void Load( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData ) const;
 	virtual void Store( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData ) const;
+	virtual void Delete( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters ) const;
 	virtual void BeginTransaction();
 	virtual void Commit();
 	virtual void Rollback();

@@ -29,6 +29,7 @@ public:
 	// load & store
 	virtual void LoadImpl( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rTestable );
 	virtual void StoreImpl( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rTestable );
+	virtual void DeleteImpl( const std::map<std::string,std::string>& i_rParameters );
 
 	// transaction support
 	virtual bool SupportsTransactions() const;
@@ -38,13 +39,16 @@ public:
 	// cycle-checking support
 	virtual void InsertImplReadForwards( std::set< std::string >& o_rForwards ) const;
 	virtual void InsertImplWriteForwards( std::set< std::string >& o_rForwards ) const;
+	virtual void InsertImplDeleteForwards( std::set< std::string >& o_rForwards ) const;
 
 	std::string GetLog() const;
 	void SetDataToReturn( const std::string& i_rData );
 	void SetLoadException( bool i_Exception );
 	void SetStoreException( bool i_Exception );
-	void InsertReadForward( const std::string& i_rForward );
-	void InsertWriteForward( const std::string& i_rForward );
+	void SetDeleteException( bool i_Exception );
+	void AddReadForward( const std::string& i_rForward );
+	void AddWriteForward( const std::string& i_rForward );
+	void AddDeleteForward( const std::string& i_rForward );
 	void SetWriteOnLoadException( bool i_WriteOnLoadException );
 
 private:
@@ -52,9 +56,11 @@ private:
 	std::string m_DataToReturn;
 	bool m_LoadException;
 	bool m_StoreException;
+	bool m_DeleteException;
 	bool m_WriteOnLoadException;
 	std::set< std::string > m_ReadForwards;
 	std::set< std::string > m_WriteForwards;
+	std::set< std::string > m_DeleteForwards;
 };
 
 #endif //_TESTABLE_NODE_HPP_

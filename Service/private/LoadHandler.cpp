@@ -34,8 +34,7 @@ namespace
 }
 
 LoadHandler::LoadHandler( DataProxyClient& i_rDataProxyClient, const std::string& i_rDplConfig, int i_ZLibCompressionLevel, bool i_EnableXForwardedFor )
-:	m_rDataProxyClient( i_rDataProxyClient ),
-	m_DplConfig( i_rDplConfig ),
+:	AbstractHandler( i_rDataProxyClient, i_rDplConfig, i_EnableXForwardedFor ),
 	// gzip params have all default values except for the compression level
 	m_GZipParams( i_ZLibCompressionLevel,
 				  boost::iostreams::zlib::deflated,
@@ -52,8 +51,7 @@ LoadHandler::LoadHandler( DataProxyClient& i_rDataProxyClient, const std::string
 					 boost::iostreams::zlib::default_strategy,
 					 true,		// this prevents the writing of a header, to conform with RFC 1951
 					 false ),	// this turns off calculation of a CRC checksum, to conform with RFC 1951
-	m_CompressionEnabled( i_ZLibCompressionLevel != 0 ),
-	m_EnableXForwardedFor( i_EnableXForwardedFor )
+	m_CompressionEnabled( i_ZLibCompressionLevel != 0 )
 {
 }
 
@@ -63,18 +61,8 @@ LoadHandler::~LoadHandler()
 
 void LoadHandler::Handle( HTTPRequest& i_rRequest, HTTPResponse& o_rResponse )
 {
-	try
+	if( !AbstractHandler::CheckConfig( o_rResponse ) )
 	{
-		m_rDataProxyClient.Initialize( m_DplConfig );
-	}
-	catch( const std::exception& i_rEx )
-	{
-		std::stringstream msg;
-		msg << "Error initializing DPL with file: " << m_DplConfig << ": " << i_rEx.what();
-		MVLOGGER( "root.lib.DataProxy.Service.LoadHandler.ErrorInitializing", msg.str() );
-		o_rResponse.SetHTTPStatusCode( HTTP_STATUS_INTERNAL_SERVER_ERROR );
-		o_rResponse.WriteHeader( SERVER, DATA_PROXY_SERVICE_VERSION );
-		o_rResponse.WriteData( msg.str() + "\n" );
 		return;
 	}
 
@@ -108,32 +96,14 @@ void LoadHandler::Handle( HTTPRequest& i_rRequest, HTTPResponse& o_rResponse )
 	}
 	pFilter->push( results );
 
-	// strip any trailing slashes
-	std::string name = i_rRequest.GetPath();
-	if( name[ name.size() - 1 ] == '/' )
-	{
-		name = name.substr( 0, name.size() - 1 );
-	}
-
-	// extract the parameters
-	std::map< std::string, std::string > parameters( i_rRequest.GetQueryParams() );
-
-	// if we're handling X-Forwarded-For
-	if( m_EnableXForwardedFor )
-	{
-		std::string& rXForwardedFor = parameters[ X_FORWARDED_FOR ];
-		Nullable< std::string > xForwardedFor = i_rRequest.GetHeaderEntry( X_FORWARDED_FOR );
-		if( !xForwardedFor.IsNull() )
-		{
-			rXForwardedFor += static_cast< std::string& >( xForwardedFor ) + ", ";
-		}
-		rXForwardedFor += i_rRequest.GetIPAddress();
-	}
+	std::map< std::string, std::string > parameters;
+	std::string name;
+	AbstractHandler::GetParams( i_rRequest, name, parameters ); 
 
 	// try to issue the load command
 	try
 	{
-		m_rDataProxyClient.Load( name, parameters, *pFilter );
+		AbstractHandler::GetDataProxyClient().Load( name, parameters, *pFilter );
 	}
 	catch( const std::exception& i_rEx )
 	{

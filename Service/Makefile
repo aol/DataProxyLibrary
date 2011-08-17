@@ -74,7 +74,7 @@ CXXD = $(CXX) -MM $(TESTINCS) $(DEFINE_FLAGS)				# generating dependencies
 # Source Directories
 PRIVATEDIR				= private
 TESTDIR					= test
-MOCKDIR					= test/common
+MOCKDIR					= mock
 SYSTESTDIR				= systemtest
 
 # Target Directories
@@ -89,16 +89,21 @@ MAINFILE = DataProxyService.cpp
 
 PRIVFILES=\
 	DataProxyServiceConfig.cpp \
+	AbstractHandler.cpp \
 	LoadHandler.cpp \
 	StoreHandler.cpp \
+	DeleteHandler.cpp \
 
 TESTFILES=\
 	test-main.cpp \
 	DataProxyServiceConfigTest.cpp \
 	LoadHandlerTest.cpp \
 	StoreHandlerTest.cpp \
+	DeleteHandlerTest.cpp \
+	AbstractHandlerTest.cpp \
 
 MOCKFILES=\
+	TestableHandler.cpp \
 
 SYSTESTFILES=\
 	system-main.cpp \

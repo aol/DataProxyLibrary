@@ -29,6 +29,10 @@ private:
 	CPPUNIT_TEST( testStoreError );
 	CPPUNIT_TEST( testStoreTimeout );
 	CPPUNIT_TEST( testStoreNotSupported );
+	CPPUNIT_TEST( testDelete );
+	CPPUNIT_TEST( testDeleteError );
+	CPPUNIT_TEST( testDeleteTimeout );
+	CPPUNIT_TEST( testDeleteNotSupported );
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -47,6 +51,10 @@ public:
 	void testStoreError();
 	void testStoreTimeout();
 	void testStoreNotSupported();
+	void testDelete();
+	void testDeleteError();
+	void testDeleteTimeout();
+	void testDeleteNotSupported();
 
 private:
 	boost::scoped_ptr<TempDirectory> m_pTempDir;

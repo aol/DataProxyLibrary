@@ -44,12 +44,15 @@ AbstractNode* MockNodeFactory::CreateNode( const std::string& i_rName, const std
 						 GetValue< bool >( i_rName, m_SupportsTransactions, true ),
 						 GetValue< bool >( i_rName, m_LoadExceptions, false ),
 						 GetValue< bool >( i_rName, m_StoreExceptions, false ),
+						 GetValue< bool >( i_rName, m_DeleteExceptions, false ),
 						 GetValue< bool >( i_rName, m_StoreResults, true ),
+						 GetValue< bool >( i_rName, m_DeleteResults, true ),
 						 GetValue< bool >( i_rName, m_CommitExceptions, false ),
 						 GetValue< bool >( i_rName, m_RollbackExceptions, false ),
 						 GetValue< std::string >( i_rName, m_DataToReturn, "" ),
 						 GetValue< std::set< std::string > >( i_rName, m_ReadForwards, std::set< std::string >() ),
 						 GetValue< std::set< std::string > >( i_rName, m_WriteForwards, std::set< std::string >() ),
+						 GetValue< std::set< std::string > >( i_rName, m_DeleteForwards, std::set< std::string >() ),
 						 i_rNode );
 }
 
@@ -73,9 +76,19 @@ void MockNodeFactory::SetStoreException( const std::string& i_rName, bool i_Valu
 	m_StoreExceptions[ i_rName ] = i_Value;
 }
 
+void MockNodeFactory::SetDeleteException( const std::string& i_rName, bool i_Value )
+{
+	m_DeleteExceptions[ i_rName ] = i_Value;
+}
+
 void MockNodeFactory::SetStoreResult( const std::string& i_rName, bool i_Value )
 {
 	m_StoreResults[ i_rName ] = i_Value;
+}
+
+void MockNodeFactory::SetDeleteResult( const std::string& i_rName, bool i_Value )
+{
+	m_DeleteResults[ i_rName ] = i_Value;
 }
 
 void MockNodeFactory::SetCommitException( const std::string& i_rName, bool i_Value )
@@ -101,6 +114,11 @@ void MockNodeFactory::AddReadForward( const std::string& i_rName, const std::str
 void MockNodeFactory::AddWriteForward( const std::string& i_rName, const std::string& i_rValue )
 {
 	m_WriteForwards[ i_rName ].insert( i_rValue );
+}
+
+void MockNodeFactory::AddDeleteForward( const std::string& i_rName, const std::string& i_rValue )
+{
+	m_DeleteForwards[ i_rName ].insert( i_rValue );
 }
 
 std::string MockNodeFactory::GetLog() const

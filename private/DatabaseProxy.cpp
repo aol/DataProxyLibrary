@@ -325,6 +325,10 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 	m_WriteNoCleanUp( false ),
 	m_WriteRequiredColumns(),
 	m_WriteConnectionByTable( false ),
+	m_DeleteEnabled( false ),
+	m_DeleteConnectionName(),
+	m_DeleteQuery(),
+	m_DeleteConnectionByTable( false ),
 	m_rDatabaseConnectionManager( i_rDatabaseConnectionManager ),
 	m_PendingCommits(),
 	m_TableMutex(),
@@ -332,11 +336,13 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 {
 	std::set<std::string> allowedReadElements;
 	std::set<std::string> allowedWriteElements;
+	std::set<std::string> allowedDeleteElements;
 	allowedWriteElements.insert( COLUMNS_NODE );
-	AbstractNode::ValidateXmlElements( i_rNode, allowedReadElements, allowedWriteElements );
+	AbstractNode::ValidateXmlElements( i_rNode, allowedReadElements, allowedWriteElements, allowedDeleteElements );
 
 	std::set<std::string> allowedReadAttributes;
 	std::set<std::string> allowedWriteAttributes;
+	std::set<std::string> allowedDeleteAttributes;
 	allowedReadAttributes.insert(CONNECTION_BY_TABLE_ATTRIBUTE);
 	allowedReadAttributes.insert(CONNECTION_ATTRIBUTE);
 	allowedReadAttributes.insert(QUERY_ATTRIBUTE);
@@ -356,7 +362,10 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 	allowedWriteAttributes.insert( INSERT_ONLY_ATTRIBUTE );
 	allowedWriteAttributes.insert( LOCAL_DATA_ATTRIBUTE );
 	allowedWriteAttributes.insert( ON_COLUMN_PARAMETER_COLLISION_ATTRIBUTE );
-	AbstractNode::ValidateXmlAttributes( i_rNode, allowedReadAttributes, allowedWriteAttributes );
+	allowedDeleteAttributes.insert(CONNECTION_BY_TABLE_ATTRIBUTE);
+	allowedDeleteAttributes.insert(CONNECTION_ATTRIBUTE);
+	allowedDeleteAttributes.insert(QUERY_ATTRIBUTE);
+	AbstractNode::ValidateXmlAttributes( i_rNode, allowedReadAttributes, allowedWriteAttributes, allowedDeleteAttributes );
 
 	xercesc::DOMNode* pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, READ_NODE );
 	if (pNode != NULL)
@@ -506,9 +515,38 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 		}
 	}
 
-	if( !m_ReadEnabled && !m_WriteEnabled )
+	pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, DELETE_NODE );
+	if (pNode != NULL)
 	{
-		MV_THROW( DatabaseProxyException, "Node not configured to handle Load or Store operations" );
+		m_DeleteEnabled = true;
+		
+		m_DeleteQuery = XMLUtilities::GetAttributeValue( pNode, QUERY_ATTRIBUTE );
+		xercesc::DOMAttr* pAttribute = XMLUtilities::GetAttribute( pNode, CONNECTION_ATTRIBUTE );
+		if( pAttribute != NULL )
+		{
+			m_DeleteConnectionName = XMLUtilities::XMLChToString(pAttribute->getValue());
+			if( XMLUtilities::GetAttribute( pNode, CONNECTION_BY_TABLE_ATTRIBUTE ) != NULL )
+			{
+				MV_THROW( DatabaseProxyException, "Invalid to supply both '" << CONNECTION_ATTRIBUTE << "' and '" << CONNECTION_BY_TABLE_ATTRIBUTE << "' attributes" );
+			}
+			//make sure this connection exists if it is a concrete connection
+			i_rDatabaseConnectionManager.ValidateConnectionName(m_DeleteConnectionName);
+		}
+		else
+		{
+			pAttribute = XMLUtilities::GetAttribute( pNode, CONNECTION_BY_TABLE_ATTRIBUTE );
+			if( pAttribute == NULL )
+			{
+				MV_THROW( DatabaseProxyException, "Neither '" << CONNECTION_ATTRIBUTE << "' nor '" << CONNECTION_BY_TABLE_ATTRIBUTE << "' attributes were provided" );
+			}
+			m_DeleteConnectionName = XMLUtilities::XMLChToString(pAttribute->getValue());
+			m_DeleteConnectionByTable = true;
+		}
+	}
+
+	if( !m_ReadEnabled && !m_WriteEnabled && !m_DeleteEnabled )
+	{
+		MV_THROW( DatabaseProxyException, "Node not configured to handle Load or Store or Delete operations" );
 	}
 }
 
@@ -793,6 +831,31 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 	}
 }
 
+void DatabaseProxy::DeleteImpl( const std::map<std::string,std::string>& i_rParameters )
+{
+	if( !m_DeleteEnabled )
+	{
+		MV_THROW( DatabaseProxyException, "Proxy not configured to be able to perform Delete operations" );
+	}
+	
+	std::string deleteQuery = ProxyUtilities::GetVariableSubstitutedString( m_DeleteQuery, i_rParameters );
+	
+	Database& rSharedDatabase = GetConnection( m_DeleteConnectionName, m_DeleteConnectionByTable, m_rDatabaseConnectionManager, i_rParameters );
+	
+	MVLOGGER("root.lib.DataProxy.DatabaseProxy.Delete.ExecutingStmt.Started", 
+			  "Executing SQL statement: " << deleteQuery << ". Memory usage: - " << MVUtility::MemCheck());
+	Database::Statement( rSharedDatabase, deleteQuery ).Execute();
+
+	{
+		boost::unique_lock< boost::shared_mutex > lock( m_PendingCommitsMutex );
+		m_PendingCommits.insert( &rSharedDatabase );
+	}
+
+	MVLOGGER("root.lib.DataProxy.DatabaseProxy.Delete.ExecutingStmt.Finished", 
+			  "Delete query was processed successfully");
+
+}
+
 bool DatabaseProxy::SupportsTransactions() const
 {
 	return true;
@@ -807,6 +870,7 @@ void DatabaseProxy::Commit()
 		(*iter)->Commit();
 	}
 }
+
 
 void DatabaseProxy::Rollback()
 {
@@ -827,3 +891,9 @@ void DatabaseProxy::InsertImplWriteForwards( std::set< std::string >& o_rForward
 {
 	// DatabaseProxy has no specific write forwarding capabilities
 }
+
+void DatabaseProxy::InsertImplDeleteForwards( std::set< std::string >& o_rForwards ) const
+{
+	// DatabaseProxy has no specific delete forwarding capabilities
+}
+

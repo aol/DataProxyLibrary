@@ -26,8 +26,7 @@ private:
 	CPPUNIT_TEST(testLoad);
 	CPPUNIT_TEST(testLoadCompressed);
 	CPPUNIT_TEST(testLoadCompressedCustomLevel);
-	CPPUNIT_TEST(testLoadXForwardedForNew);
-	CPPUNIT_TEST(testLoadXForwardedForAppend);
+	CPPUNIT_TEST(testLoadXForwardedFor);
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -41,8 +40,7 @@ public:
 	void testLoad();
 	void testLoadCompressed();
 	void testLoadCompressedCustomLevel();
-	void testLoadXForwardedForNew();
-	void testLoadXForwardedForAppend();
+	void testLoadXForwardedFor();
 
 private:
 	boost::scoped_ptr< TempDirectory > m_pTempDir;

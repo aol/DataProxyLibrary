@@ -378,7 +378,7 @@ void ParameterTranslatorTest::testBadEvalCommand()
 	xmlContents.str("");
 	xmlContents << "<Whatever>"
 				<< " <TranslateParameters evalTimeout=\"-1\" >"	// essentially disallow eval commands
-				<< "  <Parameter name=\"param01\" valueOverride=\"`sleep 2 && echo -n 10`\" />"
+				<< "  <Parameter name=\"param01\" valueOverride=\"`sleep 2 &amp;&amp; echo -n 10`\" />"
 				<< " </TranslateParameters>"
 				<< "</Whatever>";
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Whatever", nodes );
@@ -387,7 +387,6 @@ void ParameterTranslatorTest::testBadEvalCommand()
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( translator2.Translate( inputParameters, translatedParameters ), TimeoutException,
 		".*\\.cpp:\\d+: The command 'sleep 2 && echo -n 10' failed to finish after -1 seconds\\. Wrote 0 bytes to standard input\\. Read 0 bytes from standard output\\. Read 0 bytes from standard error\\." );
-	
 }
 
 void ParameterTranslatorTest::testIllegalConfig()

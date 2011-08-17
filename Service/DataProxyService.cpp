@@ -16,6 +16,7 @@
 #include "XMLUtilities.hpp"
 #include "LoadHandler.hpp"
 #include "StoreHandler.hpp"
+#include "DeleteHandler.hpp"
 
 namespace
 {
@@ -44,10 +45,12 @@ int main( int argc, char** argv )
 		DataProxyClient client( true );
 		LoadHandler loadHandler( client, config.GetDplConfig(), config.GetZLibCompressionLevel(), config.GetEnableXForwardedFor() );
 		StoreHandler storeHandler( client, config.GetDplConfig(), config.GetEnableXForwardedFor() );
+		DeleteHandler deleteHandler( client, config.GetDplConfig(), config.GetEnableXForwardedFor() );
 
 		// register handlers
 		rWebServer.AddWebService( HTTP_POST, MATCH_ALL, storeHandler );
 		rWebServer.AddWebService( HTTP_GET, MATCH_ALL, loadHandler );
+		rWebServer.AddWebService( HTTP_DELETE, MATCH_ALL, deleteHandler );
 
 		// start webservice
 		MVLOGGER( "root.lib.DataProxy.Service.CreatedWebserver", "Starting data proxy service, instance id: " << config.GetInstanceId() << ", listening on port: " << config.GetPort() );

@@ -12,7 +12,8 @@
 #ifndef _LOAD_HANDLER_
 #define _LOAD_HANDLER_
 
-#include "IWebService.hpp"
+
+#include "AbstractHandler.hpp"
 #include <boost/noncopyable.hpp>
 #include <string>
 #include <boost/iostreams/filter/zlib.hpp>
@@ -21,7 +22,7 @@ class HTTPRequest;
 class HTTPResponse;
 class DataProxyClient;
 
-class LoadHandler : public boost::noncopyable, public IWebService
+class LoadHandler : public AbstractHandler
 {
 public:
 	LoadHandler( DataProxyClient& i_rDataProxyClient, const std::string& i_rDplConfig, int i_ZLibCompressionLevel, bool i_EnableXForwardedFor );
@@ -30,12 +31,9 @@ public:
 	virtual void Handle( HTTPRequest& i_rRequest, HTTPResponse& o_rResponse );
 
 private:
-	DataProxyClient& m_rDataProxyClient;
-	std::string m_DplConfig;
 	boost::iostreams::zlib_params m_GZipParams;
 	boost::iostreams::zlib_params m_DeflateParams;
 	bool m_CompressionEnabled;
-	bool m_EnableXForwardedFor;
 };
 
 #endif // _LOAD_HANDLER_

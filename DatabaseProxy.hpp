@@ -33,8 +33,11 @@ public:
 	
 	virtual void LoadImpl( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData );
 	virtual void StoreImpl( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData );
+	virtual void DeleteImpl( const std::map<std::string,std::string>& i_rParameters );
+
 	virtual void InsertImplReadForwards( std::set< std::string >& o_rForwards ) const;
 	virtual void InsertImplWriteForwards( std::set< std::string >& o_rForwards ) const;
+	virtual void InsertImplDeleteForwards( std::set< std::string >& o_rForwards ) const;
 
 	// transaction support
 	virtual bool SupportsTransactions() const;
@@ -69,6 +72,12 @@ private:
 	std::map< std::string, std::string > m_WriteRequiredColumns;
 	bool m_WriteConnectionByTable;
 	
+	// delete settings
+	bool m_DeleteEnabled;
+	std::string m_DeleteConnectionName;
+	std::string m_DeleteQuery;
+	bool m_DeleteConnectionByTable;
+
 	DatabaseConnectionManager& m_rDatabaseConnectionManager;
 
 	std::set< Database* > m_PendingCommits;

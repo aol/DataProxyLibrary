@@ -30,9 +30,12 @@
 namespace
 {
 	const std::string DATABASE_CONNECTIONS_NODE( "DatabaseConnections" );
+	const std::string STORE_OP( "Store" );
+	const std::string DELETE_OP( "Delete" );
 
 	const int READ_PATH = 1;
 	const int WRITE_PATH = 2;
+	const int DELETE_PATH = 3;
 
 	void AddIfAbsent( const std::string& i_rName, std::vector< std::string >& o_rNodes )
 	{
@@ -157,7 +160,6 @@ void DataProxyClient::InitializeImplementation( const std::string& i_rConfigFile
 		m_Initialized = true;
 
 		std::set< std::string > allowedChildren;
-		std::set< std::string > allowedAttributes;
 
 		xercesc::XercesDOMParser parser;
 		xercesc::HandlerBase errorHandler;
@@ -243,6 +245,9 @@ void DataProxyClient::InitializeImplementation( const std::string& i_rConfigFile
 
 			// check write-side
 			CheckForCycles( nodeIter, WRITE_PATH, pathStart );
+
+			// check delete-side
+			CheckForCycles( nodeIter, DELETE_PATH, pathStart );
 		}
 
 		// finally, add in all the database connections
@@ -274,8 +279,22 @@ void DataProxyClient::CheckForCycles( const NodesMap::const_iterator& i_rNodeIte
 {
 	// get this node's current forwards
 	std::set< std::string > currentForwards;
-	i_WhichPath == READ_PATH ? i_rNodeIter->second->InsertReadForwards( currentForwards ) : i_rNodeIter->second->InsertWriteForwards( currentForwards );
-	std::string pathType = i_WhichPath == READ_PATH ? "read" : "write";
+	std::string pathType;
+	if( i_WhichPath == READ_PATH )
+	{
+		i_rNodeIter->second->InsertReadForwards( currentForwards );
+		pathType = "read";
+	}
+	else if( i_WhichPath == WRITE_PATH )
+	{
+		i_rNodeIter->second->InsertWriteForwards( currentForwards );
+		pathType = "write";
+	}
+	else if( i_WhichPath == DELETE_PATH )
+	{
+		i_rNodeIter->second->InsertDeleteForwards( currentForwards );
+		pathType = "delete";
+	}
 
 	// check each forward-to node
 	std::set< std::string >::const_iterator forwardIter = currentForwards.begin();
@@ -340,6 +359,7 @@ void DataProxyClient::Load( const std::string& i_rName, const std::map<std::stri
 	iter->second->Load( i_rParameters, o_rData );
 }
 
+
 void DataProxyClient::Store( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData ) const
 {
 	boost::shared_lock< boost::shared_mutex > lock( m_ConfigMutex );
@@ -359,43 +379,69 @@ void DataProxyClient::Store( const std::string& i_rName, const std::map<std::str
 
 	bool success = iter->second->Store( i_rParameters, i_rData );
 
+	HandleResult( i_rName, iter, success, STORE_OP );
+}
+
+void DataProxyClient::Delete( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters ) const
+{
+	boost::shared_lock< boost::shared_mutex > lock( m_ConfigMutex );
+	if( !m_Initialized )
+	{
+		MV_THROW( DataProxyClientException, "Attempted to issue Delete request on uninitialized DataProxyClient" );
+	}
+
+	MVLOGGER( "root.lib.DataProxy.DataProxyClient.Delete.Info", "Delete called for named DataNode: "
+		<< i_rName << " with parameters: " << ProxyUtilities::ToString( i_rParameters ) );
+
+	NodesMap::const_iterator iter = m_Nodes.find( i_rName );
+	if( iter == m_Nodes.end() )
+	{
+		MV_THROW( DataProxyClientException, "Attempted to issue Delete request on unknown data node '" << i_rName << "'. Check XML configuration." );
+	}
+
+	bool success = iter->second->Delete( i_rParameters );
+
+	HandleResult( i_rName, iter, success, DELETE_OP );
+}
+
+void DataProxyClient::HandleResult( const std::string& i_rName, const NodesMap::const_iterator& i_rNodeIter, bool i_bSuccess, const std::string i_Operation ) const
+{
 	if( !m_InsideTransaction )
 	{
-		if( iter->second->SupportsTransactions() )
+		if( i_rNodeIter->second->SupportsTransactions() )
 		{
-			if( success )
+			if( i_bSuccess )
 			{
 				// non-transactional success & handler supports transactions
-				iter->second->Commit();
+				i_rNodeIter->second->Commit();
 			}
 			else
 			{
 				// non-transactional failure & handler supports transactions
-				iter->second->Rollback();
+				i_rNodeIter->second->Rollback();
 			}
 		}
-		else
+		else if( !i_bSuccess ) 
 		{
-			if( !success )
-			{
-				// non-transactional failure, but handler does not support transactions
-				MVLOGGER( "root.lib.DataProxy.DataProxyClient.Store.NonTransactionalRollbackNotSupported",
-					"Store to the node: " << i_rName << " did not succeed, but did not throw an exception (likely due to failure handling). "
-					"Ordinarily this would result in an immediate rollback, but this step will not happen since this node does not support transactions" );
-			}
-			// do nothing in non-transactional succes where handler does not support transactions
+			// non-transactional failure, but handler does not support transactions
+			
+			MVLOGGER( "root.lib.DataProxy.DataProxyClient.HandleResult.NonTransactionalRollbackNotSupported",
+				i_Operation << " to the node: " << i_rName << " did not succeed, but did not throw an exception (likely due to failure handling). "
+				<< "Ordinarily this would result in an immediate rollback, but this step will not happen since this node does not support transactions" );
 		}
+
+		// do nothing in non-transactional succes where handler does not support transactions
 	}
 	else // inside a transaction
 	{
-		if( !iter->second->SupportsTransactions() )
+		if( !i_rNodeIter->second->SupportsTransactions() )
 		{
-			MVLOGGER( "root.lib.DataProxy.DataProxyClient.Store.TransactionNotSupported",
+			MVLOGGER( "root.lib.DataProxy.DataProxyClient.HandleResult.TransactionNotSupported",
 					"Currently inside a transaction, but node: " << i_rName << " does not support transactions. "
-					<< "The data currently being stored will be auto-committed" );
+					<< "The data currently being " << i_Operation << "d will be auto-committed" );
 			AddIfAbsent( i_rName, m_AutoCommittedNodes );
 		}
-		else if( success )
+		else if( i_bSuccess ) // Attempt to add to pending commits list
 		{
 			if( find( m_PendingRollbackNodes.begin(), m_PendingRollbackNodes.end(), i_rName ) != m_PendingRollbackNodes.end() )
 			{
@@ -403,7 +449,7 @@ void DataProxyClient::Store( const std::string& i_rName, const std::map<std::str
 			}
 			AddIfAbsent( i_rName, m_PendingCommitNodes );
 		}
-		else if( !success )
+		else // Supports transactions but failed: attempt to add to pending rollbacks list 
 		{
 			if( find( m_PendingCommitNodes.begin(), m_PendingCommitNodes.end(), i_rName ) != m_PendingCommitNodes.end() )
 			{

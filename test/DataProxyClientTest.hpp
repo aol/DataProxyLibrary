@@ -25,8 +25,8 @@ private:
 	CPPUNIT_TEST( testMissingName );
 	CPPUNIT_TEST( testDuplicateName );
 	CPPUNIT_TEST( testDatabaseConnectionsNode );
-	CPPUNIT_TEST( testStoreUnsuccessfulRollback );
-	CPPUNIT_TEST( testStoreUnsuccessfulRollback_WithTransactions );
+	CPPUNIT_TEST( testStoreDeleteUnsuccessfulRollback );
+	CPPUNIT_TEST( testStoreDeleteUnsuccessfulRollback_WithTransactions );
 	CPPUNIT_TEST( testTransactionException );
 	CPPUNIT_TEST( testCommit );
 	CPPUNIT_TEST( testCommitPartial );
@@ -36,8 +36,10 @@ private:
 	CPPUNIT_TEST( testForwardingOk );
 	CPPUNIT_TEST( testReadCycles );
 	CPPUNIT_TEST( testWriteCycles );
+	CPPUNIT_TEST( testDeleteCycles );
 	CPPUNIT_TEST( testUndefinedReadForwards );
 	CPPUNIT_TEST( testUndefinedWriteForwards );
+	CPPUNIT_TEST( testUndefinedDeleteForwards );
 	CPPUNIT_TEST( testEntityResolution );
 	CPPUNIT_TEST( testConfigFileMD5 );
 	CPPUNIT_TEST( testConfigFileMissing );
@@ -54,8 +56,8 @@ public:
 	void testMissingName();
 	void testDuplicateName();
 	void testDatabaseConnectionsNode();
-	void testStoreUnsuccessfulRollback();
-	void testStoreUnsuccessfulRollback_WithTransactions();
+	void testStoreDeleteUnsuccessfulRollback();
+	void testStoreDeleteUnsuccessfulRollback_WithTransactions();
 	void testTransactionException();
 	void testCommit();
 	void testCommitPartial();
@@ -65,8 +67,10 @@ public:
 	void testForwardingOk();
 	void testReadCycles();
 	void testWriteCycles();
+	void testDeleteCycles();
 	void testUndefinedReadForwards();
 	void testUndefinedWriteForwards();
+	void testUndefinedDeleteForwards();
 	void testEntityResolution();
 	void testConfigFileMD5();
 	void testConfigFileMissing();

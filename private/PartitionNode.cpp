@@ -61,6 +61,7 @@ PartitionNode::PartitionNode( const std::string& i_rName,
 	m_rParent( i_rParent ),
 	m_ReadRoute(),
 	m_WriteRoute(),
+	m_DeleteRoute(),
 	m_WritePartitionKey(),
 	m_WriteSkipSort( false ),
 	m_WriteSortTimeout( 0.0 ),
@@ -68,19 +69,19 @@ PartitionNode::PartitionNode( const std::string& i_rName,
 {
 	std::set< std::string > allowedChildren;
 	allowedChildren.insert( FORWARD_TO_NODE );
-	AbstractNode::ValidateXmlElements( i_rNode, allowedChildren, allowedChildren );
+	AbstractNode::ValidateXmlElements( i_rNode, allowedChildren, allowedChildren, allowedChildren );
 
 	std::set< std::string > allowedReadAttributes;
 	std::set< std::string > allowedWriteAttributes;
+	std::set< std::string > allowedDeleteAttributes;
 	allowedWriteAttributes.insert( PARTITION_BY_ATTRIBUTE );
 	allowedWriteAttributes.insert( SKIP_SORT_ATTRIBUTE );
 	allowedWriteAttributes.insert( SORT_TIMEOUT_ATTRIBUTE );
 	allowedWriteAttributes.insert( SORT_TEMPDIR_ATTRIBUTE );
-	AbstractNode::ValidateXmlAttributes( i_rNode, allowedReadAttributes, allowedWriteAttributes );
+	AbstractNode::ValidateXmlAttributes( i_rNode, allowedReadAttributes, allowedWriteAttributes, allowedDeleteAttributes );
 
 	std::set< std::string > allowedAttributes;
 	allowedAttributes.insert( NAME_ATTRIBUTE );
-	XMLUtilities::ValidateAttributes( &i_rNode, allowedAttributes );
 
 	// extract read parameters
 	xercesc::DOMNode* pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, READ_NODE );
@@ -131,6 +132,19 @@ PartitionNode::PartitionNode( const std::string& i_rName,
 			{
 				m_WriteSortTempDir = XMLUtilities::XMLChToString( pAttribute->getValue() );
 			}
+		}
+	}
+
+	// extract delete parameters
+	pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, DELETE_NODE );
+	if( pNode != NULL )
+	{
+		xercesc::DOMNode* pHandler = XMLUtilities::GetSingletonChildByName( pNode, FORWARD_TO_NODE );
+		if( pHandler != NULL )
+		{
+			XMLUtilities::ValidateNode( pHandler, std::set< std::string >() );
+			XMLUtilities::ValidateAttributes( pHandler, allowedAttributes );
+			m_DeleteRoute = XMLUtilities::GetAttributeValue( pHandler, NAME_ATTRIBUTE );
 		}
 	}
 }
@@ -215,6 +229,16 @@ void PartitionNode::StoreImpl( const std::map<std::string,std::string>& i_rParam
 	}
 }
 
+void PartitionNode::DeleteImpl( const std::map<std::string,std::string>& i_rParameters )
+{
+	if( m_DeleteRoute.IsNull() )
+	{
+		MV_THROW( PartitionNodeException, "PartitionNode: " << m_Name << " does not have a delete-side configuration" );
+	}
+	m_rParent.Delete( static_cast< const std::string& >( m_DeleteRoute ), i_rParameters );
+
+}
+
 void PartitionNode::InsertImplReadForwards( std::set< std::string >& o_rForwards ) const
 {
 	if( !m_ReadRoute.IsNull() )
@@ -226,6 +250,14 @@ void PartitionNode::InsertImplReadForwards( std::set< std::string >& o_rForwards
 void PartitionNode::InsertImplWriteForwards( std::set< std::string >& o_rForwards ) const
 {
 	o_rForwards.insert( m_WriteRoute );
+}
+
+void PartitionNode::InsertImplDeleteForwards( std::set< std::string >& o_rForwards ) const
+{
+	if( !m_DeleteRoute.IsNull() )
+	{
+		o_rForwards.insert( static_cast< const std::string& >( m_DeleteRoute ) );
+	}
 }
 
 bool PartitionNode::SupportsTransactions() const

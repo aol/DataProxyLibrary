@@ -285,3 +285,114 @@ void DataProxyShellConfigTest::testStoreWithMultiData()
 	CPPUNIT_ASSERT_EQUAL( std::string("data1/data2/data3"), actual.str() );
 	CPPUNIT_ASSERT_EQUAL( size_t(0), pConfig->GetParameters().size() );
 }
+
+void DataProxyShellConfigTest::testDeleteNoParams()
+{
+	std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
+	
+	char* argv[] = 
+	{
+		"dpls",
+		"--init", const_cast< char* >( configFileSpec.c_str() ),
+		"--Delete",
+		"--name", "name1"
+	};
+	int argc = sizeof(argv)/sizeof(char*);
+
+	FileUtilities::Touch( configFileSpec );
+
+	boost::scoped_ptr< DataProxyShellConfig > pConfig;
+	CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, argv ) ) );
+
+	CPPUNIT_ASSERT_EQUAL( configFileSpec, pConfig->GetDplConfig() );
+	CPPUNIT_ASSERT_EQUAL( DELETE_OPERATION, pConfig->GetOperation() );
+	CPPUNIT_ASSERT_EQUAL( std::string("name1"), pConfig->GetName() );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pConfig->GetData(), DataProxyShellConfigException, ".*:\\d+: Data pointer is NULL" );
+	CPPUNIT_ASSERT_EQUAL( size_t(0), pConfig->GetParameters().size() );
+}
+
+void DataProxyShellConfigTest::testDeleteWithParams()
+{
+	std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
+	
+	char* argv[] = 
+	{
+		"dpls",
+		"--init", const_cast< char* >( configFileSpec.c_str() ),
+		"--Delete",
+		"--name", "name1",
+		"--params", "pname1~value1^pname2~value2"
+	};
+	int argc = sizeof(argv)/sizeof(char*);
+
+	FileUtilities::Touch( configFileSpec );
+	
+	boost::scoped_ptr< DataProxyShellConfig > pConfig;
+	CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, argv ) ) );
+
+	std::map< std::string, std::string > params;
+	params[ "pname1" ] = "value1";
+	params[ "pname2" ] = "value2";
+
+	CPPUNIT_ASSERT_EQUAL( configFileSpec, pConfig->GetDplConfig() );
+	CPPUNIT_ASSERT_EQUAL( DELETE_OPERATION, pConfig->GetOperation() );
+	CPPUNIT_ASSERT_EQUAL( std::string("name1"), pConfig->GetName() );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pConfig->GetData(), DataProxyShellConfigException, ".*:\\d+: Data pointer is NULL" );
+	CPPUNIT_ASSERT_EQUAL( size_t(2), pConfig->GetParameters().size() );
+	CPPUNIT_ASSERT( params == pConfig->GetParameters() );
+}
+
+void DataProxyShellConfigTest::testDeleteWithMultiParams()
+{
+	std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
+	
+	char* argv[] = 
+	{
+		"dpls",
+		"--init", const_cast< char* >( configFileSpec.c_str() ),
+		"--Delete",
+		"--name", "name1",
+		"--params", "pname1~value1^pname2~value2",
+		"--params", "pname2~IGNORED_VALUE2^pname3~value3",	// pname2 value is ignored here since we retain the first one (from above)
+		"--params", "null"
+	};
+	int argc = sizeof(argv)/sizeof(char*);
+
+	FileUtilities::Touch( configFileSpec );
+	
+	boost::scoped_ptr< DataProxyShellConfig > pConfig;
+	CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, argv ) ) );
+
+	std::map< std::string, std::string > params;
+	params[ "pname1" ] = "value1";
+	params[ "pname2" ] = "value2";
+	params[ "pname3" ] = "value3";
+
+	CPPUNIT_ASSERT_EQUAL( configFileSpec, pConfig->GetDplConfig() );
+	CPPUNIT_ASSERT_EQUAL( DELETE_OPERATION, pConfig->GetOperation() );
+	CPPUNIT_ASSERT_EQUAL( std::string("name1"), pConfig->GetName() );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pConfig->GetData(), DataProxyShellConfigException, ".*:\\d+: Data pointer is NULL" );
+	CPPUNIT_ASSERT_EQUAL( size_t(3), pConfig->GetParameters().size() );
+	CPPUNIT_ASSERT( params == pConfig->GetParameters() );
+}
+
+void DataProxyShellConfigTest::testDeleteWithData()
+{
+	std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
+	
+	char* argv[] = 
+	{
+		"dpls",
+		"--init", const_cast< char* >( configFileSpec.c_str() ),
+		"--Delete",
+		"--name", "name1",
+		"--params", "pname1~value1^pname2~value2",
+		"--data", "data1" 
+	};
+	int argc = sizeof(argv)/sizeof(char*);
+
+	FileUtilities::Touch( configFileSpec );
+	
+	boost::scoped_ptr< DataProxyShellConfig > pConfig;
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pConfig.reset( new DataProxyShellConfig( argc, argv ) ), DataProxyShellConfigException, ".*:\\d+: Invalid argument: data cannot be supplied with a Delete request" );
+}

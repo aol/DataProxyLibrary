@@ -150,10 +150,6 @@ namespace
 			XMLUtilities::ValidateNode( *groupIter, allowedChildren );
 			XMLUtilities::ValidateAttributes( *groupIter, allowedGroupAttributes );
 
-			allowedChildren.clear();
-			allowedChildren.insert( PARAMETER_NODE );
-			XMLUtilities::ValidateNode( *groupIter, allowedChildren );
-
 			// read group name
 			Dpl::GroupConfigDatum groupDatum;
 			groupDatum.SetValue< Dpl::Format >( QUERY_FORMAT );
@@ -296,7 +292,7 @@ namespace
 		pAttribute = XMLUtilities::GetAttribute( &i_rNode, METHOD_OVERRIDE_ATTRIBUTE );
 		if( pAttribute != NULL )
 		{
-			o_rConfig.GetReference< Dpl::RestParameters >().SetMethodOverride( XMLUtilities::XMLChToString(pAttribute->getValue()) );
+			o_rConfig.GetReference< Dpl::RestParameters >().SetMethod( XMLUtilities::XMLChToString(pAttribute->getValue()) );
 		}
 
 		// get uri suffix (if it exists)
@@ -371,13 +367,14 @@ RestDataProxy::RestDataProxy( const std::string& i_rName, DataProxyClient& i_rPa
 :	AbstractNode( i_rName, i_rParent, i_rNode ),
 	m_Location( XMLUtilities::GetAttributeValue( &i_rNode, LOCATION_ATTRIBUTE ) ),
 	m_ReadConfig(),
-	m_WriteConfig()
+	m_WriteConfig(),
+	m_DeleteConfig()
 {
-	std::set< std::string > allowedReadWriteChildren;
-	allowedReadWriteChildren.insert( URI_QUERY_PARAMETERS_NODE );
-	allowedReadWriteChildren.insert( URI_PATH_SEGMENT_PARAMATERS_NODE );
-	allowedReadWriteChildren.insert( HTTP_HEADER_PARAMETERS_NODE );
-	AbstractNode::ValidateXmlElements( i_rNode, allowedReadWriteChildren, allowedReadWriteChildren );
+	std::set< std::string > allowedChildren;
+	allowedChildren.insert( URI_QUERY_PARAMETERS_NODE );
+	allowedChildren.insert( URI_PATH_SEGMENT_PARAMATERS_NODE );
+	allowedChildren.insert( HTTP_HEADER_PARAMETERS_NODE );
+	AbstractNode::ValidateXmlElements( i_rNode, allowedChildren, allowedChildren, allowedChildren );
 
 	std::set< std::string > allowedReadAttributes;
 	allowedReadAttributes.insert( METHOD_OVERRIDE_ATTRIBUTE );
@@ -390,8 +387,18 @@ RestDataProxy::RestDataProxy( const std::string& i_rName, DataProxyClient& i_rPa
 	allowedWriteAttributes.insert( TIMEOUT_ATTRIBUTE );
 	allowedWriteAttributes.insert( URI_SUFFIX_ATTRIBUTE );
 	allowedWriteAttributes.insert( MAX_REDIRECTS_ATTRIBUTE );
-	AbstractNode::ValidateXmlAttributes( i_rNode, allowedReadAttributes, allowedWriteAttributes );
+	std::set< std::string > allowedDeleteAttributes;
+	allowedDeleteAttributes.insert( METHOD_OVERRIDE_ATTRIBUTE );
+	allowedDeleteAttributes.insert( TIMEOUT_ATTRIBUTE );
+	allowedDeleteAttributes.insert( URI_SUFFIX_ATTRIBUTE );
+	allowedDeleteAttributes.insert( MAX_REDIRECTS_ATTRIBUTE );
+	AbstractNode::ValidateXmlAttributes( i_rNode, allowedReadAttributes, allowedWriteAttributes, allowedDeleteAttributes );
 	
+	// Default HTTP methods for load, store, and delete are GET, POST, and DELETE respectively
+	m_ReadConfig.GetReference< Dpl::RestParameters >().SetMethod( std::string( "GET" ) );
+	m_WriteConfig.GetReference< Dpl::RestParameters >().SetMethod( std::string( "POST" ) );
+	m_DeleteConfig.GetReference< Dpl::RestParameters >().SetMethod( std::string( "DELETE" ) );
+
 	// extract read parameters
 	xercesc::DOMNode* pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, READ_NODE );
 	if( pNode != NULL )
@@ -404,6 +411,13 @@ RestDataProxy::RestDataProxy( const std::string& i_rName, DataProxyClient& i_rPa
 	if( pNode != NULL )
 	{
 		SetRestConfig( *pNode, m_WriteConfig );
+	}
+	
+	// extract delete parameters
+	pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, DELETE_NODE );
+	if( pNode != NULL )
+	{
+		SetRestConfig( *pNode, m_DeleteConfig );
 	}
 }
 
@@ -427,8 +441,7 @@ void RestDataProxy::LoadImpl( const std::map<std::string,std::string>& i_rParame
 	// take a copy of the stored rest parameters so we can modify the copy
 	RESTParameters restParameters( m_ReadConfig.GetValue< Dpl::RestParameters >() );
 	builder.BuildRequest( uri, restParameters );
-
-	RESTClient().Get( uri, o_rData, restParameters );
+	RESTClient().Execute( uri, o_rData, restParameters );
 }
 
 void RestDataProxy::StoreImpl( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData )
@@ -447,13 +460,40 @@ void RestDataProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 	// take a copy of the stored rest parameters so we can modify the copy
 	RESTParameters restParameters( m_WriteConfig.GetValue< Dpl::RestParameters >() );
 	builder.BuildRequest( uri, restParameters );
-	std::stringstream responseBody;
+	std::ostringstream responseBody;
 
-	RESTClient().Post( uri, i_rData, responseBody, restParameters );
+	RESTClient().Execute( uri, i_rData, responseBody, restParameters );
 
 	if( responseBody.tellp() > 0L )
 	{
 		MVLOGGER( "root.lib.DataProxy.RestDataProxy.Store.ResponseBody", responseBody.str() );
+	}
+}
+
+void RestDataProxy::DeleteImpl( const std::map<std::string,std::string>& i_rParameters )
+{
+	std::stringstream result;
+	std::map< std::string, std::string > allParameters( i_rParameters );
+
+	// Create RestRequestBuilder
+	RestRequestBuilder builder( m_Location,
+								m_DeleteConfig.GetValue< Dpl::UriSuffix >(), 
+								m_DeleteConfig.GetValue< Dpl::UriPathSegmentOrder >(),
+								m_DeleteConfig.GetValue< Dpl::GroupConfig >() );
+	
+	AddParametersToBuilder( allParameters, m_DeleteConfig.GetValue< Dpl::ClientParameters >(), builder );
+
+	std::string uri;
+	// take a copy of the stored rest parameters so we can modify the copy
+	RESTParameters restParameters( m_DeleteConfig.GetValue< Dpl::RestParameters >() );
+	builder.BuildRequest( uri, restParameters );
+	std::ostringstream responseBody;
+
+	RESTClient().Execute( uri, responseBody, restParameters );
+
+	if( responseBody.tellp() > 0L )
+	{
+		MVLOGGER( "root.lib.DataProxy.RestDataProxy.Delete.ResponseBody", responseBody.str() );
 	}
 }
 
@@ -481,4 +521,9 @@ void RestDataProxy::InsertImplReadForwards( std::set< std::string >& o_rForwards
 void RestDataProxy::InsertImplWriteForwards( std::set< std::string >& o_rForwards ) const
 {
 	// RestDataProxy has no specific write forwarding capabilities
+}
+
+void RestDataProxy::InsertImplDeleteForwards( std::set< std::string >& o_rForwards ) const
+{
+	// RestDataProxy has no specific delete forwarding capabilities
 }

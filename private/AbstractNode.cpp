@@ -68,24 +68,41 @@ AbstractNode::AbstractNode( const std::string& i_rName, DataProxyClient& i_rPare
 :	m_Name( i_rName ),
 	m_rParent( i_rParent ),
 	m_ReadConfig(),
-	m_WriteConfig()
+	m_WriteConfig(),
+	m_DeleteConfig()
 {
 	// set defaults
 	m_ReadConfig.SetValue< RetryCount >( 0 );
 	m_WriteConfig.SetValue< RetryCount >( 0 );
+	m_DeleteConfig.SetValue< RetryCount >( 0 );
+
+	// Validate 
 	
 	// extract common read parameters
 	xercesc::DOMNode* pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, READ_NODE );
 	if( pNode != NULL )
 	{
-		SetConfig( *pNode, m_ReadConfig, false );
+		SetConfig( *pNode, m_ReadConfig );
 	}
 
 	// extract common write parameters
 	pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, WRITE_NODE );
 	if( pNode != NULL )
 	{
-		SetConfig( *pNode, m_WriteConfig, true );
+		SetConfig( *pNode, m_WriteConfig );
+	}
+
+	// extract common delete parameters
+	pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, DELETE_NODE );
+	if( pNode != NULL )
+	{
+		SetConfig( *pNode, m_DeleteConfig );
+		if( m_DeleteConfig.GetValue< UseTransformedStream >() )
+		{
+			
+			MVLOGGER( "root.lib.DataProxy.DataProxyClient.Delete.ForwardTransform", "Attribute forwardTransformedStream in Delete node"
+				<< " has been set to \"true\" but Delete nodes do not accept stream transformers. This attribute will be ignored." );
+		}
 	}
 }
 
@@ -305,6 +322,77 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 	return false;
 }
 
+bool AbstractNode::Delete( const std::map<std::string,std::string>& i_rParameters )
+{
+	// by default we will just use the params passed in
+	const std::map< std::string, std::string >* pUseParameters = &i_rParameters;
+	std::map< std::string, std::string > translatedParameters;
+
+	try
+	{
+		// validate incoming parameters (using the raw incoming parameters)
+		ValidateParameters( m_DeleteConfig.GetValue< RequiredParameters >(), i_rParameters );
+
+		if( m_DeleteConfig.GetValue< Translator >() != NULL )
+		{
+			// if we found a translator, translate the parameters
+			m_DeleteConfig.GetValue< Translator >()->Translate( i_rParameters, translatedParameters );
+			if( translatedParameters != i_rParameters )
+			{
+				MVLOGGER( "root.lib.DataProxy.DataProxyClient.Delete.TranslatedParameters", "Parameters have been translated to: "
+					<< ProxyUtilities::ToString( translatedParameters ) );
+			}
+			// and use those parameters instead
+			pUseParameters = &translatedParameters;
+		}
+
+		// try the maximum # of retries to issue a delete request
+		for( uint i=0; i < m_DeleteConfig.GetValue< RetryCount >()+1; ++i )
+		{
+			try
+			{
+				DeleteImpl( *pUseParameters );
+				return true;
+			}
+			catch( const std::exception& ex )
+			{
+				MVLOGGER( "root.lib.DataProxy.DataProxyClient.Delete.Exception", "Caught exception while issuing delete request: " << ex.what() );
+				// if we are out of retries, throw the exception so failure-forwarding can take place
+				if( i >= m_DeleteConfig.GetValue< RetryCount >() )
+				{
+					throw;
+				}
+			}
+		}
+	}
+
+	catch( const std::exception& ex )
+	{
+		MVLOGGER( "root.lib.DataProxy.DataProxyClient.Delete.Exception", "Caught exception while issuing delete request: " << ex.what() );
+
+		// if no forwardTo specified, then just rethrow the exception
+		Nullable< std::string > forwardName = m_DeleteConfig.GetValue< ForwardNodeName >();
+		if( forwardName.IsNull() )
+		{
+			throw;
+		}
+
+		// otherwise, we will decide whether to use the original or translated parameters
+		std::map< std::string, std::string > forwardedParams( ChooseParameters( i_rParameters, translatedParameters, m_DeleteConfig.GetValue< UseTranslatedParameters >() ) );
+
+		// if it's configured to append the "source" name, then do so under the configured value
+		AddNameIfNecessary( m_Name, forwardedParams, m_DeleteConfig.GetValue< IncludeNodeNameAsParameter >() );
+
+		// forward the delete request!
+		MVLOGGER( "root.lib.DataProxy.DataProxyClient.Delete.Forward.Info", "Forwarding request to named node: "
+			<< forwardName << " with " << (m_DeleteConfig.GetValue< UseTranslatedParameters >() ? "translated" : "original")
+			<< " parameters" << (m_DeleteConfig.GetValue< IncludeNodeNameAsParameter >().IsNull() ? "" : " (with failed name added)") );
+		
+		m_rParent.Delete( static_cast<std::string>( forwardName ), forwardedParams );
+	}
+	return false;
+}
+
 void AbstractNode::InsertReadForwards( std::set< std::string >& o_rForwards ) const
 {
 	if( !m_ReadConfig.GetValue< ForwardNodeName >().IsNull() )
@@ -323,7 +411,16 @@ void AbstractNode::InsertWriteForwards( std::set< std::string >& o_rForwards ) c
 	InsertImplWriteForwards( o_rForwards );
 }
 
-void AbstractNode::SetConfig( const xercesc::DOMNode& i_rNode, NodeConfigDatum& o_rConfig, bool i_IsWrite ) const
+void AbstractNode::InsertDeleteForwards( std::set< std::string >& o_rForwards ) const
+{
+	if( !m_DeleteConfig.GetValue< ForwardNodeName >().IsNull() )
+	{
+		o_rForwards.insert( static_cast< const std::string& >( m_DeleteConfig.GetValue< ForwardNodeName >() ) );
+	}
+	InsertImplDeleteForwards( o_rForwards );
+}
+
+void AbstractNode::SetConfig( const xercesc::DOMNode& i_rNode, NodeConfigDatum& o_rConfig ) const
 {
 	o_rConfig.SetValue< Translator >( boost::shared_ptr<ParameterTranslator>( new ParameterTranslator( i_rNode ) ) );
 	o_rConfig.SetValue< Transformers >( boost::shared_ptr< TransformerManager >( new TransformerManager( i_rNode ) ) );
@@ -356,12 +453,14 @@ void AbstractNode::SetConfig( const xercesc::DOMNode& i_rNode, NodeConfigDatum& 
 
 	allowedElements.clear();
 	allowedAttributes.clear();
+	// allowed forwarding attributes
 	allowedAttributes.insert( FORWARD_TO_ATTRIBUTE );
 	allowedAttributes.insert( RETRY_COUNT_ATTRIBUTE );
 	allowedAttributes.insert( INCLUDE_NAME_AS_PARAMETER_ATTRIBUTE );
 	allowedAttributes.insert( FORWARD_TRANSLATED_PARAMETERS_ATTRIBUTE );
 	allowedAttributes.insert( FORWARD_TRANSFORMED_STREAM_ATTRIBUTE );
 	pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, ON_FAILURE_NODE );
+
 	if( pNode != NULL )
 	{
 		XMLUtilities::ValidateAttributes( pNode, allowedAttributes );
@@ -385,7 +484,7 @@ void AbstractNode::SetConfig( const xercesc::DOMNode& i_rNode, NodeConfigDatum& 
 		if( o_rConfig.GetValue< ForwardNodeName >().IsNull() && o_rConfig.GetValue< RetryCount >() == 0 )
 		{
 			MV_THROW( NodeConfigException, "Node has an " << ON_FAILURE_NODE << " element, but no " << FORWARD_TO_ATTRIBUTE
-				<< ( i_IsWrite ? " or retryCount attributes have" : " attribute has" ) << " been set" );
+				<< " or " << RETRY_COUNT_ATTRIBUTE << " attribute has been set" );
 		}
 
 		// check for include-name-as-parameter attribute (otherwise we will not append original nodenames)
@@ -401,7 +500,7 @@ void AbstractNode::SetConfig( const xercesc::DOMNode& i_rNode, NodeConfigDatum& 
 		{
 			o_rConfig.SetValue< UseTranslatedParameters >( true );
 		}
-
+		
 		// check for forward-transformed-stream attribute;
 		pAttribute = XMLUtilities::GetAttribute( pNode, FORWARD_TRANSFORMED_STREAM_ATTRIBUTE );
 		if( pAttribute != NULL && XMLUtilities::XMLChToString(pAttribute->getValue()) == "true" )
@@ -414,20 +513,25 @@ void AbstractNode::SetConfig( const xercesc::DOMNode& i_rNode, NodeConfigDatum& 
 // static helpers
 void AbstractNode::ValidateXmlElements( const xercesc::DOMNode& i_rNode,
 										const std::set< std::string >& i_rAdditionalReadElements,
-										const std::set< std::string >& i_rAdditionalWriteElements )
+										const std::set< std::string >& i_rAdditionalWriteElements, 
+										const std::set< std::string >& i_rAdditionalDeleteElements )
 {
-	// top level for every type must only have a read & a write side
+	// top level for every type must only have a read write or delete side
 	std::set< std::string > allowedChildren;
 	allowedChildren.insert( READ_NODE );
 	allowedChildren.insert( WRITE_NODE );
+	allowedChildren.insert( DELETE_NODE );
 	XMLUtilities::ValidateNode( &i_rNode, allowedChildren );
 
-	// both read and write may always optionally have the following parameters
+	// all nodes (read, write, delete) may always optionally have the following parameters
 	std::set< std::string > commonChildren;
 	commonChildren.insert( REQUIRED_PARAMETERS_NODE );
 	commonChildren.insert( TRANSLATE_PARAMETERS_NODE );
-	commonChildren.insert( TRANSFORMERS_NODE );
 	commonChildren.insert( ON_FAILURE_NODE );
+
+	// only read and write nodes may always optionally have the following parameters
+	std::set< std::string > commonReadWriteChildren;
+	commonReadWriteChildren.insert( TRANSFORMERS_NODE );
 
 	// check the read side
 	xercesc::DOMNode* pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, READ_NODE );
@@ -435,6 +539,7 @@ void AbstractNode::ValidateXmlElements( const xercesc::DOMNode& i_rNode,
 	{
 		allowedChildren.clear();
 		allowedChildren.insert( commonChildren.begin(), commonChildren.end() );
+		allowedChildren.insert( commonReadWriteChildren.begin(), commonReadWriteChildren.end() );
 		allowedChildren.insert( i_rAdditionalReadElements.begin(), i_rAdditionalReadElements.end() );
 		XMLUtilities::ValidateNode( pNode, allowedChildren );
 	}
@@ -445,22 +550,37 @@ void AbstractNode::ValidateXmlElements( const xercesc::DOMNode& i_rNode,
 	{
 		allowedChildren.clear();
 		allowedChildren.insert( commonChildren.begin(), commonChildren.end() );
+		allowedChildren.insert( commonReadWriteChildren.begin(), commonReadWriteChildren.end() );
 		allowedChildren.insert( i_rAdditionalWriteElements.begin(), i_rAdditionalWriteElements.end() );
+		XMLUtilities::ValidateNode( pNode, allowedChildren );
+	}
+	
+	// check the delete side
+	pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, DELETE_NODE );
+	if( pNode != NULL )
+	{
+		allowedChildren.clear();
+		allowedChildren.insert( commonChildren.begin(), commonChildren.end() );
+		allowedChildren.insert( i_rAdditionalDeleteElements.begin(), i_rAdditionalDeleteElements.end() );
 		XMLUtilities::ValidateNode( pNode, allowedChildren );
 	}
 }
 
 void AbstractNode::ValidateXmlAttributes( const xercesc::DOMNode& i_rNode,
 										  const std::set< std::string >& i_rAdditionalReadAttributes,
-										  const std::set< std::string >& i_rAdditionalWriteAttributes )
+										  const std::set< std::string >& i_rAdditionalWriteAttributes,
+										  const std::set< std::string >& i_rAdditionalDeleteAttributes
+										 )
 {
 	// top-level read/write attributes
 	std::set< std::string > allowedReadAttributes;
 	std::set< std::string > allowedWriteAttributes;
+	std::set< std::string > allowedDeleteAttributes;
 
 	// add in the additional attributes allowed
 	allowedReadAttributes.insert( i_rAdditionalReadAttributes.begin(), i_rAdditionalReadAttributes.end() );
 	allowedWriteAttributes.insert( i_rAdditionalWriteAttributes.begin(), i_rAdditionalWriteAttributes.end() );
+	allowedDeleteAttributes.insert( i_rAdditionalDeleteAttributes.begin(), i_rAdditionalDeleteAttributes.end() );
 
 	// check the read side
 	xercesc::DOMNode* pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, READ_NODE );
@@ -474,5 +594,12 @@ void AbstractNode::ValidateXmlAttributes( const xercesc::DOMNode& i_rNode,
 	if( pNode != NULL )
 	{
 		XMLUtilities::ValidateAttributes( pNode, allowedWriteAttributes );
+	}
+
+	// check the delete side
+	pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, DELETE_NODE );
+	if( pNode != NULL )
+	{
+		XMLUtilities::ValidateAttributes( pNode, allowedDeleteAttributes );
 	}
 }

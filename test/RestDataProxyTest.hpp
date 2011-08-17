@@ -28,6 +28,7 @@ private:
 	CPPUNIT_TEST( testMoreThanOneUriPathSegmentParametersNode );
 	CPPUNIT_TEST( testMalformedReadNode );
 	CPPUNIT_TEST( testMalformedWriteNode );
+	CPPUNIT_TEST( testMalformedDeleteNode );
 	CPPUNIT_TEST( testMalformedUriQueryParametersNode );
 	CPPUNIT_TEST( testMalformedUriQueryGroupParametersNode );
 	CPPUNIT_TEST( testMalformedHttpHeaderParametersNode );
@@ -42,6 +43,10 @@ private:
 	CPPUNIT_TEST( testStoreBasic );
 	CPPUNIT_TEST( testStoreMethodOverride );
 	CPPUNIT_TEST( testStoreComplex );
+	CPPUNIT_TEST( testDeleteTimeout );
+	CPPUNIT_TEST( testDeleteBasic );
+	CPPUNIT_TEST( testDeleteMethodOverride );
+	CPPUNIT_TEST( testDeleteComplex );
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -57,6 +62,7 @@ public:
 	void testMoreThanOneUriPathSegmentParametersNode();
 	void testMalformedReadNode();
 	void testMalformedWriteNode();
+	void testMalformedDeleteNode();
 	void testMalformedUriQueryParametersNode();
 	void testMalformedUriQueryGroupParametersNode();
 	void testMalformedHttpHeaderParametersNode();
@@ -71,6 +77,10 @@ public:
 	void testStoreBasic();
 	void testStoreMethodOverride();
 	void testStoreComplex();
+	void testDeleteTimeout();
+	void testDeleteBasic();
+	void testDeleteMethodOverride();
+	void testDeleteComplex();
 
 private:
 	boost::scoped_ptr<TempDirectory> m_pTempDir;

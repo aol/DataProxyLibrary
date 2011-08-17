@@ -22,34 +22,39 @@ class DatabaseProxyTest : public CppUnit::TestFixture
 {
 private:
 	CPPUNIT_TEST_SUITE( DatabaseProxyTest );
-	CPPUNIT_TEST (testConstructorExceptionWithNoReadOrWriteNode);
-	CPPUNIT_TEST (testConstructorExceptionIllegalXml);
+/*	CPPUNIT_TEST( testConstructorExceptionWithNoReadOrWriteOrDeleteNode );
+	CPPUNIT_TEST( testConstructorExceptionIllegalXml );
+	CPPUNIT_TEST( testOperationNotSupported );
 
-	CPPUNIT_TEST (testOperationNotSupported);
-	
-	CPPUNIT_TEST (testLoadExceptionMissingVariableNameDefinition);
-	CPPUNIT_TEST (testLoadExceptionWithBadConnection);
-	CPPUNIT_TEST (testLoadExceptionEmptyVarName);
+	CPPUNIT_TEST( testOracleLoad );
+	CPPUNIT_TEST( testMySQLLoad );
+	CPPUNIT_TEST( testLoadWithExtraVariableNameDefinitions );
+	CPPUNIT_TEST( testLoadWithMultipleVariableNames );
+	CPPUNIT_TEST( testLoadWithNoVariableNames );
+	CPPUNIT_TEST( testLoadMaxStringParameter );
+	CPPUNIT_TEST( testLoadSameVarNameReplacedTwice );
+	CPPUNIT_TEST( testLoadCustomSeparators );
+	CPPUNIT_TEST( testLoadExceptionMissingVariableNameDefinition );
+	CPPUNIT_TEST( testLoadExceptionWithBadConnection );
+	CPPUNIT_TEST( testLoadExceptionEmptyVarName );
 
-	CPPUNIT_TEST (testOracleLoad);
-	CPPUNIT_TEST (testMySQLLoad);
-	CPPUNIT_TEST (testLoadWithExtraVariableNameDefinitions);
-	CPPUNIT_TEST (testLoadWithMultipleVariableNames);
-	CPPUNIT_TEST (testLoadWithNoVariableNames);
-	CPPUNIT_TEST (testLoadMaxStringParameter);
-	CPPUNIT_TEST (testLoadSameVarNameReplacedTwice);
-	CPPUNIT_TEST (testLoadCustomSeparators);
-
-	CPPUNIT_TEST (testStoreException);
-
-	CPPUNIT_TEST (testOracleStore);
-	CPPUNIT_TEST (testMySqlStore);
-	CPPUNIT_TEST (testMySqlStoreDynamicTables);
-	CPPUNIT_TEST (testOracleStoreDynamicTables);
-	CPPUNIT_TEST (testDynamicTableNameLength);
-	CPPUNIT_TEST (testStoreParameterOnly);
-	CPPUNIT_TEST (testStoreColumnParameterCollisionBehaviors);
-
+	CPPUNIT_TEST( testStoreException );
+	CPPUNIT_TEST( testOracleStore );
+	CPPUNIT_TEST( testMySqlStore );
+	CPPUNIT_TEST( testMySqlStoreDynamicTables );
+	CPPUNIT_TEST( testOracleStoreDynamicTables );
+	CPPUNIT_TEST( testDynamicTableNameLength );
+	CPPUNIT_TEST( testStoreParameterOnly );
+	CPPUNIT_TEST( testStoreColumnParameterCollisionBehaviors );
+*/
+	CPPUNIT_TEST( testOracleDelete );
+	CPPUNIT_TEST( testMySQLDelete );
+	CPPUNIT_TEST( testDeleteWithExtraVariableNameDefinitions );
+	CPPUNIT_TEST( testDeleteWithMultipleVariableNames );
+	CPPUNIT_TEST( testDeleteWithNoVariableNames );
+	CPPUNIT_TEST( testDeleteSameVarNameReplacedTwice );
+	CPPUNIT_TEST( testDeleteExceptionMissingVariableNameDefinition );
+	CPPUNIT_TEST( testDeleteExceptionEmptyVarName );
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -60,13 +65,8 @@ public:
 	void tearDown();
 
 	void testConstructorExceptionIllegalXml();
-	void testConstructorExceptionWithNoReadOrWriteNode();
-
+	void testConstructorExceptionWithNoReadOrWriteOrDeleteNode();
 	void testOperationNotSupported();
-
-	void testLoadExceptionMissingVariableNameDefinition();
-	void testLoadExceptionWithBadConnection();
-	void testLoadExceptionEmptyVarName();
 
 	void testOracleLoad();
 	void testMySQLLoad();
@@ -76,6 +76,9 @@ public:
 	void testLoadMaxStringParameter();
 	void testLoadSameVarNameReplacedTwice();
 	void testLoadCustomSeparators();
+	void testLoadExceptionMissingVariableNameDefinition();
+	void testLoadExceptionWithBadConnection();
+	void testLoadExceptionEmptyVarName();
 
 	void testStoreException();
 
@@ -86,6 +89,15 @@ public:
 	void testDynamicTableNameLength();
 	void testStoreParameterOnly();
 	void testStoreColumnParameterCollisionBehaviors();
+
+	void testOracleDelete();
+	void testMySQLDelete();
+	void testDeleteWithExtraVariableNameDefinitions();
+	void testDeleteWithMultipleVariableNames();
+	void testDeleteWithNoVariableNames();
+	void testDeleteSameVarNameReplacedTwice();
+	void testDeleteExceptionMissingVariableNameDefinition();
+	void testDeleteExceptionEmptyVarName();
 
 private:
 	boost::shared_ptr<TempDirectory> m_pTempDir;

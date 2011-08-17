@@ -34,6 +34,10 @@ int main(int argc, char* argv[])
 		{
 			client.Store( config.GetName(), config.GetParameters(), config.GetData() );
 		}
+		else if( config.GetOperation() == DELETE_OPERATION )
+		{
+			client.Delete( config.GetName(), config.GetParameters() );
+		}
 		else
 		{
 			MV_THROW( MVException, "Unrecognized operation: " << config.GetOperation() );

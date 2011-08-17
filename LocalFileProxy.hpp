@@ -34,8 +34,11 @@ public:
 	
 	virtual void LoadImpl( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData );
 	virtual void StoreImpl( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData );
+	virtual void DeleteImpl( const std::map<std::string,std::string>& i_rParameters );
+
 	virtual void InsertImplReadForwards( std::set< std::string >& o_rForwards ) const;
 	virtual void InsertImplWriteForwards( std::set< std::string >& o_rForwards ) const;
+	virtual void InsertImplDeleteForwards( std::set< std::string >& o_rForwards ) const;
 
 	// transaction support
 	virtual bool SupportsTransactions() const;
@@ -54,9 +57,9 @@ private:
 	OpenMode m_OpenMode;
 	int m_SkipLines;
 	UniqueIdGenerator& m_rUniqueIdGenerator;
-	std::map< std::string, std::vector< std::string > > m_PendingRenames; // a map from destination -> temp filenames
-
-	boost::shared_mutex m_PendingRenamesMutex;
+	// Pending (store or delete) operations: a map from destination -> temp filenames or "" for deletes
+	std::map< std::string, std::vector< std::string > > m_PendingOps; 
+	boost::shared_mutex m_PendingOpsMutex;
 };
 
 #endif //_LOCAL_DATA_PROXY_HPP_

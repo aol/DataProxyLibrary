@@ -82,6 +82,8 @@ void ExecutionProxyTest::testInvalidXml()
 				<< "  </Read>" << std::endl
 				<< "  <Write command=\"cat\" timeout=\"2\" >" << std::endl
 				<< "  </Write>" << std::endl
+				<< "  <Delete command=\"rm\" timeout=\"2\" >" << std::endl
+				<< "  </Delete>" << std::endl
 				<< "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
@@ -96,6 +98,8 @@ void ExecutionProxyTest::testInvalidXml()
 				<< "  <Write command=\"cat\" timeout=\"2\" >" << std::endl
 				<< "    <garbage/>" << std::endl
 				<< "  </Write>" << std::endl
+				<< "  <Delete command=\"rm\" timeout=\"2\" >" << std::endl
+				<< "  </Delete>" << std::endl
 				<< "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
@@ -105,10 +109,45 @@ void ExecutionProxyTest::testInvalidXml()
 
 	xmlContents.str("");
 	xmlContents << "<DataNode>" << std::endl
+				<< "  <Read command=\"echo hi\" timeout=\"2\" >" << std::endl
+				<< "  </Read>" << std::endl
+				<< "  <Write command=\"cat\" timeout=\"2\" >" << std::endl
+				<< "  </Write>" << std::endl
+				<< "  <Delete command=\"rm\" timeout=\"2\" >" << std::endl
+				<< "    <garbage/>" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ExecutionProxy proxy( std::string("name"), client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Found invalid child: garbage in node: Delete" );
+
+	// StreamTransformers configuration should be disallowed in Delete nodes
+	xmlContents.str("");
+	xmlContents << "<DataNode>" << std::endl
+				<< "  <Read command=\"echo hi\" timeout=\"2\" >" << std::endl
+				<< "  </Read>" << std::endl
+				<< "  <Write command=\"cat\" timeout=\"2\" >" << std::endl
+				<< "  </Write>" << std::endl
+				<< "  <Delete command=\"rm\" timeout=\"2\" >" << std::endl
+				<< "    <StreamTransformers/>" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ExecutionProxy proxy( std::string("name"), client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Found invalid child: StreamTransformers in node: Delete" );
+
+	xmlContents.str("");
+	xmlContents << "<DataNode>" << std::endl
 				<< "  <Read command=\"echo hi\" timeout=\"2\" garbage=\"true\" >" << std::endl
 				<< "  </Read>" << std::endl
 				<< "  <Write command=\"cat\" timeout=\"2\" >" << std::endl
 				<< "  </Write>" << std::endl
+				<< "  <Delete command=\"rm\" timeout=\"2\" >" << std::endl
+				<< "  </Delete>" << std::endl
 				<< "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
@@ -122,12 +161,29 @@ void ExecutionProxyTest::testInvalidXml()
 				<< "  </Read>" << std::endl
 				<< "  <Write command=\"cat\" timeout=\"2\" garbage=\"true\">" << std::endl
 				<< "  </Write>" << std::endl
+				<< "  <Delete command=\"rm\" timeout=\"2\" >" << std::endl
+				<< "  </Delete>" << std::endl
 				<< "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ExecutionProxy proxy( std::string("name"), client, *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid attribute: garbage in node: Write" );
+
+	xmlContents.str("");
+	xmlContents << "<DataNode>" << std::endl
+				<< "  <Read command=\"echo hi\" timeout=\"2\" >" << std::endl
+				<< "  </Read>" << std::endl
+				<< "  <Write command=\"cat\" timeout=\"2\" >" << std::endl
+				<< "  </Write>" << std::endl
+				<< "  <Delete command=\"rm\" timeout=\"2\" garbage=\"true\">" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ExecutionProxy proxy( std::string("name"), client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Found invalid attribute: garbage in node: Delete" );
 
 	xmlContents.str("");
 	xmlContents << "<DataNode>" << std::endl
@@ -174,12 +230,34 @@ void ExecutionProxyTest::testInvalidXml()
 		".*:\\d+: Unable to find attribute: 'command' in node: Write" );
 
 	xmlContents.str("");
+	xmlContents << "<DataNode>" << std::endl
+				<< "  <Delete command=\"echo hi\" >" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ExecutionProxy proxy( std::string("name"), client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Unable to find attribute: 'timeout' in node: Delete" );
+
+	xmlContents.str("");
+	xmlContents << "<DataNode>" << std::endl
+				<< "  <Delete timeout=\"2\" >" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ExecutionProxy proxy( std::string("name"), client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Unable to find attribute: 'command' in node: Delete" );
+
+	xmlContents.str("");
 	xmlContents << "<DataNode />" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ExecutionProxy proxy( std::string("name"), client, *nodes[0] ), ExecutionProxyException,
-		".*:\\d+: Execution proxy: 'name' does not have a read or write side configuration" );
+		".*:\\d+: Execution proxy: 'name' does not have a read, write or delete side configuration" );
 }
 
 void ExecutionProxyTest::testLoad()
@@ -202,13 +280,12 @@ void ExecutionProxyTest::testLoad()
 
 	std::stringstream result;
 
-	boost::scoped_ptr< ExecutionProxy > pProxy;
-	CPPUNIT_ASSERT_NO_THROW( pProxy.reset( new ExecutionProxy( std::string("name"), client, *nodes[0] ) ) );
-	CPPUNIT_ASSERT_NO_THROW( pProxy->Load( parameters, result ) );
+	ExecutionProxy proxy( std::string("name"), client, *nodes[0] ) ;
+	CPPUNIT_ASSERT_NO_THROW( proxy.Load( parameters, result ) );
 	CPPUNIT_ASSERT_EQUAL( std::string("hello, adlearn!!!"), result.str() );
 
 	parameters.erase( "name" );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pProxy->Load( parameters, result ), ProxyUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Load( parameters, result ), ProxyUtilitiesException,
 		".*:\\d+: The following parameters are referenced, but are not specified in the parameters: name" );
 }
 
@@ -232,9 +309,8 @@ void ExecutionProxyTest::testLoadError()
 
 	std::stringstream result;
 
-	boost::scoped_ptr< ExecutionProxy > pProxy;
-	CPPUNIT_ASSERT_NO_THROW( pProxy.reset( new ExecutionProxy( std::string("name"), client, *nodes[0] ) ) );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pProxy->Load( parameters, result ), ExecutionProxyException, 
+	ExecutionProxy proxy ( std::string("name"), client, *nodes[0] );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Load( parameters, result ), ExecutionProxyException, 
 		".*:\\d+: Command: '.*/script.sh 17' returned non-zero status: 17. Standard error: this is some standard error\n" );
 }
 
@@ -256,9 +332,8 @@ void ExecutionProxyTest::testLoadTimeout()
 
 	std::stringstream results;
 
-	boost::scoped_ptr< ExecutionProxy > pProxy;
-	CPPUNIT_ASSERT_NO_THROW( pProxy.reset( new ExecutionProxy( std::string("name"), client, *nodes[0] ) ) );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pProxy->Load( parameters, results ), TimeoutException,
+	ExecutionProxy proxy( std::string("name"), client, *nodes[0] );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Load( parameters, results ), TimeoutException,
 		".*:\\d+: The command 'sleep 1' failed to finish after 0 seconds. Wrote 0 bytes to standard input. Read 0 bytes from standard output. Read 0 bytes from standard error." );
 }
 
@@ -280,9 +355,8 @@ void ExecutionProxyTest::testLoadNotSupported()
 
 	std::stringstream result;
 
-	boost::scoped_ptr< ExecutionProxy > pProxy;
-	CPPUNIT_ASSERT_NO_THROW( pProxy.reset( new ExecutionProxy( std::string("name"), client, *nodes[0] ) ) );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pProxy->Load( parameters, result ), ExecutionProxyException, 
+	ExecutionProxy proxy( std::string("name"), client, *nodes[0] );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Load( parameters, result ), ExecutionProxyException, 
 		".*:\\d+: Execution proxy: name does not have a read-side configuration" );
 }
 
@@ -312,9 +386,8 @@ void ExecutionProxyTest::testStore()
 		 << "some data 3" << std::endl
 		 << "some data 4" << std::endl;
 
-	boost::scoped_ptr< ExecutionProxy > pProxy;
-	CPPUNIT_ASSERT_NO_THROW( pProxy.reset( new ExecutionProxy( std::string("name"), client, *nodes[0] ) ) );
-	CPPUNIT_ASSERT_NO_THROW( pProxy->Store( parameters, data ) );
+	ExecutionProxy proxy( std::string("name"), client, *nodes[0] );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data ) );
 
 	std::stringstream expected;
 	expected << "input-line: some data 1" << std::endl;
@@ -355,9 +428,8 @@ void ExecutionProxyTest::testStoreError()
 		 << "some data 3" << std::endl
 		 << "some data 4" << std::endl;
 
-	boost::scoped_ptr< ExecutionProxy > pProxy;
-	CPPUNIT_ASSERT_NO_THROW( pProxy.reset( new ExecutionProxy( std::string("name"), client, *nodes[0] ) ) );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pProxy->Store( parameters, data ), ExecutionProxyException,
+	ExecutionProxy proxy( std::string("name"), client, *nodes[0] );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Store( parameters, data ), ExecutionProxyException,
 		".*:\\d+: Command: '.*/script.sh 175' returned non-zero status: 175. Standard error: this is some standard error\n" );
 }
 
@@ -383,9 +455,8 @@ void ExecutionProxyTest::testStoreTimeout()
 		 << "some data 3" << std::endl
 		 << "some data 4" << std::endl;
 
-	boost::scoped_ptr< ExecutionProxy > pProxy;
-	CPPUNIT_ASSERT_NO_THROW( pProxy.reset( new ExecutionProxy( std::string("name"), client, *nodes[0] ) ) );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pProxy->Store( parameters, data ), TimeoutException,
+	ExecutionProxy proxy( std::string("name"), client, *nodes[0] );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Store( parameters, data ), TimeoutException,
 		".*:\\d+: The command 'sleep 1' failed to finish after 0 seconds. Wrote 0 bytes to standard input. Read 0 bytes from standard output. Read 0 bytes from standard error." );
 }
 
@@ -407,8 +478,104 @@ void ExecutionProxyTest::testStoreNotSupported()
 
 	std::stringstream data( "this is some data" );
 
-	boost::scoped_ptr< ExecutionProxy > pProxy;
-	CPPUNIT_ASSERT_NO_THROW( pProxy.reset( new ExecutionProxy( std::string("name"), client, *nodes[0] ) ) );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pProxy->Store( parameters, data ), ExecutionProxyException, 
+	ExecutionProxy proxy( std::string("name"), client, *nodes[0] );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Store( parameters, data ), ExecutionProxyException, 
 		".*:\\d+: Execution proxy: name does not have a write-side configuration" );
+}
+
+void ExecutionProxyTest::testDelete()
+{
+	std::stringstream xmlContents;
+	MockDataProxyClient client;
+	std::vector<xercesc::DOMNode*> nodes;
+
+	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/testDelete.temp" );
+	FileUtilities::Touch( fileSpec );
+	CPPUNIT_ASSERT( FileUtilities::DoesExist( fileSpec ) );
+
+	xmlContents.str("");
+	xmlContents << "<DataNode>" << std::endl
+				<< "  <Delete command=\"rm ${filename}\" timeout=\"2\" >" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	std::map< std::string, std::string > parameters;
+	parameters[ "filename" ] = fileSpec;
+	parameters[ "ignored" ] = "pobrecito";
+
+	ExecutionProxy proxy( std::string("name"), client, *nodes[0] );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+
+	CPPUNIT_ASSERT( !FileUtilities::DoesExist( fileSpec ) );
+
+	parameters.erase( "filename" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Delete( parameters ), ProxyUtilitiesException,
+		".*:\\d+: The following parameters are referenced, but are not specified in the parameters: filename" );
+}
+
+void ExecutionProxyTest::testDeleteError()
+{
+	std::stringstream xmlContents;
+	MockDataProxyClient client;
+	std::vector<xercesc::DOMNode*> nodes;
+
+	std::string scriptSpec = WriteScript( m_pTempDir->GetDirectoryName(), false );
+
+	xmlContents.str("");
+	xmlContents << "<DataNode>" << std::endl
+				<< "  <Delete command=\"" << scriptSpec <<  " 17\" timeout=\"2\" >" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	std::map< std::string, std::string > parameters;
+
+	ExecutionProxy proxy( std::string("name"), client, *nodes[0] );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Delete( parameters ), ExecutionProxyException, 
+		".*:\\d+: Command: '.*/script.sh 17' returned non-zero status: 17. Standard error: this is some standard error\n" );
+}
+
+void ExecutionProxyTest::testDeleteTimeout()
+{
+	std::stringstream xmlContents;
+	MockDataProxyClient client;
+	std::vector<xercesc::DOMNode*> nodes;
+
+	xmlContents.str("");
+	xmlContents << "<DataNode>" << std::endl
+				<< "  <Delete command=\"sleep 1\" timeout=\"0\" >" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	std::map< std::string, std::string > parameters;
+
+	ExecutionProxy proxy( std::string("name"), client, *nodes[0] );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Delete( parameters ), TimeoutException,
+		".*:\\d+: The command 'sleep 1' failed to finish after 0 seconds. Wrote 0 bytes to standard input. Read 0 bytes from standard output. Read 0 bytes from standard error." );
+}
+
+void ExecutionProxyTest::testDeleteNotSupported()
+{
+	std::stringstream xmlContents;
+	MockDataProxyClient client;
+	std::vector<xercesc::DOMNode*> nodes;
+
+	xmlContents.str("");
+	xmlContents << "<DataNode>" << std::endl
+				<< "  <Write command=\"cat\" timeout=\"2\" >" << std::endl
+				<< "  </Write>" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	std::map< std::string, std::string > parameters;
+
+	ExecutionProxy proxy( std::string("name"), client, *nodes[0] );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Delete( parameters ), ExecutionProxyException, 
+		".*:\\d+: Execution proxy: name does not have a delete-side configuration" );
 }

@@ -50,6 +50,7 @@ void RouterNodeTest::testInvalidXml()
 	MockDataProxyClient client;
 	std::vector<xercesc::DOMNode*> nodes;
 
+	// Load config
 	xmlContents.str("");
 	xmlContents << "<RouterNode >" << std::endl
 				<< "  <Read>" << std::endl
@@ -88,6 +89,7 @@ void RouterNodeTest::testInvalidXml()
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid attribute: garbage in node: ForwardTo" );
 
+	// Store config
 	xmlContents.str("");
 	xmlContents << "<RouterNode >" << std::endl
 				<< "  <Write>" << std::endl
@@ -119,6 +121,58 @@ void RouterNodeTest::testInvalidXml()
 				<< "  <Write>" << std::endl
 				<< "    <ForwardTo name=\"name1\" garbage=\"true\" />" << std::endl
 				<< "  </Write>" << std::endl
+				<< "</RouterNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Found invalid attribute: garbage in node: ForwardTo" );
+
+	// Delete config
+	xmlContents.str("");
+	xmlContents << "<RouterNode >" << std::endl
+				<< "  <Delete>" << std::endl
+				<< "    <garbage/>" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "</RouterNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Found invalid child: garbage in node: Delete" );
+
+	// StreamTransformers configuration should be disallowed in Delete nodes
+	xmlContents.str("");
+	xmlContents << "<RouterNode >" << std::endl
+				<< "  <Delete>" << std::endl
+				<< "    <StreamTransformers/>" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "</RouterNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Found invalid child: StreamTransformers in node: Delete" );
+
+	xmlContents.str("");
+	xmlContents << "<RouterNode >" << std::endl
+				<< "  <Delete>" << std::endl
+				<< "    <ForwardTo name=\"name1\" >" << std::endl
+				<< "      <garbage/>" << std::endl
+				<< "    </ForwardTo>" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "</RouterNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Found invalid child: garbage in node: ForwardTo" );
+
+	xmlContents.str("");
+	xmlContents << "<RouterNode >" << std::endl
+				<< "  <Delete>" << std::endl
+				<< "    <ForwardTo name=\"name1\" garbage=\"true\" />" << std::endl
+				<< "  </Delete>" << std::endl
 				<< "</RouterNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
@@ -386,7 +440,7 @@ void RouterNodeTest::testStoreExceptions()
 	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pNode->StoreImpl( parameters, data ), RouterNodeException,
-		".*:\\d+: Unable to successfully store to any of the destination write nodes for RouterNode: name" );
+		".*:\\d+: Unable to successfully store to any of the destination store nodes for RouterNode: name" );
 	
 	expected.str("");
 	expected << "Store called with Name: name1 Parameters: " << ProxyUtilities::ToString( parameters ) << " Data: " << data.str() << std::endl;
@@ -421,7 +475,7 @@ void RouterNodeTest::testStoreExceptions()
 	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pNode->StoreImpl( parameters, data ), RouterNodeException,
-		".*:\\d+: One or more exceptions were caught on critical destinations for RouterNode: name1" );
+		".*:\\d+: One or more store exceptions were caught on critical destinations for RouterNode: name1" );
 	
 	expected.str("");
 	expected << "Store called with Name: name1 Parameters: " << ProxyUtilities::ToString( parameters ) << " Data: " << data.str() << std::endl;
@@ -454,7 +508,7 @@ void RouterNodeTest::testStoreExceptions()
 	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pNode->StoreImpl( parameters, data ), RouterNodeException,
-		".*:\\d+: One or more exceptions were caught on critical destinations for RouterNode: name1" );
+		".*:\\d+: One or more store exceptions were caught on critical destinations for RouterNode: name1" );
 	
 	expected.str("");
 	expected << "Store called with Name: name1 Parameters: " << ProxyUtilities::ToString( parameters ) << " Data: " << data.str() << std::endl;
@@ -492,5 +546,283 @@ void RouterNodeTest::testStoreExceptions()
 	expected << "Store called with Name: name1 Parameters: " << ProxyUtilities::ToString( parameters ) << " Data: " << data.str() << std::endl;
 	expected << "Store called with Name: name2 Parameters: " << ProxyUtilities::ToString( parameters ) << " Data: " << data.str() << std::endl;
 	expected << "Store called with Name: name3 Parameters: " << ProxyUtilities::ToString( parameters ) << " Data: " << data.str() << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+}
+
+void RouterNodeTest::testDelete()
+{
+	std::stringstream xmlContents;
+	xmlContents << "<RouterNode >" << std::endl
+				<< "  <Delete>" << std::endl
+				<< "    <ForwardTo name=\"name1\" />" << std::endl
+				<< "    <ForwardTo name=\"name2\" />" << std::endl
+				<< "    <ForwardTo name=\"name3\" />" << std::endl
+				<< "    <ForwardTo name=\"name4\" />" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "</RouterNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	RouterNode node( "name", client, *nodes[0] );
+
+	std::map<std::string,std::string> parameters;
+	parameters["param1"] = "value1";
+	parameters["param2"] = "value2";
+
+	CPPUNIT_ASSERT_NO_THROW( node.DeleteImpl( parameters ) );
+	
+	std::stringstream expected;
+	expected << "Delete called with Name: name1 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	expected << "Delete called with Name: name2 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	expected << "Delete called with Name: name3 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	expected << "Delete called with Name: name4 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+}
+
+void RouterNodeTest::testDeleteNotSupported()
+{
+	std::stringstream xmlContents;
+	xmlContents << "<RouterNode >" << std::endl
+				<< "</RouterNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	RouterNode node( "name", client, *nodes[0] );
+
+	std::map<std::string,std::string> parameters;
+	parameters["param1"] = "value1";
+	parameters["param2"] = "value2";
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.DeleteImpl( parameters ), RouterNodeException,
+		".*:\\d+: RouterNode: name does not support delete operations" );
+	
+	std::stringstream expected;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+}
+
+void RouterNodeTest::testDeleteNowhere()
+{
+	std::stringstream xmlContents;
+	xmlContents << "<RouterNode >" << std::endl
+				<< "  <Delete>" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "</RouterNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	RouterNode node( "name", client, *nodes[0] );
+
+	std::map<std::string,std::string> parameters;
+	parameters["param1"] = "value1";
+	parameters["param2"] = "value2";
+
+	CPPUNIT_ASSERT_NO_THROW( node.DeleteImpl( parameters ) );
+	
+	std::stringstream expected;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+}
+
+void RouterNodeTest::testDeleteExceptions()
+{
+	std::stringstream xmlContents;
+	std::vector<xercesc::DOMNode*> nodes;
+	boost::scoped_ptr< RouterNode > pNode( NULL );
+
+	// case 1: an exception in the chain of deletes for a CRITICAL destination
+	// will cause processing to halt and an exception to be thrown
+	xmlContents.str("");
+	nodes.clear();
+	xmlContents << "<RouterNode >" << std::endl
+				<< "  <Delete>" << std::endl
+				<< "    <ForwardTo name=\"name1\" critical=\"true\" />" << std::endl
+				<< "    <ForwardTo name=\"name2\" critical=\"true\" />" << std::endl
+				<< "    <ForwardTo name=\"name3\" />" << std::endl
+				<< "    <ForwardTo name=\"name4\" />" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "</RouterNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+	client.SetExceptionForName( "name2" );
+
+	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
+
+	std::map<std::string,std::string> parameters;
+	parameters["param1"] = "value1";
+	parameters["param2"] = "value2";
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pNode->DeleteImpl( parameters ), MVException,
+		".*:\\d+: Set to throw an exception for name: name2" );
+	
+	std::stringstream expected;
+	expected << "Delete called with Name: name1 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	expected << "Delete called with Name: name2 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+
+	// case 2: an exception in the chain of deletes for a CRITICAL destination
+	// will cause processing to halt and an exception to be thrown.
+	xmlContents.str("");
+	nodes.clear();
+	client.ClearExceptions();
+	client.ClearLog();
+	xmlContents << "<RouterNode >" << std::endl
+				<< "  <Delete>" << std::endl
+				<< "    <ForwardTo name=\"name1\" critical=\"true\" />" << std::endl
+				<< "    <ForwardTo name=\"name2\" critical=\"true\" />" << std::endl
+				<< "    <ForwardTo name=\"name3\" />" << std::endl
+				<< "    <ForwardTo name=\"name4\" />" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "</RouterNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	client.SetExceptionForName( "name1" );
+
+	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pNode->DeleteImpl( parameters ), MVException,
+		".*:\\d+: Set to throw an exception for name: name1" );
+	
+	expected.str("");
+	expected << "Delete called with Name: name1 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+
+	// case 3: even if none are marked critical, if none can go through then this results in an exception
+	xmlContents.str("");
+	nodes.clear();
+	client.ClearExceptions();
+	client.ClearLog();
+	xmlContents << "<RouterNode >" << std::endl
+				<< "  <Delete>" << std::endl
+				<< "    <ForwardTo name=\"name1\" />" << std::endl
+				<< "    <ForwardTo name=\"name2\" />" << std::endl
+				<< "    <ForwardTo name=\"name3\" />" << std::endl
+				<< "    <ForwardTo name=\"name4\" />" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "</RouterNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	client.SetExceptionForName( "name1" );
+	client.SetExceptionForName( "name2" );
+	client.SetExceptionForName( "name3" );
+	client.SetExceptionForName( "name4" );
+
+	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pNode->DeleteImpl( parameters ), RouterNodeException,
+		".*:\\d+: Unable to successfully delete to any of the destination delete nodes for RouterNode: name" );
+	
+	expected.str("");
+	expected << "Delete called with Name: name1 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	expected << "Delete called with Name: name2 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	expected << "Delete called with Name: name3 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	expected << "Delete called with Name: name4 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+
+	// case 4: an exception in the chain of delete for a CRITICAL destination
+	// will cause processing to halt and an exception to be thrown.
+	// however, if delete is configured to finish all criticals, we will get
+	// two calls to Delete()
+	xmlContents.str("");
+	nodes.clear();
+	client.ClearExceptions();
+	client.ClearLog();
+	xmlContents << "<RouterNode >" << std::endl
+				<< "  <Delete onCriticalError=\"finishCriticals\">" << std::endl
+				<< "    <ForwardTo name=\"name1\" critical=\"true\" />" << std::endl
+				<< "    <ForwardTo name=\"name2\" critical=\"true\" />" << std::endl
+				<< "    <ForwardTo name=\"name3\" />" << std::endl
+				<< "    <ForwardTo name=\"name4\" critical=\"true\" />" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "</RouterNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	client.SetExceptionForName( "name1" );
+
+	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pNode->DeleteImpl( parameters ), RouterNodeException,
+		".*:\\d+: One or more delete exceptions were caught on critical destinations for RouterNode: name1" );
+	
+	expected.str("");
+	expected << "Delete called with Name: name1 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	expected << "Delete called with Name: name2 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	expected << "Delete called with Name: name4 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+
+	// case 5: an exception in the chain of deletes for a CRITICAL destination
+	// will cause processing to halt and an exception to be thrown.
+	// however, if delete is configured to finish all, we will get
+	// four calls to Delete()
+	xmlContents.str("");
+	nodes.clear();
+	client.ClearExceptions();
+	client.ClearLog();
+	xmlContents << "<RouterNode >" << std::endl
+				<< "  <Delete onCriticalError=\"finishAll\">" << std::endl
+				<< "    <ForwardTo name=\"name1\" critical=\"true\" />" << std::endl
+				<< "    <ForwardTo name=\"name2\" critical=\"true\" />" << std::endl
+				<< "    <ForwardTo name=\"name3\" />" << std::endl
+				<< "    <ForwardTo name=\"name4\" />" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "</RouterNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	client.SetExceptionForName( "name1" );
+
+	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pNode->DeleteImpl( parameters ), RouterNodeException,
+		".*:\\d+: One or more delete exceptions were caught on critical destinations for RouterNode: name1" );
+	
+	expected.str("");
+	expected << "Delete called with Name: name1 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	expected << "Delete called with Name: name2 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	expected << "Delete called with Name: name3 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	expected << "Delete called with Name: name4 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+
+	// case 6: non-critical throw, but overall result is ok
+	// critical destination is at the bottom of the chain
+	xmlContents.str("");
+	nodes.clear();
+	client.ClearExceptions();
+	client.ClearLog();
+	xmlContents << "<RouterNode >" << std::endl
+				<< "  <Delete onCriticalError=\"finishAll\">" << std::endl
+				<< "    <ForwardTo name=\"name1\" />" << std::endl
+				<< "    <ForwardTo name=\"name2\" />" << std::endl
+				<< "    <ForwardTo name=\"name3\" critical=\"true\" />" << std::endl
+				<< "    <ForwardTo name=\"name4\" />" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "</RouterNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	client.SetExceptionForName( "name1" );
+	client.SetExceptionForName( "name2" );
+
+	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
+
+	CPPUNIT_ASSERT_NO_THROW( pNode->DeleteImpl( parameters ) );
+	
+	expected.str("");
+	expected << "Delete called with Name: name1 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	expected << "Delete called with Name: name2 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	expected << "Delete called with Name: name3 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	expected << "Delete called with Name: name4 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
 	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
 }

@@ -28,6 +28,7 @@ namespace
 	std::vector< std::string > EMPTY_VECTOR;
 	const std::string GET_METHOD = "GET";
 	const std::string POST_METHOD = "POST";
+	const std::string DELETE_METHOD = "DELETE";
 
     void VerifyServiceGetRequest( const SimpleRestMockService& i_rService,
 								  const std::string& i_rExpectedPath,
@@ -73,6 +74,26 @@ namespace
         expectedOutput << "----BEGIN POST DATA----" << std::endl
                        << i_rPostData << std::endl
                        << "----END POST DATA----" << std::endl;
+        CPPUNIT_ASSERT_EQUAL( expectedOutput.str(), i_rService.GetStandardOutput() );
+    }
+
+    void VerifyServiceDeleteRequest( const SimpleRestMockService& i_rService,
+								  const std::string& i_rExpectedPath,
+								  const std::string& i_rExpectedQuery,
+								  const std::vector< std::string >& i_rCustomHeaders = EMPTY_VECTOR,
+								  const std::string& i_rMethod = DELETE_METHOD )
+    {
+        std::stringstream expectedOutput;
+        CPPUNIT_ASSERT_EQUAL( expectedOutput.str(), i_rService.GetStandardError() );
+        expectedOutput << "Service started" << std::endl
+                       << "DELETE" << std::endl
+                       << "Path: " << i_rExpectedPath << std::endl
+                       << "Query: " << i_rExpectedQuery << std::endl;
+		std::vector< std::string >::const_iterator iter = i_rCustomHeaders.begin();
+		for( ; iter != i_rCustomHeaders.end(); ++iter )
+		{
+			expectedOutput << "CustomHeader| " << *iter << std::endl;
+		}
         CPPUNIT_ASSERT_EQUAL( expectedOutput.str(), i_rService.GetStandardOutput() );
     }
 }
@@ -188,6 +209,15 @@ void RestDataProxyTest::testMalformedReadNode()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: garbage in node: Read" );
+
+	// Read is the only node which should permit the compression attribute
+	xmlContents.str("");
+	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+				<< "  <Read compression=\"deflate\" />" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	CPPUNIT_ASSERT_NO_THROW( RestDataProxy proxy( "name", client, *nodes[0] ) );
 }
 
 void RestDataProxyTest::testMalformedWriteNode()
@@ -213,6 +243,51 @@ void RestDataProxyTest::testMalformedWriteNode()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: garbage in node: Write" );
+
+	// Write nodes disallow compression attribute
+	xmlContents.str("");
+	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+				<< "  <Write compression=\"deflate\" />" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: compression in node: Write" );
+}
+
+void RestDataProxyTest::testMalformedDeleteNode()
+{
+	MockDataProxyClient client;
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+				<< "  <Delete>" << std::endl
+				<< "    <garbage />" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "</DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+		".*XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: Delete" );
+
+	xmlContents.str("");
+	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+				<< "  <Delete garbage=\"true\" />" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: garbage in node: Delete" );
+
+	// Delete nodes disallow compression attribute
+	xmlContents.str("");
+	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+				<< "  <Delete compression=\"deflate\" />" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: compression in node: Delete" );
 }
 
 void RestDataProxyTest::testMalformedUriQueryParametersNode()
@@ -843,4 +918,175 @@ void RestDataProxyTest::testStoreComplex()
 													 "&group3=default1"
 													 "&query1=queryOne"
 													 "&query2=queryTwo", data.str(), expectedHeaders );
+}
+
+void RestDataProxyTest::testDeleteBasic()
+{
+	MockDataProxyClient client;
+	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/delete_results.dat" );
+	FileUtilities::Touch( fileSpec );
+
+	std::map< std::string, std::string > parameters;
+	parameters[ "ignoredParam" ] = "ignoredValue";
+
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode location=\"" << m_pService->GetEndpoint() + m_pTempDir->GetDirectoryName() << "\" />";
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	RestDataProxy proxy( "name", client, *nodes[0] );
+
+	// ensure RestDataProxy does not support commit or rollback
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Commit(), NotSupportedException, ".*/RestDataProxy.cpp:\\d+: RestDataProxy does not support transactions" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Rollback(), NotSupportedException, ".*/RestDataProxy.cpp:\\d+: RestDataProxy does not support transactions" );
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+
+	std::vector< std::string > expectedHeaders;
+
+	VerifyServiceDeleteRequest( *m_pService, m_pTempDir->GetDirectoryName(), "", expectedHeaders );
+	CPPUNIT_ASSERT ( !FileUtilities::DoesFileExist( fileSpec ) );
+	
+	// a second delete should not throw
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+}
+
+void RestDataProxyTest::testDeleteMethodOverride()
+{
+	MockDataProxyClient client;
+	std::string data = "This data should be returned\n";
+	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/results.dat" );
+	std::ofstream file( fileSpec.c_str() );
+	file << data;
+	file.close();
+
+	std::map< std::string, std::string > parameters;
+	parameters[ "ignoredParam" ] = "ignoredValue";
+
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode location=\"" << m_pService->GetEndpoint() + m_pTempDir->GetDirectoryName() << "\" >"
+				<< "	<Delete methodOverride=\"BLAH\" />"
+				<< "</DataNode>";
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	RestDataProxy proxy( "name", client, *nodes[0] );
+
+	// ensure RestDataProxy does not support commit or rollback
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Commit(), NotSupportedException, ".*/RestDataProxy.cpp:\\d+: RestDataProxy does not support transactions" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Rollback(), NotSupportedException, ".*/RestDataProxy.cpp:\\d+: RestDataProxy does not support transactions" );
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+
+	std::vector< std::string > expectedHeaders;
+
+	VerifyServiceGetRequest( *m_pService, m_pTempDir->GetDirectoryName(), "", expectedHeaders, "BLAH" );
+}
+
+void RestDataProxyTest::testDeleteTimeout()
+{
+	MockDataProxyClient client;
+	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/delete_results.dat" );
+	FileUtilities::Touch( fileSpec );
+
+	std::map< std::string, std::string > parameters;
+
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode location=\"" << m_pService->GetEndpoint() + m_pTempDir->GetDirectoryName() << "\" >"
+				<< "  <Delete timeout=\"-1\" />"
+				<< "</DataNode>";
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	RestDataProxy proxy( "name", client, *nodes[0] );
+
+	CPPUNIT_ASSERT_THROW( proxy.Delete( parameters ), RESTClientException );
+}
+
+void RestDataProxyTest::testDeleteComplex()
+{
+	MockDataProxyClient client;
+	std::string data = "This data should be returned\n";
+	std::string realPath( m_pTempDir->GetDirectoryName() + "/uriPathSegment1(segOne)/uriPathSegment3/segThree/myDeleteSuffix/" );
+	std::string dirPath( realPath );
+	// boost create dir doesn't like parentheses so we change them to underscores in the mock service
+	boost::replace_all( dirPath, "(", "_" );
+	boost::replace_all( dirPath, ")", "_" );
+	FileUtilities::CreateDirectory( dirPath );
+	std::string fileSpec( dirPath + "/delete_results.dat" );
+	FileUtilities::Touch( fileSpec );
+
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode location=\"" << m_pService->GetEndpoint() + m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+				<< "  <Delete uriSuffix=\"myDeleteSuffix\" timeout=\"54321\" maxRedirects=\"2\" >" << std::endl
+				<< "    <UriQueryParameters>" << std::endl
+				<< "      <Parameter name=\"query1\" />" << std::endl
+				<< "      <Parameter name=\"query2\" />" << std::endl
+				<< "      <Parameter name=\"query3\" />" << std::endl
+				<< "      <Group name=\"group1\" default=\"notUsedDefault2\">" << std::endl
+				<< "        <Parameter name=\"query4\" />" << std::endl
+				<< "        <Parameter name=\"query5\" />" << std::endl
+				<< "      </Group>" << std::endl
+				<< "      <Group name=\"group2\">" << std::endl
+				<< "        <Parameter name=\"query6\" />" << std::endl
+				<< "        <Parameter name=\"query7\" />" << std::endl
+				<< "      </Group>" << std::endl
+				<< "      <Group name=\"group3\" default=\"default1\">" << std::endl
+				<< "        <Parameter name=\"query8\" />" << std::endl
+				<< "        <Parameter name=\"query9\" />" << std::endl
+				<< "      </Group>" << std::endl
+				<< "      <Group name=\"deleteGroupProps\" separator=\"@AND@\" >" << std::endl	// using separator "@AND@" instead of default "^"
+				<< "        <Parameter name=\"*\" format=\"_%k::%v_\" />" << std::endl			// using format "_key::value_" instead of default "key~value"
+				<< "      </Group>" << std::endl
+				<< "    </UriQueryParameters>" << std::endl
+				<< "    <HttpHeaderParameters>" << std::endl
+				<< "      <Parameter name=\"httpHeader1\" />" << std::endl
+				<< "      <Parameter name=\"httpHeader2\" />" << std::endl
+				<< "      <Parameter name=\"httpHeader3\" />" << std::endl
+				<< "      <Parameter name=\"httpHeader4\" />" << std::endl
+				<< "    </HttpHeaderParameters>" << std::endl
+				<< "    <UriPathSegmentParameters>" << std::endl
+				<< "      <Parameter name=\"uriPathSegment1\" />" << std::endl
+				<< "      <Parameter name=\"uriPathSegment2\" />" << std::endl
+				<< "      <Parameter name=\"uriPathSegment3\" format=\"%k/%v\" />" << std::endl		// instead of default key(value) it will be key/value
+				<< "      <Parameter name=\"uriPathSegment4\" />" << std::endl
+				<< "    </UriPathSegmentParameters>" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "</DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	RestDataProxy proxy( "name", client, *nodes[0] );
+
+	std::map< std::string, std::string > parameters;
+	parameters["uriPathSegment1"] = "segOne";
+	parameters["uriPathSegment3"] = "segThree";
+	parameters["query1"] = "queryOne";
+	parameters["query2"] = "queryTwo";
+	parameters["query4"] = "queryFour";
+	parameters["query5"] = "queryFive";
+	parameters["httpHeader2"] = "customHeaderTwo";
+	parameters["httpHeader3"] = "customHeaderThree";
+	parameters["someKey1"] = "someValue1";
+	parameters["someKey2"] = "someValue2";
+	parameters["someKey3"] = "someValue3";
+	parameters["someKey4"] = "someValue4";
+
+	std::stringstream results;
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+
+	std::vector< std::string > expectedHeaders;
+	expectedHeaders.push_back( "httpHeader2: customHeaderTwo" );
+	expectedHeaders.push_back( "httpHeader3: customHeaderThree" );
+
+	VerifyServiceDeleteRequest( *m_pService, realPath, "deleteGroupProps=_someKey1::someValue1_@AND@_someKey2::someValue2_@AND@_someKey3::someValue3_@AND@_someKey4::someValue4_"
+													"&group3=default1"
+													"&group1=query4~queryFour^query5~queryFive"
+													"&query1=queryOne"
+													"&query2=queryTwo", expectedHeaders );
+
+	CPPUNIT_ASSERT ( !FileUtilities::DoesFileExist( fileSpec ) );
+
+	// a second delete should not throw
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
 }

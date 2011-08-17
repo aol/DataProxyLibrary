@@ -97,8 +97,7 @@ void RestRequestBuilderTest::testBuild()
 	std::string uri;
 	RESTParameters parameters;
 	parameters.SetCompression( DEFLATE );
-	parameters.SetReadTimeout( 123L );
-	parameters.SetWriteTimeout( 456L );
+	parameters.SetTimeout( 123L );
 	parameters.SetMaxRedirects( 789L );
 	
 	const RESTParameters originalRestParameters( parameters );

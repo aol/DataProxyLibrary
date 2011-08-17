@@ -23,12 +23,15 @@ MockNode::MockNode( std::ostream& i_rLog,
 					bool i_SupportsTransactions,
 					bool i_LoadException,
 					bool i_StoreException,
+					bool i_DeleteException,
 					bool i_StoreResult,
+					bool i_DeleteResult,
 					bool i_CommitException,
 					bool i_RollbackException,
 					const std::string& i_rDataToReturn,
 					const std::set< std::string >& i_rReadForwards,
 					const std::set< std::string >& i_rWriteForwards,
+					const std::set< std::string >& i_rDeleteForwards,
 					const xercesc::DOMNode& i_rNode )
 :	AbstractNode( i_rName, DEFAULT_DPL_CLIENT, i_rNode ),
 	m_rLog( i_rLog ),
@@ -36,12 +39,15 @@ MockNode::MockNode( std::ostream& i_rLog,
 	m_SupportsTransactions( i_SupportsTransactions ),
 	m_LoadException( i_LoadException ),
 	m_StoreException( i_StoreException ),
+	m_DeleteException( i_DeleteException ),
 	m_StoreResult( i_StoreResult ),
+	m_DeleteResult( i_DeleteResult ),
 	m_CommitException( i_CommitException ),
 	m_RollbackException( i_RollbackException ),
 	m_DataToReturn( i_rDataToReturn ),
 	m_ReadForwards( i_rReadForwards ),
-	m_WriteForwards( i_rWriteForwards )
+	m_WriteForwards( i_rWriteForwards ),
+	m_DeleteForwards( i_rDeleteForwards )
 {
 }
 
@@ -69,11 +75,25 @@ bool MockNode::Store( const std::map<std::string,std::string>& i_rParameters, st
 	return m_StoreResult;
 }
 
+bool MockNode::Delete( const std::map<std::string,std::string>& i_rParameters )
+{
+	m_rLog << "Delete called on: " << m_Name << " with parameters: " << ProxyUtilities::ToString( i_rParameters ) << std::endl;
+	if( m_DeleteException )
+	{
+		MV_THROW( MVException, "Set to throw exception" );
+	}
+	return m_DeleteResult;
+}
+
 void MockNode::LoadImpl( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData )
 {
 }
 
 void MockNode::StoreImpl( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData )
+{
+}
+
+void MockNode::DeleteImpl( const std::map<std::string,std::string>& i_rParameters )
 {
 }
 
@@ -110,10 +130,19 @@ void MockNode::InsertWriteForwards( std::set< std::string >& o_rForwards ) const
 	o_rForwards.insert( m_WriteForwards.begin(), m_WriteForwards.end() );
 }
 
+void MockNode::InsertDeleteForwards( std::set< std::string >& o_rForwards ) const
+{
+	o_rForwards.insert( m_DeleteForwards.begin(), m_DeleteForwards.end() );
+}
+
 void MockNode::InsertImplReadForwards( std::set< std::string >& o_rForwards ) const
 {
 }
 
 void MockNode::InsertImplWriteForwards( std::set< std::string >& o_rForwards ) const
+{
+}
+
+void MockNode::InsertImplDeleteForwards( std::set< std::string >& o_rForwards ) const
 {
 }

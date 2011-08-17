@@ -12,7 +12,7 @@
 #ifndef _STORE_HANDLER_
 #define _STORE_HANDLER_
 
-#include "IWebService.hpp"
+#include "AbstractHandler.hpp"
 #include <boost/noncopyable.hpp>
 #include <string>
 
@@ -20,7 +20,7 @@ class HTTPRequest;
 class HTTPResponse;
 class DataProxyClient;
 
-class StoreHandler : public boost::noncopyable, public IWebService
+class StoreHandler : public AbstractHandler 
 {
 public:
 	StoreHandler( DataProxyClient& i_rDataProxyClient, const std::string& i_rDplConfig, bool i_EnableXForwardedFor );
@@ -29,9 +29,6 @@ public:
 	virtual void Handle( HTTPRequest& i_rRequest, HTTPResponse& o_rResponse );
 
 private:
-	DataProxyClient& m_rDataProxyClient;
-	std::string m_DplConfig;
-	bool m_EnableXForwardedFor;
 };
 
 #endif // _STORE_HANDLER_

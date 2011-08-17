@@ -20,9 +20,11 @@ TestableNode::TestableNode(	const std::string& i_rName,
 	m_DataToReturn(),
 	m_LoadException( false ),
 	m_StoreException( false ),
+	m_DeleteException( false ),
 	m_WriteOnLoadException( false ),
 	m_ReadForwards(),
-	m_WriteForwards()
+	m_WriteForwards(),
+	m_DeleteForwards()
 {
 }
 
@@ -53,6 +55,16 @@ void TestableNode::StoreImpl( const std::map<std::string,std::string>& i_rParame
 	}
 }
 
+void TestableNode::DeleteImpl( const std::map<std::string,std::string>& i_rParameters )
+{
+	m_Log << "DeleteImpl called with parameters: " << ProxyUtilities::ToString( i_rParameters ) << std::endl;
+	if( m_DeleteException )
+	{
+		MV_THROW( MVException, "Set to throw exception" );
+	}
+
+}
+
 bool TestableNode::SupportsTransactions() const
 {
 	return true;
@@ -78,6 +90,11 @@ void TestableNode::InsertImplWriteForwards( std::set< std::string >& o_rForwards
 	o_rForwards.insert( m_WriteForwards.begin(), m_WriteForwards.end() );
 }
 
+void TestableNode::InsertImplDeleteForwards( std::set< std::string >& o_rForwards ) const
+{
+	o_rForwards.insert( m_DeleteForwards.begin(), m_DeleteForwards.end() );
+}
+
 std::string TestableNode::GetLog() const
 {
 	return m_Log.str();
@@ -98,17 +115,27 @@ void TestableNode::SetStoreException( bool i_Exception )
 	m_StoreException = i_Exception;
 }
 
+void TestableNode::SetDeleteException( bool i_Exception )
+{
+	m_DeleteException = i_Exception;
+}
+
 void TestableNode::SetWriteOnLoadException( bool i_Exception )
 {
 	m_WriteOnLoadException = i_Exception;
 }
 
-void TestableNode::InsertReadForward( const std::string& i_rForward )
+void TestableNode::AddReadForward( const std::string& i_rForward )
 {
 	m_ReadForwards.insert( i_rForward );
 }
 
-void TestableNode::InsertWriteForward( const std::string& i_rForward )
+void TestableNode::AddWriteForward( const std::string& i_rForward )
 {
 	m_WriteForwards.insert( i_rForward );
+}
+
+void TestableNode::AddDeleteForward( const std::string& i_rForward )
+{
+	m_DeleteForwards.insert( i_rForward );
 }

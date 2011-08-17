@@ -44,6 +44,16 @@ private:
 	CPPUNIT_TEST( testStoreRollbackOverwrite );
 	CPPUNIT_TEST( testStoreRollbackAppend );
 	CPPUNIT_TEST( testStoreEmpties );
+	CPPUNIT_TEST( testDeleteNonexistent );
+	CPPUNIT_TEST( testDeleteUnremovable );
+	CPPUNIT_TEST( testDelete );
+	CPPUNIT_TEST( testDeleteNameFormat );
+	CPPUNIT_TEST( testDeleteNameFormatAll );
+	CPPUNIT_TEST( testDeleteNoParameters );
+	CPPUNIT_TEST( testDeleteStoreCommit );
+	CPPUNIT_TEST( testAppendStoreDeleteStore );
+	CPPUNIT_TEST( testOverwriteStoreDeleteStore );
+	CPPUNIT_TEST( testDeleteRollback );
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -76,6 +86,16 @@ public:
 	void testStoreRollbackOverwrite();
 	void testStoreRollbackAppend();
 	void testStoreEmpties();
+	void testDeleteNonexistent();
+	void testDeleteUnremovable();
+	void testDelete();
+	void testDeleteNameFormat();
+	void testDeleteNameFormatAll();
+	void testDeleteNoParameters();
+	void testDeleteStoreCommit();
+	void testAppendStoreDeleteStore ();
+	void testOverwriteStoreDeleteStore ();
+	void testDeleteRollback();
 
 private:
 	boost::scoped_ptr<TempDirectory> m_pTempDir;

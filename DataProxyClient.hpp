@@ -41,6 +41,7 @@ public:
 	virtual void Initialize( const std::string& i_rConfigFileSpec );
 	virtual void Load( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData ) const;
 	virtual void Store( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData ) const;
+	virtual void Delete( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters ) const;
 
 	virtual void BeginTransaction();
 	virtual void Commit();
@@ -62,6 +63,7 @@ private:
 	void InitializeImplementation( const std::string& i_rConfigFileSpec, INodeFactory& i_rNodeFactory, DatabaseConnectionManager& i_rDatabaseConnectionManager );
 	std::string ExtractName( xercesc::DOMNode* i_pNode ) const;
 	void CheckForCycles( const NodesMap::const_iterator& i_rIter, int i_WhichPath, const std::vector< std::string >& i_rNamePath ) const;
+	void HandleResult( const std::string& i_rName, const NodesMap::const_iterator& i_rNodeIter, bool i_bSuccess, const std::string i_Operation ) const;
 
 	bool m_Initialized;
 	NodesMap m_Nodes;

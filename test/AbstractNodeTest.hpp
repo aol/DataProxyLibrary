@@ -48,6 +48,16 @@ private:
 	CPPUNIT_TEST( testStoreFailureForwarding_UseTransformedStream_False );
 	CPPUNIT_TEST( testStoreFailureForwarding_UseTransformedStream_True );
 
+	CPPUNIT_TEST( testDelete );
+	CPPUNIT_TEST( testDeleteTranslateParameters );
+	CPPUNIT_TEST( testDeleteRequiredParameters );
+	CPPUNIT_TEST( testDeleteRetryCount );
+	CPPUNIT_TEST( testDeleteFailureForwarding );
+	CPPUNIT_TEST( testDeleteFailureForwarding_ParameterTranslationFail );
+	CPPUNIT_TEST( testDeleteFailureForwarding_ParameterValidationFail );
+	CPPUNIT_TEST( testDeleteFailureForwarding_UseTranslatedParams_False );
+	CPPUNIT_TEST( testDeleteFailureForwarding_UseTranslatedParams_True );
+
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -83,6 +93,16 @@ public:
 	void testStoreFailureForwarding_UseTranslatedParams_True();
 	void testStoreFailureForwarding_UseTransformedStream_False();
 	void testStoreFailureForwarding_UseTransformedStream_True();
+
+	void testDelete();
+	void testDeleteTranslateParameters();
+	void testDeleteRequiredParameters();
+	void testDeleteRetryCount();
+	void testDeleteFailureForwarding();
+	void testDeleteFailureForwarding_ParameterTranslationFail();
+	void testDeleteFailureForwarding_ParameterValidationFail();
+	void testDeleteFailureForwarding_UseTranslatedParams_False();
+	void testDeleteFailureForwarding_UseTranslatedParams_True();
 
 private:
 	boost::scoped_ptr< TempDirectory > m_pTempDir;

@@ -9,6 +9,7 @@
 
 #include "ProxyTestHelpers.hpp"
 #include "FileUtilities.hpp"
+#include "CustomEntityResolver.hpp"
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/scoped_ptr.hpp>
 
@@ -20,7 +21,6 @@ namespace
 void ProxyTestHelpers::GetDataNodes( const std::string& i_rBaseDir, const std::string& i_rXmlContents, const std::string& i_rNodeNames, std::vector< xercesc::DOMNode* >& o_rDataNodes )
 {
 	std::string realXmlContents( i_rXmlContents );
-	boost::replace_all( realXmlContents, "&", "&amp;" );
 	
 	std::string fileSpec( i_rBaseDir + "/temp.xml" );
 	std::ofstream file( fileSpec.c_str() );

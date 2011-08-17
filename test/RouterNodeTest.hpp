@@ -28,6 +28,10 @@ private:
 	CPPUNIT_TEST( testStoreNotSupported );
 	CPPUNIT_TEST( testStoreNowhere );
 	CPPUNIT_TEST( testStoreExceptions );
+	CPPUNIT_TEST( testDelete );
+	CPPUNIT_TEST( testDeleteNotSupported );
+	CPPUNIT_TEST( testDeleteNowhere );
+	CPPUNIT_TEST( testDeleteExceptions );
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -45,6 +49,10 @@ public:
 	void testStoreNotSupported();
 	void testStoreNowhere();
 	void testStoreExceptions();
+	void testDelete();
+	void testDeleteNotSupported();
+	void testDeleteNowhere();
+	void testDeleteExceptions();
 
 private:
 	boost::scoped_ptr<TempDirectory> m_pTempDir;

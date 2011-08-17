@@ -140,15 +140,29 @@ namespace
 					file.close();
 				}
 				s_pDataProxyClient->Initialize( s_InitFileSpec );
-				if( GetRandom( 2 ) == 0 )
+
+				int randNum = GetRandom( 3 );
+				if( randNum == 0 )
 				{
 //					std::cout << "Loading: " << node << std::endl;
-					s_pDataProxyClient->Load( node, parameters, result );
+					try
+					{
+						s_pDataProxyClient->Load( node, parameters, result );
+					}
+					catch( const LocalFileMissingException& i_rException )
+					{
+						s_pDataProxyClient->Store( node, parameters, data );
+					}
 				}
-				else
+				else if( randNum == 1 )
 				{
 //					std::cout << "Storing: " << node << std::endl;
 					s_pDataProxyClient->Store( node, parameters, data );
+				}
+				else
+				{
+//					std::cout << "Deleting: " << node << std::endl;
+					s_pDataProxyClient->Delete( node, parameters );
 				}
 			}
 		}
@@ -180,6 +194,7 @@ void MultithreadDataProxyClientTest::testMultithread()
 	file.open( configFileSpec.c_str() );
 
 	file << "<DPLConfig>" << std::endl;
+
 	file << "    <DatabaseConnections>" << std::endl;
 	file << "        <Database type=\"oracle\"" << std::endl;
 	file << "                  connection=\"o\"" << std::endl;
@@ -197,17 +212,23 @@ void MultithreadDataProxyClientTest::testMultithread()
 	file << "                  password=\"" << m_pMySqlDB->GetPassword() << "\"" << std::endl;
 	file << "                  disableCache=\"false\" />" << std::endl;
 	file << "    </DatabaseConnections>" << std::endl;
+
 	file << "    <DataNode name=\"/node0\" type=\"local\" location=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl;
 	file << "        <Write onFileExist=\"append\" />" << std::endl;
 	file << "    </DataNode>" << std::endl;
+
 	file << "    <DataNode name=\"/node1\" type=\"rest\" location=\"" << m_pService->GetEndpoint() << m_pTempDir->GetDirectoryName() << "\" >" << std::endl;
 	file << "        <Write timeout=\"10\" />" << std::endl;
 	file << "        <Read timeout=\"10\" />" << std::endl;
+	file << "        <Delete timeout=\"10\" />" << std::endl;
 	file << "    </DataNode>" << std::endl;
+
 	file << "    <DataNode name=\"/node2\" type=\"exe\" >" << std::endl;
 	file << "        <Write timeout=\"5\" command=\"cat > /dev/null\" />" << std::endl;
 	file << "        <Read timeout=\"5\" command=\"echo hello\" />" << std::endl;
+	file << "        <Delete timeout=\"5\" command=\"echo whatever\" />" << std::endl;
 	file << "    </DataNode>" << std::endl;
+
 	file << "    <DataNode name=\"/node3\" type=\"db\" >" << std::endl;
 	file << "        <Read connection=\"m\" header=\"value\" query=\"select value from mytable\" />" << std::endl;
 	file << "        <Write connection=\"m\"" << std::endl;
@@ -217,7 +238,11 @@ void MultithreadDataProxyClientTest::testMultithread()
 	file << "            <TranslateParameters> <Parameter name=\"value\" valueOverride=\"`echo -n $RANDOM`\" /> </TranslateParameters>" << std::endl;
 	file << "            <Columns> <Column name=\"value\" type=\"key\" /> </Columns>" << std::endl;
 	file << "        </Write>" << std::endl;
+	file << "        <Delete connection=\"m\" query=\"delete from mytable where value = ${value}\" >" << std::endl;
+	file << "            <TranslateParameters> <Parameter name=\"value\" valueOverride=\"`echo -n $RANDOM`\" /> </TranslateParameters>" << std::endl;
+	file << "        </Delete>" << std::endl;
 	file << "    </DataNode>" << std::endl;
+
 	file << "    <DataNode name=\"/node4\" type=\"db\" >" << std::endl;
 	file << "        <Read connection=\"o\" header=\"value\" query=\"select value from mytable\" />" << std::endl;
 	file << "        <Write connection=\"o\"" << std::endl;
@@ -227,7 +252,11 @@ void MultithreadDataProxyClientTest::testMultithread()
 	file << "            <TranslateParameters> <Parameter name=\"value\" valueOverride=\"`echo -n $RANDOM`\" /> </TranslateParameters>" << std::endl;
 	file << "            <Columns> <Column name=\"value\" type=\"key\" /> </Columns>" << std::endl;
 	file << "        </Write>" << std::endl;
+	file << "        <Delete connection=\"m\" query=\"delete from mytable where value = ${value}\" >" << std::endl;
+	file << "            <TranslateParameters> <Parameter name=\"value\" valueOverride=\"`echo -n $RANDOM`\" /> </TranslateParameters>" << std::endl;
+	file << "        </Delete>" << std::endl;
 	file << "    </DataNode>" << std::endl;
+
 	file << "</DPLConfig>" << std::endl;
 	file.close();
 

@@ -99,7 +99,7 @@ void DatabaseProxyTest::tearDown()
 	m_pTempDir.reset();
 }
 
-void DatabaseProxyTest::testConstructorExceptionWithNoReadOrWriteNode()
+void DatabaseProxyTest::testConstructorExceptionWithNoReadOrWriteOrDeleteNode()
 {
 	MockDataProxyClient client;
 	std::stringstream xmlContents;
@@ -114,7 +114,7 @@ void DatabaseProxyTest::testConstructorExceptionWithNoReadOrWriteNode()
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", client, *nodes[0], dbManager ),
 									  DatabaseProxyException,
-									  MATCH_FILE_AND_LINE_NUMBER + "Node not configured to handle Load or Store operations" );
+									  MATCH_FILE_AND_LINE_NUMBER + "Node not configured to handle Load or Store or Delete operations" );
 }
 
 void DatabaseProxyTest::testConstructorExceptionIllegalXml()
@@ -360,6 +360,45 @@ void DatabaseProxyTest::testConstructorExceptionIllegalXml()
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", client, *nodes[0], dbManager ),
 									  DatabaseProxyException,
 									  MATCH_FILE_AND_LINE_NUMBER + "Write attribute: onColumnParameterCollision has invalid value: garbage. Valid values are 'fail', 'useColumn', 'useParameter'" );
+
+	xmlContents.str("");
+	xmlContents << "<DataNode type = \"db\" >"
+				<< " <Delete "
+				<< "  query = \"Delete from OracleTable where ot_id = ${idToMatch}\" />"
+				<< "</DataNode>";
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", client, *nodes[0], dbManager ),
+									  DatabaseProxyException,
+									  MATCH_FILE_AND_LINE_NUMBER + "Neither 'connection' nor 'connectionByTable' attributes were provided");
+
+	xmlContents.str("");
+	xmlContents << "<DataNode type = \"db\" >"
+				<< " <Delete "
+				<< "  connection = \"myOracleConnection\" "
+				<< "  connectionByTable = \"myTable${campaign_id}\" "
+				<< "  query = \"Delete from OracleTable where ot_id = ${idToMatch}\" />"
+				<< "</DataNode>";
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", client, *nodes[0], dbManager ),
+									  DatabaseProxyException,
+									  MATCH_FILE_AND_LINE_NUMBER + "Invalid to supply both 'connection' and 'connectionByTable' attributes");
+
+	xmlContents.str("");
+	xmlContents << "<DataNode type = \"db\" >"
+				<< " <Delete "
+				<< "  connection = \"myOracleConnection\" />"
+				<< "</DataNode>";
+	nodes.clear();
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", client, *nodes[0], dbManager ),
+									  XMLUtilitiesException,
+									  MATCH_FILE_AND_LINE_NUMBER + "Unable to find attribute: 'query' in node: Delete");
 }
 
 void DatabaseProxyTest::testOperationNotSupported()
@@ -386,6 +425,9 @@ void DatabaseProxyTest::testOperationNotSupported()
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Store( parameters, results ),
 									   DatabaseProxyException,
 									   MATCH_FILE_AND_LINE_NUMBER + "Proxy not configured to be able to perform Store operations" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Delete( parameters ),
+									   DatabaseProxyException,
+									   MATCH_FILE_AND_LINE_NUMBER + "Proxy not configured to be able to perform Delete operations" );
 
 	xmlContents.str("");
 	xmlContents << "<DataNode type = \"db\" >"
@@ -405,6 +447,28 @@ void DatabaseProxyTest::testOperationNotSupported()
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy2.Load( parameters, results ),
 									   DatabaseProxyException,
 									   MATCH_FILE_AND_LINE_NUMBER + "Proxy not configured to be able to perform Load operations" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy2.Delete( parameters ),
+									   DatabaseProxyException,
+									   MATCH_FILE_AND_LINE_NUMBER + "Proxy not configured to be able to perform Delete operations" );
+
+	xmlContents.str("");
+	xmlContents << "<DataNode type = \"db\" >"
+				<< " <Delete "
+				<< "  connection = \"myOracleConnection\" "
+				<< "  query = \"Delete from OracleTable where ot_id = ${idToMatch}\" />"
+				<< "</DataNode>";
+	nodes.clear();
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	DatabaseProxy proxy3( "name", client, *nodes[0], dbManager );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy3.Load( parameters, results ),
+									   DatabaseProxyException,
+									   MATCH_FILE_AND_LINE_NUMBER + "Proxy not configured to be able to perform Load operations" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy3.Store( parameters, results ),
+									   DatabaseProxyException,
+									   MATCH_FILE_AND_LINE_NUMBER + "Proxy not configured to be able to perform Store operations" );
 }
 
 void DatabaseProxyTest::testOracleLoad()
@@ -1852,3 +1916,537 @@ void DatabaseProxyTest::testDynamicTableNameLength()
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( DatabaseProxy proxy( "name", client, *nodes[0], dbManager ), DatabaseProxyException,
 		".*/.*:\\d+: Attributes for table and stagingTable cannot have the same value: kna" );;
 }
+
+void DatabaseProxyTest::testOracleDelete()
+{
+	MockDataProxyClient client;
+	//Create a Database table and populate it
+	Database::Statement(*m_pOracleDB, "Create Table OracleTable(ot_id INT, ot_desc VARCHAR(64))").Execute();
+	std::string cmd( "INSERT INTO OracleTable (ot_id, ot_desc) VALUES ");
+	std::vector<std::string> values;
+
+	values.push_back( "(1, 'Alpha')");
+	values.push_back( "(2, 'Bravo')");
+	values.push_back( "(3, 'Charlie')");
+	values.push_back( "(4, 'Delta')");
+	values.push_back( "(5, 'Echo')");
+
+	for( size_t i = 0; i < values.size(); ++i )
+	{
+		Database::Statement stmt( *m_pOracleDB, cmd+values[i] );
+		stmt.Execute();
+	}
+	m_pOracleDB->Commit();
+
+	//Create a Database XML node
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode type = \"db\" >"
+				<< " <Delete connection = \"myOracleConnection\" "
+				<< "  query = \"Delete from OracleTable where ot_id = ${idToMatch} or ot_id = 1\" >"
+				<< " </Delete>"
+				<< "</DataNode>";
+
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDatabaseConnectionManager dbManager;
+	dbManager.InsertConnection("myOracleConnection", m_pOracleDB);
+
+	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+
+	std::map< std::string, std::string > parameters;
+	parameters["idToMatch"] = "3";
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+
+	std::stringstream expected;
+	expected << "MockDatabaseConnectionManager::ValidateConnectionName" << std::endl
+			 << "ConnectionName: myOracleConnection" << std::endl
+			 << std::endl;
+	expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+			 << "ConnectionName: myOracleConnection" << std::endl
+			 << std::endl;
+	CPPUNIT_ASSERT_EQUAL(expected.str(), dbManager.GetLog());
+
+	// check table contents: no changes yet since it hasn't been committed
+	expected.str("");
+	expected << "1,Alpha" << std::endl
+		 << "2,Bravo" << std::endl
+		 << "3,Charlie" << std::endl
+		 << "4,Delta" << std::endl
+		 << "5,Echo" << std::endl;
+
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pOracleObservationDB, "OracleTable", "ot_id,ot_desc", "ot_id" )
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+
+	// Verify that the records were deleted.
+	expected.str("");
+	expected << "2,Bravo" << std::endl
+		 << "4,Delta" << std::endl
+		 << "5,Echo" << std::endl;
+		 
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pOracleObservationDB, "OracleTable", "ot_id,ot_desc", "ot_id" )
+}
+
+void DatabaseProxyTest::testMySQLDelete()
+{
+	MockDataProxyClient client;
+	//Create a Database table and populate it
+	Database::Statement(*m_pMySQLDB, "Create Table MySQLTable(ot_id INT, ot_desc VARCHAR(64)) ENGINE=innodb").Execute();
+	std::string cmd( "INSERT INTO MySQLTable (ot_id, ot_desc) VALUES ");
+	std::vector<std::string> values;
+
+	values.push_back( "(1, 'Alpha')");
+	values.push_back( "(2, 'Bravo')");
+	values.push_back( "(3, 'Charlie')");
+	values.push_back( "(4, 'Delta')");
+	values.push_back( "(5, 'Echo')");
+
+	for( size_t i = 0; i < values.size(); ++i )
+	{
+		Database::Statement stmt( *m_pMySQLDB, cmd+values[i] );
+		stmt.Execute();
+	}
+	m_pMySQLDB->Commit();
+
+	//Create a Database XML node
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode type = \"db\" >"
+				<< " <Delete connection = \"myMySQLConnection\" "
+				<< "  query = \"Delete from MySQLTable where ot_id = ${idToMatch} or ot_id = 1\" >"
+				<< " </Delete>"
+				<< "</DataNode>";
+
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDatabaseConnectionManager dbManager;
+	dbManager.InsertConnection("myMySQLConnection", m_pMySQLDB);
+
+	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+
+	std::map< std::string, std::string > parameters;
+	parameters["idToMatch"] = "3";
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+
+	std::stringstream expected;
+	expected << "MockDatabaseConnectionManager::ValidateConnectionName" << std::endl
+			 << "ConnectionName: myMySQLConnection" << std::endl
+			 << std::endl;
+	expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+			 << "ConnectionName: myMySQLConnection" << std::endl
+			 << std::endl;
+	CPPUNIT_ASSERT_EQUAL(expected.str(), dbManager.GetLog());
+
+	// check table contents: no changes yet since it hasn't been committed
+	expected.str("");
+	expected << "1,Alpha" << std::endl
+		 << "2,Bravo" << std::endl
+		 << "3,Charlie" << std::endl
+		 << "4,Delta" << std::endl
+		 << "5,Echo" << std::endl;
+
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pMySQLObservationDB, "MySQLTable", "ot_id,ot_desc", "ot_id" )
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+
+	// Verify that the records were deleted.
+	expected.str("");
+	expected << "2,Bravo" << std::endl
+		 << "4,Delta" << std::endl
+		 << "5,Echo" << std::endl;
+		 
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pMySQLObservationDB, "MySQLTable", "ot_id,ot_desc", "ot_id" )
+}
+
+void DatabaseProxyTest::testDeleteExceptionMissingVariableNameDefinition()
+{
+	MockDataProxyClient client;
+	//Create a Database table and populate it
+	Database::Statement(*m_pOracleDB, "Create Table OracleTable(ot_id INT, ot_desc VARCHAR(64))").Execute();
+	std::string cmd( "INSERT INTO OracleTable (ot_id, ot_desc) VALUES ");
+	std::vector<std::string> values;
+
+	values.push_back( "(1, 'Alpha')");
+	values.push_back( "(2, 'Bravo')");
+	values.push_back( "(3, 'Charlie')");
+	values.push_back( "(4, 'Delta')");
+	values.push_back( "(5, 'Echo')");
+
+	for( size_t i = 0; i < values.size(); ++i )
+	{
+		Database::Statement stmt( *m_pOracleDB, cmd+values[i] );
+		stmt.Execute();
+	}
+	m_pOracleDB->Commit();
+
+	//Create a Database XML node
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode type = \"db\" >"
+				<< " <Delete connection = \"myOracleConnection\" "
+				<< "  query = \"Delete from OracleTable where ot_id = ${idToMatch} or ot_id = 1\" >"
+				<< " </Delete>"
+				<< "</DataNode>";
+
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDatabaseConnectionManager dbManager;
+
+	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	std::stringstream expected;
+	expected << "MockDatabaseConnectionManager::ValidateConnectionName" << std::endl
+			 << "ConnectionName: myOracleConnection" << std::endl
+			 << std::endl;
+	CPPUNIT_ASSERT_EQUAL(expected.str(), dbManager.GetLog());
+
+	std::map< std::string, std::string > parameters;
+
+	dbManager.InsertConnection("myOracleConnection", m_pOracleDB);
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Delete( parameters ),
+									   ProxyUtilitiesException,
+									   MATCH_FILE_AND_LINE_NUMBER + "The following parameters are referenced, but are not specified in the parameters: idToMatch" );
+}
+
+void DatabaseProxyTest::testDeleteWithExtraVariableNameDefinitions()
+{
+	MockDataProxyClient client;
+	//Create a Database table and populate it
+	Database::Statement(*m_pOracleDB, "Create Table OracleTable(ot_id INT, ot_desc VARCHAR(64))").Execute();
+	std::string cmd( "INSERT INTO OracleTable (ot_id, ot_desc) VALUES ");
+	std::vector<std::string> values;
+
+	values.push_back( "(1, 'Alpha')");
+	values.push_back( "(2, 'Bravo')");
+	values.push_back( "(3, NULL)");
+	values.push_back( "(4, 'Delta')");
+	values.push_back( "(5, 'Echo')");
+
+	for( size_t i = 0; i < values.size(); ++i )
+	{
+		Database::Statement stmt( *m_pOracleDB, cmd+values[i] );
+		stmt.Execute();
+	}
+	m_pOracleDB->Commit();
+
+	//Create a Database XML node
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode type = \"db\" >"
+				<< " <Delete connection = \"myOracleConnection\" "
+				<< "  query = \"Delete from OracleTable where ot_id = ${idToMatch} or ot_id = 1\" >"
+				<< " </Delete>"
+				<< "</DataNode>";
+
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDatabaseConnectionManager dbManager;
+
+	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+
+	std::map< std::string, std::string > parameters;
+	parameters["idToMatch"] = "3";
+	parameters["${An Unused Definition Should Not Throw An Exception}"] = "Unused";
+
+	dbManager.InsertConnection("myOracleConnection", m_pOracleDB);
+	std::stringstream results;
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+	std::stringstream expected;
+	expected << "MockDatabaseConnectionManager::ValidateConnectionName" << std::endl
+			 << "ConnectionName: myOracleConnection" << std::endl
+			 << std::endl;
+	expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+			 << "ConnectionName: myOracleConnection" << std::endl
+			 << std::endl;
+	CPPUNIT_ASSERT_EQUAL(expected.str(), dbManager.GetLog());
+
+	// check table contents: no changes yet since it hasn't been committed
+	expected.str("");
+	expected << "1,Alpha" << std::endl
+		 << "2,Bravo" << std::endl
+		 << "3," << std::endl
+		 << "4,Delta" << std::endl
+		 << "5,Echo" << std::endl;
+
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pOracleObservationDB, "OracleTable", "ot_id,ot_desc", "ot_id" )
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+
+	// Verify that the records were deleted.
+	expected.str("");
+	expected << "2,Bravo" << std::endl
+		 << "4,Delta" << std::endl
+		 << "5,Echo" << std::endl;
+		 
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pOracleObservationDB, "OracleTable", "ot_id,ot_desc", "ot_id" )
+}
+
+void DatabaseProxyTest::testDeleteWithNoVariableNames()
+{
+	MockDataProxyClient client;
+	//Create a Database table and populate it
+	Database::Statement(*m_pOracleDB, "Create Table OracleTable(ot_id INT, ot_desc VARCHAR(64))").Execute();
+	std::string cmd( "INSERT INTO OracleTable (ot_id, ot_desc) VALUES ");
+	std::vector<std::string> values;
+
+	values.push_back( "(1, 'Alpha')");
+	values.push_back( "(2, 'Bravo')");
+	values.push_back( "(3, 'Charlie')");
+	values.push_back( "(4, 'Delta')");
+	values.push_back( "(5, 'Echo')");
+
+	for( size_t i = 0; i < values.size(); ++i )
+	{
+		Database::Statement stmt( *m_pOracleDB, cmd+values[i] );
+		stmt.Execute();
+	}
+	m_pOracleDB->Commit();
+
+	//Create a Database XML node
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode type = \"db\" >"
+				<< " <Delete connection = \"myOracleConnection\" "
+				<< "  query = \"Delete from OracleTable where ot_id = 1\" >"
+				<< " </Delete>"
+				<< "</DataNode>";
+
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDatabaseConnectionManager dbManager;
+
+	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+
+	std::map< std::string, std::string > parameters;
+	parameters["ignored"] = "3";
+
+	dbManager.InsertConnection("myOracleConnection", m_pOracleDB);
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+
+	std::stringstream expected;
+	expected << "MockDatabaseConnectionManager::ValidateConnectionName" << std::endl
+			 << "ConnectionName: myOracleConnection" << std::endl
+			 << std::endl;
+	expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+			 << "ConnectionName: myOracleConnection" << std::endl
+			 << std::endl;
+	CPPUNIT_ASSERT_EQUAL(expected.str(), dbManager.GetLog());
+
+	// check table contents: no changes yet since it hasn't been committed
+	expected.str("");
+	expected << "1,Alpha" << std::endl
+		 << "2,Bravo" << std::endl
+		 << "3,Charlie" << std::endl
+		 << "4,Delta" << std::endl
+		 << "5,Echo" << std::endl;
+
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pOracleObservationDB, "OracleTable", "ot_id,ot_desc", "ot_id" )
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+
+	// Verify that the appropriate record is deleted.
+	expected.str("");
+	expected << "2,Bravo" << std::endl
+		 << "3,Charlie" << std::endl
+		 << "4,Delta" << std::endl
+		 << "5,Echo" << std::endl;
+		 
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pOracleDB, "OracleTable", "ot_id,ot_desc", "ot_id" )
+}
+
+void DatabaseProxyTest::testDeleteWithMultipleVariableNames()
+{
+	MockDataProxyClient client;
+	//Create a Database table and populate it
+	Database::Statement(*m_pOracleDB, "Create Table OracleTable(ot_id INT, ot_desc VARCHAR(64))").Execute();
+	std::string cmd( "INSERT INTO OracleTable (ot_id, ot_desc) VALUES ");
+	std::vector<std::string> values;
+
+	values.push_back( "(1, 'Alpha')");
+	values.push_back( "(2, 'Bravo')");
+	values.push_back( "(3, 'Charlie')");
+	values.push_back( "(4, 'Delta')");
+	values.push_back( "(5, 'Echo')");
+
+	for( size_t i = 0; i < values.size(); ++i )
+	{
+		Database::Statement stmt( *m_pOracleDB, cmd+values[i] );
+		stmt.Execute();
+	}
+	m_pOracleDB->Commit();
+
+	//Create a Database XML node
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode type = \"db\" >"
+				<< " <Delete connection = \"myOracleConnection\" "
+				<< "  query = \"Delete from OracleTable where ot_id &lt; ${idToMatch1} and ot_id &gt; ${idToMatch2}\" />"
+				<< "</DataNode>";
+
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDatabaseConnectionManager dbManager;
+
+	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+
+	std::map< std::string, std::string > parameters;
+	parameters["idToMatch1"] = "4";
+	// Only allow 2 records to be deleted
+	parameters["idToMatch2"] = "2";
+
+	dbManager.InsertConnection("myOracleConnection", m_pOracleDB);
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+	std::stringstream expected;
+	expected << "MockDatabaseConnectionManager::ValidateConnectionName" << std::endl
+			 << "ConnectionName: myOracleConnection" << std::endl
+			 << std::endl;
+	expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+			 << "ConnectionName: myOracleConnection" << std::endl
+			 << std::endl;
+	CPPUNIT_ASSERT_EQUAL(expected.str(), dbManager.GetLog());
+
+	// check table contents: no changes yet since it hasn't been committed
+	expected.str("");
+	expected << "1,Alpha" << std::endl
+		 << "2,Bravo" << std::endl
+		 << "3,Charlie" << std::endl
+		 << "4,Delta" << std::endl
+		 << "5,Echo" << std::endl;
+
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pOracleObservationDB, "OracleTable", "ot_id,ot_desc", "ot_id" )
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+
+	// Verify that the appropriate records are deleted
+	expected.str("");
+	expected << "1,Alpha" << std::endl
+		 << "2,Bravo" << std::endl
+		 << "4,Delta" << std::endl
+		 << "5,Echo" << std::endl;
+		 
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pOracleDB, "OracleTable", "ot_id,ot_desc", "ot_id" )
+}
+
+void DatabaseProxyTest::testDeleteSameVarNameReplacedTwice()
+{
+	MockDataProxyClient client;
+	//Create a Database table and populate it
+	Database::Statement(*m_pOracleDB, "Create Table OracleTable(ot_id INT, ot_desc VARCHAR(64))").Execute();
+	std::string cmd( "INSERT INTO OracleTable (ot_id, ot_desc) VALUES ");
+	std::vector<std::string> values;
+
+	values.push_back( "(1, 'Alpha')");
+	values.push_back( "(2, 'Bravo')");
+	values.push_back( "(3, 'Charlie')");
+	values.push_back( "(4, 'Delta')");
+	values.push_back( "(5, 'Echo')");
+
+	for( size_t i = 0; i < values.size(); ++i )
+	{
+		Database::Statement stmt( *m_pOracleDB, cmd+values[i] );
+		stmt.Execute();
+	}
+	m_pOracleDB->Commit();
+
+	//Create a Database XML node
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode type = \"db\" >"
+				<< " <Delete connection = \"myOracleConnection\" "
+				<< "  query = \"Delete from OracleTable where ot_id &lt; ${idToMatch} or ot_id = ${idToMatch}\" />"
+				<< "</DataNode>";
+
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDatabaseConnectionManager dbManager;
+
+	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+
+	std::map< std::string, std::string > parameters;
+	parameters["idToMatch"] = "3";
+
+	dbManager.InsertConnection("myOracleConnection", m_pOracleDB);
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+	std::stringstream expected;
+	expected << "MockDatabaseConnectionManager::ValidateConnectionName" << std::endl
+			 << "ConnectionName: myOracleConnection" << std::endl
+			 << std::endl;
+	expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+			 << "ConnectionName: myOracleConnection" << std::endl
+			 << std::endl;
+	CPPUNIT_ASSERT_EQUAL(expected.str(), dbManager.GetLog());
+
+	// check table contents: no changes yet since it hasn't been committed
+	expected.str("");
+	expected << "1,Alpha" << std::endl
+		 << "2,Bravo" << std::endl
+		 << "3,Charlie" << std::endl
+		 << "4,Delta" << std::endl
+		 << "5,Echo" << std::endl;
+
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pOracleObservationDB, "OracleTable", "ot_id,ot_desc", "ot_id" )
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+
+	// Verify that the appropriate records are deleted
+	expected.str("");
+	expected << "4,Delta" << std::endl
+		 << "5,Echo" << std::endl;
+		 
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pOracleObservationDB, "OracleTable", "ot_id,ot_desc", "ot_id" )
+}
+
+void DatabaseProxyTest::testDeleteExceptionEmptyVarName()
+{
+	MockDataProxyClient client;
+	//Create a Database table and populate it
+	Database::Statement(*m_pOracleDB, "Create Table OracleTable(ot_id INT, ot_desc VARCHAR(64))").Execute();
+	std::string cmd( "INSERT INTO OracleTable (ot_id, ot_desc) VALUES ");
+	std::vector<std::string> values;
+
+	values.push_back( "(1, 'Alpha')");
+	values.push_back( "(2, 'Bravo')");
+	values.push_back( "(3, 'Charlie')");
+	values.push_back( "(4, 'Delta')");
+	values.push_back( "(5, 'Echo')");
+
+	for( size_t i = 0; i < values.size(); ++i )
+	{
+		Database::Statement stmt( *m_pOracleDB, cmd+values[i] );
+		stmt.Execute();
+	}
+	m_pOracleDB->Commit();
+
+	//Create a Database XML node
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode type = \"db\" >"
+				<< " <Delete connection = \"myOracleConnection\" "
+				<< "  query = \"Delete ot_id, ot_desc from OracleTable where ot_id = ${idToMatch} or ot_id = ${} \" />"
+				<< "</DataNode>";
+
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDatabaseConnectionManager dbManager;
+
+	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+
+	std::map< std::string, std::string > parameters;
+	parameters["idToMatch"] = "3";
+
+	dbManager.InsertConnection("myOracleConnection", m_pOracleDB);
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Delete( parameters ),
+									   ProxyUtilitiesException,
+									   MATCH_FILE_AND_LINE_NUMBER + "Variable name referenced must be alphanumeric \\(enclosed within \"\\$\\{\" and \"\\}\"\\)\\."
+									   " Instead it is: '\\$\\{\\}'");
+}
+
+

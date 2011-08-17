@@ -30,15 +30,18 @@ ExecutionProxy::ExecutionProxy( const std::string& i_rName, DataProxyClient& i_r
 	m_ReadCommand(),
 	m_ReadTimeout(),
 	m_WriteCommand(),
-	m_WriteTimeout()
+	m_WriteTimeout(),
+	m_DeleteCommand(),
+	m_DeleteTimeout()
+
 {
 	std::set< std::string > allowedChildren;
-	AbstractNode::ValidateXmlElements( i_rNode, allowedChildren, allowedChildren );
+	AbstractNode::ValidateXmlElements( i_rNode, allowedChildren, allowedChildren, allowedChildren );
 
-	std::set< std::string > allowedReadWriteAttributes;
-	allowedReadWriteAttributes.insert( COMMAND_ATTRIBUTE );
-	allowedReadWriteAttributes.insert( TIMEOUT_ATTRIBUTE );
-	AbstractNode::ValidateXmlAttributes( i_rNode, allowedReadWriteAttributes, allowedReadWriteAttributes );
+	std::set< std::string > allowedAttributes;
+	allowedAttributes.insert( COMMAND_ATTRIBUTE );
+	allowedAttributes.insert( TIMEOUT_ATTRIBUTE );
+	AbstractNode::ValidateXmlAttributes( i_rNode, allowedAttributes, allowedAttributes, allowedAttributes );
 
 	// extract read parameters
 	xercesc::DOMNode* pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, READ_NODE );
@@ -56,9 +59,17 @@ ExecutionProxy::ExecutionProxy( const std::string& i_rName, DataProxyClient& i_r
 		m_WriteTimeout = boost::lexical_cast< double >( XMLUtilities::GetAttributeValue( pNode, TIMEOUT_ATTRIBUTE ) );
 	}
 
-	if( m_WriteCommand.IsNull() && m_ReadCommand.IsNull() )
+	// extract delete parameters
+	pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, DELETE_NODE );
+	if( pNode != NULL )
 	{
-		MV_THROW( ExecutionProxyException, "Execution proxy: '" << m_Name << "' does not have a read or write side configuration" );
+		m_DeleteCommand = XMLUtilities::GetAttributeValue( pNode, COMMAND_ATTRIBUTE );
+		m_DeleteTimeout = boost::lexical_cast< double >( XMLUtilities::GetAttributeValue( pNode, TIMEOUT_ATTRIBUTE ) );
+	}
+
+	if( m_ReadCommand.IsNull() && m_WriteCommand.IsNull() && m_DeleteCommand.IsNull() )
+	{
+		MV_THROW( ExecutionProxyException, "Execution proxy: '" << m_Name << "' does not have a read, write or delete side configuration" );
 	}
 }
 
@@ -118,6 +129,35 @@ void ExecutionProxy::StoreImpl( const std::map<std::string,std::string>& i_rPara
 	}
 }
 
+void ExecutionProxy::DeleteImpl( const std::map<std::string,std::string>& i_rParameters )
+{
+	if( m_DeleteCommand.IsNull() )
+	{
+		MV_THROW( ExecutionProxyException, "Execution proxy: " << m_Name << " does not have a delete-side configuration" );
+	}
+
+	std::string command = ProxyUtilities::GetVariableSubstitutedString( m_DeleteCommand, i_rParameters );
+	ShellExecutor executor( command );
+	std::stringstream standardOut; 
+	std::stringstream standardError;
+	MVLOGGER( "root.lib.DataProxy.ExecutionProxy.Delete.ExecutingCommand", "Executing command: '" << command << "'" );
+	int status = executor.Run( m_DeleteTimeout, standardOut, standardError );
+	if( status != 0 )
+	{
+		MV_THROW( ExecutionProxyException, "Command: '" << command << "' returned non-zero status: " << status << ". Standard error: " << standardError.rdbuf() );
+	}
+	if( !standardOut.str().empty() )
+	{
+		MVLOGGER( "root.lib.DataProxy.ExecutionProxy.Delete.StandardOut",
+			"Command: '" << command << "' generated standard out: " << standardOut.rdbuf() );
+	}	
+	if( !standardError.str().empty() )
+	{
+		MVLOGGER( "root.lib.DataProxy.ExecutionProxy.Delete.StandardError",
+			"Command: '" << command << "' generated standard error: " << standardError.rdbuf() );
+	}
+}
+
 void ExecutionProxy::InsertImplReadForwards( std::set< std::string >& o_rForwards ) const
 {
 	// ExecutionProxy has no specific read forwarding capabilities
@@ -126,6 +166,11 @@ void ExecutionProxy::InsertImplReadForwards( std::set< std::string >& o_rForward
 void ExecutionProxy::InsertImplWriteForwards( std::set< std::string >& o_rForwards ) const
 {
 	// ExecutionProxy has no specific write forwarding capabilities
+}
+
+void ExecutionProxy::InsertImplDeleteForwards( std::set< std::string >& o_rForwards ) const
+{
+	// ExecutionProxy has no specific delete forwarding capabilities
 }
 
 bool ExecutionProxy::SupportsTransactions() const

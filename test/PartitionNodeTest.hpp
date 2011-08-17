@@ -27,6 +27,8 @@ private:
 	CPPUNIT_TEST( testStoreSkipSort );
 	CPPUNIT_TEST( testStoreNoData );
 	CPPUNIT_TEST( testStoreExceptions );
+	CPPUNIT_TEST( testDelete );
+	CPPUNIT_TEST( testDeleteNotSupported );
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -43,6 +45,8 @@ public:
 	void testStoreSkipSort();
 	void testStoreNoData();
 	void testStoreExceptions();
+	void testDelete();
+	void testDeleteNotSupported();
 
 private:
 	boost::scoped_ptr<TempDirectory> m_pTempDir;

@@ -14,6 +14,7 @@
 #include "ProxyUtilities.hpp"
 #include "FileUtilities.hpp"
 #include "UniqueIdGenerator.hpp"
+#include "MVLogger.hpp"
 #include "MutexFileLock.hpp"
 #include <fstream>
 #include <boost/lexical_cast.hpp>
@@ -34,10 +35,19 @@ namespace
 	const std::string APPEND_BEHAVIOR( "append" );
 
 	// misc
-	const std::string EMPTY_STRING("");
 	const std::string PENDING_SUFFIX("~~dpl.pending");
 	const std::string LOCK_SUFFIX("~~dpl.lock");
 	const std::string COMMIT_SUFFIX("~~dpl.commit");
+
+	// The delete string will be added to the list of pendingops for a file whenever a delete
+	// is issued to the file. All previous pending renames are cancelled (the pending files
+	// are removed). This means that after every call to delete, the pendingops list for that
+	// file will contain a single element, the DELETE_STRING. This also means that there can
+	// be at most one DELETE_STRING, and whenever it is present it is at the front of the list
+	// of pendingops. Note that it is possible for elements to FOLLOW the DELETE_STRING if they
+	// are stores in append mode (overwrite stores which follow any calls to delete effectively
+	// invalidate the preceding delete operation).
+	const std::string DELETE_STRING(""); // the empty string is used to mark a file for deletion.
 
 	// buffer length for writing to a filedescriptor
 	const size_t BUFFER_LENGTH = 1024 * 1024 * 10;
@@ -76,8 +86,8 @@ LocalFileProxy::LocalFileProxy( const std::string& i_rName, DataProxyClient& i_r
 	m_OpenMode( OVERWRITE ),
 	m_SkipLines( 0 ),
 	m_rUniqueIdGenerator( i_rUniqueIdGenerator ),
-	m_PendingRenames(),
-	m_PendingRenamesMutex()
+	m_PendingOps(),
+	m_PendingOpsMutex()
 {
 	// get base location & validate
 	m_BaseLocation = XMLUtilities::GetAttributeValue( &i_rNode, LOCATION_ATTRIBUTE );
@@ -91,14 +101,14 @@ LocalFileProxy::LocalFileProxy( const std::string& i_rName, DataProxyClient& i_r
 	}
 
 	// validate children
-	AbstractNode::ValidateXmlElements( i_rNode, std::set<std::string>(), std::set<std::string>() );
+	AbstractNode::ValidateXmlElements( i_rNode, std::set<std::string>(), std::set<std::string>(), std::set<std::string>() );
 
-	// validate read/write attributes
+	// validate read/write/delete attributes
 	std::set< std::string > allowedWriteAttributes;
 	allowedWriteAttributes.insert( ON_FILE_EXIST_ATTRIBUTE );
 	allowedWriteAttributes.insert( NEW_FILE_PARAM_ATTRIBUTE );
 	allowedWriteAttributes.insert( SKIP_LINES_ATTRIBUTE );
-	AbstractNode::ValidateXmlAttributes( i_rNode, std::set<std::string>(), allowedWriteAttributes );
+	AbstractNode::ValidateXmlAttributes( i_rNode, std::set<std::string>(), allowedWriteAttributes, std::set<std::string>() );
 
 	// try to extract write-specific configuration
 	xercesc::DOMNode* pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, WRITE_NODE );
@@ -152,8 +162,6 @@ void LocalFileProxy::LoadImpl( const std::map<std::string,std::string>& i_rParam
 
 void LocalFileProxy::StoreImpl( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData )
 {
-	FileUtilities::ValidateDirectory( m_BaseLocation, W_OK | X_OK );
-
 	std::string destinationFileSpec( BuildFileSpec( m_BaseLocation, m_NameFormat, i_rParameters ) );
 	std::string pendingFileSpec;
 	
@@ -178,18 +186,56 @@ void LocalFileProxy::StoreImpl( const std::map<std::string,std::string>& i_rPara
 	file.close();
 
 	{
-		boost::unique_lock< boost::shared_mutex > lock( m_PendingRenamesMutex );
+		boost::unique_lock< boost::shared_mutex > lock( m_PendingOpsMutex );
 		// if we're set to overwrite, have to iterate over the existing temp files & remove them
 		if( m_OpenMode == OVERWRITE )
 		{	
-			std::vector< std::string >& rFilesToRemove = m_PendingRenames[ destinationFileSpec ];
-			for_each( rFilesToRemove.begin(), rFilesToRemove.end(), FileUtilities::Remove );
-			rFilesToRemove.clear();
+			std::vector< std::string >& rOpsToCancel = m_PendingOps[ destinationFileSpec ];
+
+			// if the first request is a delete, do not interpret it as a pending rename file
+			int offset = ( ( rOpsToCancel.empty() || rOpsToCancel.front() != DELETE_STRING ) ? 0 : 1 );
+
+			// remove all pending rename files
+			for_each( rOpsToCancel.begin() + offset, rOpsToCancel.end(), FileUtilities::Remove );
+			rOpsToCancel.clear();
 		}
-	
-		// and push this on the pending-renames map
-		m_PendingRenames[ destinationFileSpec ].push_back( pendingFileSpec );
+
+		// and push this on the pending ops map
+		m_PendingOps[ destinationFileSpec ].push_back( pendingFileSpec );
 	}
+}
+
+void LocalFileProxy::DeleteImpl( const std::map<std::string,std::string>& i_rParameters )
+{
+	std::string fileSpec( BuildFileSpec( m_BaseLocation, m_NameFormat, i_rParameters ) );
+	
+	if( FileUtilities::DoesDirectoryExist( FileUtilities::GetDirName( fileSpec ) ))
+	{
+		FileUtilities::ValidateDirectory( FileUtilities::GetDirName( fileSpec ), W_OK );
+	}
+
+	if( !FileUtilities::DoesExist( fileSpec ) )
+	{
+		boost::shared_lock< boost::shared_mutex > lock( m_PendingOpsMutex );
+		// make sure that the file also doesn't exist as a pending file
+		if( m_PendingOps.find( fileSpec ) == m_PendingOps.end() ) 
+		{
+			MVLOGGER( "root.lib.DataProxy.LocalFileProxy.Delete.NonexistentFile", "File: '" << fileSpec << "' does not exist and could not be deleted." );
+			return;
+		}
+	}
+
+	boost::unique_lock< boost::shared_mutex > lock( m_PendingOpsMutex );
+	std::vector< std::string >& rOpsToCancel = m_PendingOps[ fileSpec ];
+
+	// if the first request is a delete, do not interpret it as a pending rename file
+	int offset = ( ( rOpsToCancel.empty() || rOpsToCancel.front() != DELETE_STRING ) ? 0 : 1 );
+
+	// remove all pending rename files
+	for_each( rOpsToCancel.begin() + offset, rOpsToCancel.end(), FileUtilities::Remove );
+	rOpsToCancel.clear();
+
+	m_PendingOps[ fileSpec ].push_back( DELETE_STRING );
 }
 
 bool LocalFileProxy::SupportsTransactions() const
@@ -199,10 +245,10 @@ bool LocalFileProxy::SupportsTransactions() const
 
 void LocalFileProxy::Commit()
 {
-	boost::unique_lock< boost::shared_mutex > lock( m_PendingRenamesMutex );
+	boost::unique_lock< boost::shared_mutex > lock( m_PendingOpsMutex );
 
-	std::map< std::string, std::vector< std::string > >::iterator destinationIter = m_PendingRenames.begin();
-	for( ; destinationIter != m_PendingRenames.end(); m_PendingRenames.erase( destinationIter++ ) )
+	std::map< std::string, std::vector< std::string > >::iterator destinationIter = m_PendingOps.begin();
+	for( ; destinationIter != m_PendingOps.end(); m_PendingOps.erase( destinationIter++ ) )
 	{
 		// if we're in overwrite mode, we simply have to move the single pending file to the final destination
 		if( m_OpenMode == OVERWRITE )
@@ -217,16 +263,62 @@ void LocalFileProxy::Commit()
 			{
 				continue;
 			}
-			FileUtilities::Move( *destinationIter->second.begin(), destinationIter->first );
+
+			std::string operation = *destinationIter->second.begin();
+			// if our single operation is a delete operation, then remove the file
+			if( operation == DELETE_STRING )
+			{
+				if( !FileUtilities::DoesExist( destinationIter->first ) )
+				{
+					MVLOGGER( "root.lib.DataProxy.LocalFileProxy.Delete.NonexistentFile", "File: '" << destinationIter->first << "' existed when 'Delete' was "
+							<< "called but disappeared before it could be committed. Proceeding. " );
+				}
+				else
+				{
+					FileUtilities::Remove( destinationIter->first );
+				}
+			}
+			// otherwise, overwrite
+			else
+			{
+				FileUtilities::Move( *destinationIter->second.begin(), destinationIter->first );
+			}
 		}
 		else if( m_OpenMode == APPEND )
 		{
 			// obtain a lock on the commit file, creating it if it doesn't exist
-			std::string destinationCommitFileSpec( destinationIter->first + COMMIT_SUFFIX );
 			std::string destinationLockFileSpec( destinationIter->first + LOCK_SUFFIX );
 			MutexFileLock commitLockFile( destinationLockFileSpec, true, true );
 			commitLockFile.ObtainLock( MutexFileLock::BLOCK );
 	
+			// Deletes always come first. We should do the delete while having a lock on the
+			// commit file, because this delete should be atomic with the rest of this file's
+			// transaction (appends)
+			std::vector< std::string >::iterator tempIter = destinationIter->second.begin();
+			if( *tempIter == DELETE_STRING )
+			{
+				if( !FileUtilities::DoesExist( destinationIter->first ) )
+				{
+					MVLOGGER( "root.lib.DataProxy.LocalFileProxy.Delete.NonexistentFile", "File: '" << destinationIter->first << "' existed when 'Delete' was "
+							<< "called but disappeared before it could be committed. Proceeding. " );
+				}
+				else
+				{
+					FileUtilities::Remove( destinationIter->first );
+				}
+
+				tempIter = destinationIter->second.erase( tempIter );
+
+				// If the delete was the only request for this file, move on to the other files
+				if( destinationIter->second.empty() )
+				{
+					FileUtilities::Remove( destinationLockFileSpec );
+					commitLockFile.ReleaseLock();
+					continue;
+				}
+			}
+
+			std::string destinationCommitFileSpec( destinationIter->first + COMMIT_SUFFIX );
 			std::ofstream destinationCommitFile( destinationCommitFileSpec.c_str() );
 			if( !destinationCommitFile.good() )
 			{
@@ -253,7 +345,6 @@ void LocalFileProxy::Commit()
 			}
 	
 			// now go through every temp file and add that data
-			std::vector< std::string >::iterator tempIter = destinationIter->second.begin();
 			for( ; tempIter != destinationIter->second.end(); tempIter = destinationIter->second.erase( tempIter ) )
 			{
 				std::ifstream input( tempIter->c_str() );
@@ -297,17 +388,25 @@ void LocalFileProxy::Commit()
 
 void LocalFileProxy::Rollback()
 {
-	boost::unique_lock< boost::shared_mutex > lock( m_PendingRenamesMutex );
-	std::map< std::string, std::vector< std::string > >::iterator destinationIter = m_PendingRenames.begin();
-	for( ; destinationIter != m_PendingRenames.end(); )
+	boost::unique_lock< boost::shared_mutex > lock( m_PendingOpsMutex );
+	std::map< std::string, std::vector< std::string > >::iterator destinationIter = m_PendingOps.begin();
+	for( ; destinationIter != m_PendingOps.end(); )
 	{
 		std::vector< std::string >::iterator tempIter = destinationIter->second.begin();
+
+		// the only time a delete request can appear in the pending operations list is at the front
+		if( *tempIter == DELETE_STRING )
+		{
+			tempIter = destinationIter->second.erase( tempIter );
+		}
+
+		// the remaining elements in pending ops are not delete requests
 		for( ; tempIter != destinationIter->second.end(); tempIter = destinationIter->second.erase( tempIter ) )
 		{
 			FileUtilities::Remove( *tempIter );
 		}
 
-		m_PendingRenames.erase( destinationIter++ );
+		m_PendingOps.erase( destinationIter++ );
 	}
 }
 
@@ -320,3 +419,9 @@ void LocalFileProxy::InsertImplWriteForwards( std::set< std::string >& o_rForwar
 {
 	// LocalFileProxy has no specific write forwarding capabilities
 }
+
+void LocalFileProxy::InsertImplDeleteForwards( std::set< std::string >& o_rForwards ) const
+{
+	// LocalFileProxy has no specific delete forwarding capabilities
+}
+

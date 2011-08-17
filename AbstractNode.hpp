@@ -40,10 +40,12 @@ public:
 	// parameter translation, stream translation, failure forwarding, etc.
 	MV_VIRTUAL void Load( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData );
 	MV_VIRTUAL bool Store( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData );
-
+	MV_VIRTUAL bool Delete( const std::map<std::string, std::string>& i_rParameters );
+	
 	// cycle-checking support
 	MV_VIRTUAL void InsertReadForwards( std::set< std::string >& o_rForwards ) const;
 	MV_VIRTUAL void InsertWriteForwards( std::set< std::string >& o_rForwards ) const;
+	MV_VIRTUAL void InsertDeleteForwards( std::set< std::string >& o_rForwards ) const;
 
 	// transaction support
 	virtual bool SupportsTransactions() const = 0;
@@ -54,16 +56,20 @@ protected:
 	// static helpers for validating xml
 	static void ValidateXmlElements( const xercesc::DOMNode& i_rNode,
 									 const std::set< std::string >& i_rAdditionalReadElements,
-									 const std::set< std::string >& i_rAdditionalWriteElements );
+									 const std::set< std::string >& i_rAdditionalWriteElements,
+									 const std::set< std::string >& i_rAdditionalDeleteElements );
 	static void ValidateXmlAttributes( const xercesc::DOMNode& i_rNode,
 									   const std::set< std::string >& i_rAdditionalReadAttributes,
-									   const std::set< std::string >& i_rAdditionalWriteAttributes );
+									   const std::set< std::string >& i_rAdditionalWriteAttributes,
+									   const std::set< std::string >& i_rAdditionalDeleteAttributes );
 
 	// the operations that children must implement
 	virtual void LoadImpl( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData ) = 0;
 	virtual void StoreImpl( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData ) = 0;
+	virtual void DeleteImpl( const std::map<std::string,std::string>& i_rParameters ) = 0;
 	virtual void InsertImplReadForwards( std::set< std::string >& o_rForwards ) const = 0;
 	virtual void InsertImplWriteForwards( std::set< std::string >& o_rForwards ) const = 0;
+	virtual void InsertImplDeleteForwards( std::set< std::string >& o_rForwards ) const = 0;
 
 private:
 	DATUMINFO( Translator, boost::shared_ptr<ParameterTranslator> );
@@ -87,12 +93,13 @@ private:
 		RowEnd > > > > > > > >
 	NodeConfigDatum;
 
-	void SetConfig( const xercesc::DOMNode& i_rNode, NodeConfigDatum& o_rConfig, bool i_IsWrite ) const;
+	void SetConfig( const xercesc::DOMNode& i_rNode, NodeConfigDatum& o_rConfig ) const;
 	
 	std::string m_Name;
 	DataProxyClient& m_rParent;
 	NodeConfigDatum m_ReadConfig;
 	NodeConfigDatum m_WriteConfig;
+	NodeConfigDatum m_DeleteConfig;
 };
 
 

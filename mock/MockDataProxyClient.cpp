@@ -85,6 +85,15 @@ void MockDataProxyClient::Store( const std::string& i_rName, const std::map<std:
 	}
 }
 
+void MockDataProxyClient::Delete( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters ) const
+{
+	m_Log << "Delete called with Name: " << i_rName << " Parameters: " << ToString( i_rParameters ) << std::endl;
+	if( m_ExceptionNames.find( i_rName ) != m_ExceptionNames.end() )
+	{
+		MV_THROW( DataProxyClientException, "Set to throw an exception for name: " << i_rName );
+	}
+}
+
 void MockDataProxyClient::BeginTransaction()
 {
 	m_Log << "BeginTransaction called" << std::endl;

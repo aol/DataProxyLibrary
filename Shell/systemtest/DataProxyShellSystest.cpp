@@ -75,6 +75,8 @@ void DataProxyShellSystest::testHappyPath( void )
 
 	// now load it
 	cmd.str("");
+	out.str("");
+	err.str("");
 	cmd << "./dplShell"
 		<< " --init " << dplConfigFileSpec
 		<< " --name my_node"
@@ -85,4 +87,27 @@ void DataProxyShellSystest::testHappyPath( void )
 
 	CPPUNIT_ASSERT_EQUAL( allData, out.str() );
 	CPPUNIT_ASSERT_EQUAL( std::string(""), err.str() );
+
+	// now delete it
+	cmd.str("");
+	out.str("");
+	err.str("");
+	cmd << "./dplShell"
+		<< " --init " << dplConfigFileSpec
+		<< " --name my_node"
+		<< " --params p3~v3^p2~v2^p1~v1"
+		<< " --Delete";
+	
+	ShellExecutor deleteExe( cmd.str() );
+	CPPUNIT_ASSERT_EQUAL( 0, deleteExe.Run( 1.0, out, err ) );
+
+	CPPUNIT_ASSERT_EQUAL( std::string(""), out.str() );
+	CPPUNIT_ASSERT_EQUAL( std::string(""), err.str() );
+	CPPUNIT_ASSERT ( !FileUtilities::DoesFileExist( nodeDir + "/p1~v1^p2~v2^p3~v3" ) );
+
+	// delete it again
+	CPPUNIT_ASSERT_EQUAL( 0, deleteExe.Run( 1.0, out, err ) );
+	CPPUNIT_ASSERT_EQUAL( std::string(""), out.str() );
+	CPPUNIT_ASSERT_EQUAL( std::string(""), err.str() );
+	CPPUNIT_ASSERT ( !FileUtilities::DoesFileExist( nodeDir + "/p1~v1^p2~v2^p3~v3" ) );
 }

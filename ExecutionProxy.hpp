@@ -23,18 +23,18 @@ public:
 	ExecutionProxy( const std::string& i_rName, DataProxyClient& i_rParent, const xercesc::DOMNode& i_rNode );
 	virtual ~ExecutionProxy();
 	
-	// load & store
 	virtual void LoadImpl( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData );
 	virtual void StoreImpl( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData );
+	virtual void DeleteImpl( const std::map<std::string,std::string>& i_rParameters );
+
+	virtual void InsertImplReadForwards( std::set< std::string >& o_rForwards ) const;
+	virtual void InsertImplWriteForwards( std::set< std::string >& o_rForwards ) const;
+	virtual void InsertImplDeleteForwards( std::set< std::string >& o_rForwards ) const;
 
 	// transaction support
 	virtual bool SupportsTransactions() const;
 	virtual void Commit();
 	virtual void Rollback();
-
-	// cycle-checking support
-	virtual void InsertImplReadForwards( std::set< std::string >& o_rForwards ) const;
-	virtual void InsertImplWriteForwards( std::set< std::string >& o_rForwards ) const;
 
 private:
 	std::string m_Name;
@@ -43,6 +43,8 @@ private:
 	double m_ReadTimeout;
 	Nullable< std::string > m_WriteCommand;
 	double m_WriteTimeout;
+	Nullable< std::string > m_DeleteCommand;
+	double m_DeleteTimeout;
 };
 
 #endif //_EXECUTION_PROXY_HPP_

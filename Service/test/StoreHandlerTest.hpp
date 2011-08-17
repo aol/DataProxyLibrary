@@ -24,8 +24,7 @@ private:
 
 	CPPUNIT_TEST_SUITE(StoreHandlerTest);
 	CPPUNIT_TEST(testStore);
-	CPPUNIT_TEST(testStoreXForwardedForNew);
-	CPPUNIT_TEST(testStoreXForwardedForAppend);
+	CPPUNIT_TEST(testStoreXForwardedFor);
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -37,8 +36,7 @@ public:
 	void tearDown();
 
 	void testStore();
-	void testStoreXForwardedForNew();
-	void testStoreXForwardedForAppend();
+	void testStoreXForwardedFor();
 
 private:
 	boost::scoped_ptr< TempDirectory > m_pTempDir;

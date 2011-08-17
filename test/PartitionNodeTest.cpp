@@ -187,6 +187,82 @@ void PartitionNodeTest::testInvalidXml()
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( "name", client, *nodes[0] ), PartitionNodeException,
 		".*:\\d+: Write attribute: 'skipSort' has invalid value: 'garbage'. Valid values are 'true' and 'false'" );
+
+	xmlContents.str("");
+	xmlContents << "<PartitionNode >" << std::endl
+				<< "  <Delete>" << std::endl
+				<< "    <garbage/>" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "  <Write partitionBy=\"key\" sortTimeout=\"10\" >" << std::endl
+				<< "    <ForwardTo name=\"name1\" />" << std::endl
+				<< "  </Write>" << std::endl
+				<< "</PartitionNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( std::string("name"), client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Found invalid child: garbage in node: Delete" );
+
+	// StreamTransformers configuration should be disallowed in Delete nodes
+	xmlContents.str("");
+	xmlContents << "<PartitionNode >" << std::endl
+				<< "  <Delete>" << std::endl
+				<< "    <StreamTransformers/>" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "  <Write partitionBy=\"key\" sortTimeout=\"10\" >" << std::endl
+				<< "    <ForwardTo name=\"name1\" />" << std::endl
+				<< "  </Write>" << std::endl
+				<< "</PartitionNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( std::string("name"), client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Found invalid child: StreamTransformers in node: Delete" );
+
+	xmlContents.str("");
+	xmlContents << "<PartitionNode >" << std::endl
+				<< "  <Write partitionBy=\"key\" sortTimeout=\"10\" >" << std::endl
+				<< "    <ForwardTo name=\"name1\" />" << std::endl
+				<< "  </Write>" << std::endl
+				<< "  <Delete/>" << std::endl
+				<< "</PartitionNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( std::string("name"), client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Incorrect number of ForwardTo child nodes specified in Delete. There were 0 but there should be exactly 1" );
+
+	xmlContents.str("");
+	xmlContents << "<PartitionNode >" << std::endl
+				<< "  <Write partitionBy=\"key\" sortTimeout=\"10\" >" << std::endl
+				<< "    <ForwardTo name=\"name1\" />" << std::endl
+				<< "  </Write>" << std::endl
+				<< "  <Delete>" << std::endl
+				<< "    <ForwardTo name=\"name1\" >" << std::endl
+				<< "      <garbage/>" << std::endl
+				<< "    </ForwardTo>" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "</PartitionNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Found invalid child: garbage in node: ForwardTo" );
+
+	xmlContents.str("");
+	xmlContents << "<PartitionNode >" << std::endl
+				<< "  <Write partitionBy=\"key\" sortTimeout=\"10\" >" << std::endl
+				<< "    <ForwardTo name=\"name1\" />" << std::endl
+				<< "  </Write>" << std::endl
+				<< "  <Delete>" << std::endl
+				<< "    <ForwardTo name=\"name1\" garbage=\"true\" />" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "</PartitionNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Found invalid attribute: garbage in node: ForwardTo" );
 }
 
 void PartitionNodeTest::testLoad()
@@ -461,4 +537,58 @@ void PartitionNodeTest::testStoreExceptions()
 	data2 << "col1,col2" << std::endl;
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.StoreImpl( parameters, data2 ), PartitionNodeException,
 		".*:\\d+: Unable to find partitionBy key: campaign_id in incoming header: col1,col2" );
+}
+
+void PartitionNodeTest::testDelete()
+{
+	std::stringstream xmlContents;
+	xmlContents << "<PartitionNode >" << std::endl
+				<< "  <Delete>" << std::endl
+				<< "    <ForwardTo name=\"name1\" />" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "  <Write partitionBy=\"key\" sortTimeout=\"5.0\" >" << std::endl
+				<< "    <ForwardTo name=\"name1\" />" << std::endl
+				<< "  </Write>" << std::endl
+				<< "</PartitionNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	PartitionNode node( "name", client, *nodes[0] );
+
+	std::map<std::string,std::string> parameters;
+	parameters["param1"] = "value1";
+	parameters["param2"] = "value2";
+
+	CPPUNIT_ASSERT_NO_THROW( node.DeleteImpl( parameters ) );
+	
+	std::stringstream expected;
+	expected << "Delete called with Name: name1 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+}
+
+void PartitionNodeTest::testDeleteNotSupported()
+{
+	std::stringstream xmlContents;
+	xmlContents << "<PartitionNode >" << std::endl
+				<< "  <Write partitionBy=\"key\" sortTimeout=\"5.0\" >" << std::endl
+				<< "    <ForwardTo name=\"name1\" />" << std::endl
+				<< "  </Write>" << std::endl
+				<< "</PartitionNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	PartitionNode node( "name", client, *nodes[0] );
+
+	std::map<std::string,std::string> parameters;
+	parameters["param1"] = "value1";
+	parameters["param2"] = "value2";
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.DeleteImpl( parameters ), PartitionNodeException,
+		".*:\\d+: PartitionNode: name does not have a delete-side configuration");
 }
