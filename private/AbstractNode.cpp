@@ -69,7 +69,8 @@ AbstractNode::AbstractNode( const std::string& i_rName, DataProxyClient& i_rPare
 	m_rParent( i_rParent ),
 	m_ReadConfig(),
 	m_WriteConfig(),
-	m_DeleteConfig()
+	m_DeleteConfig(),
+	m_TeeConfig()
 {
 	// set defaults
 	m_ReadConfig.SetValue< RetryCount >( 0 );
@@ -83,6 +84,30 @@ AbstractNode::AbstractNode( const std::string& i_rName, DataProxyClient& i_rPare
 	if( pNode != NULL )
 	{
 		SetConfig( *pNode, m_ReadConfig );
+
+		// extract Tee configuration
+		pNode = XMLUtilities::TryGetSingletonChildByName( pNode, TEE_NODE );
+		if( pNode != NULL )
+		{
+			std::set< std::string > allowedAttributes;
+			allowedAttributes.insert( FORWARD_TO_ATTRIBUTE );
+			allowedAttributes.insert( FORWARD_TRANSLATED_PARAMETERS_ATTRIBUTE );
+			allowedAttributes.insert( FORWARD_TRANSFORMED_STREAM_ATTRIBUTE );
+			XMLUtilities::ValidateAttributes( pNode, allowedAttributes );
+			XMLUtilities::ValidateNode( pNode, std::set< std::string >() );
+
+			m_TeeConfig.SetValue< ForwardNodeName >( XMLUtilities::GetAttributeValue( pNode, FORWARD_TO_ATTRIBUTE ) );
+			xercesc::DOMAttr* pAttribute = XMLUtilities::GetAttribute( pNode, FORWARD_TRANSLATED_PARAMETERS_ATTRIBUTE );
+			if( pAttribute != NULL && XMLUtilities::XMLChToString(pAttribute->getValue()) == "true" )
+			{
+				m_TeeConfig.SetValue< UseTranslatedParameters >( true );
+			}
+			pAttribute = XMLUtilities::GetAttribute( pNode, FORWARD_TRANSFORMED_STREAM_ATTRIBUTE );
+			if( pAttribute != NULL && XMLUtilities::XMLChToString(pAttribute->getValue()) == "true" )
+			{
+				m_TeeConfig.SetValue< UseTransformedStream >( true );
+			}
+		}
 	}
 
 	// extract common write parameters
@@ -139,8 +164,8 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 		bool needToTransform = m_ReadConfig.GetValue< Transformers >() != NULL && m_ReadConfig.GetValue< Transformers >()->HasStreamTransformers();
 
 		// if we have a retry-count, we cannot write directly to the stream because the first n calls may fail (can only write the last result)
-		// if we have transformers configured, we also have to write to a temporary stream
-		if( m_ReadConfig.GetValue< RetryCount >() > 0 || needToTransform )
+		// if we have to tee the data out or if we have transformers configured, we also have to write to a temporary stream
+		if( m_ReadConfig.GetValue< RetryCount >() > 0 || !m_TeeConfig.GetValue< ForwardNodeName >().IsNull() || needToTransform )
 		{
 			pUseData = &tempIOStream;
 		}
@@ -169,14 +194,31 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 		}
 
 		// finally, if we need to transform, then we know we used the tempIOStream; transform it
+		boost::shared_ptr< std::stringstream > pTransformedStream;
 		if ( needToTransform )
 		{
-			o_rData << m_ReadConfig.GetValue< Transformers >()->TransformStream( *pUseParameters, tempIOStream )->rdbuf();
+			pTransformedStream = m_ReadConfig.GetValue< Transformers >()->TransformStream( *pUseParameters, tempIOStream );
+			pUseData = pTransformedStream.get();
+			
+			// rewind the temp in case we need to tee
+			tempIOStream.clear();
+			tempIOStream.seekg( 0L );
 		}
-		// otherwise, if we didn't write directly to the output stream, push it out from the temp
-		else if( pUseData == &tempIOStream )
+
+		// tee the data if we need to
+		if( !m_TeeConfig.GetValue< ForwardNodeName >().IsNull() )
 		{
-			o_rData << tempIOStream.rdbuf();
+			const std::map< std::string, std::string >& rTeeParameters = ( m_TeeConfig.GetValue< UseTranslatedParameters >() ? translatedParameters : i_rParameters );
+			std::istream& rTeeStream = ( m_TeeConfig.GetValue< UseTransformedStream >() && needToTransform ? *pTransformedStream : tempIOStream );
+			m_rParent.Store( m_TeeConfig.GetValue< ForwardNodeName >(), rTeeParameters, rTeeStream );
+			rTeeStream.clear();
+			rTeeStream.seekg( 0L );
+		}
+
+		// at this point, if we didn't write directly to the output stream, push it out from the temp
+		if( pUseData != &o_rData )
+		{
+			o_rData << pUseData->rdbuf();
 		}
 		
 		if( !o_rData.good() )
@@ -540,6 +582,7 @@ void AbstractNode::ValidateXmlElements( const xercesc::DOMNode& i_rNode,
 		allowedChildren.clear();
 		allowedChildren.insert( commonChildren.begin(), commonChildren.end() );
 		allowedChildren.insert( commonReadWriteChildren.begin(), commonReadWriteChildren.end() );
+		allowedChildren.insert( TEE_NODE );
 		allowedChildren.insert( i_rAdditionalReadElements.begin(), i_rAdditionalReadElements.end() );
 		XMLUtilities::ValidateNode( pNode, allowedChildren );
 	}

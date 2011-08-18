@@ -362,6 +362,47 @@ void LocalFileProxyTest::testLoadNoParameters()
 	CPPUNIT_ASSERT_EQUAL( dataInFile.str(), results.str() );
 }
 
+void LocalFileProxyTest::testLoadFailIfOlderThan()
+{
+	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >"
+				<< "<Read failIfOlderThan=\"2\" />"
+				<< "</DataNode>";
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+
+	std::map< std::string, std::string > parameters;
+	parameters["key1"] = "value1";
+	parameters["key2"] = "value2";
+
+	std::stringstream dataInFile;
+	dataInFile << "this is some data" << std::endl;
+	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( parameters ) );
+	std::ofstream file( fileSpec.c_str() );
+	file << dataInFile.str();
+	file.close();
+
+	// sleep for a second; should still be OK
+	::sleep( 1 );
+
+	std::stringstream results;
+	CPPUNIT_ASSERT_NO_THROW( proxy.Load( parameters, results ) );
+	CPPUNIT_ASSERT( results.good() );
+
+	CPPUNIT_ASSERT_EQUAL( dataInFile.str(), results.str() );
+
+	results.str("");
+	results.clear();
+	// sleep for 2 seconds; should now fail
+	::sleep( 2 );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Load( parameters, results ), LocalFileProxyException, 
+		".*:\\d+: File: .* is more than 2 seconds old; it is .* seconds old" );
+}
+
 void LocalFileProxyTest::testStoreUnwritable()
 {
 	MockDataProxyClient client;

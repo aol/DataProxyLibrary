@@ -33,6 +33,11 @@ private:
 	CPPUNIT_TEST( testLoadFailureForwarding_ParameterValidationFail );
 	CPPUNIT_TEST( testLoadFailureForwarding_UseTranslatedParams_False );
 	CPPUNIT_TEST( testLoadFailureForwarding_UseTranslatedParams_True );
+	CPPUNIT_TEST( testLoadTee );
+	CPPUNIT_TEST( testLoadTee_UseTranslatedParams_False );
+	CPPUNIT_TEST( testLoadTee_UseTranslatedParams_True );
+	CPPUNIT_TEST( testLoadTee_UseTransformedStream_False );
+	CPPUNIT_TEST( testLoadTee_UseTransformedStream_True );
 
 	CPPUNIT_TEST( testStore );
 	CPPUNIT_TEST( testStoreTranslateParameters );
@@ -79,6 +84,11 @@ public:
 	void testLoadFailureForwarding_ParameterValidationFail();
 	void testLoadFailureForwarding_UseTranslatedParams_False();
 	void testLoadFailureForwarding_UseTranslatedParams_True();
+	void testLoadTee();
+	void testLoadTee_UseTranslatedParams_False();
+	void testLoadTee_UseTranslatedParams_True();
+	void testLoadTee_UseTransformedStream_False();
+	void testLoadTee_UseTransformedStream_True();
 
 	void testStore();
 	void testStoreTranslateParameters();

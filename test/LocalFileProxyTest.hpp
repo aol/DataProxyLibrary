@@ -31,6 +31,7 @@ private:
 	CPPUNIT_TEST( testLoadNameFormat );
 	CPPUNIT_TEST( testLoadNameFormatAll );
 	CPPUNIT_TEST( testLoadNoParameters );
+	CPPUNIT_TEST( testLoadFailIfOlderThan );
 	CPPUNIT_TEST( testStoreUnwritable );
 	CPPUNIT_TEST( testStore );
 	CPPUNIT_TEST( testStoreNameFormat );
@@ -73,6 +74,7 @@ public:
 	void testLoadNameFormat();
 	void testLoadNameFormatAll();
 	void testLoadNoParameters();
+	void testLoadFailIfOlderThan();
 	void testStoreUnwritable();
 	void testStore();
 	void testStoreNameFormat();

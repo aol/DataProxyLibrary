@@ -724,6 +724,183 @@ void AbstractNodeTest::testLoadFailureForwarding_UseTranslatedParams_True()
 	CPPUNIT_ASSERT_EQUAL( expected.str(), results.str() );
 }
 
+void AbstractNodeTest::testLoadTee()
+{
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Read>" << std::endl
+				<< "      <Tee forwardTo=\"teeName\" />" << std::endl
+				<< "    </Read>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+	std::string data( "this is some data that will be teed & returned" );
+	node.SetDataToReturn( data );
+
+	std::map<std::string,std::string> parameters;
+	parameters[ "name1" ] = "value1";
+
+	std::stringstream results;
+	CPPUNIT_ASSERT_NO_THROW( node.Load( parameters, results ) );
+
+	std::stringstream expected;
+	expected << "Store called with Name: teeName Parameters: " << ProxyUtilities::ToString( parameters ) << " Data: " << data << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+
+	CPPUNIT_ASSERT_EQUAL( data, results.str() );
+}
+
+void AbstractNodeTest::testLoadTee_UseTranslatedParams_False()
+{
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Read>" << std::endl
+				<< "      <TranslateParameters> <Parameter name=\"name2\" valueOverride=\"override2\" /> </TranslateParameters>" << std::endl
+				<< "      <Tee forwardTo=\"teeName\" forwardTranslatedParameters=\"false\"/>" << std::endl
+				<< "    </Read>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+	std::string data( "this is some data that will be teed & returned" );
+	node.SetDataToReturn( data );
+
+	std::map<std::string,std::string> parameters;
+	parameters[ "name1" ] = "value1";
+
+	std::stringstream results;
+	CPPUNIT_ASSERT_NO_THROW( node.Load( parameters, results ) );
+
+	std::stringstream expected;
+	expected << "Store called with Name: teeName Parameters: " << ProxyUtilities::ToString( parameters ) << " Data: " << data << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+
+	CPPUNIT_ASSERT_EQUAL( data, results.str() );
+}
+
+void AbstractNodeTest::testLoadTee_UseTranslatedParams_True()
+{
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Read>" << std::endl
+				<< "      <TranslateParameters> <Parameter name=\"name2\" valueOverride=\"override2\" /> </TranslateParameters>" << std::endl
+				<< "      <Tee forwardTo=\"teeName\" forwardTranslatedParameters=\"true\"/>" << std::endl
+				<< "    </Read>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+	std::string data( "this is some data that will be teed & returned" );
+	node.SetDataToReturn( data );
+
+	std::map<std::string,std::string> parameters;
+	parameters[ "name1" ] = "value1";
+
+	std::stringstream results;
+	CPPUNIT_ASSERT_NO_THROW( node.Load( parameters, results ) );
+	parameters[ "name2" ] = "override2";
+
+	std::stringstream expected;
+	expected << "Store called with Name: teeName Parameters: " << ProxyUtilities::ToString( parameters ) << " Data: " << data << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+
+	CPPUNIT_ASSERT_EQUAL( data, results.str() );
+}
+
+void AbstractNodeTest::testLoadTee_UseTransformedStream_False()
+{
+	std::string m_LibrarySpec;
+	TransformerTestHelpers::SetupLibraryFile( m_pTempDir->GetDirectoryName(), m_LibrarySpec );
+
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Read>" << std::endl
+			 	<< "      <StreamTransformers>" << std::endl
+				<< "		 <StreamTransformer path=\"" << m_LibrarySpec << "\"" << " functionName=\"TransformFunction\">" << std::endl
+				<< " 		  	<Parameter name=\"st_param1\" value=\"st_value1\" /> " << std::endl
+				<< "	     </StreamTransformer>" << std::endl
+				<< "      </StreamTransformers>" << std::endl
+				<< "      <Tee forwardTo=\"teeName\" forwardTransformedStream=\"false\" />" << std::endl
+				<< "    </Read>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+	std::string data( "this is some data that will be teed & returned" );
+	node.SetDataToReturn( data );
+
+	std::map<std::string,std::string> parameters;
+	parameters[ "name1" ] = "value1";
+
+	std::stringstream results;
+	CPPUNIT_ASSERT_NO_THROW( node.Load( parameters, results ) );
+	std::string additionalData( "st_param1 : st_value1\n" );
+
+	std::stringstream expected;
+	expected << "Store called with Name: teeName Parameters: " << ProxyUtilities::ToString( parameters ) << " Data: " << data << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+
+	CPPUNIT_ASSERT_EQUAL( additionalData + data, results.str() );
+}
+
+void AbstractNodeTest::testLoadTee_UseTransformedStream_True()
+{
+	std::string m_LibrarySpec;
+	TransformerTestHelpers::SetupLibraryFile( m_pTempDir->GetDirectoryName(), m_LibrarySpec );
+
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Read>" << std::endl
+			 	<< "      <StreamTransformers>" << std::endl
+				<< "		 <StreamTransformer path=\"" << m_LibrarySpec << "\"" << " functionName=\"TransformFunction\">" << std::endl
+				<< " 		  	<Parameter name=\"st_param1\" value=\"st_value1\" /> " << std::endl
+				<< "	     </StreamTransformer>" << std::endl
+				<< "      </StreamTransformers>" << std::endl
+				<< "      <Tee forwardTo=\"teeName\" forwardTransformedStream=\"true\"/>" << std::endl
+				<< "    </Read>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+	std::string data( "this is some data that will be teed & returned" );
+	node.SetDataToReturn( data );
+
+	std::map<std::string,std::string> parameters;
+	parameters[ "name1" ] = "value1";
+
+	std::stringstream results;
+	CPPUNIT_ASSERT_NO_THROW( node.Load( parameters, results ) );
+	std::string additionalData( "st_param1 : st_value1\n" );
+
+	std::stringstream expected;
+	expected << "Store called with Name: teeName Parameters: " << ProxyUtilities::ToString( parameters ) << " Data: "
+			 << additionalData << data << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+
+	CPPUNIT_ASSERT_EQUAL( additionalData + data, results.str() );
+}
+
 void AbstractNodeTest::testStore()
 {
 	std::stringstream xmlContents;
@@ -1509,4 +1686,3 @@ void AbstractNodeTest::testDeleteFailureForwarding_UseTranslatedParams_True()
 	expected << "Delete called with Name: failureName Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
 	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
 }
-

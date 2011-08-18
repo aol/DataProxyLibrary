@@ -57,6 +57,7 @@ private:
 	OpenMode m_OpenMode;
 	int m_SkipLines;
 	UniqueIdGenerator& m_rUniqueIdGenerator;
+	Nullable< long > m_FailIfOlderThan;
 	// Pending (store or delete) operations: a map from destination -> temp filenames or "" for deletes
 	std::map< std::string, std::vector< std::string > > m_PendingOps; 
 	boost::shared_mutex m_PendingOpsMutex;

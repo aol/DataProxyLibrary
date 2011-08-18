@@ -39,6 +39,7 @@ const std::string PARAMETER_NODE( "Parameter" );
 const std::string READ_NODE( "Read" );
 const std::string WRITE_NODE( "Write" );
 const std::string DELETE_NODE( "Delete" );
+const std::string TEE_NODE( "Tee" );
 
 // common formatters
 const std::string KEY_FORMATTER( "%k" );

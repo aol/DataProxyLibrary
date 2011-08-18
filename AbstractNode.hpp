@@ -93,6 +93,13 @@ private:
 		RowEnd > > > > > > > >
 	NodeConfigDatum;
 
+	typedef
+		GenericDatum< ForwardNodeName,
+		GenericDatum< UseTranslatedParameters,
+		GenericDatum< UseTransformedStream,
+		RowEnd > > >
+	TeeConfigDatum;
+
 	void SetConfig( const xercesc::DOMNode& i_rNode, NodeConfigDatum& o_rConfig ) const;
 	
 	std::string m_Name;
@@ -100,6 +107,7 @@ private:
 	NodeConfigDatum m_ReadConfig;
 	NodeConfigDatum m_WriteConfig;
 	NodeConfigDatum m_DeleteConfig;
+	TeeConfigDatum m_TeeConfig;
 };
 
 

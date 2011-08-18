@@ -25,6 +25,7 @@
 namespace
 {
 	// attributes
+	const std::string FAIL_IF_OLDER_THAN_ATTRIBUTE( "failIfOlderThan" );
 	const std::string ON_FILE_EXIST_ATTRIBUTE( "onFileExist" );
 	const std::string NEW_FILE_PARAM_ATTRIBUTE( "newFileParam" );
 	const std::string NAME_FORMAT_ATTRIBUTE( "format" );
@@ -86,6 +87,7 @@ LocalFileProxy::LocalFileProxy( const std::string& i_rName, DataProxyClient& i_r
 	m_OpenMode( OVERWRITE ),
 	m_SkipLines( 0 ),
 	m_rUniqueIdGenerator( i_rUniqueIdGenerator ),
+	m_FailIfOlderThan(),
 	m_PendingOps(),
 	m_PendingOpsMutex()
 {
@@ -108,10 +110,22 @@ LocalFileProxy::LocalFileProxy( const std::string& i_rName, DataProxyClient& i_r
 	allowedWriteAttributes.insert( ON_FILE_EXIST_ATTRIBUTE );
 	allowedWriteAttributes.insert( NEW_FILE_PARAM_ATTRIBUTE );
 	allowedWriteAttributes.insert( SKIP_LINES_ATTRIBUTE );
-	AbstractNode::ValidateXmlAttributes( i_rNode, std::set<std::string>(), allowedWriteAttributes, std::set<std::string>() );
+	std::set< std::string > allowedReadAttributes;
+	allowedReadAttributes.insert( FAIL_IF_OLDER_THAN_ATTRIBUTE );
+	AbstractNode::ValidateXmlAttributes( i_rNode, allowedReadAttributes, allowedWriteAttributes, std::set<std::string>() );
 
+	// try to extract read-specific configuration
+	xercesc::DOMNode* pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, READ_NODE );
+	if( pNode != NULL )
+	{
+		pAttribute = XMLUtilities::GetAttribute( pNode, FAIL_IF_OLDER_THAN_ATTRIBUTE );
+		if( pAttribute != NULL )
+		{
+			m_FailIfOlderThan = boost::lexical_cast< long >( XMLUtilities::XMLChToString(pAttribute->getValue()) );
+		}
+	}
 	// try to extract write-specific configuration
-	xercesc::DOMNode* pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, WRITE_NODE );
+	pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, WRITE_NODE );
 	if( pNode != NULL )
 	{
 		pAttribute = XMLUtilities::GetAttribute( pNode, ON_FILE_EXIST_ATTRIBUTE );
@@ -150,6 +164,15 @@ void LocalFileProxy::LoadImpl( const std::map<std::string,std::string>& i_rParam
 	if( !FileUtilities::DoesExist(fileSpec) )
 	{
 		MV_THROW( LocalFileMissingException, "Could not locate file: " << fileSpec );
+	}
+
+	if( !m_FailIfOlderThan.IsNull() )
+	{
+		long fileAge = DateTime().SecondsFromEpoch() - FileUtilities::GetModTime( fileSpec ).SecondsFromEpoch();
+		if( fileAge > m_FailIfOlderThan )
+		{
+			MV_THROW( LocalFileProxyException, "File: " << fileSpec << " is more than " << m_FailIfOlderThan << " seconds old; it is " << fileAge << " seconds old" );
+		}
 	}
 
 	std::ifstream file( fileSpec.c_str() );
