@@ -76,6 +76,7 @@ private:
 	DATUMINFO( Transformers, boost::shared_ptr<TransformerManager>);
 	DATUMINFO( RequiredParameters, std::set<std::string> );
 	DATUMINFO( RetryCount, uint );
+	DATUMINFO( RetryDelay, double );
 	DATUMINFO( ForwardNodeName, Nullable<std::string> );
 	DATUMINFO( IncludeNodeNameAsParameter, Nullable<std::string> );
 	DATUMINFO( UseTranslatedParameters, bool );
@@ -86,11 +87,12 @@ private:
 		GenericDatum< Transformers,					// stream transformer(s)
 		GenericDatum< RequiredParameters,			// required parameters
 		GenericDatum< RetryCount,					// before failure forwarding, # of retries
+		GenericDatum< RetryDelay,					// seconds to pause before retrying
 		GenericDatum< ForwardNodeName,				// failure forwarding: name
 		GenericDatum< IncludeNodeNameAsParameter,	// failure forwarding: include node name as parameters
 		GenericDatum< UseTranslatedParameters,		// failure forwarding: use translated params (or original)
 		GenericDatum< UseTransformedStream,			// failure forwarding: use transformed stream (or original)
-		RowEnd > > > > > > > >
+		RowEnd > > > > > > > > >
 	NodeConfigDatum;
 
 	typedef

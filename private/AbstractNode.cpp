@@ -21,6 +21,8 @@
 
 namespace
 {
+	const unsigned long MICROSECONDS_PER_SECOND( 1000000 );
+
 	const std::map< std::string, std::string >& ChooseParameters( const std::map< std::string, std::string >& i_rOriginalParameters,
 																  const std::map< std::string, std::string >& i_rTranslatedParameters,
 																  bool i_ForwardTranslatedParameters )
@@ -74,8 +76,11 @@ AbstractNode::AbstractNode( const std::string& i_rName, DataProxyClient& i_rPare
 {
 	// set defaults
 	m_ReadConfig.SetValue< RetryCount >( 0 );
+	m_ReadConfig.SetValue< RetryDelay >( 0.0 );
 	m_WriteConfig.SetValue< RetryCount >( 0 );
+	m_WriteConfig.SetValue< RetryDelay >( 0.0 );
 	m_DeleteConfig.SetValue< RetryCount >( 0 );
+	m_DeleteConfig.SetValue< RetryDelay >( 0.0 );
 
 	// Validate 
 	
@@ -185,6 +190,12 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 				{
 					tempIOStream.str("");
 					tempIOStream.clear();
+
+					if( m_ReadConfig.GetValue< RetryDelay >() > 0.0 )
+					{
+						MVLOGGER( "root.lib.DataProxy.DataProxyClient.Load.RetryDelay", "Sleeping for " <<  m_ReadConfig.GetValue< RetryDelay >() << " seconds before retrying" );
+						::usleep( ulong( m_ReadConfig.GetValue< RetryDelay >() * MICROSECONDS_PER_SECOND ) );
+					}
 				}
 				else
 				{
@@ -317,6 +328,12 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 				{
 					pUseData->clear();
 					pUseData->seekg( retryPos );
+
+					if( m_WriteConfig.GetValue< RetryDelay >() > 0.0 )
+					{
+						MVLOGGER( "root.lib.DataProxy.DataProxyClient.Store.RetryDelay", "Sleeping for " <<  m_WriteConfig.GetValue< RetryDelay >() << " seconds before retrying" );
+						::usleep( ulong( m_WriteConfig.GetValue< RetryDelay >() * MICROSECONDS_PER_SECOND ) );
+					}
 				}
 				else	// otherwise, we're out of retries; throw the exception so failure-forwarding can take place
 				{
@@ -403,6 +420,11 @@ bool AbstractNode::Delete( const std::map<std::string,std::string>& i_rParameter
 				if( i >= m_DeleteConfig.GetValue< RetryCount >() )
 				{
 					throw;
+				}
+				if( m_DeleteConfig.GetValue< RetryDelay >() > 0.0 )
+				{
+					MVLOGGER( "root.lib.DataProxy.DataProxyClient.Delete.RetryDelay", "Sleeping for " <<  m_DeleteConfig.GetValue< RetryDelay >() << " seconds before retrying" );
+					::usleep( ulong( m_DeleteConfig.GetValue< RetryDelay >() * MICROSECONDS_PER_SECOND ) );
 				}
 			}
 		}
@@ -498,6 +520,7 @@ void AbstractNode::SetConfig( const xercesc::DOMNode& i_rNode, NodeConfigDatum& 
 	// allowed forwarding attributes
 	allowedAttributes.insert( FORWARD_TO_ATTRIBUTE );
 	allowedAttributes.insert( RETRY_COUNT_ATTRIBUTE );
+	allowedAttributes.insert( RETRY_DELAY_ATTRIBUTE );
 	allowedAttributes.insert( INCLUDE_NAME_AS_PARAMETER_ATTRIBUTE );
 	allowedAttributes.insert( FORWARD_TRANSLATED_PARAMETERS_ATTRIBUTE );
 	allowedAttributes.insert( FORWARD_TRANSFORMED_STREAM_ATTRIBUTE );
@@ -513,6 +536,11 @@ void AbstractNode::SetConfig( const xercesc::DOMNode& i_rNode, NodeConfigDatum& 
 		if( pAttribute != NULL )
 		{
 			o_rConfig.SetValue< RetryCount >( boost::lexical_cast< uint >( XMLUtilities::XMLChToString(pAttribute->getValue()) ) );
+			pAttribute = XMLUtilities::GetAttribute( pNode, RETRY_DELAY_ATTRIBUTE );
+			if( pAttribute != NULL )
+			{
+				o_rConfig.SetValue< RetryDelay >( boost::lexical_cast< double >( XMLUtilities::XMLChToString(pAttribute->getValue()) ) );
+			}
 		}
 
 		// check for forward-to

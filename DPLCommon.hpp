@@ -22,6 +22,7 @@ const std::string NAME_ATTRIBUTE( "name" );
 const std::string TYPE_ATTRIBUTE( "type" );
 const std::string LOCATION_ATTRIBUTE( "location" );
 const std::string RETRY_COUNT_ATTRIBUTE( "retryCount" );
+const std::string RETRY_DELAY_ATTRIBUTE( "retryDelay" );
 const std::string FORWARD_TO_ATTRIBUTE( "forwardTo" );
 const std::string FORWARD_TRANSLATED_PARAMETERS_ATTRIBUTE( "forwardTranslatedParameters" );
 const std::string FORWARD_TRANSFORMED_STREAM_ATTRIBUTE( "forwardTransformedStream" );
