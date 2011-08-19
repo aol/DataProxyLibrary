@@ -997,7 +997,8 @@ void LocalFileProxyTest::testDeleteUnremovable()
 	// try again but this time un-executable
 	::system( ( std::string( "chmod 666 " ) + m_pTempDir->GetDirectoryName() ).c_str() );
 
-	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Delete( parameters ), InvalidDirectoryException,
+		".*/FileUtilities\\.cpp:\\d+: The directory " << m_pTempDir->GetDirectoryName() << " does not have the requested file access permissions." );
 }
 
 void LocalFileProxyTest::testDelete()

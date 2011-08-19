@@ -234,7 +234,7 @@ void LocalFileProxy::DeleteImpl( const std::map<std::string,std::string>& i_rPar
 	
 	if( FileUtilities::DoesDirectoryExist( FileUtilities::GetDirName( fileSpec ) ))
 	{
-		FileUtilities::ValidateDirectory( FileUtilities::GetDirName( fileSpec ), W_OK );
+		FileUtilities::ValidateDirectory( FileUtilities::GetDirName( fileSpec ), W_OK | X_OK );
 	}
 
 	if( !FileUtilities::DoesExist( fileSpec ) )
