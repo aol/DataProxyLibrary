@@ -1,5 +1,5 @@
 //
-// FILE NAME:       $RCSfile: ValidateStreamTransformer.hpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

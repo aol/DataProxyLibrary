@@ -1,5 +1,5 @@
 //
-// FILE NAME:       $RCSfile: ColumnAppenderStreamTransformer.hpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

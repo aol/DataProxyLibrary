@@ -1,5 +1,5 @@
 //
-// FILE NAME:       $RCSfile: CampaignReferenceGeneratorStreamTransformer.hpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

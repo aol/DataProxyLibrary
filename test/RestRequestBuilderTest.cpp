@@ -1,4 +1,4 @@
-// FILE NAME:       $RCSfile: RestRequestBuilderTest.cpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

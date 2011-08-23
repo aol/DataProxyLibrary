@@ -1,5 +1,5 @@
 //
-// FILE NAME:       $RCSfile: PropertyDomain.cpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

@@ -1,11 +1,11 @@
-// FILE NAME:       $RCSfile: MultithreadDataProxyClientTest.hpp,v $
+// FILE NAME:       $HeadURL$
 //
-// REVISION:        $Revision: 215266 $
+// REVISION:        $Revision$
 //
 // COPYRIGHT:       (c) 2006 Advertising.com All Rights Reserved.
 //
-// LAST UPDATED:    $Date: 2011-07-11 20:29:32 -0400 (Mon, 11 Jul 2011) $
-// UPDATED BY:      $Author: sstrick $
+// LAST UPDATED:    $Date$
+// UPDATED BY:      $Author$
 
 #ifndef _MULTITHREAD_DATA_PROXY_CLIENT_TEST_HPP_
 #define _MULTITHREAD_DATA_PROXY_CLIENT_TEST_HPP_

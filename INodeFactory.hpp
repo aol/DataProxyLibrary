@@ -1,5 +1,5 @@
 //
-// FILE NAME:       $RCSfile: INodeFactory.hpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

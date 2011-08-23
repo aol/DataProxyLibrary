@@ -1,4 +1,4 @@
-// FILE NAME:       $RCSfile: DataProxyWrapperTest.cpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

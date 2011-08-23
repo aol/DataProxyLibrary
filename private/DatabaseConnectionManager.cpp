@@ -1,5 +1,5 @@
 //
-// FILE NAME:      $RCSfile: DatabaseConnectionManager.cpp,v $
+// FILE NAME:      $HeadURL$
 //
 // REVISION:        $Revision$
 //

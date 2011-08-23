@@ -1,5 +1,5 @@
 //
-// FILE NAME:       $RCSfile: TestableDataProxyClient.hpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

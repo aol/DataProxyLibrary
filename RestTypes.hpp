@@ -1,5 +1,5 @@
 //
-// FILE NAME:       $RCSfile: RestTypes.hpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

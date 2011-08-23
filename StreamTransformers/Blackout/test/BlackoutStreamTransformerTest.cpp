@@ -1,5 +1,5 @@
 //
-// FILE NAME:       $RCSfile: BlackoutStreamTransformerTest.cpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

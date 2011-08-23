@@ -1,5 +1,5 @@
 //
-// FILE NAME:       $RCSfile: RestRequestBuilder.cpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

@@ -1,4 +1,4 @@
-// FILE NAME:       $RCSfile: NodeFactoryTest.hpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

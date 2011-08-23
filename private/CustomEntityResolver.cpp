@@ -1,5 +1,5 @@
 //
-// FILE NAME:       $RCSfile: CustomEntityResolver.cpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

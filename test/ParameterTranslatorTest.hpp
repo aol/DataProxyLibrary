@@ -1,4 +1,4 @@
-// FILE NAME:       $RCSfile: ParameterTranslatorTest.hpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

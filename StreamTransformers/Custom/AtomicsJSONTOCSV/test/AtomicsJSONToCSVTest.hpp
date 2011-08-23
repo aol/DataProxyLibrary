@@ -1,13 +1,13 @@
 //
-// FILE NAME:           $RCSfile: UTCTimeProviderTest.hpp,v $
+// FILE NAME:           $HeadURL$
 //
-// REVISION:            $Revision: 213033 $
+// REVISION:            $Revision$
 //
 // COPYRIGHT:           (c) 2005 Advertising.com All Rights Reserved.
 //
-// LAST UPDATED:        $Date: 2011-06-22 17:12:18 -0400 (Wed, 22 Jun 2011) $
+// LAST UPDATED:        $Date$
 //
-// UPDATED BY:          $Author: robarson $
+// UPDATED BY:          $Author$
 //
 #ifndef _ATOMICS_JSON_TO_CSV_CONVERTER_TEST_HPP
 #define _ATOMICS_JSON_TO_CSV_CONVERTER_TEST_HPP

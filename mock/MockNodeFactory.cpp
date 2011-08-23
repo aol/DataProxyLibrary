@@ -1,5 +1,5 @@
 //
-// FILE NAME:       $RCSfile: MockNodeFactory.cpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

@@ -1,6 +1,6 @@
 
 //
-// FILE NAME:       $RCSfile: PreCampaignReferenceDatum.hpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

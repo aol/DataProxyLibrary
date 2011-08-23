@@ -1,5 +1,5 @@
 //
-// FILE NAME:           $RCSfile: BlackoutTransformerCommon.hpp,v $
+// FILE NAME:           $HeadURL$
 //
 // REVISION:            $Revision$
 //

@@ -1,5 +1,5 @@
 //
-// FILE NAME:       $RCSfile: SeederEquivalenceClassDomainTest.cpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

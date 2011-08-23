@@ -1,4 +1,4 @@
-# FILE NAME:           $RCSfile: Makefile,v $
+# FILE NAME:           $HeadURL$
 #
 # REVISION:            $Revision$
 #

@@ -1,13 +1,13 @@
 //
-// FILE NAME:	   $RCSfile: DeleteHandlerTest.cpp,v $
+// FILE NAME:	   $HeadURL$
 //
-// REVISION:		$Revision: 215839 $
+// REVISION:		$Revision$
 //
 // COPYRIGHT:	   (c) 2006 Advertising.com All Rights Reserved.
 //
-// LAST UPDATED:	$Date: 2011-07-15 04:36:00 -0400 (Fri, 15 Jul 2011) $
+// LAST UPDATED:	$Date$
 //
-// UPDATED BY:	  $Author: bhh1988 $
+// UPDATED BY:	  $Author$
 
 #include "DeleteHandlerTest.hpp"
 #include "DataProxyService.hpp"

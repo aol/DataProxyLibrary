@@ -1,4 +1,4 @@
-// FILE NAME:       $RCSfile: RouterNodeTest.hpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

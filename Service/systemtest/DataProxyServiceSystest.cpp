@@ -1,5 +1,5 @@
 //  
-//	FILE NAME:	$RCSfile: DataProxyServiceSystest.cpp,v $
+//	FILE NAME:	$HeadURL$
 //  
 //	DESCRIPTION:	
 //  

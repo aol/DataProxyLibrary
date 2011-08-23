@@ -1,5 +1,5 @@
 //
-// FILE NAME:	   $RCSfile: StoreHandlerTest.cpp,v $
+// FILE NAME:	   $HeadURL$
 //
 // REVISION:		$Revision$
 //

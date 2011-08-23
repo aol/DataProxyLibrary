@@ -1,5 +1,5 @@
 //
-// FILE NAME:       $RCSfile: PartitionNode.cpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

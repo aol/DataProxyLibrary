@@ -1,5 +1,5 @@
 //
-// FILE NAME:       $RCSfile: NodeFactory.hpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

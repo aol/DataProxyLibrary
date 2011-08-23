@@ -1,4 +1,4 @@
-// FILE NAME:       $RCSfile: AbstractNodeTest.cpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

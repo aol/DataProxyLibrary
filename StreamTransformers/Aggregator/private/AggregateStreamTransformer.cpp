@@ -1,5 +1,5 @@
 //
-// FILE NAME:       $RCSfile: AggregateStreamTransformer.cpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

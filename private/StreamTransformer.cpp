@@ -1,5 +1,5 @@
 //
-// FILE NAME:       $RCSfile: StreamTransformer.cpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

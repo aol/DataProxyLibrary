@@ -1,11 +1,11 @@
-// FILE NAME:       $RCSfile: MultithreadDataProxyClientTest.cpp,v $
+// FILE NAME:       $HeadURL$
 //
-// REVISION:        $Revision: 215522 $
+// REVISION:        $Revision$
 //
 // COPYRIGHT:       (c) 2006 Advertising.com All Rights Reserved.
 //
-// LAST UPDATED:    $Date: 2011-07-12 21:49:22 -0400 (Tue, 12 Jul 2011) $
-// UPDATED BY:      $Author: sstrick $
+// LAST UPDATED:    $Date$
+// UPDATED BY:      $Author$
 
 #include "TestableDataProxyClient.hpp"
 #include "CustomEntityResolver.hpp"

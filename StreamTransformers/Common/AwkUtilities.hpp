@@ -1,5 +1,5 @@
 //
-// FILE NAME:       $RCSfile: AwkUtilities.hpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

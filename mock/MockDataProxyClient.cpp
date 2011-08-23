@@ -1,5 +1,5 @@
 //
-// FILE NAME:       $RCSfile: MockDataProxyClient.cpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

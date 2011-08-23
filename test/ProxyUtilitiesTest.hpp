@@ -1,4 +1,4 @@
-// FILE NAME:       $RCSfile: ProxyUtilitiesTest.hpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

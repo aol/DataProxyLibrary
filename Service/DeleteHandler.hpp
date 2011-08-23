@@ -1,12 +1,12 @@
 //
-// FILE NAME:		$RCSfile: DeleteHandler.hpp,v $
+// FILE NAME:		$HeadURL$
 //
-// REVISION:		$Revision: 215839 $
+// REVISION:		$Revision$
 //
 // COPYRIGHT:		(c) 2007 Advertising.com All Rights Reserved.
 //
-// LAST UPDATED:	$Date: 2011-07-15 04:36:00 -0400 (Fri, 15 Jul 2011) $
-// UPDATED BY:		$Author: bhh1988 $
+// LAST UPDATED:	$Date$
+// UPDATED BY:		$Author$
 //
 
 #ifndef _DELETE_HANDLER_

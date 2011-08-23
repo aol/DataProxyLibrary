@@ -1,5 +1,5 @@
 //
-// FILE NAME:       $RCSfile: RestDataProxy.hpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

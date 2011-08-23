@@ -1,13 +1,13 @@
 //
-// FILE NAME:           $RCSfile: UTCTimeProviderTest.cpp,v $
+// FILE NAME:           $HeadURL$
 //
-// REVISION:            $Revision: 213033 $
+// REVISION:            $Revision$
 //
 // COPYRIGHT:           (c) 2005 Advertising.com All Rights Reserved.
 //
-// LAST UPDATED:        $Date: 2011-06-22 17:12:18 -0400 (Wed, 22 Jun 2011) $
+// LAST UPDATED:        $Date$
 //
-// UPDATED BY:          $Author: robarson $
+// UPDATED BY:          $Author$
 //
 #include "AtomicsJSONToCSV.hpp"
 #include "AtomicsJSONToCSVTest.hpp"

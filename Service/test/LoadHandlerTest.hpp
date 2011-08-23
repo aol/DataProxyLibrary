@@ -1,5 +1,5 @@
 //
-// FILE NAME:       $RCSfile: LoadHandlerTest.hpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

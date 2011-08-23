@@ -1,5 +1,5 @@
 //
-// FILE NAME:       $RCSfile: SeederStreamTransformerTest.cpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

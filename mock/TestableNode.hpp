@@ -1,5 +1,5 @@
 //
-// FILE NAME:       $RCSfile: TestableNode.hpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

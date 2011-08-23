@@ -1,5 +1,5 @@
 //
-// FILE NAME:    $RCSfile: MockDatabaseConnectionManager.hpp,v $
+// FILE NAME:    $HeadURL$
 //
 // REVISION:     $Revision$
 //

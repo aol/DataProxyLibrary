@@ -1,4 +1,4 @@
-// FILE NAME:       $RCSfile: LocalFileProxyTest.hpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

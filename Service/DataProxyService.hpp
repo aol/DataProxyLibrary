@@ -1,5 +1,5 @@
 //  
-//    FILE NAME:	$RCSfile: DataProxyService.hpp,v $
+//    FILE NAME:	$HeadURL$
 //  
 //    DESCRIPTION:    
 //  

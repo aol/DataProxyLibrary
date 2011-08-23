@@ -1,4 +1,4 @@
-// FILE NAME:       $RCSfile: DatabaseProxyTest.cpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

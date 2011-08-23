@@ -1,5 +1,5 @@
 //
-// FILE NAME:       $RCSfile: DataProxyServiceConfigTest.hpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

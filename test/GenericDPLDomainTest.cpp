@@ -1,5 +1,5 @@
 //
-// FILE NAME:      $RCSfile: GenericDPLDomainTest.cpp,v $
+// FILE NAME:      $HeadURL$
 //
 // REVISION:        $Revision$
 //

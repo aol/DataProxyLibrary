@@ -1,14 +1,14 @@
 
 //
-// FILE NAME:       $RCSfile: AbstractHandlerTest.hpp,v $
+// FILE NAME:       $HeadURL$
 //
-// REVISION:        $Revision: 210605 $
+// REVISION:        $Revision$
 //
 // COPYRIGHT:       (c) 2007 Advertising.com All Rights Reserved.
 //
-// LAST UPDATED:    $Date: 2011-06-03 20:45:22 -0400 (Fri, 03 Jun 2011) $
+// LAST UPDATED:    $Date$
 //
-// UPDATED BY:      $Author: bhh1988 $
+// UPDATED BY:      $Author$
 
 #ifndef _ABSTRACT_HANDLER_TEST_HPP_
 #define _ABSTRACT_HANDLER_TEST_HPP_

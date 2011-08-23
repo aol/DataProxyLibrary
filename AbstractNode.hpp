@@ -1,5 +1,5 @@
 //
-// FILE NAME:       $RCSfile: AbstractNode.hpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

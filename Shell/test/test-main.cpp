@@ -1,5 +1,5 @@
 // 
-//   FILE NAME:		$RCSfile: test-main.cpp,v $
+//   FILE NAME:		$HeadURL$
 // 
 //   DESCRIPTION:   Main routine to run all unit tests.
 // 

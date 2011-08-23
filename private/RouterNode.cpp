@@ -1,5 +1,5 @@
 //
-// FILE NAME:       $RCSfile: RouterNode.cpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //

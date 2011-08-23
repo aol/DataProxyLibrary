@@ -1,4 +1,4 @@
-// FILE NAME:       $RCSfile: ResourceProxyFactoryTest.hpp,v $
+// FILE NAME:       $HeadURL$
 //
 // REVISION:        $Revision$
 //
