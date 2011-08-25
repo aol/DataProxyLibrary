@@ -22,7 +22,7 @@ SERVICEDIR		= ${ROOTDIR}/lib/cpp/Service
 DATAPROXYDIR	= ${ROOTDIR}/lib/cpp/DataProxy
 
 # for auto-generating hpp files from thpp for GDP
-THPP2HPP        = $(ROOTDIR)/lib/perl/Utility/thpp2hpp
+THPP2HPP        = $(ROOTDIR)/lib/cpp/GDP/scripts/thpp2hpp
 
 TRANSFORMERSCOMMONDIR = ../Common
 

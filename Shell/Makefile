@@ -16,7 +16,7 @@ ROOTDIR		= ../../../..
 # Directories for common components
 INCLUDE_DIRS ?= /usr/local/include
 LIB_DIRS ?= /usr/local/lib
-THPP2HPP = $(ROOTDIR)/lib/perl/Utility/thpp2hpp
+THPP2HPP = $(ROOTDIR)/lib/cpp/GDP/scripts/thpp2hpp
 
 # Ad.com Modules used by the project, directory path should be fully specified from
 # Optimization/ directory -- does not include CPPUNIT
