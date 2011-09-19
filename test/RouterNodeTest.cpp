@@ -192,6 +192,19 @@ void RouterNodeTest::testInvalidXml()
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", client, *nodes[0] ), RouterNodeException,
 		".*:\\d+: Illegal joinType specified for ForwardTo node name2: 'stupid'. Legal values are: 'inner', 'right', 'left', 'outer'" );
 
+	xmlContents.str("");
+	xmlContents << "<RouterNode >" << std::endl
+				<< "  <Read behavior=\"join\" workingDir=\"/nonexistent\" >" << std::endl
+				<< "    <ForwardTo name=\"name1\" joinKey=\"whatever\" />" << std::endl
+				<< "    <ForwardTo name=\"name2\" joinKey=\"whatever\" joinType=\"inner\" />" << std::endl
+				<< "  </Read>" << std::endl
+				<< "</RouterNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", client, *nodes[0] ), InvalidDirectoryException,
+		".*:\\d+: /nonexistent does not exist or is not a valid directory." );
+
 	// Store config
 	xmlContents.str("");
 	xmlContents << "<RouterNode >" << std::endl

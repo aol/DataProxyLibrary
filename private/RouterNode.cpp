@@ -589,6 +589,7 @@ void RouterNode::SetReadConfig( const xercesc::DOMNode* i_pNode, ReadBehavior& o
 	if( pAttribute != NULL )
 	{
 		o_rReadWorkingDir = XMLUtilities::XMLChToString( pAttribute->getValue() );
+		FileUtilities::ValidateDirectory( o_rReadWorkingDir, R_OK | W_OK );
 	}
 
 	pAttribute = XMLUtilities::GetAttribute( i_pNode, TIMEOUT_ATTRIBUTE );
