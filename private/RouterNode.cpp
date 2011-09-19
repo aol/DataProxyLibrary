@@ -126,6 +126,7 @@ RouterNode::RouterNode(	const std::string& i_rName,
 	std::set< std::string > allowedDeleteAttributes;
 	allowedReadAttributes.insert( READ_BEHAVIOR_ATTRIBUTE );
 	allowedReadAttributes.insert( WORKING_DIR_ATTRIBUTE );
+	allowedReadAttributes.insert( TIMEOUT_ATTRIBUTE );
 	allowedWriteAttributes.insert( ON_CRITICAL_ERROR_ATTRIBUTE );
 	allowedDeleteAttributes.insert( ON_CRITICAL_ERROR_ATTRIBUTE );
 	AbstractNode::ValidateXmlAttributes( i_rNode, allowedReadAttributes, allowedWriteAttributes, allowedDeleteAttributes );

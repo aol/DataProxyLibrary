@@ -1206,7 +1206,7 @@ void RouterNodeTest::testLoadJoinComplex()
 {
 	std::stringstream xmlContents;
 	xmlContents << "<RouterNode >" << std::endl
-				<< "  <Read behavior=\"join\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+				<< "  <Read behavior=\"join\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" timeout=\"30\" >" << std::endl
 				<< "    <ForwardTo name=\"name1\" joinKey=\"id\" />" << std::endl
 				<< "    <ForwardTo name=\"name2\" joinKey=\"id\" joinType=\"inner\" />" << std::endl
 				<< "    <ForwardTo name=\"name3\" joinKey=\"id\" joinType=\"right\" />" << std::endl
