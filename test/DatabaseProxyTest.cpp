@@ -87,6 +87,12 @@ void DatabaseProxyTest::setUp()
 																		m_pMySQLDB->GetDBName(),
 																		m_pMySQLDB->GetUserName(),
 																		m_pMySQLDB->GetPassword() ) ));
+	CPPUNIT_ASSERT_NO_THROW( m_pMySQLAccessoryDB.reset( new Database( Database::DBCONN_ODBC_MYSQL,
+																		m_pMySQLDB->GetServerName(),
+																		m_pMySQLDB->GetDBName(),
+																		m_pMySQLDB->GetUserName(),
+																		m_pMySQLDB->GetPassword() ) ));
+
 }
 
 void DatabaseProxyTest::tearDown()
@@ -96,6 +102,7 @@ void DatabaseProxyTest::tearDown()
 	m_pMySQLObservationDB.reset();
 	m_pOracleDB.reset();
 	m_pMySQLDB.reset();
+	m_pMySQLAccessoryDB.reset();
 	m_pTempDir.reset();
 }
 
@@ -122,7 +129,6 @@ void DatabaseProxyTest::testConstructorExceptionIllegalXml()
 	MockDataProxyClient client;
 	MockDatabaseConnectionManager dbManager;
 	dbManager.InsertConnection("myOracleConnection", m_pOracleDB);
-	dbManager.InsertConnection("myMySqlConnection", m_pMySQLDB);
 
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode type = \"db\" >"
@@ -1296,10 +1302,22 @@ void DatabaseProxyTest::testOracleStore()
 
 	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data ) );
 
+	std::stringstream expectedStaging;
+	expectedStaging << "12,13,14,15.5,,24" << std::endl
+					<< "22,23,24,25.5,,24" << std::endl
+					<< "32,33,34,35.5,,24" << std::endl
+					<< "42,43,44,45.5,,24" << std::endl
+					<< "52,53,54,55.5,,24" << std::endl
+					<< "62,63,64,65.5,,24" << std::endl;
+
+	//the sqlloader will have loaded the staging table at this point
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expectedStaging.str(), *m_pOracleObservationDB, "stg_kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" )
 	// check table contents: nothing yet since it hasn't been committed
 	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" )
 
 	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+
+	// check table contents
 	std::stringstream expected;
 	expected << "12,13,14,15.5,17,24" << std::endl
 			 << "22,23,24,25.5,17,24" << std::endl
@@ -1307,8 +1325,6 @@ void DatabaseProxyTest::testOracleStore()
 			 << "42,43,44,45.5,17,24" << std::endl
 			 << "52,53,54,55.5,17,24" << std::endl
 			 << "62,63,64,65.5,17,24" << std::endl;
-
-	// check table contents
 	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" )
 
 	// no cleanup was on, so files should still exist in temporary directory
@@ -1382,6 +1398,7 @@ void DatabaseProxyTest::testMySqlStore()
 
 	MockDatabaseConnectionManager dbManager;
 	dbManager.InsertConnection( "myMySqlConnection", m_pMySQLDB );
+	dbManager.InsertMySQLAccessoryConnection("myMySqlConnection", m_pMySQLAccessoryDB);
 
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode type = \"db\" >"
@@ -1427,6 +1444,8 @@ void DatabaseProxyTest::testMySqlStore()
 
 	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data ) );
 
+	//the mysql table will be truncated, which implicitly commits, in a dedicated db session
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pMySQLObservationDB, "stg_kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" )
 	// check table contents; it will be empty since we haven't committed yet
 	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" )
 
@@ -1505,6 +1524,7 @@ void DatabaseProxyTest::testStoreColumnParameterCollisionBehaviors()
 
 	MockDatabaseConnectionManager dbManager;
 	dbManager.InsertConnection( "myMySqlConnection", m_pMySQLDB );
+	dbManager.InsertMySQLAccessoryConnection("myMySqlConnection", m_pMySQLAccessoryDB);
 
 	// CASE 0: default behavior (fail on collision)
 	std::stringstream xmlContents;
@@ -1696,6 +1716,7 @@ void DatabaseProxyTest::testStoreParameterOnly()
 
 	MockDatabaseConnectionManager dbManager;
 	dbManager.InsertConnection( "myMySqlConnection", m_pMySQLDB );
+	dbManager.InsertMySQLAccessoryConnection("myMySqlConnection", m_pMySQLAccessoryDB);
 
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode type = \"db\" >"
@@ -1752,6 +1773,7 @@ void DatabaseProxyTest::testMySqlStoreDynamicTables()
 
 	MockDatabaseConnectionManager dbManager;
 	dbManager.InsertConnection( "myMySqlConnection", m_pMySQLDB );
+	dbManager.InsertMySQLAccessoryConnection("myMySqlConnection", m_pMySQLAccessoryDB);
 
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode type = \"db\" >"
@@ -2448,5 +2470,592 @@ void DatabaseProxyTest::testDeleteExceptionEmptyVarName()
 									   MATCH_FILE_AND_LINE_NUMBER + "Variable name referenced must be alphanumeric \\(enclosed within \"\\$\\{\" and \"\\}\"\\)\\."
 									   " Instead it is: '\\$\\{\\}'");
 }
+
+void DatabaseProxyTest::testOracleStoreWithPreStatement()
+{
+	MockDataProxyClient client;
+	MockDatabaseConnectionManager dbManager;
+	dbManager.InsertConnection("myOracleConnection", m_pOracleDB);
+
+	// create primary & staging tables
+	Database::Statement(*m_pOracleDB, GetOracleTableDDL("kna")).Execute();
+	Database::Statement(*m_pOracleDB, GetOracleTableDDL("stg_kna")).Execute();
+
+	//Create a Database XML node
+	std::string xmlContents
+	(
+		"<DataNode type = \"db\" >\n"
+		" <Write connection=\"myOracleConnection\"\n"
+		"        table=\"kna\"\n"
+		"        stagingTable=\"stg_kna\"\n"
+		"        workingDir=\"" + m_pTempDir->GetDirectoryName() + "\"\n"
+		"        noCleanUp=\"true\"\n"
+		"        pre-statement=\"insert into kna (media_id,website_id,impressions,revenue,dummy,myConstant) VALUES (1000,2000,3999,4999,5999,6999)\">\n"
+		"    <Columns>\n"
+		"      <Column name=\"media_id\" type=\"key\" />\n"
+		"      <Column name=\"website_id\" type=\"key\" />\n"
+		"      <Column name=\"impressions\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"revenue\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"dummy\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"myConstant\" type=\"data\" ifNew=\"%v\" />\n"
+		"	 </Columns>\n"
+		" </Write>\n"
+		"</DataNode>\n"
+	);
+
+	//the data to be stored
+	std::string data
+	(
+		"media_id,website_id,impressions,revenue,dummy,myConstant\n"
+		"1001,2001,3001,4001,5001,6001\n" //should be inserted
+		"1000,2000,3000,4000,5000,6000\n" //should be ignored because the key exists and we are configured to only insert non-matched rows
+	);
+
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents, "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	boost::scoped_ptr< DatabaseProxy > pProxy;
+	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+
+	std::map< std::string, std::string > parameters;
+	std::stringstream dataStream(data);
+
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+	CPPUNIT_ASSERT_NO_THROW(pProxy->Store(parameters, dataStream));
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+
+	std::string expectedAfterCommit
+	(
+		"1000,2000,3999,4999,5999,6999\n"
+		"1001,2001,3001,4001,5001,6001\n"
+	);
+
+	//the following verifies that:
+	//a. 'pre-statement' was executed
+	//b.  the upload was executed
+	//c. 'pre-statement' was executed after the upload assuming that we correctly configured the data node to insert non-matched rows only
+	CPPUNIT_ASSERT_NO_THROW( pProxy->Commit() );
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expectedAfterCommit, *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+
+}
+
+void DatabaseProxyTest::testOracleStoreWithPostStatement()
+{
+	MockDataProxyClient client;
+	MockDatabaseConnectionManager dbManager;
+	dbManager.InsertConnection("myOracleConnection", m_pOracleDB);
+
+	// create primary & staging tables
+	Database::Statement(*m_pOracleDB, GetOracleTableDDL("kna")).Execute();
+	Database::Statement(*m_pOracleDB, GetOracleTableDDL("stg_kna")).Execute();
+
+	//Create a Database XML node
+	std::string xmlContents
+	(
+		"<DataNode type = \"db\" >\n"
+		" <Write connection=\"myOracleConnection\"\n"
+		"        table=\"kna\"\n"
+		"        stagingTable=\"stg_kna\"\n"
+		"        workingDir=\"" + m_pTempDir->GetDirectoryName() + "\"\n"
+		"        noCleanUp=\"true\"\n"
+		"        post-statement=\"update kna set myConstant=42\">\n"
+		"    <Columns>\n"
+		"      <Column name=\"media_id\" type=\"key\" />\n"
+		"      <Column name=\"website_id\" type=\"key\" />\n"
+		"      <Column name=\"impressions\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"revenue\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"dummy\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"myConstant\" type=\"data\" ifNew=\"%v\" />\n"
+		"	 </Columns>\n"
+		" </Write>\n"
+		"</DataNode>\n"
+	);
+
+	//the data to be stored
+	std::string data
+	(
+		"media_id,website_id,impressions,revenue,dummy,myConstant\n"
+		"1001,2001,3001,4001,5001,6001\n"
+		"1000,2000,3000,4000,5000,6000\n"
+	);
+
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents, "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	boost::scoped_ptr< DatabaseProxy > pProxy;
+	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+
+	std::map< std::string, std::string > parameters;
+	std::stringstream dataStream(data);
+
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+	CPPUNIT_ASSERT_NO_THROW(pProxy->Store(parameters, dataStream));
+
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+
+	std::string expectedAfterCommit
+	(
+		"1000,2000,3000,4000,5000,42\n"
+		"1001,2001,3001,4001,5001,42\n"
+	);
+
+	//the following verifies that:
+	//a. 'post-statement' was executed
+	//b.  the upload was executed
+	//c. 'post-statement' was executed after the upload
+	CPPUNIT_ASSERT_NO_THROW( pProxy->Commit() );
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expectedAfterCommit, *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+
+}
+
+void DatabaseProxyTest::testOracleStoreWithBothPreStatementAndPostStatement()
+{
+	MockDataProxyClient client;
+	MockDatabaseConnectionManager dbManager;
+	dbManager.InsertConnection("myOracleConnection", m_pOracleDB);
+
+	// create primary & staging tables
+	Database::Statement(*m_pOracleDB, GetOracleTableDDL("kna")).Execute();
+	Database::Statement(*m_pOracleDB, GetOracleTableDDL("stg_kna")).Execute();
+
+	//Create a Database XML node
+	std::string xmlContents
+	(
+		"<DataNode type = \"db\" >\n"
+		" <Write connection=\"myOracleConnection\"\n"
+		"        table=\"kna\"\n"
+		"        stagingTable=\"stg_kna\"\n"
+		"        workingDir=\"" + m_pTempDir->GetDirectoryName() + "\"\n"
+		"        noCleanUp=\"true\"\n"
+		"        pre-statement=\"insert into kna (media_id,website_id,impressions,revenue,dummy,myConstant) VALUES (1000,2000,3999,4999,5999,6999)\"\n"
+		"        post-statement=\"update kna set myConstant=42\">\n"
+		"    <Columns>\n"
+		"      <Column name=\"media_id\" type=\"key\" />\n"
+		"      <Column name=\"website_id\" type=\"key\" />\n"
+		"      <Column name=\"impressions\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"revenue\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"dummy\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"myConstant\" type=\"data\" ifNew=\"%v\" />\n"
+		"	 </Columns>\n"
+		" </Write>\n"
+		"</DataNode>\n"
+	);
+
+	//the data to be stored
+	std::string data
+	(
+		"media_id,website_id,impressions,revenue,dummy,myConstant\n"
+		"1001,2001,3001,4001,5001,6001\n"
+		"1000,2000,3000,4000,5000,6000\n"
+	);
+
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents, "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	boost::scoped_ptr< DatabaseProxy > pProxy;
+	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+
+	std::map< std::string, std::string > parameters;
+	std::stringstream dataStream(data);
+
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+	CPPUNIT_ASSERT_NO_THROW(pProxy->Store(parameters, dataStream));
+
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+
+	std::string expectedAfterCommit
+	(
+		"1000,2000,3999,4999,5999,42\n"
+		"1001,2001,3001,4001,5001,42\n"
+	);
+
+	//the following verifies that:
+	//a. 'pre-statement' was executed
+	//b. 'post-statement' was executed
+	//c.  the upload was executed
+	//d. the order was: 'pre-statement', upload, 'post-statement'
+	CPPUNIT_ASSERT_NO_THROW( pProxy->Commit() );
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expectedAfterCommit, *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+
+}
+
+void DatabaseProxyTest::testMySqlStoreWithPreStatement()
+{
+	MockDataProxyClient client;
+	MockDatabaseConnectionManager dbManager;
+	dbManager.InsertConnection("myMySQLConnection", m_pMySQLDB);
+	dbManager.InsertMySQLAccessoryConnection("myMySQLConnection", m_pMySQLAccessoryDB);
+
+	// create primary & staging tables
+	Database::Statement(*m_pMySQLDB, GetMySqlTableDDL("kna")).Execute();
+	Database::Statement(*m_pMySQLDB, GetMySqlTableDDL("stg_kna")).Execute();
+
+	//Create a Database XML node
+	std::string xmlContents
+	(
+		"<DataNode type = \"db\" >\n"
+		" <Write connection=\"myMySQLConnection\"\n"
+		"        table=\"kna\"\n"
+		"        stagingTable=\"stg_kna\"\n"
+		"        workingDir=\"" + m_pTempDir->GetDirectoryName() + "\"\n"
+		"        noCleanUp=\"true\"\n"
+		"        pre-statement=\"insert into kna (media_id,website_id,impressions,revenue,dummy,myConstant) VALUES (1000,2000,3999,4999,5999,6999)\">\n"
+		"    <Columns>\n"
+		"      <Column name=\"media_id\" type=\"key\" />\n"
+		"      <Column name=\"website_id\" type=\"key\" />\n"
+		"      <Column name=\"impressions\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"revenue\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"dummy\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"myConstant\" type=\"data\" ifNew=\"%v\" />\n"
+		"	 </Columns>\n"
+		" </Write>\n"
+		"</DataNode>\n"
+	);
+
+	//the data to be stored
+	std::string data
+	(
+		"media_id,website_id,impressions,revenue,dummy,myConstant\n"
+		"1001,2001,3001,4001,5001,6001\n" //should be inserted
+		"1000,2000,3000,4000,5000,6000\n" //should be ignored because the key exists and we are configured to only insert non-matched rows
+	);
+
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents, "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	boost::scoped_ptr< DatabaseProxy > pProxy;
+	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+
+	std::map< std::string, std::string > parameters;
+	std::stringstream dataStream(data);
+
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+	CPPUNIT_ASSERT_NO_THROW(pProxy->Store(parameters, dataStream));
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+
+	std::string expectedAfterCommit
+	(
+		"1000,2000,3999,4999,5999,6999\n"
+		"1001,2001,3001,4001,5001,6001\n"
+	);
+
+	//the following verifies that:
+	//a. 'pre-statement' was executed
+	//b.  the upload was executed
+	//c. 'pre-statement' was executed after the upload assuming that we correctly configured the data node to insert non-matched rows only
+	CPPUNIT_ASSERT_NO_THROW( pProxy->Commit() );
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expectedAfterCommit, *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+
+}
+
+void DatabaseProxyTest::testMySqlStoreWithPostStatement()
+{
+	MockDataProxyClient client;
+	MockDatabaseConnectionManager dbManager;
+	dbManager.InsertConnection("myMySQLConnection", m_pMySQLDB);
+	dbManager.InsertMySQLAccessoryConnection("myMySQLConnection", m_pMySQLAccessoryDB);
+
+	// create primary & staging tables
+	Database::Statement(*m_pMySQLDB, GetMySqlTableDDL("kna")).Execute();
+	Database::Statement(*m_pMySQLDB, GetMySqlTableDDL("stg_kna")).Execute();
+
+	//Create a Database XML node
+	std::string xmlContents
+	(
+		"<DataNode type = \"db\" >\n"
+		" <Write connection=\"myMySQLConnection\"\n"
+		"        table=\"kna\"\n"
+		"        stagingTable=\"stg_kna\"\n"
+		"        workingDir=\"" + m_pTempDir->GetDirectoryName() + "\"\n"
+		"        noCleanUp=\"true\"\n"
+		"        post-statement=\"update kna set myConstant=42\">\n"
+		"    <Columns>\n"
+		"      <Column name=\"media_id\" type=\"key\" />\n"
+		"      <Column name=\"website_id\" type=\"key\" />\n"
+		"      <Column name=\"impressions\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"revenue\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"dummy\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"myConstant\" type=\"data\" ifNew=\"%v\" />\n"
+		"	 </Columns>\n"
+		" </Write>\n"
+		"</DataNode>\n"
+	);
+
+	//the data to be stored
+	std::string data
+	(
+		"media_id,website_id,impressions,revenue,dummy,myConstant\n"
+		"1001,2001,3001,4001,5001,6001\n"
+		"1000,2000,3000,4000,5000,6000\n"
+	);
+
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents, "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	boost::scoped_ptr< DatabaseProxy > pProxy;
+	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+
+	std::map< std::string, std::string > parameters;
+	std::stringstream dataStream(data);
+
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+	CPPUNIT_ASSERT_NO_THROW(pProxy->Store(parameters, dataStream));
+
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+
+	std::string expectedAfterCommit
+	(
+		"1000,2000,3000,4000,5000,42\n"
+		"1001,2001,3001,4001,5001,42\n"
+	);
+
+	//the following verifies that:
+	//a. 'post-statement' was executed
+	//b.  the upload was executed
+	//c. 'post-statement' was executed after the upload
+	CPPUNIT_ASSERT_NO_THROW( pProxy->Commit() );
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expectedAfterCommit, *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+
+}
+
+void DatabaseProxyTest::testMySqlStoreWithBothPreStatementAndPostStatement()
+{
+	MockDataProxyClient client;
+	MockDatabaseConnectionManager dbManager;
+	dbManager.InsertConnection("myMySQLConnection", m_pMySQLDB);
+	dbManager.InsertMySQLAccessoryConnection("myMySQLConnection", m_pMySQLAccessoryDB);
+
+	// create primary & staging tables
+	Database::Statement(*m_pMySQLDB, GetMySqlTableDDL("kna")).Execute();
+	Database::Statement(*m_pMySQLDB, GetMySqlTableDDL("stg_kna")).Execute();
+
+	//Create a Database XML node
+	std::string xmlContents
+	(
+		"<DataNode type = \"db\" >\n"
+		" <Write connection=\"myMySQLConnection\"\n"
+		"        table=\"kna\"\n"
+		"        stagingTable=\"stg_kna\"\n"
+		"        workingDir=\"" + m_pTempDir->GetDirectoryName() + "\"\n"
+		"        noCleanUp=\"true\"\n"
+		"        pre-statement=\"insert into kna (media_id,website_id,impressions,revenue,dummy,myConstant) VALUES (1000,2000,3999,4999,5999,6999)\"\n"
+		"        post-statement=\"update kna set myConstant=42\">\n"
+		"    <Columns>\n"
+		"      <Column name=\"media_id\" type=\"key\" />\n"
+		"      <Column name=\"website_id\" type=\"key\" />\n"
+		"      <Column name=\"impressions\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"revenue\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"dummy\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"myConstant\" type=\"data\" ifNew=\"%v\" />\n"
+		"	 </Columns>\n"
+		" </Write>\n"
+		"</DataNode>\n"
+	);
+
+	//the data to be stored
+	std::string data
+	(
+		"media_id,website_id,impressions,revenue,dummy,myConstant\n"
+		"1001,2001,3001,4001,5001,6001\n"
+		"1000,2000,3000,4000,5000,6000\n"
+	);
+
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents, "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	boost::scoped_ptr< DatabaseProxy > pProxy;
+	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+
+	std::map< std::string, std::string > parameters;
+	std::stringstream dataStream(data);
+
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+	CPPUNIT_ASSERT_NO_THROW(pProxy->Store(parameters, dataStream));
+
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+
+	std::string expectedAfterCommit
+	(
+		"1000,2000,3999,4999,5999,42\n"
+		"1001,2001,3001,4001,5001,42\n"
+	);
+
+	//the following verifies that:
+	//a. 'pre-statement' was executed
+	//b. 'post-statement' was executed
+	//c.  the upload was executed
+	//d. the order was: 'pre-statement', upload, 'post-statement'
+	CPPUNIT_ASSERT_NO_THROW( pProxy->Commit() );
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expectedAfterCommit, *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+
+}
+
+//-verify the following
+//a. if two stores are executed with the same data proxy without commit every being called then no data is stored to the primary table
+void DatabaseProxyTest::testOracleMultipleStore()
+{
+	MockDataProxyClient client;
+	MockDatabaseConnectionManager dbManager;
+	dbManager.InsertConnection("myOracleConnection", m_pOracleDB);
+
+	// create primary & staging tables
+	Database::Statement(*m_pOracleDB, GetOracleTableDDL("kna")).Execute();
+	Database::Statement(*m_pOracleDB, GetOracleTableDDL("stg_kna")).Execute();
+
+	//Create a Database XML node
+	std::string xmlContents
+	(
+		"<DataNode type = \"db\" >\n"
+		" <Write connection=\"myOracleConnection\"\n"
+		"        table=\"kna\"\n"
+		"        stagingTable=\"stg_kna\"\n"
+		"        workingDir=\"" + m_pTempDir->GetDirectoryName() + "\"\n"
+		"        noCleanUp=\"true\">\n"
+		"    <Columns>\n"
+		"      <Column name=\"media_id\" type=\"key\" />\n"
+		"      <Column name=\"website_id\" type=\"key\" />\n"
+		"      <Column name=\"impressions\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"revenue\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"dummy\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"myConstant\" type=\"data\" ifNew=\"%v\" />\n"
+		"	 </Columns>\n"
+		" </Write>\n"
+		"</DataNode>\n"
+	);
+
+	//the first store
+	std::string firstStoreData
+	(
+		"media_id,website_id,impressions,revenue,dummy,myConstant\n"
+		"1000,2000,3000,4000,5000,6000\n" 
+		"1001,2001,3001,4001,5001,6001\n" 
+	);
+
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents, "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	boost::scoped_ptr< DatabaseProxy > pProxy;
+	CPPUNIT_ASSERT_NO_THROW(pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) ));
+
+	std::map< std::string, std::string > parameters;
+	std::stringstream dataStream(firstStoreData);
+
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+	CPPUNIT_ASSERT_NO_THROW(pProxy->Store(parameters, dataStream));
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+
+	CPPUNIT_ASSERT(!dataStream.bad());
+
+	//the second store
+	std::string secondStoreData
+	(
+		"media_id,website_id,impressions,revenue,dummy,myConstant\n"
+		"1002,2002,3002,4002,5002,6002\n" 
+	);
+
+	std::stringstream dataStreamTwo(secondStoreData);
+
+	CPPUNIT_ASSERT_NO_THROW(pProxy->Store(parameters, dataStreamTwo));
+	//we still have never called commit; no data should be stored
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+
+	CPPUNIT_ASSERT_NO_THROW( pProxy->Commit() );
+	std::string expectedData
+	(
+		"1000,2000,3000,4000,5000,6000\n"
+		"1001,2001,3001,4001,5001,6001\n"
+		"1002,2002,3002,4002,5002,6002\n"
+	);
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expectedData, *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+}
+
+//-verify the following
+//a. if two stores are executed with the same mysql data proxy without commit every being called then no data is stored to the primary table
+void DatabaseProxyTest::testMySqlMultipleStore()
+{
+	MockDataProxyClient client;
+	MockDatabaseConnectionManager dbManager;
+	dbManager.InsertConnection("myMySQLConnection", m_pMySQLDB);
+	dbManager.InsertMySQLAccessoryConnection("myMySQLConnection", m_pMySQLAccessoryDB);
+
+	// create primary & staging tables
+	Database::Statement(*m_pMySQLDB, GetMySqlTableDDL("kna")).Execute();
+	Database::Statement(*m_pMySQLDB, GetMySqlTableDDL("stg_kna")).Execute();
+
+	//Create a Database XML node
+	std::string xmlContents
+	(
+		"<DataNode type = \"db\" >\n"
+		" <Write connection=\"myMySQLConnection\"\n"
+		"        table=\"kna\"\n"
+		"        stagingTable=\"stg_kna\"\n"
+		"        workingDir=\"" + m_pTempDir->GetDirectoryName() + "\"\n"
+		"        noCleanUp=\"true\">\n"
+		"    <Columns>\n"
+		"      <Column name=\"media_id\" type=\"key\" />\n"
+		"      <Column name=\"website_id\" type=\"key\" />\n"
+		"      <Column name=\"impressions\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"revenue\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"dummy\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"myConstant\" type=\"data\" ifNew=\"%v\" />\n"
+		"	 </Columns>\n"
+		" </Write>\n"
+		"</DataNode>\n"
+	);
+
+	//the first store
+	std::string firstStoreData
+	(
+		"media_id,website_id,impressions,revenue,dummy,myConstant\n"
+		"1000,2000,3000,4000,5000,6000\n" 
+		"1001,2001,3001,4001,5001,6001\n" 
+	);
+
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents, "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	boost::scoped_ptr< DatabaseProxy > pProxy;
+	CPPUNIT_ASSERT_NO_THROW(pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) ));
+
+	std::map< std::string, std::string > parameters;
+	std::stringstream dataStream(firstStoreData);
+
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+	CPPUNIT_ASSERT_NO_THROW(pProxy->Store(parameters, dataStream));
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+
+	CPPUNIT_ASSERT(!dataStream.bad());
+
+	//the second store
+	std::string secondStoreData
+	(
+		"media_id,website_id,impressions,revenue,dummy,myConstant\n"
+		"1002,2002,3002,4002,5002,6002\n" 
+	);
+
+	std::stringstream dataStreamTwo(secondStoreData);
+
+	CPPUNIT_ASSERT_NO_THROW(pProxy->Store(parameters, dataStreamTwo));
+	//we still have never called commit; no data should be stored
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+
+	CPPUNIT_ASSERT_NO_THROW( pProxy->Commit() );
+	std::string expectedData
+	(
+		"1000,2000,3000,4000,5000,6000\n"
+		"1001,2001,3001,4001,5001,6001\n"
+		"1002,2002,3002,4002,5002,6002\n"
+	);
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expectedData, *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+}
+
 
 

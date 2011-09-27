@@ -64,6 +64,8 @@ private:
 	std::string m_WriteMySqlMergeQuery;
 	std::string m_WriteOracleMergeQuery;
 	std::string m_WriteOnColumnParameterCollision;
+	Nullable<std::string> m_PreStatement;
+	Nullable<std::string> m_PostStatement;
 	Nullable< size_t > m_WriteMaxTableNameLength;
 	bool m_WriteDynamicStagingTable;
 	bool m_WriteDirectLoad;

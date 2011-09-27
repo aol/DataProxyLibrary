@@ -22,7 +22,7 @@ class DatabaseProxyTest : public CppUnit::TestFixture
 {
 private:
 	CPPUNIT_TEST_SUITE( DatabaseProxyTest );
-/*	CPPUNIT_TEST( testConstructorExceptionWithNoReadOrWriteOrDeleteNode );
+	CPPUNIT_TEST( testConstructorExceptionWithNoReadOrWriteOrDeleteNode );
 	CPPUNIT_TEST( testConstructorExceptionIllegalXml );
 	CPPUNIT_TEST( testOperationNotSupported );
 
@@ -46,7 +46,17 @@ private:
 	CPPUNIT_TEST( testDynamicTableNameLength );
 	CPPUNIT_TEST( testStoreParameterOnly );
 	CPPUNIT_TEST( testStoreColumnParameterCollisionBehaviors );
-*/
+
+	CPPUNIT_TEST( testOracleMultipleStore );
+	CPPUNIT_TEST( testMySqlMultipleStore );
+	CPPUNIT_TEST( testOracleStoreWithPreStatement );
+	CPPUNIT_TEST( testOracleStoreWithPostStatement );
+	CPPUNIT_TEST( testOracleStoreWithBothPreStatementAndPostStatement );
+
+	CPPUNIT_TEST( testMySqlStoreWithPreStatement );
+	CPPUNIT_TEST( testMySqlStoreWithPostStatement );
+	CPPUNIT_TEST( testMySqlStoreWithBothPreStatementAndPostStatement );
+
 	CPPUNIT_TEST( testOracleDelete );
 	CPPUNIT_TEST( testMySQLDelete );
 	CPPUNIT_TEST( testDeleteWithExtraVariableNameDefinitions );
@@ -83,12 +93,22 @@ public:
 	void testStoreException();
 
 	void testOracleStore();
+	void testOracleMultipleStore();
 	void testMySqlStore();
+	void testMySqlMultipleStore();
 	void testMySqlStoreDynamicTables();
 	void testOracleStoreDynamicTables();
 	void testDynamicTableNameLength();
 	void testStoreParameterOnly();
 	void testStoreColumnParameterCollisionBehaviors();
+
+	void testOracleStoreWithPreStatement();
+	void testOracleStoreWithPostStatement();
+	void testOracleStoreWithBothPreStatementAndPostStatement();
+
+	void testMySqlStoreWithPreStatement();
+	void testMySqlStoreWithPostStatement();
+	void testMySqlStoreWithBothPreStatementAndPostStatement();
 
 	void testOracleDelete();
 	void testMySQLDelete();
@@ -103,6 +123,7 @@ private:
 	boost::shared_ptr<TempDirectory> m_pTempDir;
 	boost::shared_ptr<Database> m_pOracleDB;
 	boost::shared_ptr<Database> m_pMySQLDB;
+	boost::shared_ptr<Database> m_pMySQLAccessoryDB;
 	boost::shared_ptr<Database> m_pOracleObservationDB;
 	boost::shared_ptr<Database> m_pMySQLObservationDB;
 };

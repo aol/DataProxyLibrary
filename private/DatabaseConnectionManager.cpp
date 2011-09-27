@@ -21,6 +21,7 @@
 
 namespace
 {
+	const std::string MYSQL_ACCESSORY_CONNECTION_PREFIX("__mysql_accessory_connection_");
 	const std::string CONNECTIONS_BY_TABLE_NODE("ConnectionsByTable");
 	const std::string CONNECTIONS_NODE_NAME_ATTRIBUTE( "connectionsNodeName" );
 	const std::string TABLES_NODE_NAME_ATTRIBUTE( "tablesNodeName" );
@@ -186,6 +187,12 @@ void DatabaseConnectionManager::Parse( const xercesc::DOMNode& i_rDatabaseConnec
 		datum.SetValue< DatabaseConfig >( databaseConfig );
 		datum.SetValue< ConnectionReconnect >( reconnectTimeout );
 		m_DatabaseConnectionContainer.InsertUpdate(datum);
+		if (type == MYSQL_DB_TYPE)
+		{
+			//for mysql db connections, we need to provide a different connection for truncating because truncating implicitly commits. 
+			datum.SetValue(MYSQL_ACCESSORY_CONNECTION_PREFIX + datum.GetValue<ConnectionName>());
+			m_DatabaseConnectionContainer.InsertUpdate(datum);
+		}
 	}
 }
 
@@ -232,6 +239,12 @@ void DatabaseConnectionManager::FetchConnectionsByTable( const std::string& i_rN
 		configDatum.SetValue< DisableCache >( boost::lexical_cast< bool >( disableCache ) );
 		connectionDatum.SetValue< DatabaseConfig >( configDatum );
 		m_ShardDatabaseConnectionContainer.InsertUpdate( connectionDatum );
+		if (type == MYSQL_DB_TYPE)
+		{
+			//for mysql db connections, we need to provide a different connection for truncating because truncating implicitly commits. 
+			connectionDatum.SetValue(MYSQL_ACCESSORY_CONNECTION_PREFIX + connectionDatum.GetValue<ConnectionName>());
+			m_ShardDatabaseConnectionContainer.InsertUpdate(connectionDatum);
+		}
 	}
 
 	// now load the tables
@@ -268,7 +281,7 @@ DatabaseConnectionDatum& DatabaseConnectionManager::PrivateGetConnection( const 
 		if (iter == m_ShardDatabaseConnectionContainer.end())
 		{
 			MV_THROW(DatabaseConnectionManagerException,
-					 "Connection referenced by db Data Node named " << i_rConnectionName << " was not created in the DatabaseConnections node");
+					 "DatabaseConnection '" << i_rConnectionName << "' was not found. Make sure the dpl config's 'DatabaseConnections' node is configured correctly.");
 		}
 	}
 	return *(iter->second);
@@ -293,7 +306,7 @@ void DatabaseConnectionManager::RefreshConnectionsByTable() const
 	}
 }
 
-Database& DatabaseConnectionManager::GetConnectionByTable( const std::string& i_rTableName ) const
+std::string DatabaseConnectionManager::PrivateGetConnectionNameByTable(const std::string& i_rTableName ) const
 {
 	__gnu_cxx::hash_map< std::string, std::string >::const_iterator iter;
 	{
@@ -311,7 +324,24 @@ Database& DatabaseConnectionManager::GetConnectionByTable( const std::string& i_
 			}
 		}
 	}
-	return GetConnection( iter->second );
+	return iter->second;
+}
+
+Database& DatabaseConnectionManager::GetConnectionByTable( const std::string& i_rTableName ) const
+{
+	std::string connectionName = PrivateGetConnectionNameByTable(i_rTableName);
+	return GetConnection(connectionName);
+}
+
+Database& DatabaseConnectionManager::GetMySQLAccessoryConnectionByTable( const std::string& i_rTableName ) const
+{
+	std::string connectionName = PrivateGetConnectionNameByTable(i_rTableName);
+	return GetConnection(MYSQL_ACCESSORY_CONNECTION_PREFIX + connectionName);
+}
+
+Database& DatabaseConnectionManager::GetMySQLAccessoryConnection(const std::string& i_ConnectionName) const
+{
+	return GetConnection(MYSQL_ACCESSORY_CONNECTION_PREFIX + i_ConnectionName);
 }
 
 Database& DatabaseConnectionManager::GetConnection(const std::string& i_ConnectionName) const
@@ -389,20 +419,14 @@ std::string DatabaseConnectionManager::GetDatabaseType(const std::string& i_Conn
 
 std::string DatabaseConnectionManager::GetDatabaseTypeByTable( const std::string& i_rTableName ) const
 {
-	boost::shared_lock< boost::shared_mutex > lock( m_ConfigVersion );
-	__gnu_cxx::hash_map< std::string, std::string >::const_iterator iter = m_ConnectionsByTableName.find( i_rTableName );
-	if( iter == m_ConnectionsByTableName.end() )
-	{
-		lock.unlock();
-		boost::unique_lock< boost::shared_mutex > writeLock( m_ConfigVersion );
-		RefreshConnectionsByTable();
-		iter = m_ConnectionsByTableName.find( i_rTableName );
-		if( iter == m_ConnectionsByTableName.end() )
-		{
-			MV_THROW( DatabaseConnectionManagerException, "Unable to find a registered connection for table name: " << i_rTableName );
-		}
-	}
-	return GetDatabaseType( iter->second );
+	std::string connectionName = PrivateGetConnectionNameByTable(i_rTableName);
+	return GetDatabaseType( connectionName );
+}
+
+std::string DatabaseConnectionManager::GetMySQLAccessoryDatabaseTypeByTable(const std::string& i_rTableName) const
+{
+	std::string connectionName = PrivateGetConnectionNameByTable(i_rTableName);
+	return GetDatabaseType( MYSQL_ACCESSORY_CONNECTION_PREFIX + connectionName);
 }
 
 void DatabaseConnectionManager::ClearConnections()

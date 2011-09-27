@@ -21,6 +21,7 @@
 #include "StringUtilities.hpp"
 #include "CSVReader.hpp"
 #include "SQLLoader.hpp"
+#include "DataProxyClient.hpp"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -55,6 +56,8 @@ namespace
 	const std::string ON_COLUMN_PARAMETER_COLLISION_ATTRIBUTE( "onColumnParameterCollision" );
 	const std::string IF_NEW_ATTRIBUTE( "ifNew" );
 	const std::string IF_MATCHED_ATTRIBUTE( "ifMatched" );
+	const std::string PRE_STATEMENT_ATTRIBUTE( "pre-statement" );
+	const std::string POST_STATEMENT_ATTRIBUTE( "post-statement" );
 
 	// values
 	const std::string FAIL( "fail" );
@@ -185,6 +188,7 @@ namespace
 
 		file << "options( bindsize=1048576, readsize=1048576, skip=1)" << std::endl
 			 << "LOAD DATA INFILE '" << i_rDataFileSpec << "'" << std::endl
+			 << "TRUNCATE "
 			 << "INTO TABLE " << i_rStagingTable << " FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED by '\"'" << std::endl
 			 << "TRAILING NULLCOLS" << std::endl
 			 << "(" << i_rColumns << ")" << std::endl;
@@ -274,6 +278,19 @@ namespace
 		return finalTableName;
 	}
 
+	void TruncateMySQLStagingTable(const std::string i_rStagingTableName,
+								   const std::string i_rWriteConnectionName,
+								   const DatabaseConnectionManager& i_rManager)
+	{
+		Database& rMySQLStagingTableConnection = i_rManager.GetMySQLAccessoryConnection(i_rWriteConnectionName);
+		std::stringstream sql;
+		
+		// truncate the staging table
+		sql << "TRUNCATE TABLE " << i_rStagingTableName;
+		MVLOGGER( "root.lib.DataProxy.DatabaseProxy.TrucnateMySQLStagingTable", "Truncating staging table: " << i_rStagingTableName << " using the mysql staging table truncate connection");
+		Database::Statement( rMySQLStagingTableConnection, sql.str() ).Execute();
+	}
+
 	class ScopedTempTable
 	{
 	public:
@@ -318,6 +335,8 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 	m_WriteMySqlMergeQuery(),
 	m_WriteOracleMergeQuery(),
 	m_WriteOnColumnParameterCollision( FAIL ),
+	m_PreStatement(),
+	m_PostStatement(),
 	m_WriteMaxTableNameLength(),
 	m_WriteDynamicStagingTable( true ),
 	m_WriteDirectLoad( true ),
@@ -362,6 +381,8 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 	allowedWriteAttributes.insert( INSERT_ONLY_ATTRIBUTE );
 	allowedWriteAttributes.insert( LOCAL_DATA_ATTRIBUTE );
 	allowedWriteAttributes.insert( ON_COLUMN_PARAMETER_COLLISION_ATTRIBUTE );
+	allowedWriteAttributes.insert( PRE_STATEMENT_ATTRIBUTE );
+	allowedWriteAttributes.insert( POST_STATEMENT_ATTRIBUTE );
 	allowedDeleteAttributes.insert(CONNECTION_BY_TABLE_ATTRIBUTE);
 	allowedDeleteAttributes.insert(CONNECTION_ATTRIBUTE);
 	allowedDeleteAttributes.insert(QUERY_ATTRIBUTE);
@@ -480,6 +501,18 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 				MV_THROW( DatabaseProxyException, "Write attribute: " << ON_COLUMN_PARAMETER_COLLISION_ATTRIBUTE << " has invalid value: " << m_WriteOnColumnParameterCollision
 					<< ". Valid values are '" << FAIL << "', '" << USE_COLUMN << "', '" << USE_PARAMETER << "'" );
 			}
+		}
+
+		pAttribute = XMLUtilities::GetAttribute( pNode, PRE_STATEMENT_ATTRIBUTE );
+		if( pAttribute != NULL )
+		{
+			m_PreStatement = XMLUtilities::XMLChToString(pAttribute->getValue());
+		}
+
+		pAttribute = XMLUtilities::GetAttribute( pNode, POST_STATEMENT_ATTRIBUTE );
+		if( pAttribute != NULL )
+		{
+			m_PostStatement = XMLUtilities::XMLChToString(pAttribute->getValue());
 		}
 
 		if( m_WriteTable == m_WriteStagingTable )
@@ -760,13 +793,6 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			WriteControlFile( controlFileSpec, dataFileSpec, columns, stagingTable );
 			SQLLoader loader( rDatabase.GetDBName(), rDatabase.GetUserName(), rDatabase.GetPassword(), controlFileSpec, logFileSpec );
 
-
-			// truncate the staging table
-			std::stringstream sql;
-			sql << "CALL sp_truncate_table( '" << stagingTable << "' )";
-			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.TruncateStagingTable", "Truncating staging table: " << stagingTable );
-			Database::Statement( rDatabase, sql.str() ).Execute();
-
 			// upload!
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Begin", "Uploading data to staging table: " << stagingTable );
 			if( loader.Upload( m_WriteDirectLoad ) )
@@ -775,10 +801,26 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			}
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Finished", "Done uploading data to staging table: " << stagingTable );
 
+			// issue the pre-statement query if one exists
+			if (!m_PreStatement.IsNull())
+			{
+				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing pre-statement supplied in the DPL config file: " << m_PreStatement );
+				Database::Statement( rDatabase, m_PreStatement ).Execute();
+				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Finished", "pre-statement complete");
+			}
+
 			// merge staging table data into primary table
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Begin", "Merging data from staging table with query: " << oracleMergeQuery );
 			Database::Statement( rDatabase, oracleMergeQuery ).Execute();
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Finished", "Merge complete" );
+
+			// issue the post-statement query if one exists
+			if (!m_PostStatement.IsNull())
+			{
+				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing post-statement supplied in the DPL config file: " << m_PostStatement );
+				Database::Statement( rDatabase, m_PostStatement ).Execute();
+				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Finished", "post-statement complete");
+			}
 
 			// if cleaning up, remove files
 			if( !m_WriteNoCleanUp )
@@ -790,13 +832,10 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 		}
 		else if( databaseType == MYSQL_DB_TYPE )
 		{
+			
+			TruncateMySQLStagingTable(stagingTable, m_WriteConnectionName, m_rDatabaseConnectionManager);
+
 			std::stringstream sql;
-
-			// truncate the staging table
-			sql << "TRUNCATE TABLE " << stagingTable;
-			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.TruncateStagingTable", "Truncating staging table: " << stagingTable );
-			Database::Statement( rDatabase, sql.str() ).Execute();
-
 			// load the data into the table
 			sql.str("");
 			sql << "LOAD DATA" << ( m_WriteLocalDataFile ? " LOCAL" : "" ) << " INFILE '" << dataFileSpec << "'" << std::endl
@@ -808,10 +847,26 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			Database::Statement( rDatabase, sql.str() ).Execute();
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Finished", "Done uploading data to staging table: " << stagingTable );
 
+			// issue the pre-statement query if one exists
+			if (!m_PreStatement.IsNull())
+			{
+				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing pre-statement supplied in the DPL config file: " << m_PreStatement );
+				Database::Statement( rDatabase, m_PreStatement ).Execute();
+				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Finished", "pre-statement complete");
+			}
+
 			// merge staging table data into primary table
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Begin", "Merging data from staging table with query: " << mysqlMergeQuery );
 			Database::Statement( rDatabase, mysqlMergeQuery ).Execute();
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Finished", "Merge complete" );
+
+			// issue the post-statement query if one exists
+			if (!m_PostStatement.IsNull())
+			{
+				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing post-statement supplied in the DPL config file: " << m_PostStatement );
+				Database::Statement( rDatabase, m_PostStatement ).Execute();
+				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Finished", "post-statement complete");
+			}
 		
 			// if cleaning up, remove file
 			if( !m_WriteNoCleanUp )

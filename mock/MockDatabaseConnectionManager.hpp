@@ -25,10 +25,12 @@ public:
 	virtual void Parse(const xercesc::DOMNode& i_rDatabaseConnectionNode);
 	virtual void ValidateConnectionName(const std::string& i_rConnectionName ) const;
 	virtual Database& GetConnection(const std::string& i_rConnectionName) const;
+	virtual Database& GetMySQLAccessoryConnection(const std::string& i_rConnectionName) const;
 	virtual std::string GetDatabaseType(const std::string& i_rConnectionName) const;
 	virtual void ClearConnections();
 
 	void InsertConnection(const std::string& i_rConnectionName, boost::shared_ptr<Database>& i_rConnection, const std::string& i_rType = "unknown");
+	void InsertMySQLAccessoryConnection(const std::string& i_rConnectionName, boost::shared_ptr<Database>& i_rConnection);
 	std::string GetLog() const;
 
 private:

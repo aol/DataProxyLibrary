@@ -18,6 +18,7 @@
 namespace
 {
 	DataProxyClient DEFAULT_DATA_PROXY_CLIENT( true );
+	std::string MOCK_MYSQL_ACCESSORY_PREFIX("__mock_mysql_accessory");
 }
 
 MockDatabaseConnectionManager::MockDatabaseConnectionManager()
@@ -65,6 +66,11 @@ void MockDatabaseConnectionManager::ValidateConnectionName(const std::string& i_
 		  << std::endl;
 }
 
+Database& MockDatabaseConnectionManager::GetMySQLAccessoryConnection(const std::string& i_rConnectionName) const
+{
+	return GetConnection(MOCK_MYSQL_ACCESSORY_PREFIX + i_rConnectionName);
+}
+
 Database& MockDatabaseConnectionManager::GetConnection(const std::string& i_rConnectionName) const
 {
 	m_Log << "MockDatabaseConnectionManager::GetConnection" << std::endl
@@ -93,6 +99,11 @@ std::string MockDatabaseConnectionManager::GetDatabaseType(const std::string& i_
 void MockDatabaseConnectionManager::ClearConnections()
 {
 	m_Log << "MockDatabaseConnectionManager::ClearLogs" << std::endl;
+}
+
+void MockDatabaseConnectionManager::InsertMySQLAccessoryConnection(const std::string& i_rConnectionName, boost::shared_ptr<Database>& i_rConnection)
+{
+	InsertConnection(MOCK_MYSQL_ACCESSORY_PREFIX + i_rConnectionName, i_rConnection, "mysql");
 }
 
 void MockDatabaseConnectionManager::InsertConnection(const std::string& i_rConnectionName, boost::shared_ptr<Database>& i_rConnection, const std::string& i_rType)
