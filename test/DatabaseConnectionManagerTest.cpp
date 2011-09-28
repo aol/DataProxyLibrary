@@ -119,11 +119,11 @@ void DatabaseConnectionManagerTest::testNormal()
 
 	expected.str("");
 	expected << ", localhost, adlearn, adlearn, Adv.commv, 0" << std::endl;
-	Database* pTruncateTableDatabase = &dbConnectionManager->GetMySQLAccessoryConnection("name2");
+	Database* pMySqlAccessoryDatabase = &dbConnectionManager->GetMySQLAccessoryConnection("name2");
 	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase)));
 
-	// ensure that the mysql truncate table database object is different than the regular mysql database object it cloned
-	CPPUNIT_ASSERT(pTruncateTableDatabase != pDatabase);
+	// ensure that the mysql accessory database object is different than the regular mysql database object it cloned
+	CPPUNIT_ASSERT(pMySqlAccessoryDatabase != pDatabase);
 
 	// check clear functionality
 	CPPUNIT_ASSERT_NO_THROW (dbConnectionManager->ValidateConnectionName("name2"));
@@ -187,11 +187,11 @@ void DatabaseConnectionManagerTest::testNormalReconnect()
 
 	expected.str("");
 	expected << ", localhost, adlearn, adlearn, Adv.commv, 0" << std::endl;
-	Database* pTruncateTableDatabase = &dbConnectionManager->GetMySQLAccessoryConnection("name2");
+	Database* pMySqlAccessoryDatabase = &dbConnectionManager->GetMySQLAccessoryConnection("name2");
 	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase)));
 
-	// ensure that the mysql truncate table database object is different than the regular mysql database object it cloned
-	CPPUNIT_ASSERT(pTruncateTableDatabase != pDatabase);
+	// ensure that the mysql accessory database object is different than the regular mysql database object it cloned
+	CPPUNIT_ASSERT(pMySqlAccessoryDatabase != pDatabase);
 
 	// check clear functionality
 	CPPUNIT_ASSERT_NO_THROW (dbConnectionManager->ValidateConnectionName("name2"));
@@ -576,6 +576,7 @@ void DatabaseConnectionManagerTest::testFetchShardNodes()
 	CPPUNIT_ASSERT_EQUAL(std::string(", localhost, adlearn, adlearn, Adv.commv, 0\n"), PrettyPrintDatabaseConnection(manager.GetMySQLAccessoryConnectionByTable("shard_12345")));
 	CPPUNIT_ASSERT_EQUAL(std::string(", localhost, adlearn, adlearn, Adv.commv, 0\n"), PrettyPrintDatabaseConnection(manager.GetMySQLAccessoryConnectionByTable("shard_54321")));
 	CPPUNIT_ASSERT_EQUAL(std::string(", localhost, adlearn, adlearn, Adv.commv, 1\n"), PrettyPrintDatabaseConnection(manager.GetMySQLAccessoryConnectionByTable("shard_22222")));
+	//trying to get a mysql accessory connection for a table configured with oracle should throw an exception
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(manager.GetMySQLAccessoryConnectionByTable("shard_33333"),
 									  DatabaseConnectionManagerException,
 									   ".*:\\d+: DatabaseConnection '__mysql_accessory_connection___shard_name1_3' was not found\\. Make sure the dpl config's 'DatabaseConnections' node is configured correctly\\.");
@@ -585,13 +586,6 @@ void DatabaseConnectionManagerTest::testFetchShardNodes()
 	CPPUNIT_ASSERT_EQUAL(std::string("mysql"), manager.GetDatabaseTypeByTable("shard_22222"));
 	CPPUNIT_ASSERT_EQUAL(std::string("oracle"), manager.GetDatabaseTypeByTable("shard_33333"));
 
-	CPPUNIT_ASSERT_EQUAL(std::string("mysql"), manager.GetMySQLAccessoryDatabaseTypeByTable("shard_12345"));
-	CPPUNIT_ASSERT_EQUAL(std::string("mysql"), manager.GetMySQLAccessoryDatabaseTypeByTable("shard_54321"));
-	CPPUNIT_ASSERT_EQUAL(std::string("mysql"), manager.GetMySQLAccessoryDatabaseTypeByTable("shard_22222"));
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(manager.GetMySQLAccessoryDatabaseTypeByTable("shard_33333"),
-									  DatabaseConnectionManagerException,
-									   ".*:\\d+: DatabaseConnection '__mysql_accessory_connection___shard_name1_3' was not found. Make sure the dpl config's 'DatabaseConnections' node is configured correctly\\.");
-	
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( manager.GetDatabaseTypeByTable( "unknown" ), DatabaseConnectionManagerException,
 		".*:\\d+: Unable to find a registered connection for table name: unknown" );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( manager.GetConnectionByTable( "unknown" ), DatabaseConnectionManagerException,

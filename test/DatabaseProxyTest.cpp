@@ -2534,7 +2534,7 @@ void DatabaseProxyTest::testOracleStoreWithPreStatement()
 	//the following verifies that:
 	//a. 'pre-statement' was executed
 	//b.  the upload was executed
-	//c. 'pre-statement' was executed after the upload assuming that we correctly configured the data node to insert non-matched rows only
+	//c. 'pre-statement' was executed before the upload assuming that we correctly configured the data node to insert non-matched rows only
 	CPPUNIT_ASSERT_NO_THROW( pProxy->Commit() );
 	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expectedAfterCommit, *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
 
@@ -2746,7 +2746,7 @@ void DatabaseProxyTest::testMySqlStoreWithPreStatement()
 	//the following verifies that:
 	//a. 'pre-statement' was executed
 	//b.  the upload was executed
-	//c. 'pre-statement' was executed after the upload assuming that we correctly configured the data node to insert non-matched rows only
+	//c. 'pre-statement' was executed before the upload assuming that we correctly configured the data node to insert non-matched rows only
 	CPPUNIT_ASSERT_NO_THROW( pProxy->Commit() );
 	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expectedAfterCommit, *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
 
@@ -2950,8 +2950,6 @@ void DatabaseProxyTest::testOracleMultipleStore()
 	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
 	CPPUNIT_ASSERT_NO_THROW(pProxy->Store(parameters, dataStream));
 	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
-
-	CPPUNIT_ASSERT(!dataStream.bad());
 
 	//the second store
 	std::string secondStoreData

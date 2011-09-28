@@ -190,7 +190,7 @@ void DatabaseConnectionManager::Parse( const xercesc::DOMNode& i_rDatabaseConnec
 		if (type == MYSQL_DB_TYPE)
 		{
 			//for mysql db connections, we need to provide a different connection for truncating because truncating implicitly commits. 
-			datum.SetValue(MYSQL_ACCESSORY_CONNECTION_PREFIX + datum.GetValue<ConnectionName>());
+			datum.SetValue<ConnectionName>(MYSQL_ACCESSORY_CONNECTION_PREFIX + datum.GetValue<ConnectionName>());
 			m_DatabaseConnectionContainer.InsertUpdate(datum);
 		}
 	}
@@ -242,7 +242,7 @@ void DatabaseConnectionManager::FetchConnectionsByTable( const std::string& i_rN
 		if (type == MYSQL_DB_TYPE)
 		{
 			//for mysql db connections, we need to provide a different connection for truncating because truncating implicitly commits. 
-			connectionDatum.SetValue(MYSQL_ACCESSORY_CONNECTION_PREFIX + connectionDatum.GetValue<ConnectionName>());
+			connectionDatum.SetValue<ConnectionName>(MYSQL_ACCESSORY_CONNECTION_PREFIX + connectionDatum.GetValue<ConnectionName>());
 			m_ShardDatabaseConnectionContainer.InsertUpdate(connectionDatum);
 		}
 	}
@@ -421,12 +421,6 @@ std::string DatabaseConnectionManager::GetDatabaseTypeByTable( const std::string
 {
 	std::string connectionName = PrivateGetConnectionNameByTable(i_rTableName);
 	return GetDatabaseType( connectionName );
-}
-
-std::string DatabaseConnectionManager::GetMySQLAccessoryDatabaseTypeByTable(const std::string& i_rTableName) const
-{
-	std::string connectionName = PrivateGetConnectionNameByTable(i_rTableName);
-	return GetDatabaseType( MYSQL_ACCESSORY_CONNECTION_PREFIX + connectionName);
 }
 
 void DatabaseConnectionManager::ClearConnections()
