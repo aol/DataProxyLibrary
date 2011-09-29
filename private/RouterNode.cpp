@@ -91,10 +91,10 @@ namespace
 		return result.str();
 	}
 
-	std::string GetSortCommand( size_t i_KeyIndex )
+	std::string GetSortCommand( size_t i_KeyIndex, const std::string& i_rTempDir )
 	{
 		std::stringstream result;
-		result << "sort -t, -k" << i_KeyIndex;
+		result << "sort -t, -k" << i_KeyIndex << " -T" << i_rTempDir;
 		return result.str();
 	}
 }
@@ -199,7 +199,7 @@ void RouterNode::LoadImpl( const std::map<std::string,std::string>& i_rParameter
 		std::string mainTempFileName( m_ReadWorkingDir + "/" + iter->GetValue< NodeName >() + "." + UniqueIdGenerator().GetUniqueId() );
 		std::ofstream mainTempFile( mainTempFileName.c_str() );
 		std::stringstream stdErr;
-		ShellExecutor sortExe( GetSortCommand( mainKeyIndex ) );
+		ShellExecutor sortExe( GetSortCommand( mainKeyIndex, m_ReadWorkingDir ) );
 		int status = -1;
 		if( ( status = sortExe.Run( m_ReadTimeout, mainStream, mainTempFile, stdErr ) ) != 0 )
 		{
@@ -227,7 +227,7 @@ void RouterNode::LoadImpl( const std::map<std::string,std::string>& i_rParameter
 			std::string tempFileName( m_ReadWorkingDir + "/" + iter->GetValue< NodeName >() + "." + UniqueIdGenerator().GetUniqueId() );
 			std::ofstream file( tempFileName.c_str() );
 			stdErr.str("");
-			ShellExecutor sortExe( GetSortCommand( nextKeyIndex ) );
+			ShellExecutor sortExe( GetSortCommand( nextKeyIndex, m_ReadWorkingDir ) );
 			if( ( status = sortExe.Run( m_ReadTimeout, nextStream, file, stdErr ) ) != 0 )
 			{
 				MV_THROW( RouterNodeException, "Error executing sort command for stream number " << streamNum << ". Standard error: " << stdErr.str() << " Return code: " << status );
