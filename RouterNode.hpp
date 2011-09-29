@@ -85,7 +85,7 @@ private:
 	RouteConfig;
 
 	void SetWriteDeleteConfig( const xercesc::DOMNode* i_pNode, CriticalErrorBehavior& o_rOnCriticalError, std::vector< RouteConfig >& o_rRoute  );
-	void SetReadConfig( const xercesc::DOMNode* i_pNode, ReadBehavior& o_rReadBehavior, std::string& o_rReadWorkingDir, int i_ReadTimeout, std::vector< StreamConfig >& o_rConfig );
+	void SetReadConfig( const xercesc::DOMNode* i_pNode, ReadBehavior& o_rReadBehavior, std::string& o_rReadWorkingDir, int& i_ReadTimeout, std::vector< StreamConfig >& o_rConfig );
 	void StoreDeleteImpl( bool i_bIsWrite, const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData ); 
 
 	std::string m_Name;

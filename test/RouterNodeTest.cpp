@@ -8,6 +8,7 @@
 // UPDATED BY:      $Author$
 
 #include "RouterNode.hpp"
+#include "ShellExecutor.hpp"
 #include "RouterNodeTest.hpp"
 #include "MockDataProxyClient.hpp"
 #include "FileUtilities.hpp"
@@ -1430,6 +1431,40 @@ void RouterNodeTest::testLoadJoinRuntimeErrors()
 
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.LoadImpl( parameters, results ), RouterNodeException,
 			".*:\\d+: Unable to fetch csv header from main stream" );
+	}
+
+	// case 3: timeout
+	{
+		std::stringstream xmlContents;
+		xmlContents << "<RouterNode >" << std::endl
+					<< "  <Read behavior=\"join\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" timeout=\"-1\" >" << std::endl
+					<< "    <ForwardTo name=\"name1\" joinKey=\"campaign_id\" />" << std::endl
+					<< "    <ForwardTo name=\"name2\" joinKey=\"campaign_id\" joinType=\"inner\" />" << std::endl
+					<< "  </Read>" << std::endl
+					<< "</RouterNode>" << std::endl;
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		std::stringstream stream1;
+		std::stringstream stream2;
+
+		stream1 << "prop1,campaign_id,prop2" << std::endl;
+		stream2 << "campaign_id,prop3,prop4" << std::endl;
+
+		MockDataProxyClient client;
+		client.SetDataToReturn( "name1", stream1.str() );
+		client.SetDataToReturn( "name2", stream2.str() );
+
+		RouterNode node( "name", client, *nodes[0] );
+
+		std::stringstream results;
+		std::map<std::string,std::string> parameters;
+		parameters["param1"] = "value1";
+		parameters["param2"] = "value2";
+
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.LoadImpl( parameters, results ), TimeoutException,
+			".*:\\d+: The command '.*' failed to finish after -1 seconds.*" );
 	}
 }
 

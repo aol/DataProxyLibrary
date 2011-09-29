@@ -564,7 +564,7 @@ void RouterNode::SetWriteDeleteConfig( const xercesc::DOMNode* i_pNode, Critical
 	}
 }
 
-void RouterNode::SetReadConfig( const xercesc::DOMNode* i_pNode, ReadBehavior& o_rReadBehavior, std::string& o_rReadWorkingDir, int o_rReadTimeout, std::vector< StreamConfig >& o_rConfig )
+void RouterNode::SetReadConfig( const xercesc::DOMNode* i_pNode, ReadBehavior& o_rReadBehavior, std::string& o_rReadWorkingDir, int& o_rReadTimeout, std::vector< StreamConfig >& o_rConfig )
 {
 	xercesc::DOMAttr* pAttribute = XMLUtilities::GetAttribute( i_pNode, READ_BEHAVIOR_ATTRIBUTE );
 	if( pAttribute != NULL )
