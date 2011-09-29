@@ -243,9 +243,9 @@ void RouterNode::LoadImpl( const std::map<std::string,std::string>& i_rParameter
 
 			// get the next column list, and form the command!
 			std::string nextColumnList = GetColumnList( 1, nextHeader.size(), nextKeyIndex, 2, false );
-			joinCommand << "join -t, -e '' -1 " << mainKeyIndex << " -2 " << nextKeyIndex							// delim:,	on-null:''	key indeces
-						<< " -o" << mainColumns.str() << ( mainHeader.size() > 1 ? "," : "" ) << nextColumnList		// output list
-						<< " " << ( streamNum == 2 ? mainTempFileName : std::string( "-" ) ) << " " << tempFileName;		// join stdin to temp file
+			joinCommand << "join -t, -e '' -1 " << mainKeyIndex << " -2 " << nextKeyIndex // delim:,	on-null:''	key indeces
+						<< " -o" << mainColumns.str() << ( !mainHeader.empty() && !nextColumnList.empty() ? "," : "" ) << nextColumnList // output list
+						<< " " << ( streamNum == 2 ? mainTempFileName : std::string( "-" ) ) << " " << tempFileName; // join stdin to temp file
 			switch( iter->GetValue< JoinType >() )
 			{
 			case OUTER:
