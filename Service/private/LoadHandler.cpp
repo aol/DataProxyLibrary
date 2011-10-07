@@ -29,7 +29,6 @@ namespace
 	const std::string CONTENT_LENGTH( "Content-Length" );
 	const std::string CONTENT_ENCODING( "Content-Encoding" );
 	const std::string GZIP( "gzip" );
-	const std::string DEFLATE( "deflate" );
 	const std::string ACCEPT_ENCODING_SEPARATORS( ", " );
 }
 
@@ -37,20 +36,13 @@ LoadHandler::LoadHandler( DataProxyClient& i_rDataProxyClient, const std::string
 :	AbstractHandler( i_rDataProxyClient, i_rDplConfig, i_EnableXForwardedFor ),
 	// gzip params have all default values except for the compression level
 	m_GZipParams( i_ZLibCompressionLevel,
-				  boost::iostreams::zlib::deflated,
-				  boost::iostreams::zlib::default_window_bits,
-				  boost::iostreams::zlib::default_mem_level,
-				  boost::iostreams::zlib::default_strategy,
-				  boost::iostreams::zlib::default_noheader,
-				  boost::iostreams::zlib::default_crc ),
-	// gzip params have all default values except for the compression level, and the to at the bottom...
-	m_DeflateParams( i_ZLibCompressionLevel,
-					 boost::iostreams::zlib::deflated,
-					 boost::iostreams::zlib::default_window_bits,
-					 boost::iostreams::zlib::default_mem_level,
-					 boost::iostreams::zlib::default_strategy,
-					 true,		// this prevents the writing of a header, to conform with RFC 1951
-					 false ),	// this turns off calculation of a CRC checksum, to conform with RFC 1951
+				  boost::iostreams::gzip::deflated,
+				  boost::iostreams::gzip::default_window_bits,
+				  boost::iostreams::gzip::default_mem_level,
+				  boost::iostreams::gzip::default_strategy,
+				  "",	// file name
+				  "",	// comment
+				  0 ),	// mtime
 	m_CompressionEnabled( i_ZLibCompressionLevel != 0 )
 {
 }
@@ -70,7 +62,7 @@ void LoadHandler::Handle( HTTPRequest& i_rRequest, HTTPResponse& o_rResponse )
 	std::ostringstream results;
 
 	// we will use a boost filtering_ostream, optionally tacking on compressors based on incoming parameters
-	// need to scope the filter because the zlib_compressor does not support flush operations; it will need to go out of scope
+	// need to scope the filter because the gzip_compressor does not support flush operations; it will need to go out of scope
 	boost::scoped_ptr< boost::iostreams::filtering_ostream > pFilter( new boost::iostreams::filtering_ostream() );
 	Nullable< std::string > acceptEncoding = i_rRequest.GetHeaderEntry( ACCEPT_ENCODING );
 	if( !acceptEncoding.IsNull() && m_CompressionEnabled )
@@ -82,16 +74,8 @@ void LoadHandler::Handle( HTTPRequest& i_rRequest, HTTPResponse& o_rResponse )
 		if( std::find( encodings.begin(), encodings.end(), GZIP ) != encodings.end() )
 		{
 			MVLOGGER( "root.lib.DataProxy.Service.LoadHandler.UsingCompression.GZip", "Using gzip compression; parsed from client's " << ACCEPT_ENCODING << " field: '" << acceptEncoding << "'" );
-			pFilter->push( boost::iostreams::zlib_compressor( m_GZipParams ) );
+			pFilter->push( boost::iostreams::gzip_compressor( m_GZipParams ) );
 			encoding = GZIP;
-		}
-
-		// 2. deflate
-		else if( std::find( encodings.begin(), encodings.end(), DEFLATE ) != encodings.end() )
-		{
-			MVLOGGER( "root.lib.DataProxy.Service.LoadHandler.UsingCompression.GZip", "Using deflate compression; parsed from client's " << ACCEPT_ENCODING << " field: '" << acceptEncoding << "'" );
-			pFilter->push( boost::iostreams::zlib_compressor( m_DeflateParams ) );
-			encoding = DEFLATE;
 		}
 	}
 	pFilter->push( results );

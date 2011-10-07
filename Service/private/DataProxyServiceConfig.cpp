@@ -23,6 +23,9 @@ namespace
 	const char* MAX_REQUEST_SIZE( "max_request_size" );
 	const char* ZLIB_COMPRESSION_LEVEL( "zlib_compression_level" );
 	const char* ENABLE_X_FORWARDED_FOR( "enable_x-forwarded-for" );
+	const char* STATS_RETENTION_HOURS( "stats_retention_hours" );
+	const char* STATS_RETENTION_SIZE( "stats_retention_size" );
+	const char* STATS_PER_HOUR_ESTIMATE( "stats_per_hour_estimate" );
 }
 
 DataProxyServiceConfig::DataProxyServiceConfig( int argc, char** argv )
@@ -36,7 +39,10 @@ DataProxyServiceConfig::DataProxyServiceConfig( int argc, char** argv )
 		( NUM_THREADS, boost::program_options::value<uint>(), "number of threads to handle requests" )
 		( MAX_REQUEST_SIZE, boost::program_options::value<uint>()->default_value(16384), "byte limit for url requests" )
 		( ENABLE_X_FORWARDED_FOR, boost::program_options::value<bool>()->default_value(false), "if toggled, enable parsing, appending, and forwarding of X-Forwarded-For HTTP header field" )
-		( ZLIB_COMPRESSION_LEVEL, boost::program_options::value<int>()->default_value(0), "zlib dynamic compression level\n  -1: use zlib default\n   0: disable compression\n 1-9: legal compression levels" );
+		( ZLIB_COMPRESSION_LEVEL, boost::program_options::value<int>()->default_value(0), "zlib dynamic compression level\n  -1: use zlib default\n   0: disable compression\n 1-9: legal compression levels" )
+		( STATS_RETENTION_HOURS, boost::program_options::value<unsigned int>()->default_value(30 * 24), "number of hours to keep stats information. 0 = off." )
+		( STATS_RETENTION_SIZE, boost::program_options::value<long>()->default_value(-1), "maximum number of stats logs to keep. -1 = no limit. 0 = off." )
+		( STATS_PER_HOUR_ESTIMATE, boost::program_options::value<size_t>()->default_value(20000), "estimated number of requests per hour. a good estimate optimizes insertion of stats information." );
 
 	m_Options.ParseOptions(argc, argv);
 
@@ -89,4 +95,19 @@ int DataProxyServiceConfig::GetZLibCompressionLevel() const
 bool DataProxyServiceConfig::GetEnableXForwardedFor() const
 {
 	return m_Options[ENABLE_X_FORWARDED_FOR].as< bool >();
+}
+
+unsigned int DataProxyServiceConfig::GetStatsRetentionHours() const
+{
+	return m_Options[STATS_RETENTION_HOURS].as< unsigned int >();
+}
+
+long DataProxyServiceConfig::GetStatsRetentionSize() const
+{
+	return m_Options[STATS_RETENTION_SIZE].as< long >();
+}
+
+size_t DataProxyServiceConfig::GetStatsPerHourEstimate() const
+{
+	return m_Options[STATS_PER_HOUR_ESTIMATE].as< size_t >();
 }

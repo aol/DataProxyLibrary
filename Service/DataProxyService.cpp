@@ -22,6 +22,10 @@ namespace
 {
 	const std::string LISTENING_PORTS( "listening_ports" );
 	const std::string NUM_THREADS( "num_threads" );
+	const std::string MAX_REQUEST_SIZE( "max_request_size" );
+	const std::string STATS_RETENTION_HOURS( "stats_retention_hours" );
+	const std::string STATS_RETENTION_SIZE( "stats_retention_size" );
+	const std::string STATS_PER_HOUR_ESTIMATE( "stats_per_hour_estimate" );
 
 	const std::string MATCH_ALL( ".*" );
 }
@@ -38,6 +42,10 @@ int main( int argc, char** argv )
 		std::map< std::string, std::string > parameters;
 		parameters[ LISTENING_PORTS ] = boost::lexical_cast< std::string >( config.GetPort() );
 		parameters[ NUM_THREADS ] = boost::lexical_cast< std::string >( config.GetNumThreads() );
+		parameters[ MAX_REQUEST_SIZE ] = boost::lexical_cast< std::string >( config.GetMaxRequestSize() );
+		parameters[ STATS_RETENTION_HOURS ] = boost::lexical_cast< std::string >( config.GetStatsRetentionHours() );
+		parameters[ STATS_RETENTION_SIZE ] = boost::lexical_cast< std::string >( config.GetStatsRetentionSize() );
+		parameters[ STATS_PER_HOUR_ESTIMATE ] = boost::lexical_cast< std::string >( config.GetStatsPerHourEstimate() );
 		WebServer::CreateInstance( parameters );
 		WebServer& rWebServer = WebServer::GetInstance();
 

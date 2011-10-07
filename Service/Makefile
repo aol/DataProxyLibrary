@@ -32,8 +32,12 @@ TESTMODULES=\
 	lib/cpp/Service \
 	lib/cpp/TestHelpers \
 
+MOCKMODULES=\
+	lib/cpp/Service \
+
 MODULESPEC = $(MODULES:%=$(ROOTDIR)/%)
 TESTMODULESPEC = $(TESTMODULES:%=$(ROOTDIR)/%)
+MOCKMODULESPEC = $(MOCKMODULES:%=$(ROOTDIR)/%)
 
 # Include directories
 INCS=\
@@ -45,7 +49,7 @@ TESTINCS=\
 	$(INCS) \
 	-I$(MOCKDIR) \
 	-I$(TESTDIR) \
-	$(MODULESPEC:%=-I%/mock) \
+	$(MOCKMODULESPEC:%=-I%/mock) \
 	$(TESTMODULESPEC:%=-I%) \
 
 # Library locations
@@ -184,6 +188,7 @@ test_coverage: $(COVERAGEDIR)
 extlibs:
 	$(MODULES:%=cd $(ROOTDIR)/%;make ${SUBTARGET};cd -;)
 	$(TESTMODULES:%=cd $(ROOTDIR)/%;make ${SUBTARGET};cd -;)
+	$(MOCKMODULES:%=cd $(ROOTDIR)/%;make mock;cd -;)
 
 # Create links to the target dir
 $(PRIMARY_TARGET): % : $(TARGETDIR)/% $(TARGETDIR)

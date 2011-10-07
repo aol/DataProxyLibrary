@@ -16,7 +16,7 @@
 #include "AbstractHandler.hpp"
 #include <boost/noncopyable.hpp>
 #include <string>
-#include <boost/iostreams/filter/zlib.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
 
 class HTTPRequest;
 class HTTPResponse;
@@ -31,8 +31,7 @@ public:
 	virtual void Handle( HTTPRequest& i_rRequest, HTTPResponse& o_rResponse );
 
 private:
-	boost::iostreams::zlib_params m_GZipParams;
-	boost::iostreams::zlib_params m_DeflateParams;
+	boost::iostreams::gzip_params m_GZipParams;
 	bool m_CompressionEnabled;
 };
 

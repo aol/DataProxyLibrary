@@ -24,7 +24,6 @@
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/copy.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
-#include <boost/iostreams/filter/zlib.hpp>
 
 CPPUNIT_TEST_SUITE_REGISTRATION(LoadHandlerTest);
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(LoadHandlerTest, "LoadHandlerTest");
@@ -176,23 +175,10 @@ void LoadHandlerTest::testLoadCompressed()
 
 	std::stringstream gzipData1;
 	boost::iostreams::filtering_ostream gzipFilter;
-	gzipFilter.push( boost::iostreams::zlib_compressor() );
+	gzipFilter.push( boost::iostreams::gzip_compressor() );
 	gzipFilter.push( gzipData1 );
 	std::istringstream gzipIn( data1 );
 	boost::iostreams::copy( gzipIn, gzipFilter );
-
-	std::stringstream deflateData1;
-	boost::iostreams::filtering_ostream deflateFilter;
-	boost::iostreams::zlib_params deflateParams( boost::iostreams::zlib::default_compression,
-												 boost::iostreams::zlib::deflated,
-												 boost::iostreams::zlib::default_window_bits,
-												 boost::iostreams::zlib::default_mem_level,
-												 boost::iostreams::zlib::default_strategy,
-												 true, false );
-	deflateFilter.push( boost::iostreams::zlib_compressor( deflateParams ) );
-	deflateFilter.push( deflateData1 );
-	std::istringstream deflateIn( data1 );
-	boost::iostreams::copy( deflateIn, deflateFilter );
 
 	std::string dplConfigFileSpec = m_pTempDir->GetDirectoryName() + "/dplConfig.xml";
 
@@ -214,18 +200,6 @@ void LoadHandlerTest::testLoadCompressed()
 			 << "WriteHeader called with Name: Content-Length Value: " << gzipData1.str().size() << std::endl
 			 << "WriteHeader called with Name: Content-Encoding Value: gzip" << std::endl
 			 << "WriteData called with Data: " << gzipData1.str() << std::endl;
-	CPPUNIT_ASSERT_EQUAL( expected.str(), response.GetLog() );
-	expected.str("");
-	response.ClearLog();
-
-	// deflate encoding
-	request.SetHTTPHeader( "Accept-Encoding", "deflate" );
-	CPPUNIT_ASSERT_NO_THROW( handler.Handle( request, response ) );
-	expected << "SetHTTPStatusCode called with Code: 200 Message: " << std::endl
-			 << "WriteHeader called with Name: Server Value: " << DATA_PROXY_SERVICE_VERSION << std::endl
-			 << "WriteHeader called with Name: Content-Length Value: " << deflateData1.str().size() << std::endl
-			 << "WriteHeader called with Name: Content-Encoding Value: deflate" << std::endl
-			 << "WriteData called with Data: " << deflateData1.str() << std::endl;
 	CPPUNIT_ASSERT_EQUAL( expected.str(), response.GetLog() );
 	expected.str("");
 	response.ClearLog();
@@ -278,18 +252,6 @@ void LoadHandlerTest::testLoadCompressed()
 	expected.str("");
 	response.ClearLog();
 
-	// garbage, deflate encoding = deflate
-	request.SetHTTPHeader( "Accept-Encoding", "garbage, deflate" );
-	CPPUNIT_ASSERT_NO_THROW( handler.Handle( request, response ) );
-	expected << "SetHTTPStatusCode called with Code: 200 Message: " << std::endl
-			 << "WriteHeader called with Name: Server Value: " << DATA_PROXY_SERVICE_VERSION << std::endl
-			 << "WriteHeader called with Name: Content-Length Value: " << deflateData1.str().size() << std::endl
-			 << "WriteHeader called with Name: Content-Encoding Value: deflate" << std::endl
-			 << "WriteData called with Data: " << deflateData1.str() << std::endl;
-	CPPUNIT_ASSERT_EQUAL( expected.str(), response.GetLog() );
-	expected.str("");
-	response.ClearLog();
-
 	// garbage1,garbage2 encoding = identity
 	request.SetHTTPHeader( "Accept-Encoding", "garbage1,garbage2" );
 	CPPUNIT_ASSERT_NO_THROW( handler.Handle( request, response ) );
@@ -318,23 +280,10 @@ void LoadHandlerTest::testLoadCompressedCustomLevel()
 
 	std::stringstream gzipData1;
 	boost::iostreams::filtering_ostream gzipFilter;
-	gzipFilter.push( boost::iostreams::zlib_compressor( boost::iostreams::zlib_params( 9 ) ) );
+	gzipFilter.push( boost::iostreams::gzip_compressor( boost::iostreams::gzip_params( 9 ) ) );
 	gzipFilter.push( gzipData1 );
 	std::istringstream gzipIn( data1 );
 	boost::iostreams::copy( gzipIn, gzipFilter );
-
-	std::stringstream deflateData1;
-	boost::iostreams::filtering_ostream deflateFilter;
-	boost::iostreams::zlib_params deflateParams( 9,
-												 boost::iostreams::zlib::deflated,
-												 boost::iostreams::zlib::default_window_bits,
-												 boost::iostreams::zlib::default_mem_level,
-												 boost::iostreams::zlib::default_strategy,
-												 true, false );
-	deflateFilter.push( boost::iostreams::zlib_compressor( deflateParams ) );
-	deflateFilter.push( deflateData1 );
-	std::istringstream deflateIn( data1 );
-	boost::iostreams::copy( deflateIn, deflateFilter );
 
 	std::string dplConfigFileSpec = m_pTempDir->GetDirectoryName() + "/dplConfig.xml";
 
@@ -356,18 +305,6 @@ void LoadHandlerTest::testLoadCompressedCustomLevel()
 			 << "WriteHeader called with Name: Content-Length Value: " << gzipData1.str().size() << std::endl
 			 << "WriteHeader called with Name: Content-Encoding Value: gzip" << std::endl
 			 << "WriteData called with Data: " << gzipData1.str() << std::endl;
-	CPPUNIT_ASSERT_EQUAL( expected.str(), response.GetLog() );
-	expected.str("");
-	response.ClearLog();
-
-	// deflate encoding
-	request.SetHTTPHeader( "Accept-Encoding", "deflate" );
-	CPPUNIT_ASSERT_NO_THROW( handler.Handle( request, response ) );
-	expected << "SetHTTPStatusCode called with Code: 200 Message: " << std::endl
-			 << "WriteHeader called with Name: Server Value: " << DATA_PROXY_SERVICE_VERSION << std::endl
-			 << "WriteHeader called with Name: Content-Length Value: " << deflateData1.str().size() << std::endl
-			 << "WriteHeader called with Name: Content-Encoding Value: deflate" << std::endl
-			 << "WriteData called with Data: " << deflateData1.str() << std::endl;
 	CPPUNIT_ASSERT_EQUAL( expected.str(), response.GetLog() );
 	expected.str("");
 	response.ClearLog();

@@ -48,6 +48,9 @@ void DataProxyServiceConfigTest::testParameters()
 		"--num_threads", "45",
 		"--max_request_size", "678",
 		"--zlib_compression_level", "7",
+		"--stats_retention_hours", "17",
+		"--stats_retention_size", "123",
+		"--stats_per_hour_estimate", "468",
 		"--enable_x-forwarded-for", "1"
 	};
 	int argc = sizeof(argv)/sizeof(char*);
@@ -62,6 +65,9 @@ void DataProxyServiceConfigTest::testParameters()
 	CPPUNIT_ASSERT_EQUAL( uint(45), config.GetNumThreads() );
 	CPPUNIT_ASSERT_EQUAL( uint(678), config.GetMaxRequestSize() );
 	CPPUNIT_ASSERT_EQUAL( 7, config.GetZLibCompressionLevel() );
+	CPPUNIT_ASSERT_EQUAL( uint(17), config.GetStatsRetentionHours() );
+	CPPUNIT_ASSERT_EQUAL( long(123), config.GetStatsRetentionSize() );
+	CPPUNIT_ASSERT_EQUAL( size_t(468), config.GetStatsPerHourEstimate() );
 	CPPUNIT_ASSERT( config.GetEnableXForwardedFor() );
 }
 
@@ -88,6 +94,9 @@ void DataProxyServiceConfigTest::testOptionalParameters()
 	CPPUNIT_ASSERT_EQUAL( uint(16384), config.GetMaxRequestSize() );
 	CPPUNIT_ASSERT_EQUAL( 0, config.GetZLibCompressionLevel() );
 	CPPUNIT_ASSERT( !config.GetEnableXForwardedFor() );
+	CPPUNIT_ASSERT_EQUAL( uint(30*24), config.GetStatsRetentionHours() );
+	CPPUNIT_ASSERT_EQUAL( long(-1), config.GetStatsRetentionSize() );
+	CPPUNIT_ASSERT_EQUAL( size_t(20000), config.GetStatsPerHourEstimate() );
 }
 
 void DataProxyServiceConfigTest::testIllegalParameters()
