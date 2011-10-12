@@ -40,9 +40,9 @@ DataProxyServiceConfig::DataProxyServiceConfig( int argc, char** argv )
 		( MAX_REQUEST_SIZE, boost::program_options::value<uint>()->default_value(16384), "byte limit for url requests" )
 		( ENABLE_X_FORWARDED_FOR, boost::program_options::value<bool>()->default_value(false), "if toggled, enable parsing, appending, and forwarding of X-Forwarded-For HTTP header field" )
 		( ZLIB_COMPRESSION_LEVEL, boost::program_options::value<int>()->default_value(0), "zlib dynamic compression level\n  -1: use zlib default\n   0: disable compression\n 1-9: legal compression levels" )
-		( STATS_RETENTION_HOURS, boost::program_options::value<unsigned int>()->default_value(30 * 24), "number of hours to keep stats information. 0 = off." )
+		( STATS_RETENTION_HOURS, boost::program_options::value<unsigned int>()->default_value(24), "number of hours to keep stats information. 0 = off." )
 		( STATS_RETENTION_SIZE, boost::program_options::value<long>()->default_value(-1), "maximum number of stats logs to keep. -1 = no limit. 0 = off." )
-		( STATS_PER_HOUR_ESTIMATE, boost::program_options::value<size_t>()->default_value(20000), "estimated number of requests per hour. a good estimate optimizes insertion of stats information." );
+		( STATS_PER_HOUR_ESTIMATE, boost::program_options::value<size_t>()->default_value(5000), "estimated number of requests per hour. a good estimate optimizes insertion of stats information." );
 
 	m_Options.ParseOptions(argc, argv);
 

@@ -94,9 +94,9 @@ void DataProxyServiceConfigTest::testOptionalParameters()
 	CPPUNIT_ASSERT_EQUAL( uint(16384), config.GetMaxRequestSize() );
 	CPPUNIT_ASSERT_EQUAL( 0, config.GetZLibCompressionLevel() );
 	CPPUNIT_ASSERT( !config.GetEnableXForwardedFor() );
-	CPPUNIT_ASSERT_EQUAL( uint(30*24), config.GetStatsRetentionHours() );
+	CPPUNIT_ASSERT_EQUAL( uint(24), config.GetStatsRetentionHours() );
 	CPPUNIT_ASSERT_EQUAL( long(-1), config.GetStatsRetentionSize() );
-	CPPUNIT_ASSERT_EQUAL( size_t(20000), config.GetStatsPerHourEstimate() );
+	CPPUNIT_ASSERT_EQUAL( size_t(5000), config.GetStatsPerHourEstimate() );
 }
 
 void DataProxyServiceConfigTest::testIllegalParameters()
