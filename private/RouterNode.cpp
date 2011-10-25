@@ -94,7 +94,7 @@ namespace
 	std::string GetSortCommand( size_t i_KeyIndex, const std::string& i_rTempDir )
 	{
 		std::stringstream result;
-		result << "sort -t, -k" << i_KeyIndex << " -T" << i_rTempDir;
+		result << "sort -t, -k" << i_KeyIndex << "," << i_KeyIndex << " -T" << i_rTempDir;
 		return result.str();
 	}
 }
