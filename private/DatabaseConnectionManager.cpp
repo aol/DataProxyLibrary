@@ -69,6 +69,7 @@ DatabaseConnectionManager::DatabaseConnectionManager( DataProxyClient& i_rDataPr
 	m_ConnectionsByTableName(),
 	m_rDataProxyClient( i_rDataProxyClient ),
 	m_ConfigVersion(),
+	m_ShardVersion(),
 	m_ConnectMutex()
 {
 }
@@ -79,7 +80,7 @@ DatabaseConnectionManager::~DatabaseConnectionManager()
 
 void DatabaseConnectionManager::ParseConnectionsByTable( const xercesc::DOMNode& i_rDatabaseConnectionNode )
 {
-	boost::unique_lock< boost::shared_mutex > lock( m_ConfigVersion );
+	boost::unique_lock< boost::shared_mutex > lock( m_ShardVersion );
 	std::vector<xercesc::DOMNode*> nodes;
 	XMLUtilities::GetChildrenByName( nodes, &i_rDatabaseConnectionNode, CONNECTIONS_BY_TABLE_NODE);
 	std::vector<xercesc::DOMNode*>::const_iterator iter = nodes.begin();
@@ -97,7 +98,7 @@ void DatabaseConnectionManager::ParseConnectionsByTable( const xercesc::DOMNode&
 		datum.SetValue< ConnectionNodeName >( XMLUtilities::GetAttributeValue(*iter, CONNECTIONS_NODE_NAME_ATTRIBUTE) );
 		datum.SetValue< TablesNodeName >( XMLUtilities::GetAttributeValue(*iter, TABLES_NODE_NAME_ATTRIBUTE) );
 		m_ShardCollections.InsertUpdate( datum );
-		FetchConnectionsByTable( datum.GetValue< ShardCollectionName >(), datum.GetValue< ConnectionNodeName >(), datum.GetValue< TablesNodeName >() );
+//		FetchConnectionsByTable( datum.GetValue< ShardCollectionName >(), datum.GetValue< ConnectionNodeName >(), datum.GetValue< TablesNodeName >() );
 	}
 }
 
@@ -310,7 +311,7 @@ std::string DatabaseConnectionManager::PrivateGetConnectionNameByTable(const std
 {
 	__gnu_cxx::hash_map< std::string, std::string >::const_iterator iter;
 	{
-		boost::unique_lock< boost::shared_mutex > lock( m_ConfigVersion );
+		boost::unique_lock< boost::shared_mutex > lock( m_ShardVersion );
 		iter = m_ConnectionsByTableName.find( i_rTableName );
 		if( iter == m_ConnectionsByTableName.end() )
 		{
@@ -426,6 +427,7 @@ std::string DatabaseConnectionManager::GetDatabaseTypeByTable( const std::string
 void DatabaseConnectionManager::ClearConnections()
 {
 	boost::unique_lock< boost::shared_mutex > lock( m_ConfigVersion );
+	boost::unique_lock< boost::shared_mutex > lock2( m_ShardVersion );
 	m_DatabaseConnectionContainer.clear();
 	m_ShardDatabaseConnectionContainer.clear();
 	m_ShardCollections.clear();

@@ -132,6 +132,7 @@ private:
 	std::string PrivateGetConnectionNameByTable(const std::string& i_rTableName ) const;
 
 	mutable boost::shared_mutex m_ConfigVersion;
+	mutable boost::shared_mutex m_ShardVersion;
 	mutable boost::shared_mutex m_ConnectMutex;
 };
 
