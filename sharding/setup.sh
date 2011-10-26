@@ -2,7 +2,7 @@
 set -e
 set -u
 
-if [ $# -ne 3 ]; then
+if [ $# -ne 4 ]; then
 	echo "usage: $0 <master_host> <server_list_file> <dbname_list_file> <dpl_config_file>"
 	echo "	NOTE: <dpl_config_file> must contain a node called 'shard_nodes'"
 	exit 1
@@ -17,7 +17,7 @@ dpl_config_file=$4
 master_db=shard_master
 echo "`date`: Setting up master on $master_host (dbname=$master_db)"
 echo "CREATE DATABASE IF NOT EXISTS $master_db" | mysql -u adlearn -pAdv.commv -h $master_host
-mysql -u adlearn -p Adv.commv -h $master_host $master_db < masterTables.sql
+mysql -uadlearn -pAdv.commv -h$master_host $master_db < masterTables.sql
 
 
 # REGION: NODES SETUP
@@ -34,10 +34,10 @@ for server in $servers; do
 		command="drop database if exists $db; create database $db; "$command
 		echo "mysql,$db,$server,adlearn,Adv.commv,,0" >> $nodesFile
 	done
-	mysql -u adlearn -p Adv.commv -h $server -e "$command"
+	mysql -uadlearn -pAdv.commv -h$server -e "$command"
 done
 
 echo "`date`: Updating master with node information..."
-dplShell --i $dpl_config_file --n nodes --d @$nodesFile
+dplShell --i $dpl_config_file --n shard_nodes --d @$nodesFile
 
 rm $nodesFile
