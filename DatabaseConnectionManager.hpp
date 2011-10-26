@@ -86,14 +86,16 @@ MV_MAKEEXCEPTIONCLASS(DatabaseConnectionManagerException, MVException);
 		GenericDatum< ShardCollectionName,
 		GenericDatum< ConnectionNodeName,
 		GenericDatum< TablesNodeName,
-		RowEnd > > >
+		GenericDatum< ConnectionReconnect,
+		RowEnd > > > >
 	ShardCollectionDatum;
 
 	typedef
 		GenericDataContainerDescriptor< ShardCollectionName, KeyDatum,
 		GenericDataContainerDescriptor< ConnectionNodeName, RetainFirstDatum,
 		GenericDataContainerDescriptor< TablesNodeName, RetainFirstDatum,
-		RowEnd > > >
+		GenericDataContainerDescriptor< ConnectionReconnect, RetainFirstDatum,
+		RowEnd > > > >
 	ShardCollectionContainerDescription;
 
 	typedef GenericDataContainer< ShardCollectionDatum, ShardCollectionContainerDescription, std::map > ShardCollectionContainer;
@@ -127,7 +129,7 @@ protected:
 
 private:
 	void RefreshConnectionsByTable() const;
-	void FetchConnectionsByTable( const std::string& i_rName, const std::string& i_rConnectionsNode, const std::string& i_rTablesNode ) const;
+	void FetchConnectionsByTable( const std::string& i_rName, const std::string& i_rConnectionsNode, const std::string& i_rTablesNode, double i_ConnectionReconnect ) const;
 	DatabaseConnectionDatum& PrivateGetConnection(const std::string& i_rConnectionName ) const;
 	std::string PrivateGetConnectionNameByTable(const std::string& i_rTableName ) const;
 

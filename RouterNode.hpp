@@ -61,7 +61,10 @@ private:
 		INNER,
 		LEFT,
 		RIGHT,
-		OUTER
+		OUTER,
+		ANTI_LEFT,
+		ANTI_RIGHT,
+		ANTI_INNER
 	};
 
 	DATUMINFO( NodeName, std::string );

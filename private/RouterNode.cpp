@@ -42,6 +42,9 @@ namespace
 	const std::string LEFT_STRING( "left" );
 	const std::string RIGHT_STRING( "right" );
 	const std::string OUTER_STRING( "outer" );
+	const std::string ANTI_LEFT_STRING( "antiLeft" );
+	const std::string ANTI_RIGHT_STRING( "antiRight" );
+	const std::string ANTI_INNER_STRING( "antiInner" );
 
 	const std::string APPEND_STRING( "append" );
 	const std::string SKIP_LINES_ATTRIBUTE( "skipLines" );
@@ -257,6 +260,16 @@ void RouterNode::LoadImpl( const std::map<std::string,std::string>& i_rParameter
 				break;
 			case LEFT:
 				joinCommand << " -a 1";
+				break;
+			case ANTI_RIGHT:
+				joinCommand << " -v 1";
+				break;
+			case ANTI_LEFT:
+				joinCommand << " -v 2";
+				break;
+			case ANTI_INNER:
+				joinCommand << " -v 1";
+				joinCommand << " -v 2";
 				break;
 			case INNER:
 			case BASE:
@@ -655,10 +668,23 @@ void RouterNode::SetReadConfig( const xercesc::DOMNode* i_pNode, ReadBehavior& o
 				{
 					streamConfig.SetValue< JoinType >( OUTER );
 				}
+				else if( joinType == ANTI_RIGHT_STRING )
+				{
+					streamConfig.SetValue< JoinType >( ANTI_RIGHT );
+				}
+				else if( joinType == ANTI_LEFT_STRING )
+				{
+					streamConfig.SetValue< JoinType >( ANTI_LEFT );
+				}
+				else if( joinType == ANTI_INNER_STRING )
+				{
+					streamConfig.SetValue< JoinType >( ANTI_INNER );
+				}
 				else
 				{
 					MV_THROW( RouterNodeException, "Illegal " << JOIN_TYPE_ATTRIBUTE << " specified for " << FORWARD_TO_NODE << " node " << handlerName << ": '" << joinType
-						<< "'. Legal values are: '" << INNER_STRING << "', '" << RIGHT_STRING << "', '" << LEFT_STRING << "', '" << OUTER_STRING << "'" );
+						<< "'. Legal values are: '" << INNER_STRING << "', '" << RIGHT_STRING << "', '" << LEFT_STRING << "', '" << OUTER_STRING << "', '"
+						<< ANTI_RIGHT_STRING << "', '" << ANTI_LEFT_STRING << "', '" << ANTI_INNER_STRING << "'" );
 				}
 			}
 		}

@@ -27,6 +27,7 @@ private:
 	CPPUNIT_TEST( testLoadJoinRight );
 	CPPUNIT_TEST( testLoadJoinOuter );
 	CPPUNIT_TEST( testLoadJoinComplex );
+	CPPUNIT_TEST( testLoadAntiJoin );
 	CPPUNIT_TEST( testLoadJoinRuntimeErrors );
 	CPPUNIT_TEST( testLoadAppend );
 	CPPUNIT_TEST( testLoadEmpty );
@@ -55,6 +56,7 @@ public:
 	void testLoadJoinRight();
 	void testLoadJoinOuter();
 	void testLoadJoinComplex();
+	void testLoadAntiJoin();
 	void testLoadJoinRuntimeErrors();
 	void testLoadAppend();
 	void testLoadEmpty();

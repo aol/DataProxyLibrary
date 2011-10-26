@@ -48,6 +48,24 @@ namespace
 		return NODE_NAME_PREFIX + "_" + i_rShardNode + "_" + i_rNodeId;
 	}
 
+	double GetTimeout( xercesc::DOMNode* i_pNode, double i_Default )
+	{
+		xercesc::DOMAttr* pAttribute = XMLUtilities::GetAttribute( i_pNode, RECONNECT_TIMEOUT_ATTRIBUTE );
+		if( pAttribute != NULL )
+		{
+			std::string reconnectString = XMLUtilities::XMLChToString( pAttribute->getValue() );
+			try
+			{
+				return boost::lexical_cast< double >( reconnectString );
+			}
+			catch( const boost::bad_lexical_cast& i_rException )
+			{
+				MV_THROW( DatabaseConnectionManagerException, "Error parsing " << RECONNECT_TIMEOUT_ATTRIBUTE << " attribute: " << reconnectString << " as double" );
+			}
+		}
+		return i_Default;
+	}
+
 	void ReconnectIfNecessary( DatabaseConnectionDatum& i_rDatum )
 	{
 		double secondsElapsed = i_rDatum.GetReference< ConnectionTimer >()->GetElapsedSeconds();
@@ -90,6 +108,7 @@ void DatabaseConnectionManager::ParseConnectionsByTable( const xercesc::DOMNode&
 		allowedAttributes.insert( NAME_ATTRIBUTE );
 		allowedAttributes.insert( CONNECTIONS_NODE_NAME_ATTRIBUTE );
 		allowedAttributes.insert( TABLES_NODE_NAME_ATTRIBUTE );
+		allowedAttributes.insert( RECONNECT_TIMEOUT_ATTRIBUTE );
 		XMLUtilities::ValidateAttributes( *iter, allowedAttributes );
 		XMLUtilities::ValidateNode( *iter, std::set< std::string >() );
 
@@ -97,8 +116,8 @@ void DatabaseConnectionManager::ParseConnectionsByTable( const xercesc::DOMNode&
 		datum.SetValue< ShardCollectionName >( XMLUtilities::GetAttributeValue(*iter, NAME_ATTRIBUTE) );
 		datum.SetValue< ConnectionNodeName >( XMLUtilities::GetAttributeValue(*iter, CONNECTIONS_NODE_NAME_ATTRIBUTE) );
 		datum.SetValue< TablesNodeName >( XMLUtilities::GetAttributeValue(*iter, TABLES_NODE_NAME_ATTRIBUTE) );
+		datum.SetValue< ConnectionReconnect >( GetTimeout( *iter, 3600 ) );
 		m_ShardCollections.InsertUpdate( datum );
-//		FetchConnectionsByTable( datum.GetValue< ShardCollectionName >(), datum.GetValue< ConnectionNodeName >(), datum.GetValue< TablesNodeName >() );
 	}
 }
 
@@ -124,20 +143,7 @@ void DatabaseConnectionManager::Parse( const xercesc::DOMNode& i_rDatabaseConnec
 		std::string databaseUserName = XMLUtilities::GetAttributeValue( *iter, DATABASE_USERNAME_ATTRIBUTE );
 		std::string databasePassword = XMLUtilities::GetAttributeValue( *iter, DATABASE_PASSWORD_ATTRIBUTE );
 		std::string connectionName = XMLUtilities::GetAttributeValue( *iter, CONNECTION_NAME_ATTRIBUTE );
-		double reconnectTimeout = 3600;	// by default, reconnect every hour
-		xercesc::DOMAttr* pAttribute = XMLUtilities::GetAttribute( *iter, RECONNECT_TIMEOUT_ATTRIBUTE );
-		if( pAttribute != NULL )
-		{
-			std::string reconnectString = XMLUtilities::XMLChToString( pAttribute->getValue() );
-			try
-			{
-				reconnectTimeout = boost::lexical_cast< double >( reconnectString );
-			}
-			catch( const boost::bad_lexical_cast& i_rException )
-			{
-				MV_THROW( DatabaseConnectionManagerException, "Error parsing " << RECONNECT_TIMEOUT_ATTRIBUTE << " attribute: " << reconnectString << " as double" );
-			}
-		}
+		double reconnectTimeout = GetTimeout( *iter, 3600 );	// by default, reconnect every hour
 
 		databaseConfig.SetValue<DatabaseName>(databaseName);
 		databaseConfig.SetValue<DatabaseUserName>(databaseUserName);
@@ -199,7 +205,8 @@ void DatabaseConnectionManager::Parse( const xercesc::DOMNode& i_rDatabaseConnec
 
 void DatabaseConnectionManager::FetchConnectionsByTable( const std::string& i_rName,
 														 const std::string& i_rConnectionsNode,
-														 const std::string& i_rTablesNode ) const
+														 const std::string& i_rTablesNode,
+														 double i_ConnectionReconnect ) const
 {
 	// first load connections
 	std::map< std::string, std::string > parameters;
@@ -227,6 +234,7 @@ void DatabaseConnectionManager::FetchConnectionsByTable( const std::string& i_rN
 
 		std::string connectionName = GetConnectionName( node, i_rName );
 		DatabaseConnectionDatum connectionDatum;
+		connectionDatum.SetValue< ConnectionReconnect >( i_ConnectionReconnect );
 		connectionDatum.SetValue< ConnectionName >( connectionName );
 		if( m_DatabaseConnectionContainer.find( connectionDatum ) != m_DatabaseConnectionContainer.end() )
 		{
@@ -303,7 +311,8 @@ void DatabaseConnectionManager::RefreshConnectionsByTable() const
 	{
 		FetchConnectionsByTable( shardIter->second->GetValue< ShardCollectionName >(),
 								 shardIter->second->GetValue< ConnectionNodeName >(),
-								 shardIter->second->GetValue< TablesNodeName >() );
+								 shardIter->second->GetValue< TablesNodeName >(),
+								 shardIter->second->GetValue< ConnectionReconnect >() );
 	}
 }
 

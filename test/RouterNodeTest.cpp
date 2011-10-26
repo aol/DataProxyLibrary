@@ -191,7 +191,7 @@ void RouterNodeTest::testInvalidXml()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", client, *nodes[0] ), RouterNodeException,
-		".*:\\d+: Illegal joinType specified for ForwardTo node name2: 'stupid'. Legal values are: 'inner', 'right', 'left', 'outer'" );
+		".*:\\d+: Illegal joinType specified for ForwardTo node name2: 'stupid'. Legal values are: 'inner', 'right', 'left', 'outer', 'antiRight', 'antiLeft', 'antiInner'" );
 
 	xmlContents.str("");
 	xmlContents << "<RouterNode >" << std::endl
@@ -1390,6 +1390,180 @@ void RouterNodeTest::testLoadJoinOuter()
 	std::vector< std::string > dirContents;
 	CPPUNIT_ASSERT_NO_THROW( FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirContents ) );
 	CPPUNIT_ASSERT_EQUAL( size_t(0), dirContents.size() );
+}
+
+void RouterNodeTest::testLoadAntiJoin()
+{
+	// case 1: antiRight
+	{
+		std::stringstream xmlContents;
+		xmlContents << "<RouterNode >" << std::endl
+					<< "  <Read behavior=\"join\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <ForwardTo name=\"name1\" joinKey=\"campaign_id\" />" << std::endl
+					<< "    <ForwardTo name=\"name2\" joinKey=\"campaign_id\" joinType=\"antiRight\" />" << std::endl
+					<< "  </Read>" << std::endl
+					<< "</RouterNode>" << std::endl;
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		std::stringstream stream1;
+		std::stringstream stream2;
+
+		stream1 << "campaign_id,prop1" << std::endl
+				<< "1,1prop1" << std::endl
+				<< "2,2prop1" << std::endl
+				<< "3,3prop1" << std::endl
+				<< "4,4prop1" << std::endl;
+		
+		stream2 << "campaign_id,prop2" << std::endl
+				<< "3,3prop2" << std::endl
+				<< "4,4prop2" << std::endl
+				<< "5,5prop2" << std::endl
+				<< "6,6prop2" << std::endl;
+
+		MockDataProxyClient client;
+		client.SetDataToReturn( "name1", stream1.str() );
+		client.SetDataToReturn( "name2", stream2.str() );
+
+		RouterNode node( "name", client, *nodes[0] );
+
+		std::stringstream results;
+		std::map<std::string,std::string> parameters;
+		parameters["param1"] = "value1";
+		parameters["param2"] = "value2";
+
+		CPPUNIT_ASSERT_NO_THROW( node.LoadImpl( parameters, results ) );
+		
+		std::stringstream expected;
+		expected << "Load called with Name: name1 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+		expected << "Load called with Name: name2 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+		CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+
+		expected.str("");
+		expected << "campaign_id,prop1,prop2" << std::endl
+				 << "1,1prop1," << std::endl
+				 << "2,2prop1," << std::endl;
+		CPPUNIT_ASSERT_EQUAL( expected.str(), results.str() );
+		
+		std::vector< std::string > dirContents;
+		CPPUNIT_ASSERT_NO_THROW( FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirContents ) );
+		CPPUNIT_ASSERT_EQUAL( size_t(0), dirContents.size() );
+	}
+	// case 1: antiLeft
+	{
+		std::stringstream xmlContents;
+		xmlContents << "<RouterNode >" << std::endl
+					<< "  <Read behavior=\"join\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <ForwardTo name=\"name1\" joinKey=\"campaign_id\" />" << std::endl
+					<< "    <ForwardTo name=\"name2\" joinKey=\"campaign_id\" joinType=\"antiLeft\" />" << std::endl
+					<< "  </Read>" << std::endl
+					<< "</RouterNode>" << std::endl;
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		std::stringstream stream1;
+		std::stringstream stream2;
+
+		stream1 << "campaign_id,prop1" << std::endl
+				<< "1,1prop1" << std::endl
+				<< "2,2prop1" << std::endl
+				<< "3,3prop1" << std::endl
+				<< "4,4prop1" << std::endl;
+		
+		stream2 << "campaign_id,prop2" << std::endl
+				<< "3,3prop2" << std::endl
+				<< "4,4prop2" << std::endl
+				<< "5,5prop2" << std::endl
+				<< "6,6prop2" << std::endl;
+
+		MockDataProxyClient client;
+		client.SetDataToReturn( "name1", stream1.str() );
+		client.SetDataToReturn( "name2", stream2.str() );
+
+		RouterNode node( "name", client, *nodes[0] );
+
+		std::stringstream results;
+		std::map<std::string,std::string> parameters;
+		parameters["param1"] = "value1";
+		parameters["param2"] = "value2";
+
+		CPPUNIT_ASSERT_NO_THROW( node.LoadImpl( parameters, results ) );
+		
+		std::stringstream expected;
+		expected << "Load called with Name: name1 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+		expected << "Load called with Name: name2 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+		CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+
+		expected.str("");
+		expected << "campaign_id,prop1,prop2" << std::endl
+				 << "5,,5prop2" << std::endl
+				 << "6,,6prop2" << std::endl;
+		CPPUNIT_ASSERT_EQUAL( expected.str(), results.str() );
+		
+		std::vector< std::string > dirContents;
+		CPPUNIT_ASSERT_NO_THROW( FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirContents ) );
+		CPPUNIT_ASSERT_EQUAL( size_t(0), dirContents.size() );
+	}
+	// case 1: antiInner
+	{
+		std::stringstream xmlContents;
+		xmlContents << "<RouterNode >" << std::endl
+					<< "  <Read behavior=\"join\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <ForwardTo name=\"name1\" joinKey=\"campaign_id\" />" << std::endl
+					<< "    <ForwardTo name=\"name2\" joinKey=\"campaign_id\" joinType=\"antiInner\" />" << std::endl
+					<< "  </Read>" << std::endl
+					<< "</RouterNode>" << std::endl;
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		std::stringstream stream1;
+		std::stringstream stream2;
+
+		stream1 << "campaign_id,prop1" << std::endl
+				<< "1,1prop1" << std::endl
+				<< "2,2prop1" << std::endl
+				<< "3,3prop1" << std::endl
+				<< "4,4prop1" << std::endl;
+		
+		stream2 << "campaign_id,prop2" << std::endl
+				<< "3,3prop2" << std::endl
+				<< "4,4prop2" << std::endl
+				<< "5,5prop2" << std::endl
+				<< "6,6prop2" << std::endl;
+
+		MockDataProxyClient client;
+		client.SetDataToReturn( "name1", stream1.str() );
+		client.SetDataToReturn( "name2", stream2.str() );
+
+		RouterNode node( "name", client, *nodes[0] );
+
+		std::stringstream results;
+		std::map<std::string,std::string> parameters;
+		parameters["param1"] = "value1";
+		parameters["param2"] = "value2";
+
+		CPPUNIT_ASSERT_NO_THROW( node.LoadImpl( parameters, results ) );
+		
+		std::stringstream expected;
+		expected << "Load called with Name: name1 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+		expected << "Load called with Name: name2 Parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+		CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+
+		expected.str("");
+		expected << "campaign_id,prop1,prop2" << std::endl
+				 << "1,1prop1," << std::endl
+				 << "2,2prop1," << std::endl
+				 << "5,,5prop2" << std::endl
+				 << "6,,6prop2" << std::endl;
+		CPPUNIT_ASSERT_EQUAL( expected.str(), results.str() );
+		
+		std::vector< std::string > dirContents;
+		CPPUNIT_ASSERT_NO_THROW( FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirContents ) );
+		CPPUNIT_ASSERT_EQUAL( size_t(0), dirContents.size() );
+	}
 }
 
 void RouterNodeTest::testLoadJoinComplex()

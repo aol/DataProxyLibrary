@@ -278,17 +278,27 @@ namespace
 		return finalTableName;
 	}
 
-	void TruncateMySQLStagingTable(const std::string i_rStagingTableName,
-								   const std::string i_rWriteConnectionName,
-								   const DatabaseConnectionManager& i_rManager)
+	void TruncateMySQLStagingTable( const std::string i_rStagingTableName,
+								    const std::string i_rWriteConnectionName,
+								    const std::string i_rWriteTable,
+								    const DatabaseConnectionManager& i_rManager,
+									bool i_ConnectionByTable )
 	{
-		Database& rMySQLStagingTableConnection = i_rManager.GetMySQLAccessoryConnection(i_rWriteConnectionName);
+		Database* pMySQLStagingTableConnection;
+		if( i_ConnectionByTable )
+		{
+			 pMySQLStagingTableConnection = &i_rManager.GetMySQLAccessoryConnectionByTable(i_rWriteTable);
+		}
+		else
+		{
+			 pMySQLStagingTableConnection = &i_rManager.GetMySQLAccessoryConnection(i_rWriteConnectionName);
+		}
 		std::stringstream sql;
 		
 		// truncate the staging table
 		sql << "TRUNCATE TABLE " << i_rStagingTableName;
 		MVLOGGER( "root.lib.DataProxy.DatabaseProxy.TrucnateMySQLStagingTable", "Truncating staging table: " << i_rStagingTableName << " using the mysql staging table truncate connection");
-		Database::Statement( rMySQLStagingTableConnection, sql.str() ).Execute();
+		Database::Statement( *pMySQLStagingTableConnection, sql.str() ).Execute();
 	}
 
 	class ScopedTempTable
@@ -832,8 +842,11 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 		}
 		else if( databaseType == MYSQL_DB_TYPE )
 		{
-			
-			TruncateMySQLStagingTable(stagingTable, m_WriteConnectionName, m_rDatabaseConnectionManager);
+			// if this isn't a dynamic staging table, we need to truncate it
+			if( !m_WriteDynamicStagingTable )
+			{
+				TruncateMySQLStagingTable( stagingTable, m_WriteConnectionName, table, m_rDatabaseConnectionManager, m_WriteConnectionByTable );
+			}
 
 			std::stringstream sql;
 			// load the data into the table
