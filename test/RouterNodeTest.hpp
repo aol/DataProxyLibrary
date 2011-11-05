@@ -22,14 +22,6 @@ private:
 	CPPUNIT_TEST_SUITE( RouterNodeTest );
 	CPPUNIT_TEST( testInvalidXml );
 	CPPUNIT_TEST( testLoad );
-	CPPUNIT_TEST( testLoadJoinInner );
-	CPPUNIT_TEST( testLoadJoinLeft );
-	CPPUNIT_TEST( testLoadJoinRight );
-	CPPUNIT_TEST( testLoadJoinOuter );
-	CPPUNIT_TEST( testLoadJoinComplex );
-	CPPUNIT_TEST( testLoadAntiJoin );
-	CPPUNIT_TEST( testLoadJoinRuntimeErrors );
-	CPPUNIT_TEST( testLoadAppend );
 	CPPUNIT_TEST( testLoadEmpty );
 	CPPUNIT_TEST( testLoadNotSupported );
 	CPPUNIT_TEST( testStore );
@@ -51,14 +43,6 @@ public:
 
 	void testInvalidXml();
 	void testLoad();
-	void testLoadJoinInner();
-	void testLoadJoinLeft();
-	void testLoadJoinRight();
-	void testLoadJoinOuter();
-	void testLoadJoinComplex();
-	void testLoadAntiJoin();
-	void testLoadJoinRuntimeErrors();
-	void testLoadAppend();
 	void testLoadEmpty();
 	void testLoadNotSupported();
 	void testStore();

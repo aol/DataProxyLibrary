@@ -16,6 +16,7 @@
 #include "ExecutionProxy.hpp"
 #include "RouterNode.hpp"
 #include "PartitionNode.hpp"
+#include "JoinNode.hpp"
 #include "DatabaseConnectionManager.hpp"
 #include "XMLUtilities.hpp"
 
@@ -75,6 +76,10 @@ AbstractNode* NodeFactory::CreateNode( const std::string& i_rName, const std::st
 	else if( i_rNodeType == PARTITION_NODE )
 	{
 		return new PartitionNode( i_rName, m_rParent, i_rNode );
+	}
+	else if( i_rNodeType == JOIN_NODE )
+	{
+		return new JoinNode( i_rName, m_rParent, i_rNode );
 	}
 	else
 	{

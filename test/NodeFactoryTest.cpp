@@ -10,6 +10,7 @@
 #include "NodeFactoryTest.hpp"
 #include "PartitionNode.hpp"
 #include "RouterNode.hpp"
+#include "JoinNode.hpp"
 #include "LocalFileProxy.hpp"
 #include "RestDataProxy.hpp"
 #include "DatabaseProxy.hpp"
@@ -108,6 +109,16 @@ void NodeFactoryTest::testCreateNode()
 	CPPUNIT_ASSERT_NO_THROW( pNode = factory.CreateNode( "name", "RouterNode", *nodes[0] ) );
 	CPPUNIT_ASSERT( pNode != NULL );
 	CPPUNIT_ASSERT( dynamic_cast<RouterNode*>( pNode ) != NULL );
+
+	// JoinNodes
+	xmlContents.str("");
+	xmlContents << "<JoinNode />";
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_NO_THROW( pNode = factory.CreateNode( "name", "JoinNode", *nodes[0] ) );
+	CPPUNIT_ASSERT( pNode != NULL );
+	CPPUNIT_ASSERT( dynamic_cast<JoinNode*>( pNode ) != NULL );
 
 	// PartitionNodes
 	xmlContents.str("");

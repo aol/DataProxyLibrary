@@ -32,6 +32,7 @@ const std::string INCLUDE_NAME_AS_PARAMETER_ATTRIBUTE( "includeNameAsParameter" 
 const std::string DATA_NODE( "DataNode" );
 const std::string ROUTER_NODE( "RouterNode" );
 const std::string PARTITION_NODE( "PartitionNode" );
+const std::string JOIN_NODE( "JoinNode" );
 const std::string REQUIRED_PARAMETERS_NODE( "RequiredParameters" );
 const std::string TRANSLATE_PARAMETERS_NODE( "TranslateParameters" );
 const std::string TRANSFORMERS_NODE( "StreamTransformers" );

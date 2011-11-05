@@ -1,0 +1,717 @@
+//
+// FILE NAME:       $HeadURL: svn+ssh://sstrick@svn.cm.aol.com/advertising/adlearn/gen1/trunk/lib/cpp/DataProxy/private/JoinNode.cpp $
+//
+// REVISION:        $Revision: 227687 $
+//
+// COPYRIGHT:       (c) 2006 Advertising.com All Rights Reserved.
+//
+// LAST UPDATED:    $Date: 2011-10-26 19:31:53 -0400 (Wed, 26 Oct 2011) $
+// UPDATED BY:      $Author: sstrick $
+
+#include "JoinNode.hpp"
+#include "DataProxyClient.hpp"
+#include "ProxyUtilities.hpp"
+#include "DPLCommon.hpp"
+#include "XMLUtilities.hpp"
+#include "StringUtilities.hpp"
+#include "MVLogger.hpp"
+#include "FileUtilities.hpp"
+#include "ShellExecutor.hpp"
+#include "UniqueIdGenerator.hpp"
+#include <boost/lexical_cast.hpp>
+#include <boost/iostreams/copy.hpp>
+#include <boost/algorithm/string/replace.hpp>
+#include <fstream>
+
+namespace
+{
+	const std::string FORWARD_TO_NODE( "ForwardTo" );
+	const std::string JOIN_TO_NODE( "Join" );
+	const std::string JOIN_AXIS_ATTRIBUTE( "axis" );
+	const std::string WORKING_DIR_ATTRIBUTE( "workingDir" );
+	const std::string TIMEOUT_ATTRIBUTE( "timeout" );
+
+	const std::string HORIZONTAL_STRING( "horizontal" );
+	const std::string KEY_ATTRIBUTE( "key" );
+	const std::string INNER_STRING( "inner" );
+	const std::string LEFT_STRING( "left" );
+	const std::string RIGHT_STRING( "right" );
+	const std::string OUTER_STRING( "outer" );
+	const std::string ANTI_LEFT_STRING( "antiLeft" );
+	const std::string ANTI_RIGHT_STRING( "antiRight" );
+	const std::string ANTI_INNER_STRING( "antiInner" );
+
+	const std::string VERTICAL_STRING( "vertical" );
+	const std::string SKIP_LINES_ATTRIBUTE( "skipLines" );
+
+	size_t GetKeyIndex( const std::vector< std::string >& i_rHeader, const std::string& i_rKey )
+	{
+		std::vector< std::string >::const_iterator iter = i_rHeader.begin();
+		for( size_t i=1; iter != i_rHeader.end(); ++iter, ++i )
+		{
+			if( *iter == i_rKey )
+			{
+				return i;
+			}
+		}
+		MV_THROW( JoinNodeException, "Unable to find key: " << i_rKey << " in header: " << Join( i_rHeader, ',' ) );
+	}
+	
+	std::string GetColumnList( size_t i_StartIndex, size_t i_VectorSize, size_t i_KeyIndex, int i_StreamNumber, bool i_IncludeKey )
+	{
+		std::stringstream result;
+		bool wroteOne( false );
+		for( size_t i = i_StartIndex; i < i_VectorSize + i_StartIndex; ++i )
+		{
+			// if we're looking at the key and we're not including it, skip it
+			if( i == i_KeyIndex && !i_IncludeKey )
+			{
+				continue;
+			}
+
+			// insert commas if this isn't the first
+			if( wroteOne )
+			{
+				result << ',';
+			}
+
+			// if we're looking at the key, we indicate it with a 0 (in case we're doing a right-join and it's not part of the main stream
+			if( i == i_KeyIndex )
+			{
+				result << "0";
+			}
+			else // otherwise we just output the number
+			{
+				result << i_StreamNumber << "." << i;
+			}
+			wroteOne = true;
+		}
+		return result.str();
+	}
+
+	std::string GetSortCommand( size_t i_KeyIndex, const std::string& i_rTempDir )
+	{
+		std::stringstream result;
+		result << "sort -t, -k" << i_KeyIndex << "," << i_KeyIndex << " -T" << i_rTempDir;
+		return result.str();
+	}
+
+	void WriteLine( std::vector< std::string >& i_rLineCols, const std::vector< size_t >& i_rJoinColIndeces, std::ostream& o_rOutput )
+	{
+		// first write the key
+		std::vector< size_t >::const_iterator keyIter = i_rJoinColIndeces.begin();
+		for( ; keyIter != i_rJoinColIndeces.end(); ++keyIter )
+		{
+			if( keyIter != i_rJoinColIndeces.begin() )
+			{
+				o_rOutput << "|";
+			}
+			o_rOutput << i_rLineCols[ *keyIter ];
+		}
+
+		// now write the rest, comma-separated
+		std::vector< std::string >::const_iterator iter = i_rLineCols.begin();
+		for( size_t i=0; iter != i_rLineCols.end(); ++iter, ++i )
+		{
+			if( std::find( i_rJoinColIndeces.begin(), i_rJoinColIndeces.end(), i ) == i_rJoinColIndeces.end() )
+			{
+				o_rOutput << ',' << *iter;
+			}
+		}
+			o_rOutput << std::endl;
+	}
+
+	void WriteMultiKeyStream( std::string& io_rHeader, std::string& io_rJoinKey, std::istream& i_rInput, std::ostream& o_rOutput )
+	{
+		std::stringstream newHeader;
+		std::vector< std::string > headerCols;
+		std::vector< std::string > joinCols;
+		std::vector< size_t > joinColIndeces;
+		Tokenize( headerCols, io_rHeader, ",", true );
+		Tokenize( joinCols, io_rJoinKey, ",", true );
+		std::vector< std::string >::const_iterator iter = joinCols.begin();
+		for( ; iter != joinCols.end(); ++iter )
+		{
+			joinColIndeces.push_back( GetKeyIndex( headerCols, *iter ) - 1 );
+		}
+
+		std::string line;
+		std::vector< std::string > lineCols;
+		while( std::getline( i_rInput, line ) )
+		{
+			Tokenize( lineCols, line, ",", true );
+			WriteLine( lineCols, joinColIndeces, o_rOutput );
+		}
+
+		// use the same mechanism to rewrite the header
+		WriteLine( headerCols, joinColIndeces, newHeader );
+		io_rHeader = newHeader.str();
+		boost::replace_all( io_rHeader, "\n", "" );
+		boost::replace_all( io_rJoinKey, ",", "|" );
+	}
+}
+
+JoinNode::JoinNode(	const std::string& i_rName,
+					DataProxyClient& i_rParent,
+					const xercesc::DOMNode& i_rNode )
+:	AbstractNode( i_rName, i_rParent, i_rNode ),
+	m_Name( i_rName ),
+	m_rParent( i_rParent ),
+	m_ReadEnabled( false ),
+	m_ReadEndpoint(),
+	m_ReadKey(),
+	m_ReadJoins(),
+	m_ReadJoinAxis( HORIZONTAL ),
+	m_ReadWorkingDir( "/tmp" ),
+	m_ReadTimeout( 60 ),
+	m_WriteEnabled( false ),
+	m_WriteEndpoint(),
+	m_WriteKey(),
+	m_WriteJoins(),
+	m_WriteJoinAxis( HORIZONTAL ),
+	m_WriteWorkingDir( "/tmp" ),
+	m_WriteTimeout( 60 ),
+	m_DeleteEnabled( false ),
+	m_DeleteEndpoint()
+{
+	std::set< std::string > allowedReadChildren;
+	std::set< std::string > allowedWriteChildren;
+	std::set< std::string > allowedDeleteChildren;
+	allowedReadChildren.insert( JOIN_TO_NODE );
+	allowedReadChildren.insert( FORWARD_TO_NODE );
+	allowedWriteChildren.insert( JOIN_TO_NODE );
+	allowedWriteChildren.insert( FORWARD_TO_NODE );
+	allowedDeleteChildren.insert( FORWARD_TO_NODE );
+	AbstractNode::ValidateXmlElements( i_rNode, allowedReadChildren, allowedWriteChildren, allowedDeleteChildren );
+
+	std::set< std::string > allowedReadAttributes;
+	std::set< std::string > allowedWriteAttributes;
+	std::set< std::string > allowedDeleteAttributes;
+	allowedReadAttributes.insert( JOIN_AXIS_ATTRIBUTE );
+	allowedReadAttributes.insert( WORKING_DIR_ATTRIBUTE );
+	allowedReadAttributes.insert( TIMEOUT_ATTRIBUTE );
+	allowedWriteAttributes.insert( JOIN_AXIS_ATTRIBUTE );
+	allowedWriteAttributes.insert( WORKING_DIR_ATTRIBUTE );
+	allowedWriteAttributes.insert( TIMEOUT_ATTRIBUTE );
+	allowedWriteAttributes.insert( KEY_ATTRIBUTE );
+	AbstractNode::ValidateXmlAttributes( i_rNode, allowedReadAttributes, allowedWriteAttributes, allowedDeleteAttributes );
+
+	// extract read parameters
+	xercesc::DOMNode* pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, READ_NODE );
+	if( pNode != NULL )
+	{
+		SetConfig( pNode, m_ReadJoinAxis, m_ReadWorkingDir, m_ReadTimeout, m_ReadJoins, m_ReadEndpoint, m_ReadKey, true );
+		m_ReadEnabled = true;
+	}
+
+	// extract write parameters
+	pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, WRITE_NODE );
+	if( pNode != NULL )
+	{
+		SetConfig( pNode, m_WriteJoinAxis, m_WriteWorkingDir, m_WriteTimeout, m_WriteJoins, m_WriteEndpoint, m_WriteKey, false );
+		m_WriteEnabled = true;
+	}
+
+	// extract delete parameters
+	pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, DELETE_NODE );
+	if( pNode != NULL )
+	{
+		pNode = XMLUtilities::TryGetSingletonChildByName( pNode, FORWARD_TO_NODE );
+		if( pNode == NULL )
+		{
+			MV_THROW( JoinNodeException, "Must provide a " << FORWARD_TO_NODE << " node for delete configuration" );
+		}
+		std::set< std::string > allowedAttributes;
+		allowedAttributes.insert( NAME_ATTRIBUTE );
+		XMLUtilities::ValidateNode( pNode, std::set< std::string >() );
+		XMLUtilities::ValidateAttributes( pNode, allowedAttributes );
+		m_DeleteEndpoint = XMLUtilities::GetAttributeValue( pNode, NAME_ATTRIBUTE );
+		m_DeleteEnabled = true;
+	}
+}
+
+
+JoinNode::~JoinNode()
+{
+}
+
+void JoinNode::LoadImpl( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData )
+{
+	if( !m_ReadEnabled )
+	{
+		MV_THROW( JoinNodeException, "JoinNode: " << m_Name << " does not support read operations" );
+	}
+	if( m_ReadJoins.empty() )
+	{
+		m_rParent.Load( m_ReadEndpoint, i_rParameters, o_rData );
+		return;
+	}
+
+	// otherwise we're going to join some data
+	if( m_ReadJoinAxis == HORIZONTAL )
+	{
+		std::stringstream tempStream;
+		m_rParent.Load( m_ReadEndpoint, i_rParameters, tempStream );
+		WriteHorizontalJoin( tempStream, o_rData, m_ReadKey, i_rParameters, m_ReadJoins, m_ReadWorkingDir, m_ReadTimeout );
+	}
+	else if( m_ReadJoinAxis == VERTICAL )
+	{
+		std::vector< StreamConfig >::const_iterator iter = m_ReadJoins.begin();
+		for( ; iter != m_ReadJoins.end(); ++iter )
+		{
+			std::stringstream tempStream;
+			std::string tempLine;
+			m_rParent.Load( iter->GetValue< NodeName >(), i_rParameters, tempStream );
+			for( int i=0; i<iter->GetValue< SkipLines >(); ++i )
+			{
+				std::getline( tempStream, tempLine );
+			}
+			boost::iostreams::copy( tempStream, o_rData );
+		}
+	}
+	else
+	{
+		MV_THROW( JoinNodeException, "Unrecognized join axis" );
+	}
+}
+
+void JoinNode::StoreImpl( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData )
+{
+	if( !m_WriteEnabled )
+	{
+		MV_THROW( JoinNodeException, "JoinNode: " << m_Name << " does not support write operations" );
+	}
+	if( m_WriteJoins.empty() )
+	{
+		m_rParent.Store( m_WriteEndpoint, i_rParameters, i_rData );
+	}
+	else if( m_WriteJoinAxis == HORIZONTAL )
+	{
+		std::stringstream input;
+		WriteHorizontalJoin( i_rData, input, m_WriteKey, i_rParameters, m_WriteJoins, m_WriteWorkingDir, m_WriteTimeout );
+		m_rParent.Store( m_WriteEndpoint, i_rParameters, input );
+	}
+	else if( m_WriteJoinAxis == VERTICAL )
+	{
+		std::stringstream input;
+		std::stringstream tempStream;
+		boost::iostreams::copy( i_rData, input );
+		std::vector< StreamConfig >::const_iterator iter = m_WriteJoins.begin();
+		for( ; iter != m_WriteJoins.end(); ++iter )
+		{
+			std::string tempLine;
+			m_rParent.Load( iter->GetValue< NodeName >(), i_rParameters, tempStream );
+			for( int i=0; i<iter->GetValue< SkipLines >(); ++i )
+			{
+				std::getline( tempStream, tempLine );
+			}
+			boost::iostreams::copy( tempStream, input );
+		}
+		m_rParent.Store( m_WriteEndpoint, i_rParameters, input );
+	}
+	else
+	{
+		MV_THROW( JoinNodeException, "Unrecognized join axis" );
+	}
+}
+
+void JoinNode::DeleteImpl( const std::map<std::string,std::string>& i_rParameters )
+{
+	if( !m_DeleteEnabled )
+	{
+		MV_THROW( JoinNodeException, "JoinNode: " << m_Name << " does not support delete operations" );
+	}
+	m_rParent.Delete( m_DeleteEndpoint, i_rParameters );
+}
+
+bool JoinNode::SupportsTransactions() const
+{
+	return true;
+}
+
+void JoinNode::Commit()
+{
+}
+
+void JoinNode::Rollback()
+{
+}
+
+void JoinNode::InsertImplReadForwards( std::set< std::string >& o_rForwards ) const
+{
+	std::vector< StreamConfig >::const_iterator iter = m_ReadJoins.begin();
+	for( ; iter != m_ReadJoins.end(); ++iter )
+	{
+		o_rForwards.insert( iter->GetValue< NodeName >() );
+	}
+}
+
+void JoinNode::InsertImplWriteForwards( std::set< std::string >& o_rForwards ) const
+{
+	if( !m_WriteEnabled )
+	{
+		return;
+	}
+	std::vector< StreamConfig >::const_iterator iter = m_WriteJoins.begin();
+	for( ; iter != m_WriteJoins.end(); ++iter )
+	{
+		o_rForwards.insert( iter->GetValue< NodeName >() );
+	}
+	o_rForwards.insert( m_WriteEndpoint );
+}
+
+
+void JoinNode::InsertImplDeleteForwards( std::set< std::string >& o_rForwards ) const
+{
+	if( m_DeleteEnabled )
+	{
+		o_rForwards.insert( m_DeleteEndpoint );
+	}
+}
+
+void JoinNode::SetConfig( const xercesc::DOMNode* i_pNode,
+						  JoinAxis& o_rJoinAxis,
+						  std::string& o_rWorkingDir,
+						  int& o_rTimeout,
+						  std::vector< StreamConfig >& o_rConfig,
+						  std::string& o_rEndpoint,
+						  std::string& o_rKey,
+						  bool i_IsRead )
+{
+	xercesc::DOMAttr* pAttribute = XMLUtilities::GetAttribute( i_pNode, JOIN_AXIS_ATTRIBUTE );
+	if( pAttribute != NULL )
+	{
+		std::string joinAxis = XMLUtilities::XMLChToString( pAttribute->getValue() );
+		if( joinAxis == HORIZONTAL_STRING )
+		{
+			o_rJoinAxis = HORIZONTAL;
+		}
+		else if( joinAxis == VERTICAL_STRING )
+		{
+			o_rJoinAxis = VERTICAL;
+		}
+		else
+		{
+			MV_THROW( JoinNodeException, "Unknown value for " << XMLUtilities::XMLChToString( i_pNode->getNodeName() ) << " " << JOIN_AXIS_ATTRIBUTE << ": " << joinAxis
+				<< ". Legal values are '" << HORIZONTAL_STRING << "', '" << VERTICAL_STRING << "'" );
+		}
+	}
+
+	pAttribute = XMLUtilities::GetAttribute( i_pNode, WORKING_DIR_ATTRIBUTE );
+	if( pAttribute != NULL )
+	{
+		o_rWorkingDir = XMLUtilities::XMLChToString( pAttribute->getValue() );
+		FileUtilities::ValidateDirectory( o_rWorkingDir, R_OK | W_OK );
+	}
+
+	pAttribute = XMLUtilities::GetAttribute( i_pNode, TIMEOUT_ATTRIBUTE );
+	if( pAttribute != NULL )
+	{
+		o_rTimeout = boost::lexical_cast< int >( XMLUtilities::XMLChToString( pAttribute->getValue() ) );
+	}
+
+	std::set< std::string > allowedAttributes;
+	allowedAttributes.insert( NAME_ATTRIBUTE );
+
+	if( o_rJoinAxis == HORIZONTAL )
+	{
+		allowedAttributes.insert( KEY_ATTRIBUTE );
+		allowedAttributes.insert( TYPE_ATTRIBUTE );
+	}
+	else if( o_rJoinAxis == VERTICAL )
+	{
+		allowedAttributes.insert( SKIP_LINES_ATTRIBUTE );
+	}
+
+	bool hasForwardTo = false;
+	xercesc::DOMNode* pNode = XMLUtilities::TryGetSingletonChildByName( i_pNode, FORWARD_TO_NODE );
+	if( pNode != NULL )
+	{
+		XMLUtilities::ValidateNode( pNode, std::set< std::string >() );
+		o_rEndpoint = XMLUtilities::GetAttributeValue( pNode, NAME_ATTRIBUTE );
+		hasForwardTo = true;
+	}
+	if( !i_IsRead )
+	{
+		pAttribute = XMLUtilities::GetAttribute( i_pNode, KEY_ATTRIBUTE );
+		if( pAttribute != NULL )
+		{
+			o_rKey = XMLUtilities::XMLChToString(pAttribute->getValue());
+		}
+		if( !hasForwardTo )
+		{
+			MV_THROW( JoinNodeException, "Must provide a " << FORWARD_TO_NODE << " node for write-side joins" );
+		}
+	}
+
+	std::vector<xercesc::DOMNode*> destinations;
+	XMLUtilities::GetChildrenByName( destinations, i_pNode, JOIN_TO_NODE );
+	std::vector<xercesc::DOMNode*>::const_iterator routeIter = destinations.begin();
+	for( ; routeIter != destinations.end(); ++routeIter )
+	{
+		XMLUtilities::ValidateNode( *routeIter, std::set< std::string >() );
+		XMLUtilities::ValidateAttributes( *routeIter, allowedAttributes );
+		StreamConfig streamConfig;
+
+		std::string handlerName = XMLUtilities::GetAttributeValue( *routeIter, NAME_ATTRIBUTE );
+		streamConfig.SetValue< NodeName >( handlerName );
+		if( o_rJoinAxis == HORIZONTAL )
+		{
+			streamConfig.SetValue< JoinKey >( XMLUtilities::GetAttributeValue( *routeIter, KEY_ATTRIBUTE ) );
+			pAttribute = XMLUtilities::GetAttribute( *routeIter, TYPE_ATTRIBUTE );
+			if( routeIter == destinations.begin() && i_IsRead )
+			{
+				if( pAttribute != NULL )
+				{
+					MV_THROW( JoinNodeException, "Cannot provide a " << TYPE_ATTRIBUTE << " for the first read-side " << JOIN_TO_NODE << " node" );
+				}
+			}
+			else
+			{
+				if( pAttribute == NULL )
+				{
+					std::stringstream message;
+					message << "Must provide a " << TYPE_ATTRIBUTE << " for all " << ( i_IsRead ? "read-side " : "write-side " ) << JOIN_TO_NODE << " nodes";
+					if( i_IsRead )
+					{
+						message << " other than the first";
+					}
+					MV_THROW( JoinNodeException, message.str() );
+				}
+				std::string joinType = XMLUtilities::GetAttributeValue( *routeIter, TYPE_ATTRIBUTE );
+				if( joinType == INNER_STRING )
+				{
+					streamConfig.SetValue< JoinType >( INNER );
+				}
+				else if( joinType == LEFT_STRING )
+				{
+					streamConfig.SetValue< JoinType >( LEFT );
+				}
+				else if( joinType == RIGHT_STRING )
+				{
+					streamConfig.SetValue< JoinType >( RIGHT );
+				}
+				else if( joinType == OUTER_STRING )
+				{
+					streamConfig.SetValue< JoinType >( OUTER );
+				}
+				else if( joinType == ANTI_RIGHT_STRING )
+				{
+					streamConfig.SetValue< JoinType >( ANTI_RIGHT );
+				}
+				else if( joinType == ANTI_LEFT_STRING )
+				{
+					streamConfig.SetValue< JoinType >( ANTI_LEFT );
+				}
+				else if( joinType == ANTI_INNER_STRING )
+				{
+					streamConfig.SetValue< JoinType >( ANTI_INNER );
+				}
+				else
+				{
+					MV_THROW( JoinNodeException, "Illegal " << TYPE_ATTRIBUTE << " specified for " << JOIN_TO_NODE << " node " << handlerName << ": '" << joinType
+						<< "'. Legal values are: '" << INNER_STRING << "', '" << RIGHT_STRING << "', '" << LEFT_STRING << "', '" << OUTER_STRING << "', '"
+						<< ANTI_RIGHT_STRING << "', '" << ANTI_LEFT_STRING << "', '" << ANTI_INNER_STRING << "'" );
+				}
+			}
+		}
+		else if( o_rJoinAxis == VERTICAL )
+		{
+			pAttribute = XMLUtilities::GetAttribute( *routeIter, SKIP_LINES_ATTRIBUTE );
+			if( pAttribute != NULL )
+			{
+				streamConfig.SetValue< SkipLines >( boost::lexical_cast< int >( XMLUtilities::XMLChToString(pAttribute->getValue()) ) );
+			}
+		}
+
+		if( i_IsRead && o_rJoinAxis == HORIZONTAL && routeIter == destinations.begin() )
+		{
+			o_rEndpoint = streamConfig.GetValue< NodeName >();
+			o_rKey = streamConfig.GetValue< JoinKey >();
+		}
+		else
+		{
+			o_rConfig.push_back( streamConfig );
+		}
+	}
+
+	if( i_IsRead && hasForwardTo && !o_rConfig.empty() )
+	{
+		MV_THROW( JoinNodeException, "Cannot provide a read-side " << FORWARD_TO_NODE << " node as well as " << JOIN_TO_NODE << " nodes" );
+	}
+	if( !i_IsRead && o_rKey.empty() && !o_rConfig.empty() && o_rJoinAxis == HORIZONTAL )
+	{
+		MV_THROW( JoinNodeException, "When providing nodes to join to on write, must indicate the key of the incoming stream" );
+	}
+}
+
+void JoinNode::WriteHorizontalJoin( std::istream& i_rInput,
+									std::ostream& o_rOutput, 
+									std::string& i_rKey, 
+									const std::map< std::string, std::string >& i_rParameters,
+									std::vector< StreamConfig >& i_rJoins, 
+									const std::string& i_rWorkingDir, 
+									int i_Timeout )
+{
+	std::vector< std::string > mainHeader;
+	std::vector< std::string > nextHeader;
+	std::vector< std::string > tempFiles;
+	std::string headerLine;
+	std::stringstream mainColumns;
+	bool multiKey( false );
+	std::vector< size_t > multiKeys;
+	boost::scoped_ptr< std::stringstream > pTempStream;
+	std::istream* pInputStream( &i_rInput );
+
+	// step 0: determine if we are dealing with multi-key stream
+	if( i_rKey.find( ',' ) != std::string::npos )
+	{
+		multiKey = true;
+		pTempStream.reset( new std::stringstream() );
+		pInputStream = pTempStream.get();
+	}
+
+	// step 1: load the main stream
+	if( !getline( i_rInput, headerLine ) )
+	{
+		MV_THROW( JoinNodeException, "Unable to fetch csv header from main stream" );
+	}
+
+	// step 2: if we're multikey-joining, we need to rewrite the stream and manipulate the headerline / joinKey
+	if( multiKey )
+	{
+		WriteMultiKeyStream( headerLine, i_rKey, i_rInput, *pTempStream );
+	}
+
+	// figure out header information
+	Tokenize( mainHeader, headerLine, "," );
+	size_t mainKeyIndex = GetKeyIndex( mainHeader, i_rKey );
+	mainColumns << GetColumnList( 1, mainHeader.size(), mainKeyIndex, 1, true );
+
+	std::stringstream stdErr;
+	int status;
+
+	// step 2: loop through the streams we have to join
+	std::stringstream* pCurrentStream;
+	boost::scoped_ptr< std::stringstream > pNextTempStream;
+	std::stringstream joinCommand;
+	joinCommand << GetSortCommand( mainKeyIndex, i_rWorkingDir );
+	std::vector< StreamConfig >::iterator iter = i_rJoins.begin();
+	for( int streamNum = 2; iter != i_rJoins.end(); ++iter, ++streamNum )
+	{
+		std::stringstream nextStream;
+		pCurrentStream = &nextStream;
+
+		// if we're dealing with multi-key stream, rewrite it
+		if( multiKey )
+		{
+			pNextTempStream.reset( new std::stringstream() );
+			pCurrentStream = pNextTempStream.get();
+		}
+
+		// load the next stream & extract the header
+		m_rParent.Load( iter->GetValue< NodeName >(), i_rParameters, *pCurrentStream );
+		if( !getline( *pCurrentStream, headerLine ) )
+		{
+			MV_THROW( JoinNodeException, "Unable to fetch csv header from stream number " << streamNum );
+		}
+
+		if( multiKey )
+		{
+			WriteMultiKeyStream( headerLine, iter->GetReference< JoinKey >(), *pCurrentStream, nextStream );
+		}
+		Tokenize( nextHeader, headerLine, "," );
+		size_t nextKeyIndex = GetKeyIndex( nextHeader, iter->GetValue< JoinKey >() );
+
+		// write the headerless stream to a temp file
+		std::string tempFileName( i_rWorkingDir + "/" + iter->GetValue< NodeName >() + "." + UniqueIdGenerator().GetUniqueId() );
+		std::ofstream file( tempFileName.c_str() );
+		ShellExecutor sortExe( GetSortCommand( nextKeyIndex, i_rWorkingDir ) );
+		if( ( status = sortExe.Run( i_Timeout, nextStream, file, stdErr ) ) != 0 )
+		{
+			MV_THROW( JoinNodeException, "Error executing sort command for stream number " << streamNum << ". Standard error: " << stdErr.str() << " Return code: " << status );
+		}
+		file.close();
+		tempFiles.push_back( tempFileName );
+			
+		// get the next column list, and form the command!
+		std::string nextColumnList = GetColumnList( 1, nextHeader.size(), nextKeyIndex, 2, false );
+		joinCommand << " | join -t, -e '' -1 " << mainKeyIndex << " -2 " << nextKeyIndex // delim:,	on-null:''	key indeces
+					<< " -o" << mainColumns.str() << ( !mainHeader.empty() && !nextColumnList.empty() ? "," : "" ) << nextColumnList // output list
+					<< " - " << tempFileName; // join stdin to temp file
+		switch( iter->GetValue< JoinType >() )
+		{
+		case OUTER:
+			joinCommand << " -a 1";
+			joinCommand << " -a 2";
+			break;
+		case RIGHT:
+			joinCommand << " -a 2";
+			break;
+		case LEFT:
+			joinCommand << " -a 1";
+			break;
+		case ANTI_RIGHT:
+			joinCommand << " -v 1";
+			break;
+		case ANTI_LEFT:
+			joinCommand << " -v 2";
+			break;
+		case ANTI_INNER:
+			joinCommand << " -v 1";
+			joinCommand << " -v 2";
+			break;
+		case INNER:
+		case BASE:
+			break;
+		}
+
+		// prepare the output column list for the next go-around
+		for( size_t i=mainHeader.size()+1; i<=mainHeader.size()+nextHeader.size()-1; ++i )
+		{
+			mainColumns << ",1." << i;
+		}
+		// prepare the column headers
+		std::vector< std::string >::const_iterator nextIter = nextHeader.begin();
+		for( ; nextIter != nextHeader.end(); ++nextIter )
+		{
+			if( *nextIter != iter->GetValue< JoinKey >() )
+			{
+				std::string colName = *nextIter;
+				if( std::find( mainHeader.begin(), mainHeader.end(), colName ) != mainHeader.end() )
+				{
+					colName = iter->GetValue< NodeName >() + "." + colName;
+				}
+				mainHeader.push_back( colName );
+			}
+		}
+	}
+
+	// prepare the awk command to print resolve the joined-key
+	if( multiKey )
+	{
+		joinCommand << " | gawk -F, '{ gsub( \"\\\\|\", \",\", $" << mainKeyIndex << "); print $1";
+		for( size_t i=1; i<mainHeader.size(); ++i )
+		{
+			joinCommand << " \",\" $" << i+1;
+		}
+		joinCommand << "; }'";
+		boost::replace_all( mainHeader[ mainKeyIndex - 1 ], "|", "," );
+	}
+
+	// step 3: execute the command
+	o_rOutput << Join( mainHeader, ',' ) << std::endl;
+	stdErr.str("");
+	ShellExecutor exe( joinCommand.str() );
+	if( ( status = exe.Run( i_Timeout, *pInputStream, o_rOutput, stdErr ) ) != 0 )
+	{
+		MV_THROW( JoinNodeException, "Error executing join command. Standard error: " << stdErr.str() << " Return code: " << status );
+	}
+
+	// step 4: remove temp files created
+	std::vector< std::string >::const_iterator removeIter = tempFiles.begin();
+	for( ; removeIter != tempFiles.end(); ++removeIter )
+	{
+		FileUtilities::Remove( *removeIter );
+	}
+}

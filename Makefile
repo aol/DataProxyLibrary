@@ -134,6 +134,7 @@ PRIVATEFILES=\
 	AbstractNode.cpp \
 	NodeFactory.cpp \
 	RouterNode.cpp \
+	JoinNode.cpp \
 	PartitionNode.cpp \
 	ExecutionProxy.cpp \
 	ProxyUtilities.cpp \
@@ -159,6 +160,7 @@ TESTFILES=\
 	ProxyUtilitiesTest.cpp \
 	AbstractNodeTest.cpp \
 	RouterNodeTest.cpp \
+	JoinNodeTest.cpp \
 	PartitionNodeTest.cpp \
 	ExecutionProxyTest.cpp \
 	LocalFileProxyTest.cpp \
