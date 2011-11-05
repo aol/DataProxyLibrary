@@ -548,7 +548,8 @@ void DatabaseConnectionManagerTest::testFetchShardNodes()
 	data << "node_id,type,server,database,username,password,schema,disable_cache" << std::endl
 		 << "1,garbage,localhost,,adlearn,Adv.commv,,0" << std::endl;
 	dplClient.SetDataToReturn( "nodes", data.str() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( manager.ParseConnectionsByTable( *nodes[0] ), DatabaseConnectionManagerException,
+	CPPUNIT_ASSERT_NO_THROW( manager.ParseConnectionsByTable( *nodes[0] ) );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( manager.GetConnectionByTable( "blah" ), DatabaseConnectionManagerException,
 		".*:\\d+: Unrecognized database type parsed from shard connections: garbage" );
 
 	data.str("");
@@ -621,7 +622,8 @@ void DatabaseConnectionManagerTest::testFetchShardNodesException()
 	data.str("");
 	data << "table_id,node_id" << std::endl;
 	dplClient.SetDataToReturn( "tables", data.str() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pManager->ParseConnectionsByTable( *nodes[0] ), DatabaseConnectionManagerException,
+	CPPUNIT_ASSERT_NO_THROW( pManager->ParseConnectionsByTable( *nodes[0] ) );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pManager->GetConnectionByTable( "blah" ), DatabaseConnectionManagerException,
 		".*:\\d+: Duplicate node id: 1 loaded from connections node: nodes \\(conflicts with shard connection\\)" );
 
 	pManager.reset( new DatabaseConnectionManager( dplClient ) );
@@ -640,6 +642,7 @@ void DatabaseConnectionManagerTest::testFetchShardNodesException()
 		 << "shard_33333,3" << std::endl;
 	dplClient.SetDataToReturn( "tables", data.str() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pManager->ParseConnectionsByTable( *nodes[0] ), DatabaseConnectionManagerException,
+	CPPUNIT_ASSERT_NO_THROW( pManager->ParseConnectionsByTable( *nodes[0] ) );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pManager->GetConnectionByTable( "blah" ), DatabaseConnectionManagerException,
 		".*:\\d+: Table: shard_22222 loaded from node: tables is reported to be located in unknown node id: 4" );
 }
