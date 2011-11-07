@@ -679,6 +679,7 @@ void DataProxyClientTest::testAutoRollback()
 		 << "  <RouterNode name=\"name3\" />" << std::endl
 		 << "  <PartitionNode name=\"name4\" />" << std::endl
 		 << "  <DataNode name=\"name5\" />" << std::endl
+		 << "  <JoinNode name=\"name6\" />" << std::endl
 		 << "</DPLConfig>" << std::endl;
 	file.close();
 
@@ -700,6 +701,7 @@ void DataProxyClientTest::testAutoRollback()
 	expected << "CreateNode called with Name: name5 NodeType: DataNode" << std::endl;
 	expected << "CreateNode called with Name: name3 NodeType: RouterNode" << std::endl;
 	expected << "CreateNode called with Name: name4 NodeType: PartitionNode" << std::endl;
+	expected << "CreateNode called with Name: name6 NodeType: JoinNode" << std::endl;
 	CPPUNIT_ASSERT_EQUAL( expected.str(), factory.GetLog() );
 
 	std::stringstream result;

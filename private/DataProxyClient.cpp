@@ -178,6 +178,7 @@ void DataProxyClient::InitializeImplementation( const std::string& i_rConfigFile
 			pConfig = pDocument->getDocumentElement();
 			// validate config node
 			allowedChildren.insert( DATA_NODE );
+			allowedChildren.insert( JOIN_NODE );
 			allowedChildren.insert( ROUTER_NODE );
 			allowedChildren.insert( PARTITION_NODE );
 			allowedChildren.insert( DATABASE_CONNECTIONS_NODE );
@@ -222,6 +223,15 @@ void DataProxyClient::InitializeImplementation( const std::string& i_rConfigFile
 			{
 				std::string name = ExtractName( *iter );
 				m_Nodes[ name ] = boost::shared_ptr< AbstractNode >( i_rNodeFactory.CreateNode( name, PARTITION_NODE, **iter ) );
+			}
+
+			// read all our JoinNode elements
+			std::vector<xercesc::DOMNode*> joinNodes;
+			XMLUtilities::GetChildrenByName( joinNodes, pConfig, JOIN_NODE );
+			for( iter = joinNodes.begin(); iter != joinNodes.end(); ++iter )
+			{
+				std::string name = ExtractName( *iter );
+				m_Nodes[ name ] = boost::shared_ptr< AbstractNode >( i_rNodeFactory.CreateNode( name, JOIN_NODE, **iter ) );
 			}
 		}
 		catch( const xercesc::SAXParseException& ex )
