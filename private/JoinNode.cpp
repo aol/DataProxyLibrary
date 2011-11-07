@@ -26,12 +26,11 @@
 namespace
 {
 	const std::string FORWARD_TO_NODE( "ForwardTo" );
-	const std::string JOIN_TO_NODE( "Join" );
-	const std::string JOIN_AXIS_ATTRIBUTE( "axis" );
+	const std::string JOIN_TO_NODE( "JoinTo" );
+	const std::string BEHAVIOR_ATTRIBUTE( "behavior" );
 	const std::string WORKING_DIR_ATTRIBUTE( "workingDir" );
 	const std::string TIMEOUT_ATTRIBUTE( "timeout" );
 
-	const std::string HORIZONTAL_STRING( "horizontal" );
 	const std::string KEY_ATTRIBUTE( "key" );
 	const std::string INNER_STRING( "inner" );
 	const std::string LEFT_STRING( "left" );
@@ -41,7 +40,8 @@ namespace
 	const std::string ANTI_RIGHT_STRING( "antiRight" );
 	const std::string ANTI_INNER_STRING( "antiInner" );
 
-	const std::string VERTICAL_STRING( "vertical" );
+	const std::string ROW_APPEND_STRING( "rowAppend" );
+	const std::string COLUMN_JOIN_STRING( "columnJoin" );
 	const std::string SKIP_LINES_ATTRIBUTE( "skipLines" );
 
 	size_t GetKeyIndex( const std::vector< std::string >& i_rHeader, const std::string& i_rKey )
@@ -161,14 +161,14 @@ JoinNode::JoinNode(	const std::string& i_rName,
 	m_ReadEndpoint(),
 	m_ReadKey(),
 	m_ReadJoins(),
-	m_ReadJoinAxis( HORIZONTAL ),
+	m_ReadBehavior( COLUMN_JOIN ),
 	m_ReadWorkingDir( "/tmp" ),
 	m_ReadTimeout( 60 ),
 	m_WriteEnabled( false ),
 	m_WriteEndpoint(),
 	m_WriteKey(),
 	m_WriteJoins(),
-	m_WriteJoinAxis( HORIZONTAL ),
+	m_WriteBehavior( COLUMN_JOIN ),
 	m_WriteWorkingDir( "/tmp" ),
 	m_WriteTimeout( 60 ),
 	m_DeleteEnabled( false ),
@@ -187,10 +187,10 @@ JoinNode::JoinNode(	const std::string& i_rName,
 	std::set< std::string > allowedReadAttributes;
 	std::set< std::string > allowedWriteAttributes;
 	std::set< std::string > allowedDeleteAttributes;
-	allowedReadAttributes.insert( JOIN_AXIS_ATTRIBUTE );
+	allowedReadAttributes.insert( BEHAVIOR_ATTRIBUTE );
 	allowedReadAttributes.insert( WORKING_DIR_ATTRIBUTE );
 	allowedReadAttributes.insert( TIMEOUT_ATTRIBUTE );
-	allowedWriteAttributes.insert( JOIN_AXIS_ATTRIBUTE );
+	allowedWriteAttributes.insert( BEHAVIOR_ATTRIBUTE );
 	allowedWriteAttributes.insert( WORKING_DIR_ATTRIBUTE );
 	allowedWriteAttributes.insert( TIMEOUT_ATTRIBUTE );
 	allowedWriteAttributes.insert( KEY_ATTRIBUTE );
@@ -200,7 +200,7 @@ JoinNode::JoinNode(	const std::string& i_rName,
 	xercesc::DOMNode* pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, READ_NODE );
 	if( pNode != NULL )
 	{
-		SetConfig( pNode, m_ReadJoinAxis, m_ReadWorkingDir, m_ReadTimeout, m_ReadJoins, m_ReadEndpoint, m_ReadKey, true );
+		SetConfig( pNode, m_ReadBehavior, m_ReadWorkingDir, m_ReadTimeout, m_ReadJoins, m_ReadEndpoint, m_ReadKey, true );
 		m_ReadEnabled = true;
 	}
 
@@ -208,7 +208,7 @@ JoinNode::JoinNode(	const std::string& i_rName,
 	pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, WRITE_NODE );
 	if( pNode != NULL )
 	{
-		SetConfig( pNode, m_WriteJoinAxis, m_WriteWorkingDir, m_WriteTimeout, m_WriteJoins, m_WriteEndpoint, m_WriteKey, false );
+		SetConfig( pNode, m_WriteBehavior, m_WriteWorkingDir, m_WriteTimeout, m_WriteJoins, m_WriteEndpoint, m_WriteKey, false );
 		m_WriteEnabled = true;
 	}
 
@@ -248,14 +248,15 @@ void JoinNode::LoadImpl( const std::map<std::string,std::string>& i_rParameters,
 	}
 
 	// otherwise we're going to join some data
-	if( m_ReadJoinAxis == HORIZONTAL )
+	if( m_ReadBehavior == COLUMN_JOIN )
 	{
 		std::stringstream tempStream;
 		m_rParent.Load( m_ReadEndpoint, i_rParameters, tempStream );
 		WriteHorizontalJoin( tempStream, o_rData, m_ReadKey, i_rParameters, m_ReadJoins, m_ReadWorkingDir, m_ReadTimeout );
 	}
-	else if( m_ReadJoinAxis == VERTICAL )
+	else if( m_ReadBehavior == ROW_APPEND )
 	{
+		m_rParent.Load( m_ReadEndpoint, i_rParameters, o_rData );
 		std::vector< StreamConfig >::const_iterator iter = m_ReadJoins.begin();
 		for( ; iter != m_ReadJoins.end(); ++iter )
 		{
@@ -271,7 +272,7 @@ void JoinNode::LoadImpl( const std::map<std::string,std::string>& i_rParameters,
 	}
 	else
 	{
-		MV_THROW( JoinNodeException, "Unrecognized join axis" );
+		MV_THROW( JoinNodeException, "Unrecognized join behavior" );
 	}
 }
 
@@ -285,13 +286,13 @@ void JoinNode::StoreImpl( const std::map<std::string,std::string>& i_rParameters
 	{
 		m_rParent.Store( m_WriteEndpoint, i_rParameters, i_rData );
 	}
-	else if( m_WriteJoinAxis == HORIZONTAL )
+	else if( m_WriteBehavior == COLUMN_JOIN )
 	{
 		std::stringstream input;
 		WriteHorizontalJoin( i_rData, input, m_WriteKey, i_rParameters, m_WriteJoins, m_WriteWorkingDir, m_WriteTimeout );
 		m_rParent.Store( m_WriteEndpoint, i_rParameters, input );
 	}
-	else if( m_WriteJoinAxis == VERTICAL )
+	else if( m_WriteBehavior == ROW_APPEND )
 	{
 		std::stringstream input;
 		std::stringstream tempStream;
@@ -311,7 +312,7 @@ void JoinNode::StoreImpl( const std::map<std::string,std::string>& i_rParameters
 	}
 	else
 	{
-		MV_THROW( JoinNodeException, "Unrecognized join axis" );
+		MV_THROW( JoinNodeException, "Unrecognized join behavior" );
 	}
 }
 
@@ -370,7 +371,7 @@ void JoinNode::InsertImplDeleteForwards( std::set< std::string >& o_rForwards ) 
 }
 
 void JoinNode::SetConfig( const xercesc::DOMNode* i_pNode,
-						  JoinAxis& o_rJoinAxis,
+						  Behavior& o_rBehavior,
 						  std::string& o_rWorkingDir,
 						  int& o_rTimeout,
 						  std::vector< StreamConfig >& o_rConfig,
@@ -378,22 +379,22 @@ void JoinNode::SetConfig( const xercesc::DOMNode* i_pNode,
 						  std::string& o_rKey,
 						  bool i_IsRead )
 {
-	xercesc::DOMAttr* pAttribute = XMLUtilities::GetAttribute( i_pNode, JOIN_AXIS_ATTRIBUTE );
+	xercesc::DOMAttr* pAttribute = XMLUtilities::GetAttribute( i_pNode, BEHAVIOR_ATTRIBUTE );
 	if( pAttribute != NULL )
 	{
 		std::string joinAxis = XMLUtilities::XMLChToString( pAttribute->getValue() );
-		if( joinAxis == HORIZONTAL_STRING )
+		if( joinAxis == COLUMN_JOIN_STRING )
 		{
-			o_rJoinAxis = HORIZONTAL;
+			o_rBehavior = COLUMN_JOIN;
 		}
-		else if( joinAxis == VERTICAL_STRING )
+		else if( joinAxis == ROW_APPEND_STRING )
 		{
-			o_rJoinAxis = VERTICAL;
+			o_rBehavior = ROW_APPEND;
 		}
 		else
 		{
-			MV_THROW( JoinNodeException, "Unknown value for " << XMLUtilities::XMLChToString( i_pNode->getNodeName() ) << " " << JOIN_AXIS_ATTRIBUTE << ": " << joinAxis
-				<< ". Legal values are '" << HORIZONTAL_STRING << "', '" << VERTICAL_STRING << "'" );
+			MV_THROW( JoinNodeException, "Unknown value for " << XMLUtilities::XMLChToString( i_pNode->getNodeName() ) << " " << BEHAVIOR_ATTRIBUTE << ": " << joinAxis
+				<< ". Legal values are '" << COLUMN_JOIN_STRING << "', '" << ROW_APPEND_STRING << "'" );
 		}
 	}
 
@@ -413,39 +414,45 @@ void JoinNode::SetConfig( const xercesc::DOMNode* i_pNode,
 	std::set< std::string > allowedAttributes;
 	allowedAttributes.insert( NAME_ATTRIBUTE );
 
-	if( o_rJoinAxis == HORIZONTAL )
+	if( o_rBehavior == COLUMN_JOIN )
 	{
 		allowedAttributes.insert( KEY_ATTRIBUTE );
 		allowedAttributes.insert( TYPE_ATTRIBUTE );
 	}
-	else if( o_rJoinAxis == VERTICAL )
+	else if( o_rBehavior == ROW_APPEND )
 	{
 		allowedAttributes.insert( SKIP_LINES_ATTRIBUTE );
 	}
 
-	bool hasForwardTo = false;
+	bool hasForwardToKey = false;
 	xercesc::DOMNode* pNode = XMLUtilities::TryGetSingletonChildByName( i_pNode, FORWARD_TO_NODE );
 	if( pNode != NULL )
 	{
+		std::set< std::string > allowedAttributes;
+		allowedAttributes.insert( NAME_ATTRIBUTE );
+		allowedAttributes.insert( KEY_ATTRIBUTE );
 		XMLUtilities::ValidateNode( pNode, std::set< std::string >() );
+		XMLUtilities::ValidateAttributes( pNode, allowedAttributes );
 		o_rEndpoint = XMLUtilities::GetAttributeValue( pNode, NAME_ATTRIBUTE );
-		hasForwardTo = true;
-	}
-	if( !i_IsRead )
-	{
-		pAttribute = XMLUtilities::GetAttribute( i_pNode, KEY_ATTRIBUTE );
+		pAttribute = XMLUtilities::GetAttribute( ( i_IsRead ? pNode : i_pNode ), KEY_ATTRIBUTE );
 		if( pAttribute != NULL )
 		{
 			o_rKey = XMLUtilities::XMLChToString(pAttribute->getValue());
+			hasForwardToKey = true;
 		}
-		if( !hasForwardTo )
-		{
-			MV_THROW( JoinNodeException, "Must provide a " << FORWARD_TO_NODE << " node for write-side joins" );
-		}
+	}
+	else
+	{
+		MV_THROW( JoinNodeException, "Must provide a " << FORWARD_TO_NODE << " node for " 
+			<< ( i_IsRead ? "read-side joins to act as the main stream" : "write-side joins to determine the final destination" ) );
 	}
 
 	std::vector<xercesc::DOMNode*> destinations;
 	XMLUtilities::GetChildrenByName( destinations, i_pNode, JOIN_TO_NODE );
+	if( i_IsRead && o_rBehavior == COLUMN_JOIN && !hasForwardToKey && !destinations.empty() )
+	{
+		MV_THROW( JoinNodeException, "When providing nonzero " << JOIN_TO_NODE << " nodes, the read-side " << FORWARD_TO_NODE << " must contain an attribute for '" << KEY_ATTRIBUTE << "'" );
+	}
 	std::vector<xercesc::DOMNode*>::const_iterator routeIter = destinations.begin();
 	for( ; routeIter != destinations.end(); ++routeIter )
 	{
@@ -455,67 +462,46 @@ void JoinNode::SetConfig( const xercesc::DOMNode* i_pNode,
 
 		std::string handlerName = XMLUtilities::GetAttributeValue( *routeIter, NAME_ATTRIBUTE );
 		streamConfig.SetValue< NodeName >( handlerName );
-		if( o_rJoinAxis == HORIZONTAL )
+		if( o_rBehavior == COLUMN_JOIN )
 		{
 			streamConfig.SetValue< JoinKey >( XMLUtilities::GetAttributeValue( *routeIter, KEY_ATTRIBUTE ) );
-			pAttribute = XMLUtilities::GetAttribute( *routeIter, TYPE_ATTRIBUTE );
-			if( routeIter == destinations.begin() && i_IsRead )
+			std::string joinType = XMLUtilities::GetAttributeValue( *routeIter, TYPE_ATTRIBUTE );
+			if( joinType == INNER_STRING )
 			{
-				if( pAttribute != NULL )
-				{
-					MV_THROW( JoinNodeException, "Cannot provide a " << TYPE_ATTRIBUTE << " for the first read-side " << JOIN_TO_NODE << " node" );
-				}
+				streamConfig.SetValue< JoinType >( INNER );
+			}
+			else if( joinType == LEFT_STRING )
+			{
+				streamConfig.SetValue< JoinType >( LEFT );
+			}
+			else if( joinType == RIGHT_STRING )
+			{
+				streamConfig.SetValue< JoinType >( RIGHT );
+			}
+			else if( joinType == OUTER_STRING )
+			{
+				streamConfig.SetValue< JoinType >( OUTER );
+			}
+			else if( joinType == ANTI_RIGHT_STRING )
+			{
+				streamConfig.SetValue< JoinType >( ANTI_RIGHT );
+			}
+			else if( joinType == ANTI_LEFT_STRING )
+			{
+				streamConfig.SetValue< JoinType >( ANTI_LEFT );
+			}
+			else if( joinType == ANTI_INNER_STRING )
+			{
+				streamConfig.SetValue< JoinType >( ANTI_INNER );
 			}
 			else
 			{
-				if( pAttribute == NULL )
-				{
-					std::stringstream message;
-					message << "Must provide a " << TYPE_ATTRIBUTE << " for all " << ( i_IsRead ? "read-side " : "write-side " ) << JOIN_TO_NODE << " nodes";
-					if( i_IsRead )
-					{
-						message << " other than the first";
-					}
-					MV_THROW( JoinNodeException, message.str() );
-				}
-				std::string joinType = XMLUtilities::GetAttributeValue( *routeIter, TYPE_ATTRIBUTE );
-				if( joinType == INNER_STRING )
-				{
-					streamConfig.SetValue< JoinType >( INNER );
-				}
-				else if( joinType == LEFT_STRING )
-				{
-					streamConfig.SetValue< JoinType >( LEFT );
-				}
-				else if( joinType == RIGHT_STRING )
-				{
-					streamConfig.SetValue< JoinType >( RIGHT );
-				}
-				else if( joinType == OUTER_STRING )
-				{
-					streamConfig.SetValue< JoinType >( OUTER );
-				}
-				else if( joinType == ANTI_RIGHT_STRING )
-				{
-					streamConfig.SetValue< JoinType >( ANTI_RIGHT );
-				}
-				else if( joinType == ANTI_LEFT_STRING )
-				{
-					streamConfig.SetValue< JoinType >( ANTI_LEFT );
-				}
-				else if( joinType == ANTI_INNER_STRING )
-				{
-					streamConfig.SetValue< JoinType >( ANTI_INNER );
-				}
-				else
-				{
-					MV_THROW( JoinNodeException, "Illegal " << TYPE_ATTRIBUTE << " specified for " << JOIN_TO_NODE << " node " << handlerName << ": '" << joinType
-						<< "'. Legal values are: '" << INNER_STRING << "', '" << RIGHT_STRING << "', '" << LEFT_STRING << "', '" << OUTER_STRING << "', '"
-						<< ANTI_RIGHT_STRING << "', '" << ANTI_LEFT_STRING << "', '" << ANTI_INNER_STRING << "'" );
-				}
+				MV_THROW( JoinNodeException, "Illegal " << TYPE_ATTRIBUTE << " specified for " << JOIN_TO_NODE << " node " << handlerName << ": '" << joinType
+					<< "'. Legal values are: '" << INNER_STRING << "', '" << RIGHT_STRING << "', '" << LEFT_STRING << "', '" << OUTER_STRING << "', '"
+					<< ANTI_RIGHT_STRING << "', '" << ANTI_LEFT_STRING << "', '" << ANTI_INNER_STRING << "'" );
 			}
 		}
-		else if( o_rJoinAxis == VERTICAL )
+		else if( o_rBehavior == ROW_APPEND )
 		{
 			pAttribute = XMLUtilities::GetAttribute( *routeIter, SKIP_LINES_ATTRIBUTE );
 			if( pAttribute != NULL )
@@ -524,24 +510,7 @@ void JoinNode::SetConfig( const xercesc::DOMNode* i_pNode,
 			}
 		}
 
-		if( i_IsRead && o_rJoinAxis == HORIZONTAL && routeIter == destinations.begin() )
-		{
-			o_rEndpoint = streamConfig.GetValue< NodeName >();
-			o_rKey = streamConfig.GetValue< JoinKey >();
-		}
-		else
-		{
-			o_rConfig.push_back( streamConfig );
-		}
-	}
-
-	if( i_IsRead && hasForwardTo && !o_rConfig.empty() )
-	{
-		MV_THROW( JoinNodeException, "Cannot provide a read-side " << FORWARD_TO_NODE << " node as well as " << JOIN_TO_NODE << " nodes" );
-	}
-	if( !i_IsRead && o_rKey.empty() && !o_rConfig.empty() && o_rJoinAxis == HORIZONTAL )
-	{
-		MV_THROW( JoinNodeException, "When providing nodes to join to on write, must indicate the key of the incoming stream" );
+		o_rConfig.push_back( streamConfig );
 	}
 }
 

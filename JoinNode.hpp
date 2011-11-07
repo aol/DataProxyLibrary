@@ -41,11 +41,11 @@ public:
 	virtual void InsertImplDeleteForwards( std::set< std::string >& o_rForwards ) const;
 
 private:
-	enum JoinAxis
+	enum Behavior
 	{
 		UNKNOWN = 0,
-		HORIZONTAL,
-		VERTICAL
+		COLUMN_JOIN,
+		ROW_APPEND
 	};
 
 	enum JoinTypeEnum
@@ -74,7 +74,7 @@ private:
 	StreamConfig;
 
 	void SetConfig( const xercesc::DOMNode* i_pNode,
-					JoinAxis& o_rJoinAxis,
+					Behavior& o_rBehavior,
 					std::string& o_rWorkingDir, 
 					int& i_Timeout, 
 					std::vector< StreamConfig >& o_rConfig,
@@ -98,7 +98,7 @@ private:
 	std::string m_ReadEndpoint;
 	std::string m_ReadKey;
 	std::vector< StreamConfig > m_ReadJoins;
-	JoinAxis m_ReadJoinAxis;
+	Behavior m_ReadBehavior;
 	std::string m_ReadWorkingDir;
 	int m_ReadTimeout;
 
@@ -107,7 +107,7 @@ private:
 	std::string m_WriteEndpoint;
 	std::string m_WriteKey;
 	std::vector< StreamConfig > m_WriteJoins;
-	JoinAxis m_WriteJoinAxis;
+	Behavior m_WriteBehavior;
 	std::string m_WriteWorkingDir;
 	int m_WriteTimeout;
 

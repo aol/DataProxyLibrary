@@ -67,112 +67,114 @@ void JoinNodeTest::testInvalidXml()
 	xmlContents.str("");
 	xmlContents << "<JoinNode >" << std::endl
 				<< "  <Read>" << std::endl
-				<< "    <Join name=\"name1\" >" << std::endl
+				<< "    <ForwardTo name=\"name0\" key=\"k1\" />" << std::endl
+				<< "    <JoinTo name=\"name1\" key=\"k1\" type=\"inner\" >" << std::endl
 				<< "      <garbage/>" << std::endl
-				<< "    </Join>" << std::endl
+				<< "    </JoinTo>" << std::endl
 				<< "  </Read>" << std::endl
 				<< "</JoinNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
-		".*:\\d+: Found invalid child: garbage in node: Join" );
+		".*:\\d+: Found invalid child: garbage in node: JoinTo" );
 
 	xmlContents.str("");
 	xmlContents << "<JoinNode >" << std::endl
 				<< "  <Read>" << std::endl
-				<< "    <Join name=\"name1\" garbage=\"true\" />" << std::endl
+				<< "    <ForwardTo name=\"name0\" key=\"k1\" />" << std::endl
+				<< "    <JoinTo name=\"name1\" garbage=\"true\" />" << std::endl
 				<< "  </Read>" << std::endl
 				<< "</JoinNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
-		".*:\\d+: Found invalid attribute: garbage in node: Join" );
+		".*:\\d+: Found invalid attribute: garbage in node: JoinTo" );
 
 	xmlContents.str("");
 	xmlContents << "<JoinNode >" << std::endl
-				<< "  <Read axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-				<< "    <Join name=\"name1\" key=\"whatever\" type=\"inner\" />" << std::endl
-				<< "    <Join name=\"name2\" key=\"whatever\" type=\"inner\" />" << std::endl
-				<< "  </Read>" << std::endl
-				<< "</JoinNode>" << std::endl;
-	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
-	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), JoinNodeException,
-		".*:\\d+: Cannot provide a type for the first read-side Join node" );
-
-	xmlContents.str("");
-	xmlContents << "<JoinNode >" << std::endl
-				<< "  <Read axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-				<< "    <Join name=\"name1\" key=\"whatever\" />" << std::endl
-				<< "    <Join name=\"name2\" key=\"whatever\" />" << std::endl
-				<< "  </Read>" << std::endl
-				<< "</JoinNode>" << std::endl;
-	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
-	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), JoinNodeException,
-		".*:\\d+: Must provide a type for all read-side Join nodes other than the first" );
-
-	xmlContents.str("");
-	xmlContents << "<JoinNode >" << std::endl
-				<< "  <Read axis=\"garbage\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-				<< "    <Join name=\"name1\" key=\"whatever\" />" << std::endl
-				<< "    <Join name=\"name2\" key=\"whatever\" type=\"inner\" />" << std::endl
-				<< "  </Read>" << std::endl
-				<< "</JoinNode>" << std::endl;
-	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
-	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), JoinNodeException,
-		".*:\\d+: Unknown value for Read axis: garbage. Legal values are 'horizontal', 'vertical'" );
-
-	xmlContents.str("");
-	xmlContents << "<JoinNode >" << std::endl
-				<< "  <Read axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-				<< "    <Join name=\"name1\" />" << std::endl
-				<< "    <Join name=\"name2\" key=\"whatever\" type=\"inner\" />" << std::endl
+				<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+				<< "    <ForwardTo name=\"name1\" key=\"whatever\" type=\"inner\" />" << std::endl
+				<< "    <JoinTo name=\"name2\" key=\"whatever\" type=\"inner\" />" << std::endl
 				<< "  </Read>" << std::endl
 				<< "</JoinNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
-		".*:\\d+: Unable to find attribute: 'key' in node: Join" );
+		".*:\\d+: Found invalid attribute: type in node: ForwardTo" );
 
 	xmlContents.str("");
 	xmlContents << "<JoinNode >" << std::endl
-				<< "  <Read axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-				<< "    <Join name=\"name1\" key=\"whatever\" />" << std::endl
-				<< "    <Join name=\"name2\" type=\"inner\" />" << std::endl
+				<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+				<< "    <ForwardTo name=\"name1\" key=\"whatever\" />" << std::endl
+				<< "    <JoinTo name=\"name2\" key=\"whatever\" />" << std::endl
 				<< "  </Read>" << std::endl
 				<< "</JoinNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
-		".*:\\d+: Unable to find attribute: 'key' in node: Join" );
+		".*:\\d+: Unable to find attribute: 'type' in node: JoinTo" );
 
 	xmlContents.str("");
 	xmlContents << "<JoinNode >" << std::endl
-				<< "  <Read axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-				<< "    <Join name=\"name1\" key=\"whatever\" />" << std::endl
-				<< "    <Join name=\"name2\" key=\"whatever\" type=\"stupid\" />" << std::endl
+				<< "  <Read behavior=\"garbage\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+				<< "    <ForwardTo name=\"name1\" key=\"whatever\" />" << std::endl
+				<< "    <JoinTo name=\"name2\" key=\"whatever\" type=\"inner\" />" << std::endl
 				<< "  </Read>" << std::endl
 				<< "</JoinNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), JoinNodeException,
-		".*:\\d+: Illegal type specified for Join node name2: 'stupid'. Legal values are: 'inner', 'right', 'left', 'outer', 'antiRight', 'antiLeft', 'antiInner'" );
+		".*:\\d+: Unknown value for Read behavior: garbage. Legal values are 'columnJoin', 'rowAppend'" );
 
 	xmlContents.str("");
 	xmlContents << "<JoinNode >" << std::endl
-				<< "  <Read axis=\"horizontal\" workingDir=\"/nonexistent\" >" << std::endl
-				<< "    <Join name=\"name1\" key=\"whatever\" />" << std::endl
-				<< "    <Join name=\"name2\" key=\"whatever\" type=\"inner\" />" << std::endl
+				<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+				<< "    <ForwardTo name=\"name1\" />" << std::endl
+				<< "    <JoinTo name=\"name2\" key=\"whatever\" type=\"inner\" />" << std::endl
+				<< "  </Read>" << std::endl
+				<< "</JoinNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), JoinNodeException,
+		".*:\\d+: When providing nonzero JoinTo nodes, the read-side ForwardTo must contain an attribute for 'key'" );
+
+	xmlContents.str("");
+	xmlContents << "<JoinNode >" << std::endl
+				<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+				<< "    <ForwardTo name=\"name1\" key=\"whatever\" />" << std::endl
+				<< "    <JoinTo name=\"name2\" type=\"inner\" />" << std::endl
+				<< "  </Read>" << std::endl
+				<< "</JoinNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Unable to find attribute: 'key' in node: JoinTo" );
+
+	xmlContents.str("");
+	xmlContents << "<JoinNode >" << std::endl
+				<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+				<< "    <ForwardTo name=\"name1\" key=\"whatever\" />" << std::endl
+				<< "    <JoinTo name=\"name2\" key=\"whatever\" type=\"stupid\" />" << std::endl
+				<< "  </Read>" << std::endl
+				<< "</JoinNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), JoinNodeException,
+		".*:\\d+: Illegal type specified for JoinTo node name2: 'stupid'. Legal values are: 'inner', 'right', 'left', 'outer', 'antiRight', 'antiLeft', 'antiInner'" );
+
+	xmlContents.str("");
+	xmlContents << "<JoinNode >" << std::endl
+				<< "  <Read behavior=\"columnJoin\" workingDir=\"/nonexistent\" >" << std::endl
+				<< "    <ForwardTo name=\"name1\" key=\"whatever\" />" << std::endl
+				<< "    <JoinTo name=\"name2\" key=\"whatever\" type=\"inner\" />" << std::endl
 				<< "  </Read>" << std::endl
 				<< "</JoinNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
@@ -180,20 +182,6 @@ void JoinNodeTest::testInvalidXml()
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), InvalidDirectoryException,
 		".*:\\d+: /nonexistent does not exist or is not a valid directory." );
-
-	xmlContents.str("");
-	xmlContents << "<JoinNode >" << std::endl
-				<< "  <Read axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-				<< "    <ForwardTo name=\"name1\" />" << std::endl
-				<< "    <Join name=\"name2\" key=\"whatever\" />" << std::endl
-				<< "    <Join name=\"name3\" key=\"whatever\" type=\"inner\" />" << std::endl
-				<< "  </Read>" << std::endl
-				<< "</JoinNode>" << std::endl;
-	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
-	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), JoinNodeException,
-		".*:\\d+: Cannot provide a read-side ForwardTo node as well as Join nodes" );
 
 	// Store config
 	xmlContents.str("");
@@ -211,9 +199,9 @@ void JoinNodeTest::testInvalidXml()
 	xmlContents.str("");
 	xmlContents << "<JoinNode >" << std::endl
 				<< "  <Write key=\"campaign_id\">" << std::endl
-				<< "    <Join name=\"name1\" >" << std::endl
+				<< "    <JoinTo name=\"name1\" >" << std::endl
 				<< "      <garbage/>" << std::endl
-				<< "    </Join>" << std::endl
+				<< "    </JoinTo>" << std::endl
 				<< "    <ForwardTo name=\"name2\" />" << std::endl
 				<< "  </Write>" << std::endl
 				<< "</JoinNode>" << std::endl;
@@ -221,32 +209,32 @@ void JoinNodeTest::testInvalidXml()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
-		".*:\\d+: Found invalid child: garbage in node: Join" );
+		".*:\\d+: Found invalid child: garbage in node: JoinTo" );
 
 	xmlContents.str("");
 	xmlContents << "<JoinNode >" << std::endl
 				<< "  <Write key=\"campaign_id\">" << std::endl
-				<< "    <Join name=\"name1\" key=\"key1\" type=\"inner\" />" << std::endl
+				<< "    <JoinTo name=\"name1\" key=\"key1\" type=\"inner\" />" << std::endl
 				<< "  </Write>" << std::endl
 				<< "</JoinNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), JoinNodeException,
-		".*:\\d+: Must provide a ForwardTo node for write-side joins" );
+		".*:\\d+: Must provide a ForwardTo node for write-side joins to determine the final destination" );
 
 	xmlContents.str("");
 	xmlContents << "<JoinNode >" << std::endl
 				<< "  <Write key=\"campaign_id\">" << std::endl
-				<< "    <Join name=\"name1\" key=\"key1\" />" << std::endl
+				<< "    <JoinTo name=\"name1\" key=\"key1\" />" << std::endl
 				<< "    <ForwardTo name=\"name2\" />" << std::endl
 				<< "  </Write>" << std::endl
 				<< "</JoinNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), JoinNodeException,
-		".*:\\d+: Must provide a type for all write-side Join nodes" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+		".*:\\d+: Unable to find attribute: 'type' in node: JoinTo" );
 
 	xmlContents.str("");
 	xmlContents << "<JoinNode >" << std::endl
@@ -367,14 +355,14 @@ void JoinNodeTest::testLoad()
 
 void JoinNodeTest::testLoadJoinInner()
 {
-	// case 1: basic 3-stream horizontal
+	// case 1: basic 3-stream columnJoin
 	{
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
-					<< "  <Read axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <Join name=\"name1\" key=\"campaign_id\" />" << std::endl
-					<< "    <Join name=\"name2\" key=\"CAMPAIGNID\" type=\"inner\" />" << std::endl
-					<< "    <Join name=\"name3\" key=\"c\" type=\"inner\" />" << std::endl
+					<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <ForwardTo name=\"name1\" key=\"campaign_id\" />" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"CAMPAIGNID\" type=\"inner\" />" << std::endl
+					<< "    <JoinTo name=\"name3\" key=\"c\" type=\"inner\" />" << std::endl
 					<< "  </Read>" << std::endl
 					<< "</JoinNode>" << std::endl;
 		std::vector<xercesc::DOMNode*> nodes;
@@ -450,9 +438,9 @@ void JoinNodeTest::testLoadJoinInner()
 	{
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
-					<< "  <Read axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <Join name=\"name1\" key=\"campaign_id\" />" << std::endl
-					<< "    <Join name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
+					<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <ForwardTo name=\"name1\" key=\"campaign_id\" />" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
 					<< "  </Read>" << std::endl
 					<< "</JoinNode>" << std::endl;
 		std::vector<xercesc::DOMNode*> nodes;
@@ -508,9 +496,9 @@ void JoinNodeTest::testLoadJoinInner()
 	{
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
-					<< "  <Read axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <Join name=\"name1\" key=\"campaign_id\" />" << std::endl
-					<< "    <Join name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
+					<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <ForwardTo name=\"name1\" key=\"campaign_id\" />" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
 					<< "  </Read>" << std::endl
 					<< "</JoinNode>" << std::endl;
 		std::vector<xercesc::DOMNode*> nodes;
@@ -566,9 +554,9 @@ void JoinNodeTest::testLoadJoinInner()
 	{
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
-					<< "  <Read axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <Join name=\"name1\" key=\"campaign_id\" />" << std::endl
-					<< "    <Join name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
+					<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <ForwardTo name=\"name1\" key=\"campaign_id\" />" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
 					<< "  </Read>" << std::endl
 					<< "</JoinNode>" << std::endl;
 		std::vector<xercesc::DOMNode*> nodes;
@@ -624,9 +612,9 @@ void JoinNodeTest::testLoadJoinLeft()
 {
 	std::stringstream xmlContents;
 	xmlContents << "<JoinNode >" << std::endl
-				<< "  <Read axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-				<< "    <Join name=\"name1\" key=\"campaign_id\" />" << std::endl
-				<< "    <Join name=\"name2\" key=\"CAMPAIGNID\" type=\"left\" />" << std::endl
+				<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+				<< "    <ForwardTo name=\"name1\" key=\"campaign_id\" />" << std::endl
+				<< "    <JoinTo name=\"name2\" key=\"CAMPAIGNID\" type=\"left\" />" << std::endl
 				<< "  </Read>" << std::endl
 				<< "</JoinNode>" << std::endl;
 	std::vector<xercesc::DOMNode*> nodes;
@@ -688,9 +676,9 @@ void JoinNodeTest::testLoadJoinRight()
 {
 	std::stringstream xmlContents;
 	xmlContents << "<JoinNode >" << std::endl
-				<< "  <Read axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-				<< "    <Join name=\"name1\" key=\"campaign_id\" />" << std::endl
-				<< "    <Join name=\"name2\" key=\"CAMPAIGNID\" type=\"right\" />" << std::endl
+				<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+				<< "    <ForwardTo name=\"name1\" key=\"campaign_id\" />" << std::endl
+				<< "    <JoinTo name=\"name2\" key=\"CAMPAIGNID\" type=\"right\" />" << std::endl
 				<< "  </Read>" << std::endl
 				<< "</JoinNode>" << std::endl;
 	std::vector<xercesc::DOMNode*> nodes;
@@ -752,9 +740,9 @@ void JoinNodeTest::testLoadJoinOuter()
 {
 	std::stringstream xmlContents;
 	xmlContents << "<JoinNode >" << std::endl
-				<< "  <Read axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-				<< "    <Join name=\"name1\" key=\"campaign_id\" />" << std::endl
-				<< "    <Join name=\"name2\" key=\"CAMPAIGNID\" type=\"outer\" />" << std::endl
+				<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+				<< "    <ForwardTo name=\"name1\" key=\"campaign_id\" />" << std::endl
+				<< "    <JoinTo name=\"name2\" key=\"CAMPAIGNID\" type=\"outer\" />" << std::endl
 				<< "  </Read>" << std::endl
 				<< "</JoinNode>" << std::endl;
 	std::vector<xercesc::DOMNode*> nodes;
@@ -819,9 +807,9 @@ void JoinNodeTest::testLoadAntiJoin()
 	{
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
-					<< "  <Read axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <Join name=\"name1\" key=\"campaign_id\" />" << std::endl
-					<< "    <Join name=\"name2\" key=\"campaign_id\" type=\"antiRight\" />" << std::endl
+					<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <ForwardTo name=\"name1\" key=\"campaign_id\" />" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" type=\"antiRight\" />" << std::endl
 					<< "  </Read>" << std::endl
 					<< "</JoinNode>" << std::endl;
 		std::vector<xercesc::DOMNode*> nodes;
@@ -875,9 +863,9 @@ void JoinNodeTest::testLoadAntiJoin()
 	{
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
-					<< "  <Read axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <Join name=\"name1\" key=\"campaign_id\" />" << std::endl
-					<< "    <Join name=\"name2\" key=\"campaign_id\" type=\"antiLeft\" />" << std::endl
+					<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <ForwardTo name=\"name1\" key=\"campaign_id\" />" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" type=\"antiLeft\" />" << std::endl
 					<< "  </Read>" << std::endl
 					<< "</JoinNode>" << std::endl;
 		std::vector<xercesc::DOMNode*> nodes;
@@ -931,9 +919,9 @@ void JoinNodeTest::testLoadAntiJoin()
 	{
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
-					<< "  <Read axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <Join name=\"name1\" key=\"campaign_id\" />" << std::endl
-					<< "    <Join name=\"name2\" key=\"campaign_id\" type=\"antiInner\" />" << std::endl
+					<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <ForwardTo name=\"name1\" key=\"campaign_id\" />" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" type=\"antiInner\" />" << std::endl
 					<< "  </Read>" << std::endl
 					<< "</JoinNode>" << std::endl;
 		std::vector<xercesc::DOMNode*> nodes;
@@ -991,12 +979,12 @@ void JoinNodeTest::testLoadJoinComplex()
 {
 	std::stringstream xmlContents;
 	xmlContents << "<JoinNode >" << std::endl
-				<< "  <Read axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" timeout=\"30\" >" << std::endl
-				<< "    <Join name=\"name1\" key=\"id\" />" << std::endl
-				<< "    <Join name=\"name2\" key=\"id\" type=\"inner\" />" << std::endl
-				<< "    <Join name=\"name3\" key=\"id\" type=\"right\" />" << std::endl
-				<< "    <Join name=\"name4\" key=\"id\" type=\"left\" />" << std::endl
-				<< "    <Join name=\"name5\" key=\"id\" type=\"outer\" />" << std::endl
+				<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" timeout=\"30\" >" << std::endl
+				<< "    <ForwardTo name=\"name1\" key=\"id\" />" << std::endl
+				<< "    <JoinTo name=\"name2\" key=\"id\" type=\"inner\" />" << std::endl
+				<< "    <JoinTo name=\"name3\" key=\"id\" type=\"right\" />" << std::endl
+				<< "    <JoinTo name=\"name4\" key=\"id\" type=\"left\" />" << std::endl
+				<< "    <JoinTo name=\"name5\" key=\"id\" type=\"outer\" />" << std::endl
 				<< "  </Read>" << std::endl
 				<< "</JoinNode>" << std::endl;
 	std::vector<xercesc::DOMNode*> nodes;
@@ -1072,13 +1060,13 @@ void JoinNodeTest::testLoadJoinComplex()
 
 void JoinNodeTest::testLoadJoinRuntimeErrors()
 {
-	// case 1: nonexistent horizontal key
+	// case 1: nonexistent columnJoin key
 	{
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
-					<< "  <Read axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <Join name=\"name1\" key=\"campaign_id\" />" << std::endl
-					<< "    <Join name=\"name2\" key=\"nonexistent\" type=\"inner\" />" << std::endl
+					<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <ForwardTo name=\"name1\" key=\"campaign_id\" />" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"nonexistent\" type=\"inner\" />" << std::endl
 					<< "  </Read>" << std::endl
 					<< "</JoinNode>" << std::endl;
 		std::vector<xercesc::DOMNode*> nodes;
@@ -1108,9 +1096,9 @@ void JoinNodeTest::testLoadJoinRuntimeErrors()
 	{
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
-					<< "  <Read axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <Join name=\"name1\" key=\"nonexistent\" />" << std::endl
-					<< "    <Join name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
+					<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <ForwardTo name=\"name1\" key=\"nonexistent\" />" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
 					<< "  </Read>" << std::endl
 					<< "</JoinNode>" << std::endl;
 		std::vector<xercesc::DOMNode*> nodes;
@@ -1142,9 +1130,9 @@ void JoinNodeTest::testLoadJoinRuntimeErrors()
 	{
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
-					<< "  <Read axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <Join name=\"name1\" key=\"campaign_id\" />" << std::endl
-					<< "    <Join name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
+					<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <ForwardTo name=\"name1\" key=\"campaign_id\" />" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
 					<< "  </Read>" << std::endl
 					<< "</JoinNode>" << std::endl;
 		std::vector<xercesc::DOMNode*> nodes;
@@ -1174,9 +1162,9 @@ void JoinNodeTest::testLoadJoinRuntimeErrors()
 	{
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
-					<< "  <Read axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <Join name=\"name1\" key=\"campaign_id\" />" << std::endl
-					<< "    <Join name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
+					<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <ForwardTo name=\"name1\" key=\"campaign_id\" />" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
 					<< "  </Read>" << std::endl
 					<< "</JoinNode>" << std::endl;
 		std::vector<xercesc::DOMNode*> nodes;
@@ -1208,9 +1196,9 @@ void JoinNodeTest::testLoadJoinRuntimeErrors()
 	{
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
-					<< "  <Read axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" timeout=\"-1\" >" << std::endl
-					<< "    <Join name=\"name1\" key=\"campaign_id\" />" << std::endl
-					<< "    <Join name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
+					<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" timeout=\"-1\" >" << std::endl
+					<< "    <ForwardTo name=\"name1\" key=\"campaign_id\" />" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
 					<< "  </Read>" << std::endl
 					<< "</JoinNode>" << std::endl;
 		std::vector<xercesc::DOMNode*> nodes;
@@ -1243,9 +1231,9 @@ void JoinNodeTest::testLoadJoinMulti()
 {
 	std::stringstream xmlContents;
 	xmlContents << "<JoinNode >" << std::endl
-				<< "  <Read axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-				<< "    <Join name=\"name1\" key=\"key1,key2\" />" << std::endl
-				<< "    <Join name=\"name2\" key=\"key1,key2\" type=\"inner\" />" << std::endl
+				<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+				<< "    <ForwardTo name=\"name1\" key=\"key1,key2\" />" << std::endl
+				<< "    <JoinTo name=\"name2\" key=\"key1,key2\" type=\"inner\" />" << std::endl
 				<< "  </Read>" << std::endl
 				<< "</JoinNode>" << std::endl;
 	std::vector<xercesc::DOMNode*> nodes;
@@ -1319,11 +1307,11 @@ void JoinNodeTest::testLoadAppend()
 {
 	std::stringstream xmlContents;
 	xmlContents << "<JoinNode >" << std::endl
-				<< "  <Read axis=\"vertical\" >" << std::endl
-				<< "    <Join name=\"name1\" />" << std::endl
-				<< "    <Join name=\"name2\" skipLines=\"1\" />" << std::endl
-				<< "    <Join name=\"name3\" />" << std::endl
-				<< "    <Join name=\"name4\" skipLines=\"3\" />" << std::endl
+				<< "  <Read behavior=\"rowAppend\" >" << std::endl
+				<< "    <ForwardTo name=\"name1\" />" << std::endl
+				<< "    <JoinTo name=\"name2\" skipLines=\"1\" />" << std::endl
+				<< "    <JoinTo name=\"name3\" />" << std::endl
+				<< "    <JoinTo name=\"name4\" skipLines=\"3\" />" << std::endl
 				<< "  </Read>" << std::endl
 				<< "</JoinNode>" << std::endl;
 	std::vector<xercesc::DOMNode*> nodes;
@@ -1425,13 +1413,13 @@ void JoinNodeTest::testStore()
 
 void JoinNodeTest::testStoreJoinInner()
 {
-	// case 1: basic 3-stream horizontal
+	// case 1: basic 3-stream columnJoin
 	{
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
-					<< "  <Write key=\"campaign_id\" axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <Join name=\"name2\" key=\"CAMPAIGNID\" type=\"inner\" />" << std::endl
-					<< "    <Join name=\"name3\" key=\"c\" type=\"inner\" />" << std::endl
+					<< "  <Write key=\"campaign_id\" behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"CAMPAIGNID\" type=\"inner\" />" << std::endl
+					<< "    <JoinTo name=\"name3\" key=\"c\" type=\"inner\" />" << std::endl
 					<< "    <ForwardTo name=\"out\" />" << std::endl
 					<< "  </Write>" << std::endl
 					<< "</JoinNode>" << std::endl;
@@ -1505,8 +1493,8 @@ void JoinNodeTest::testStoreJoinInner()
 	{
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
-					<< "  <Write key=\"campaign_id\" axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <Join name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
+					<< "  <Write key=\"campaign_id\" behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
 					<< "    <ForwardTo name=\"out\" />" << std::endl
 					<< "  </Write>" << std::endl
 					<< "</JoinNode>" << std::endl;
@@ -1558,8 +1546,8 @@ void JoinNodeTest::testStoreJoinInner()
 	{
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
-					<< "  <Write key=\"campaign_id\" axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <Join name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
+					<< "  <Write key=\"campaign_id\" behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
 					<< "    <ForwardTo name=\"out\" />" << std::endl
 					<< "  </Write>" << std::endl
 					<< "</JoinNode>" << std::endl;
@@ -1611,8 +1599,8 @@ void JoinNodeTest::testStoreJoinInner()
 	{
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
-					<< "  <Write key=\"campaign_id\" axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <Join name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
+					<< "  <Write key=\"campaign_id\" behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
 					<< "    <ForwardTo name=\"out\" />" << std::endl
 					<< "  </Write>" << std::endl
 					<< "</JoinNode>" << std::endl;
@@ -1664,8 +1652,8 @@ void JoinNodeTest::testStoreJoinLeft()
 {
 	std::stringstream xmlContents;
 	xmlContents << "<JoinNode >" << std::endl
-				<< "  <Write key=\"campaign_id\" axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-				<< "    <Join name=\"name2\" key=\"CAMPAIGNID\" type=\"left\" />" << std::endl
+				<< "  <Write key=\"campaign_id\" behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+				<< "    <JoinTo name=\"name2\" key=\"CAMPAIGNID\" type=\"left\" />" << std::endl
 				<< "    <ForwardTo name=\"out\" />" << std::endl
 				<< "  </Write>" << std::endl
 				<< "</JoinNode>" << std::endl;
@@ -1723,8 +1711,8 @@ void JoinNodeTest::testStoreJoinRight()
 {
 	std::stringstream xmlContents;
 	xmlContents << "<JoinNode >" << std::endl
-				<< "  <Write key=\"campaign_id\" axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-				<< "    <Join name=\"name2\" key=\"CAMPAIGNID\" type=\"right\" />" << std::endl
+				<< "  <Write key=\"campaign_id\" behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+				<< "    <JoinTo name=\"name2\" key=\"CAMPAIGNID\" type=\"right\" />" << std::endl
 				<< "    <ForwardTo name=\"out\" />" << std::endl
 				<< "  </Write>" << std::endl
 				<< "</JoinNode>" << std::endl;
@@ -1782,8 +1770,8 @@ void JoinNodeTest::testStoreJoinOuter()
 {
 	std::stringstream xmlContents;
 	xmlContents << "<JoinNode >" << std::endl
-				<< "  <Write key=\"campaign_id\" axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-				<< "    <Join name=\"name2\" key=\"CAMPAIGNID\" type=\"outer\" />" << std::endl
+				<< "  <Write key=\"campaign_id\" behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+				<< "    <JoinTo name=\"name2\" key=\"CAMPAIGNID\" type=\"outer\" />" << std::endl
 				<< "    <ForwardTo name=\"out\" />" << std::endl
 				<< "  </Write>" << std::endl
 				<< "</JoinNode>" << std::endl;
@@ -1844,8 +1832,8 @@ void JoinNodeTest::testStoreAntiJoin()
 	{
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
-					<< "  <Write key=\"campaign_id\" axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <Join name=\"name2\" key=\"campaign_id\" type=\"antiRight\" />" << std::endl
+					<< "  <Write key=\"campaign_id\" behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" type=\"antiRight\" />" << std::endl
 					<< "    <ForwardTo name=\"out\" />" << std::endl
 					<< "  </Write>" << std::endl
 					<< "</JoinNode>" << std::endl;
@@ -1895,8 +1883,8 @@ void JoinNodeTest::testStoreAntiJoin()
 	{
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
-					<< "  <Write key=\"campaign_id\" axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <Join name=\"name2\" key=\"campaign_id\" type=\"antiLeft\" />" << std::endl
+					<< "  <Write key=\"campaign_id\" behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" type=\"antiLeft\" />" << std::endl
 					<< "    <ForwardTo name=\"out\" />" << std::endl
 					<< "  </Write>" << std::endl
 					<< "</JoinNode>" << std::endl;
@@ -1946,8 +1934,8 @@ void JoinNodeTest::testStoreAntiJoin()
 	{
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
-					<< "  <Write key=\"campaign_id\" axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <Join name=\"name2\" key=\"campaign_id\" type=\"antiInner\" />" << std::endl
+					<< "  <Write key=\"campaign_id\" behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" type=\"antiInner\" />" << std::endl
 					<< "    <ForwardTo name=\"out\" />" << std::endl
 					<< "  </Write>" << std::endl
 					<< "</JoinNode>" << std::endl;
@@ -2001,11 +1989,11 @@ void JoinNodeTest::testStoreJoinComplex()
 {
 	std::stringstream xmlContents;
 	xmlContents << "<JoinNode >" << std::endl
-				<< "  <Write key=\"id\" axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" timeout=\"30\" >" << std::endl
-				<< "    <Join name=\"name2\" key=\"id\" type=\"inner\" />" << std::endl
-				<< "    <Join name=\"name3\" key=\"id\" type=\"right\" />" << std::endl
-				<< "    <Join name=\"name4\" key=\"id\" type=\"left\" />" << std::endl
-				<< "    <Join name=\"name5\" key=\"id\" type=\"outer\" />" << std::endl
+				<< "  <Write key=\"id\" behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" timeout=\"30\" >" << std::endl
+				<< "    <JoinTo name=\"name2\" key=\"id\" type=\"inner\" />" << std::endl
+				<< "    <JoinTo name=\"name3\" key=\"id\" type=\"right\" />" << std::endl
+				<< "    <JoinTo name=\"name4\" key=\"id\" type=\"left\" />" << std::endl
+				<< "    <JoinTo name=\"name5\" key=\"id\" type=\"outer\" />" << std::endl
 				<< "    <ForwardTo name=\"out\" />" << std::endl
 				<< "  </Write>" << std::endl
 				<< "</JoinNode>" << std::endl;
@@ -2077,12 +2065,12 @@ void JoinNodeTest::testStoreJoinComplex()
 
 void JoinNodeTest::testStoreJoinRuntimeErrors()
 {
-	// case 1: nonexistent horizontal key
+	// case 1: nonexistent columnJoin key
 	{
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
-					<< "  <Write key=\"campaign_id\" axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <Join name=\"name2\" key=\"nonexistent\" type=\"inner\" />" << std::endl
+					<< "  <Write key=\"campaign_id\" behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"nonexistent\" type=\"inner\" />" << std::endl
 					<< "    <ForwardTo name=\"out\" />" << std::endl
 					<< "  </Write>" << std::endl
 					<< "</JoinNode>" << std::endl;
@@ -2111,8 +2099,8 @@ void JoinNodeTest::testStoreJoinRuntimeErrors()
 	{
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
-					<< "  <Write key=\"nonexistent\" axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <Join name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
+					<< "  <Write key=\"nonexistent\" behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
 					<< "    <ForwardTo name=\"out\" />" << std::endl
 					<< "  </Write>" << std::endl
 					<< "</JoinNode>" << std::endl;
@@ -2143,8 +2131,8 @@ void JoinNodeTest::testStoreJoinRuntimeErrors()
 	{
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
-					<< "  <Write key=\"campaign_id\" axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <Join name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
+					<< "  <Write key=\"campaign_id\" behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
 					<< "    <ForwardTo name=\"out\" />" << std::endl
 					<< "  </Write>" << std::endl
 					<< "</JoinNode>" << std::endl;
@@ -2173,8 +2161,8 @@ void JoinNodeTest::testStoreJoinRuntimeErrors()
 	{
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
-					<< "  <Write key=\"campaign_id\" axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <Join name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
+					<< "  <Write key=\"campaign_id\" behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
 					<< "    <ForwardTo name=\"out\" />" << std::endl
 					<< "  </Write>" << std::endl
 					<< "</JoinNode>" << std::endl;
@@ -2205,8 +2193,8 @@ void JoinNodeTest::testStoreJoinRuntimeErrors()
 	{
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
-					<< "  <Write key=\"campaign_id\" axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" timeout=\"-1\" >" << std::endl
-					<< "    <Join name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
+					<< "  <Write key=\"campaign_id\" behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" timeout=\"-1\" >" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
 					<< "    <ForwardTo name=\"out\" />" << std::endl
 					<< "  </Write>" << std::endl
 					<< "</JoinNode>" << std::endl;
@@ -2238,8 +2226,8 @@ void JoinNodeTest::testStoreJoinMulti()
 {
 	std::stringstream xmlContents;
 	xmlContents << "<JoinNode >" << std::endl
-				<< "  <Write key=\"key1,key2\" axis=\"horizontal\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-				<< "    <Join name=\"name2\" key=\"key1,key2\" type=\"inner\" />" << std::endl
+				<< "  <Write key=\"key1,key2\" behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+				<< "    <JoinTo name=\"name2\" key=\"key1,key2\" type=\"inner\" />" << std::endl
 				<< "    <ForwardTo name=\"out\" />" << std::endl
 				<< "  </Write>" << std::endl
 				<< "</JoinNode>" << std::endl;
@@ -2309,10 +2297,10 @@ void JoinNodeTest::testStoreAppend()
 {
 	std::stringstream xmlContents;
 	xmlContents << "<JoinNode >" << std::endl
-				<< "  <Write axis=\"vertical\" >" << std::endl
-				<< "    <Join name=\"name2\" skipLines=\"1\" />" << std::endl
-				<< "    <Join name=\"name3\" />" << std::endl
-				<< "    <Join name=\"name4\" skipLines=\"3\" />" << std::endl
+				<< "  <Write behavior=\"rowAppend\" >" << std::endl
+				<< "    <JoinTo name=\"name2\" skipLines=\"1\" />" << std::endl
+				<< "    <JoinTo name=\"name3\" />" << std::endl
+				<< "    <JoinTo name=\"name4\" skipLines=\"3\" />" << std::endl
 				<< "    <ForwardTo name=\"out\" />" << std::endl
 				<< "  </Write>" << std::endl
 				<< "</JoinNode>" << std::endl;
