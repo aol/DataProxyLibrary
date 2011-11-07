@@ -40,7 +40,7 @@ namespace
 	const std::string ANTI_RIGHT_STRING( "antiRight" );
 	const std::string ANTI_INNER_STRING( "antiInner" );
 
-	const std::string ROW_APPEND_STRING( "rowAppend" );
+	const std::string APPEND_STRING( "append" );
 	const std::string COLUMN_JOIN_STRING( "columnJoin" );
 	const std::string SKIP_LINES_ATTRIBUTE( "skipLines" );
 
@@ -254,7 +254,7 @@ void JoinNode::LoadImpl( const std::map<std::string,std::string>& i_rParameters,
 		m_rParent.Load( m_ReadEndpoint, i_rParameters, tempStream );
 		WriteHorizontalJoin( tempStream, o_rData, m_ReadKey, i_rParameters, m_ReadJoins, m_ReadWorkingDir, m_ReadTimeout );
 	}
-	else if( m_ReadBehavior == ROW_APPEND )
+	else if( m_ReadBehavior == APPEND )
 	{
 		m_rParent.Load( m_ReadEndpoint, i_rParameters, o_rData );
 		std::vector< StreamConfig >::const_iterator iter = m_ReadJoins.begin();
@@ -292,7 +292,7 @@ void JoinNode::StoreImpl( const std::map<std::string,std::string>& i_rParameters
 		WriteHorizontalJoin( i_rData, input, m_WriteKey, i_rParameters, m_WriteJoins, m_WriteWorkingDir, m_WriteTimeout );
 		m_rParent.Store( m_WriteEndpoint, i_rParameters, input );
 	}
-	else if( m_WriteBehavior == ROW_APPEND )
+	else if( m_WriteBehavior == APPEND )
 	{
 		std::stringstream input;
 		std::stringstream tempStream;
@@ -387,14 +387,14 @@ void JoinNode::SetConfig( const xercesc::DOMNode* i_pNode,
 		{
 			o_rBehavior = COLUMN_JOIN;
 		}
-		else if( joinAxis == ROW_APPEND_STRING )
+		else if( joinAxis == APPEND_STRING )
 		{
-			o_rBehavior = ROW_APPEND;
+			o_rBehavior = APPEND;
 		}
 		else
 		{
 			MV_THROW( JoinNodeException, "Unknown value for " << XMLUtilities::XMLChToString( i_pNode->getNodeName() ) << " " << BEHAVIOR_ATTRIBUTE << ": " << joinAxis
-				<< ". Legal values are '" << COLUMN_JOIN_STRING << "', '" << ROW_APPEND_STRING << "'" );
+				<< ". Legal values are '" << COLUMN_JOIN_STRING << "', '" << APPEND_STRING << "'" );
 		}
 	}
 
@@ -419,7 +419,7 @@ void JoinNode::SetConfig( const xercesc::DOMNode* i_pNode,
 		allowedAttributes.insert( KEY_ATTRIBUTE );
 		allowedAttributes.insert( TYPE_ATTRIBUTE );
 	}
-	else if( o_rBehavior == ROW_APPEND )
+	else if( o_rBehavior == APPEND )
 	{
 		allowedAttributes.insert( SKIP_LINES_ATTRIBUTE );
 	}
@@ -501,7 +501,7 @@ void JoinNode::SetConfig( const xercesc::DOMNode* i_pNode,
 					<< ANTI_RIGHT_STRING << "', '" << ANTI_LEFT_STRING << "', '" << ANTI_INNER_STRING << "'" );
 			}
 		}
-		else if( o_rBehavior == ROW_APPEND )
+		else if( o_rBehavior == APPEND )
 		{
 			pAttribute = XMLUtilities::GetAttribute( *routeIter, SKIP_LINES_ATTRIBUTE );
 			if( pAttribute != NULL )

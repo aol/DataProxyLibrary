@@ -45,7 +45,7 @@ private:
 	{
 		UNKNOWN = 0,
 		COLUMN_JOIN,
-		ROW_APPEND
+		APPEND
 	};
 
 	enum JoinTypeEnum

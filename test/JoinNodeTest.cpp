@@ -129,7 +129,7 @@ void JoinNodeTest::testInvalidXml()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), JoinNodeException,
-		".*:\\d+: Unknown value for Read behavior: garbage. Legal values are 'columnJoin', 'rowAppend'" );
+		".*:\\d+: Unknown value for Read behavior: garbage. Legal values are 'columnJoin', 'append'" );
 
 	xmlContents.str("");
 	xmlContents << "<JoinNode >" << std::endl
@@ -1307,7 +1307,7 @@ void JoinNodeTest::testLoadAppend()
 {
 	std::stringstream xmlContents;
 	xmlContents << "<JoinNode >" << std::endl
-				<< "  <Read behavior=\"rowAppend\" >" << std::endl
+				<< "  <Read behavior=\"append\" >" << std::endl
 				<< "    <ForwardTo name=\"name1\" />" << std::endl
 				<< "    <JoinTo name=\"name2\" skipLines=\"1\" />" << std::endl
 				<< "    <JoinTo name=\"name3\" />" << std::endl
@@ -2297,7 +2297,7 @@ void JoinNodeTest::testStoreAppend()
 {
 	std::stringstream xmlContents;
 	xmlContents << "<JoinNode >" << std::endl
-				<< "  <Write behavior=\"rowAppend\" >" << std::endl
+				<< "  <Write behavior=\"append\" >" << std::endl
 				<< "    <JoinTo name=\"name2\" skipLines=\"1\" />" << std::endl
 				<< "    <JoinTo name=\"name3\" />" << std::endl
 				<< "    <JoinTo name=\"name4\" skipLines=\"3\" />" << std::endl
