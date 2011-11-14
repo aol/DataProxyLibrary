@@ -24,6 +24,7 @@ class DataProxyShellSystest : public CppUnit::TestFixture
 private:
 	CPPUNIT_TEST_SUITE( DataProxyShellSystest );
 	CPPUNIT_TEST( testHappyPath );
+	CPPUNIT_TEST( testTransactions );
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -34,6 +35,7 @@ public:
 	void tearDown( void );
 
 	void testHappyPath( void );
+	void testTransactions( void );
 
 private:
 	boost::scoped_ptr<TempDirectory> m_pTempDir;

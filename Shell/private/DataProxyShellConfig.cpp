@@ -31,6 +31,7 @@ namespace
 	const char* VERBOSE( "Verbose" );
 	const char* LOG_CONFIG( "log_config" );
 	const char* INSTANCE_ID( "Instance" );
+	const char* TRANSACTION( "transactional" );
 
 	const std::string DEFAULT_PARAMS( "null" );
 
@@ -58,6 +59,7 @@ DataProxyShellConfig::DataProxyShellConfig( int argc, char** argv )
 		( DATA, boost::program_options::value< std::vector< std::string > >(), "* if supplied, data to store (default op is load).\n* prepend with the '@' symbol to use data from a file.\n* use '-' to read from standard in.\n* if this option is used multiple times, each one\n  after the first will append data in order.", false )
 		( LOG_CONFIG, boost::program_options::value<std::string>()->default_value(""), "* If logging is desired, use this to configure log4cxx" )
 		( INSTANCE_ID, boost::program_options::value<std::string>()->default_value(""), "* If logging, use this instance id for tracking" )
+		( TRANSACTION, "Perform operation(s) inside a transaction", false, false )
 		( VERBOSE, "Verbose output", false, false );
 
 	m_Options.ParseOptions(argc, argv);
@@ -196,4 +198,9 @@ std::istream& DataProxyShellConfig::GetData() const
 const std::map< std::string, std::string >& DataProxyShellConfig::GetParameters() const
 {
 	return m_Parameters;
+}
+
+bool DataProxyShellConfig::IsTransactional() const
+{
+	return m_Options.Exists( TRANSACTION );
 }

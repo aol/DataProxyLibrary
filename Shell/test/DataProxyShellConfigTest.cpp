@@ -69,26 +69,53 @@ void DataProxyShellConfigTest::testInit()
 
 void DataProxyShellConfigTest::testLoadNoParams()
 {
-	std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
-	
-	char* argv[] = 
 	{
-		"dpls",
-		"--init", const_cast< char* >( configFileSpec.c_str() ),
-		"--name", "name1"
-	};
-	int argc = sizeof(argv)/sizeof(char*);
+		std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
+		
+		char* argv[] = 
+		{
+			"dpls",
+			"--init", const_cast< char* >( configFileSpec.c_str() ),
+			"--name", "name1"
+		};
+		int argc = sizeof(argv)/sizeof(char*);
 
-	FileUtilities::Touch( configFileSpec );
+		FileUtilities::Touch( configFileSpec );
 
-	boost::scoped_ptr< DataProxyShellConfig > pConfig;
-	CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, argv ) ) );
+		boost::scoped_ptr< DataProxyShellConfig > pConfig;
+		CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, argv ) ) );
 
-	CPPUNIT_ASSERT_EQUAL( configFileSpec, pConfig->GetDplConfig() );
-	CPPUNIT_ASSERT_EQUAL( LOAD_OPERATION, pConfig->GetOperation() );
-	CPPUNIT_ASSERT_EQUAL( std::string("name1"), pConfig->GetName() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pConfig->GetData(), DataProxyShellConfigException, ".*:\\d+: Data pointer is NULL" );
-	CPPUNIT_ASSERT_EQUAL( size_t(0), pConfig->GetParameters().size() );
+		CPPUNIT_ASSERT( !pConfig->IsTransactional() );
+		CPPUNIT_ASSERT_EQUAL( configFileSpec, pConfig->GetDplConfig() );
+		CPPUNIT_ASSERT_EQUAL( LOAD_OPERATION, pConfig->GetOperation() );
+		CPPUNIT_ASSERT_EQUAL( std::string("name1"), pConfig->GetName() );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pConfig->GetData(), DataProxyShellConfigException, ".*:\\d+: Data pointer is NULL" );
+		CPPUNIT_ASSERT_EQUAL( size_t(0), pConfig->GetParameters().size() );
+	}
+	{
+		std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
+		
+		char* argv[] = 
+		{
+			"dpls",
+			"--init", const_cast< char* >( configFileSpec.c_str() ),
+			"--name", "name1",
+			"--transactional"
+		};
+		int argc = sizeof(argv)/sizeof(char*);
+
+		FileUtilities::Touch( configFileSpec );
+
+		boost::scoped_ptr< DataProxyShellConfig > pConfig;
+		CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, argv ) ) );
+
+		CPPUNIT_ASSERT( pConfig->IsTransactional() );
+		CPPUNIT_ASSERT_EQUAL( configFileSpec, pConfig->GetDplConfig() );
+		CPPUNIT_ASSERT_EQUAL( LOAD_OPERATION, pConfig->GetOperation() );
+		CPPUNIT_ASSERT_EQUAL( std::string("name1"), pConfig->GetName() );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pConfig->GetData(), DataProxyShellConfigException, ".*:\\d+: Data pointer is NULL" );
+		CPPUNIT_ASSERT_EQUAL( size_t(0), pConfig->GetParameters().size() );
+	}
 }
 
 void DataProxyShellConfigTest::testLoadWithParams()
@@ -156,29 +183,59 @@ void DataProxyShellConfigTest::testLoadWithMultiParams()
 
 void DataProxyShellConfigTest::testStoreNoParams()
 {
-	std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
-	
-	char* argv[] = 
 	{
-		"dpls",
-		"--init", const_cast< char* >( configFileSpec.c_str() ),
-		"--name", "name1",
-		"--data", "data1"
-	};
-	int argc = sizeof(argv)/sizeof(char*);
+		std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
+		
+		char* argv[] = 
+		{
+			"dpls",
+			"--init", const_cast< char* >( configFileSpec.c_str() ),
+			"--name", "name1",
+			"--data", "data1"
+		};
+		int argc = sizeof(argv)/sizeof(char*);
 
-	FileUtilities::Touch( configFileSpec );
+		FileUtilities::Touch( configFileSpec );
 
-	boost::scoped_ptr< DataProxyShellConfig > pConfig;
-	CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, argv ) ) );
+		boost::scoped_ptr< DataProxyShellConfig > pConfig;
+		CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, argv ) ) );
 
-	CPPUNIT_ASSERT_EQUAL( configFileSpec, pConfig->GetDplConfig() );
-	CPPUNIT_ASSERT_EQUAL( STORE_OPERATION, pConfig->GetOperation() );
-	CPPUNIT_ASSERT_EQUAL( std::string("name1"), pConfig->GetName() );
-	std::stringstream actual;
-	CPPUNIT_ASSERT_NO_THROW( actual << pConfig->GetData().rdbuf() );
-	CPPUNIT_ASSERT_EQUAL( std::string("data1"), actual.str() );
-	CPPUNIT_ASSERT_EQUAL( size_t(0), pConfig->GetParameters().size() );
+		CPPUNIT_ASSERT( !pConfig->IsTransactional() );
+		CPPUNIT_ASSERT_EQUAL( configFileSpec, pConfig->GetDplConfig() );
+		CPPUNIT_ASSERT_EQUAL( STORE_OPERATION, pConfig->GetOperation() );
+		CPPUNIT_ASSERT_EQUAL( std::string("name1"), pConfig->GetName() );
+		std::stringstream actual;
+		CPPUNIT_ASSERT_NO_THROW( actual << pConfig->GetData().rdbuf() );
+		CPPUNIT_ASSERT_EQUAL( std::string("data1"), actual.str() );
+		CPPUNIT_ASSERT_EQUAL( size_t(0), pConfig->GetParameters().size() );
+	}
+	{
+		std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
+		
+		char* argv[] = 
+		{
+			"dpls",
+			"--init", const_cast< char* >( configFileSpec.c_str() ),
+			"--name", "name1",
+			"--data", "data1",
+			"--transactional"
+		};
+		int argc = sizeof(argv)/sizeof(char*);
+
+		FileUtilities::Touch( configFileSpec );
+
+		boost::scoped_ptr< DataProxyShellConfig > pConfig;
+		CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, argv ) ) );
+
+		CPPUNIT_ASSERT( pConfig->IsTransactional() );
+		CPPUNIT_ASSERT_EQUAL( configFileSpec, pConfig->GetDplConfig() );
+		CPPUNIT_ASSERT_EQUAL( STORE_OPERATION, pConfig->GetOperation() );
+		CPPUNIT_ASSERT_EQUAL( std::string("name1"), pConfig->GetName() );
+		std::stringstream actual;
+		CPPUNIT_ASSERT_NO_THROW( actual << pConfig->GetData().rdbuf() );
+		CPPUNIT_ASSERT_EQUAL( std::string("data1"), actual.str() );
+		CPPUNIT_ASSERT_EQUAL( size_t(0), pConfig->GetParameters().size() );
+	}
 }
 
 void DataProxyShellConfigTest::testStoreWithParams()
@@ -288,27 +345,55 @@ void DataProxyShellConfigTest::testStoreWithMultiData()
 
 void DataProxyShellConfigTest::testDeleteNoParams()
 {
-	std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
-	
-	char* argv[] = 
 	{
-		"dpls",
-		"--init", const_cast< char* >( configFileSpec.c_str() ),
-		"--Delete",
-		"--name", "name1"
-	};
-	int argc = sizeof(argv)/sizeof(char*);
+		std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
+		
+		char* argv[] = 
+		{
+			"dpls",
+			"--init", const_cast< char* >( configFileSpec.c_str() ),
+			"--Delete",
+			"--name", "name1"
+		};
+		int argc = sizeof(argv)/sizeof(char*);
 
-	FileUtilities::Touch( configFileSpec );
+		FileUtilities::Touch( configFileSpec );
 
-	boost::scoped_ptr< DataProxyShellConfig > pConfig;
-	CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, argv ) ) );
+		boost::scoped_ptr< DataProxyShellConfig > pConfig;
+		CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, argv ) ) );
 
-	CPPUNIT_ASSERT_EQUAL( configFileSpec, pConfig->GetDplConfig() );
-	CPPUNIT_ASSERT_EQUAL( DELETE_OPERATION, pConfig->GetOperation() );
-	CPPUNIT_ASSERT_EQUAL( std::string("name1"), pConfig->GetName() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pConfig->GetData(), DataProxyShellConfigException, ".*:\\d+: Data pointer is NULL" );
-	CPPUNIT_ASSERT_EQUAL( size_t(0), pConfig->GetParameters().size() );
+		CPPUNIT_ASSERT( !pConfig->IsTransactional() );
+		CPPUNIT_ASSERT_EQUAL( configFileSpec, pConfig->GetDplConfig() );
+		CPPUNIT_ASSERT_EQUAL( DELETE_OPERATION, pConfig->GetOperation() );
+		CPPUNIT_ASSERT_EQUAL( std::string("name1"), pConfig->GetName() );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pConfig->GetData(), DataProxyShellConfigException, ".*:\\d+: Data pointer is NULL" );
+		CPPUNIT_ASSERT_EQUAL( size_t(0), pConfig->GetParameters().size() );
+	}
+	{
+		std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
+		
+		char* argv[] = 
+		{
+			"dpls",
+			"--init", const_cast< char* >( configFileSpec.c_str() ),
+			"--Delete",
+			"--name", "name1",
+			"--transactional"
+		};
+		int argc = sizeof(argv)/sizeof(char*);
+
+		FileUtilities::Touch( configFileSpec );
+
+		boost::scoped_ptr< DataProxyShellConfig > pConfig;
+		CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, argv ) ) );
+
+		CPPUNIT_ASSERT( pConfig->IsTransactional() );
+		CPPUNIT_ASSERT_EQUAL( configFileSpec, pConfig->GetDplConfig() );
+		CPPUNIT_ASSERT_EQUAL( DELETE_OPERATION, pConfig->GetOperation() );
+		CPPUNIT_ASSERT_EQUAL( std::string("name1"), pConfig->GetName() );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pConfig->GetData(), DataProxyShellConfigException, ".*:\\d+: Data pointer is NULL" );
+		CPPUNIT_ASSERT_EQUAL( size_t(0), pConfig->GetParameters().size() );
+	}
 }
 
 void DataProxyShellConfigTest::testDeleteWithParams()

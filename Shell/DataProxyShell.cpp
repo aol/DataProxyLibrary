@@ -20,8 +20,15 @@ int main(int argc, char* argv[])
 	{
 		DataProxyShellConfig config( argc, argv );
 
+		// initialize client & begin a transaction if necessary
 		DataProxyClient client;
 		client.Initialize( config.GetDplConfig() );
+		if( config.IsTransactional() )
+		{
+			client.BeginTransaction();
+		}
+
+		// perform operation
 		if( config.GetOperation() == INIT_OPERATION )
 		{
 			// do nothing
@@ -41,6 +48,12 @@ int main(int argc, char* argv[])
 		else
 		{
 			MV_THROW( MVException, "Unrecognized operation: " << config.GetOperation() );
+		}
+
+		// if transactional and we get here, commit!
+		if( config.IsTransactional() )
+		{
+			client.Commit();
 		}
 	}
 	catch( const cli::QuietException& i_rExitMessage )

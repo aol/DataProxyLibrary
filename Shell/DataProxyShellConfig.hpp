@@ -31,6 +31,7 @@ public:
 	MV_VIRTUAL const std::string& GetOperation() const;
 	MV_VIRTUAL std::istream& GetData() const;
 	MV_VIRTUAL const std::map< std::string, std::string >& GetParameters() const;
+	MV_VIRTUAL bool IsTransactional() const;
 
 private:
 	CliOptions m_Options;
