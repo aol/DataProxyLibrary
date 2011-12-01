@@ -2629,8 +2629,8 @@ void DatabaseProxyTest::testOracleStoreWithBothPreStatementAndPostStatement()
 		"        stagingTable=\"stg_kna\"\n"
 		"        workingDir=\"" + m_pTempDir->GetDirectoryName() + "\"\n"
 		"        noCleanUp=\"true\"\n"
-		"        pre-statement=\"insert into kna (media_id,website_id,impressions,revenue,dummy,myConstant) VALUES (1000,2000,3999,4999,5999,6999)\"\n"
-		"        post-statement=\"update kna set myConstant=42\">\n"
+		"        pre-statement=\"insert into kna (media_id,website_id,impressions,revenue,dummy,myConstant) VALUES (1000,2000,3999,4999,5999,${preConstant})\"\n"
+		"        post-statement=\"update kna set myConstant=${postConstant}\">\n"
 		"    <Columns>\n"
 		"      <Column name=\"media_id\" type=\"key\" />\n"
 		"      <Column name=\"website_id\" type=\"key\" />\n"
@@ -2659,6 +2659,8 @@ void DatabaseProxyTest::testOracleStoreWithBothPreStatementAndPostStatement()
 	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
 
 	std::map< std::string, std::string > parameters;
+	parameters["preConstant"] = "6999";
+	parameters["postConstant"] = "42";
 	std::stringstream dataStream(data);
 
 	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
@@ -2843,8 +2845,8 @@ void DatabaseProxyTest::testMySqlStoreWithBothPreStatementAndPostStatement()
 		"        stagingTable=\"stg_kna\"\n"
 		"        workingDir=\"" + m_pTempDir->GetDirectoryName() + "\"\n"
 		"        noCleanUp=\"true\"\n"
-		"        pre-statement=\"insert into kna (media_id,website_id,impressions,revenue,dummy,myConstant) VALUES (1000,2000,3999,4999,5999,6999)\"\n"
-		"        post-statement=\"update kna set myConstant=42\">\n"
+		"        pre-statement=\"insert into kna (media_id,website_id,impressions,revenue,dummy,myConstant) VALUES (1000,2000,3999,4999,5999,${preConstant})\"\n"
+		"        post-statement=\"update kna set myConstant=${postConstant}\">\n"
 		"    <Columns>\n"
 		"      <Column name=\"media_id\" type=\"key\" />\n"
 		"      <Column name=\"website_id\" type=\"key\" />\n"
@@ -2873,6 +2875,8 @@ void DatabaseProxyTest::testMySqlStoreWithBothPreStatementAndPostStatement()
 	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
 
 	std::map< std::string, std::string > parameters;
+	parameters["preConstant"] = "6999";
+	parameters["postConstant"] = "42";
 	std::stringstream dataStream(data);
 
 	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );

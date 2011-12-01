@@ -815,7 +815,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			if (!m_PreStatement.IsNull())
 			{
 				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing pre-statement supplied in the DPL config file: " << m_PreStatement );
-				Database::Statement( rDatabase, m_PreStatement ).Execute();
+				Database::Statement( rDatabase, ProxyUtilities::GetVariableSubstitutedString( m_PreStatement, i_rParameters ) ).Execute();
 				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Finished", "pre-statement complete");
 			}
 
@@ -828,7 +828,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			if (!m_PostStatement.IsNull())
 			{
 				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing post-statement supplied in the DPL config file: " << m_PostStatement );
-				Database::Statement( rDatabase, m_PostStatement ).Execute();
+				Database::Statement( rDatabase, ProxyUtilities::GetVariableSubstitutedString( m_PostStatement, i_rParameters ) ).Execute();
 				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Finished", "post-statement complete");
 			}
 
@@ -864,7 +864,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			if (!m_PreStatement.IsNull())
 			{
 				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing pre-statement supplied in the DPL config file: " << m_PreStatement );
-				Database::Statement( rDatabase, m_PreStatement ).Execute();
+				Database::Statement( rDatabase, ProxyUtilities::GetVariableSubstitutedString( m_PreStatement, i_rParameters ) ).Execute();
 				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Finished", "pre-statement complete");
 			}
 
@@ -877,7 +877,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			if (!m_PostStatement.IsNull())
 			{
 				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing post-statement supplied in the DPL config file: " << m_PostStatement );
-				Database::Statement( rDatabase, m_PostStatement ).Execute();
+				Database::Statement( rDatabase, ProxyUtilities::GetVariableSubstitutedString( m_PostStatement, i_rParameters ) ).Execute();
 				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Finished", "post-statement complete");
 			}
 		
