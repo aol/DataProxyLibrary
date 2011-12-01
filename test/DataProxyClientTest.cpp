@@ -996,12 +996,21 @@ void DataProxyClientTest::testEntityResolution()
 void DataProxyClientTest::testConfigFileMD5()
 {
 	std::string configFileSpec( m_pTempDir->GetDirectoryName() + "/dataProxyConfig.xml" );
+	std::string realConfigFileSpec( m_pTempDir->GetDirectoryName() + "/realConfig.xml" );
 	std::ofstream file( configFileSpec.c_str() );
 
-	file << "<DPLConfig>" << std::endl
-		 << "  <DataNode name=\"n\" type=\"type1\" />" << std::endl
-		 << "  <DataNode name=\"nn\" type=\"type2\" />" << std::endl
+	file << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" << std::endl
+		 << "<!DOCTYPE doc[" << std::endl
+		 << "<!ENTITY contents SYSTEM \"" << realConfigFileSpec << "\" >" << std::endl
+		 << "]>" << std::endl
+		 << "<DPLConfig>" << std::endl
+		 << "  &contents;" << std::endl
 		 << "</DPLConfig>" << std::endl;
+	file.close();
+
+	file.open( realConfigFileSpec.c_str() );
+	file << "  <DataNode name=\"n\" type=\"type1\" />" << std::endl
+		 << "  <DataNode name=\"nn\" type=\"type2\" />" << std::endl;
 	file.close();
 	
 	std::string data( "this is some data that will be returned" );
@@ -1028,12 +1037,10 @@ void DataProxyClientTest::testConfigFileMD5()
 	CPPUNIT_ASSERT_EQUAL( std::string( "" ), result.str() );
 
 	// then change the file content and re-initialize
-	std::ofstream file1( configFileSpec.c_str() );
-	file1 << "<DPLConfig>" << std::endl
-		 << "  <DataNode name=\"n\" type=\"type1\" />" << std::endl
-		 << "  <DataNode name=\"name1\" type=\"type2\" />" << std::endl
-		 << "</DPLConfig>" << std::endl;
-	file1.close();
+	file.open( realConfigFileSpec.c_str() );
+	file << "  <DataNode name=\"n\" type=\"type1\" />" << std::endl
+		 << "  <DataNode name=\"name1\" type=\"type2\" />" << std::endl;
+	file.close();
 	result.str("");
 	std::string newdata( "new test data" );
 	std::string newdata1( "new test data 1" );

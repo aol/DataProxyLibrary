@@ -209,6 +209,7 @@ UTILITYFILES=\
 	Stopwatch.cpp \
 	UniqueIdGenerator.cpp \
 	MutexFileLock.cpp \
+	XercesString.cpp \
 
 DATABASEFILES=\
 	Database.cpp \

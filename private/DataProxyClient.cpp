@@ -19,6 +19,8 @@
 #include "CustomEntityResolver.hpp"
 #include "StringUtilities.hpp"
 #include "MVLogger.hpp"
+#include "MVUtility.hpp"
+#include "XercesString.hpp"
 #include <boost/scoped_ptr.hpp>
 #include <string>
 #include <xercesc/dom/DOM.hpp>
@@ -26,6 +28,7 @@
 #include <xercesc/parsers/XercesDOMParser.hpp>
 #include <xercesc/sax/HandlerBase.hpp>
 #include <xercesc/framework/LocalFileFormatTarget.hpp>
+#include <xercesc/framework/MemBufFormatTarget.hpp>
 
 namespace
 {
@@ -59,6 +62,62 @@ namespace
 		}
 
 		return result.str();
+	}
+
+	// similar to scoped ptr, but instead of calling delete upon destruction,
+	// this pointer calls release.  it is also extremely simple and not as glorified.
+	template< typename T_Ptr >
+	class ScopedReleasePtr
+	{
+	public:
+		ScopedReleasePtr( T_Ptr* i_pData )
+		:	m_pData( i_pData )
+		{
+		}
+		virtual ~ScopedReleasePtr()
+		{
+			m_pData->release();
+		}
+
+		operator T_Ptr*()
+		{
+			return m_pData;
+		}
+
+		T_Ptr* operator ->()
+		{
+			return m_pData;
+		}
+
+	private:
+		T_Ptr* m_pData;
+	};
+
+	std::string GetMD5( const std::string& i_rConfigFileSpec )
+	{
+		xercesc::XercesDOMParser parser;
+		xercesc::HandlerBase errorHandler;
+		CustomEntityResolver entityResolver;
+		xercesc::DOMDocument* pDocument = NULL;
+		xercesc::DOMElement* pConfig = NULL;
+
+		parser.setErrorHandler( &errorHandler );
+		parser.setEntityResolver( &entityResolver );
+		parser.setCreateEntityReferenceNodes( false );
+		parser.parse( i_rConfigFileSpec.c_str() );
+
+		pDocument = parser.getDocument();
+		pConfig = pDocument->getDocumentElement();
+
+		xercesc::DOMImplementation* pImpl = DOMImplementationRegistry::getDOMImplementation( XercesString( "LS" ) );
+		xercesc::MemBufFormatTarget target;
+		ScopedReleasePtr< DOMWriter > pSerializer( ((DOMImplementationLS*)pImpl)->createDOMWriter() );
+		pSerializer->setFeature(XMLUni::fgDOMWRTFormatPrettyPrint, false);
+		pSerializer->setFeature(XMLUni::fgDOMWRTDiscardDefaultContent, true);
+		pSerializer->writeNode( &target, *pDocument );
+		std::stringstream data;
+		data << target.getRawBuffer();
+		return MVUtility::GetMD5( data.str() );
 	}
 }
 
@@ -127,7 +186,7 @@ void DataProxyClient::InitializeImplementation( const std::string& i_rConfigFile
 		MV_THROW( DataProxyClientException, "Cannot find config file: " << i_rConfigFileSpec );
 	}
 	
-	std::string md5 = FileUtilities::GetMD5( i_rConfigFileSpec );
+	std::string md5 = GetMD5( i_rConfigFileSpec );
 	if ( md5 == m_ConfigFileMD5 )
 	{
 		m_Initialized = true;
