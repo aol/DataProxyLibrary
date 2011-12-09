@@ -529,7 +529,12 @@ void DataProxyClient::HandleResult( const std::string& i_rName, const NodesMap::
 	}
 }
 
-void DataProxyClient::BeginTransaction()
+bool DataProxyClient::InsideTransaction()
+{
+	return m_InsideTransaction;
+}
+
+void DataProxyClient::BeginTransaction( bool i_AbortCurrent )
 {
 	boost::shared_lock< boost::shared_mutex > lock( m_ConfigMutex );
 	if( !m_Initialized )
@@ -537,11 +542,19 @@ void DataProxyClient::BeginTransaction()
 		MV_THROW( DataProxyClientException, "Attempted to issue BeginTransaction request on uninitialized DataProxyClient" );
 	}
 
+	if( i_AbortCurrent && m_InsideTransaction )
+	{
+		MVLOGGER( "root.lib.DataProxy.DataProxyClient.BeginTransaction.AbortCurrent", "Aborting current transaction before beginning a new one" );
+		Rollback();
+	}
+
 	if( m_InsideTransaction )
 	{
 		MV_THROW( DataProxyClientException, "A transaction has already been started. Complete the current transaction by calling Commit() or Rollback() before starting a new one." );
 	}
 	m_InsideTransaction = true;
+
+	MVLOGGER( "root.lib.DataProxy.DataProxyClient.BeginTransaction.Complete", "Transaction started" );
 }
 
 void DataProxyClient::Commit()
@@ -627,6 +640,7 @@ void DataProxyClient::Commit()
 	}
 
 	m_InsideTransaction = false;
+	MVLOGGER( "root.lib.DataProxy.DataProxyClient.Commit.Complete", "Transaction committed" );
 }
 
 void DataProxyClient::Rollback()
@@ -716,4 +730,5 @@ void DataProxyClient::PrivateRollback( bool i_ObtainLock )
 	}
 
 	m_InsideTransaction = false;
+	MVLOGGER( "root.lib.DataProxy.DataProxyClient.Rollback.Complete", "Transaction rolled back" );
 }

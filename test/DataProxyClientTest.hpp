@@ -31,6 +31,7 @@ private:
 	CPPUNIT_TEST( testCommit );
 	CPPUNIT_TEST( testCommitPartial );
 	CPPUNIT_TEST( testRollback );
+	CPPUNIT_TEST( testRollbackImpliedByBeginTransaction );
 	CPPUNIT_TEST( testRollbackException );
 	CPPUNIT_TEST( testAutoRollback );
 	CPPUNIT_TEST( testForwardingOk );
@@ -62,6 +63,7 @@ public:
 	void testCommit();
 	void testCommitPartial();
 	void testRollback();
+	void testRollbackImpliedByBeginTransaction();
 	void testRollbackException();
 	void testAutoRollback();
 	void testForwardingOk();

@@ -94,9 +94,9 @@ void MockDataProxyClient::Delete( const std::string& i_rName, const std::map<std
 	}
 }
 
-void MockDataProxyClient::BeginTransaction()
+void MockDataProxyClient::BeginTransaction( bool i_AbortCurrent )
 {
-	m_Log << "BeginTransaction called" << std::endl;
+	m_Log << "BeginTransaction called" << ( i_AbortCurrent ? ", aborting current" : "" ) << std::endl;
 }
 
 void MockDataProxyClient::Commit()

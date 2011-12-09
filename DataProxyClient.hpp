@@ -43,7 +43,8 @@ public:
 	virtual void Store( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData ) const;
 	virtual void Delete( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters ) const;
 
-	virtual void BeginTransaction();
+	virtual bool InsideTransaction();
+	virtual void BeginTransaction( bool i_AbortCurrent = false );
 	virtual void Commit();
 	virtual void Rollback();
 
