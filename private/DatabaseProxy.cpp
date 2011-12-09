@@ -188,7 +188,6 @@ namespace
 
 		file << "options( bindsize=1048576, readsize=1048576, skip=1)" << std::endl
 			 << "LOAD DATA INFILE '" << i_rDataFileSpec << "'" << std::endl
-			 << "TRUNCATE "
 			 << "INTO TABLE " << i_rStagingTable << " FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED by '\"'" << std::endl
 			 << "TRAILING NULLCOLS" << std::endl
 			 << "(" << i_rColumns << ")" << std::endl;
@@ -246,6 +245,18 @@ namespace
 		return i_rManager.GetConnection( i_rConnection );
 	}
 
+	Database& GetDataDefinitionConnection( const std::string& i_rConnection,
+										   bool i_IsConnectionByTable,
+										   const DatabaseConnectionManager& i_rManager,
+										   const std::map< std::string, std::string >& i_rParameters )
+	{
+		if( i_IsConnectionByTable )
+		{
+			return i_rManager.GetDataDefinitionConnectionByTable( ProxyUtilities::GetVariableSubstitutedString( i_rConnection, i_rParameters ) );
+		}
+		return i_rManager.GetDataDefinitionConnection( i_rConnection );
+	}
+
 	bool GetBool( const xercesc::DOMNode& i_rNode, const std::string& i_rAttribute, bool i_rDefault )
 	{
 		xercesc::DOMAttr* pAttribute = XMLUtilities::GetAttribute( &i_rNode, i_rAttribute );
@@ -276,29 +287,6 @@ namespace
 		boost::replace_all( finalTableName, "-", "_" );
 		boost::replace_all( finalTableName, ".", "_" );
 		return finalTableName;
-	}
-
-	void TruncateMySQLStagingTable( const std::string i_rStagingTableName,
-								    const std::string i_rWriteConnectionName,
-								    const std::string i_rWriteTable,
-								    const DatabaseConnectionManager& i_rManager,
-									bool i_ConnectionByTable )
-	{
-		Database* pMySQLStagingTableConnection;
-		if( i_ConnectionByTable )
-		{
-			 pMySQLStagingTableConnection = &i_rManager.GetMySQLAccessoryConnectionByTable(i_rWriteTable);
-		}
-		else
-		{
-			 pMySQLStagingTableConnection = &i_rManager.GetMySQLAccessoryConnection(i_rWriteConnectionName);
-		}
-		std::stringstream sql;
-		
-		// truncate the staging table
-		sql << "TRUNCATE TABLE " << i_rStagingTableName;
-		MVLOGGER( "root.lib.DataProxy.DatabaseProxy.TrucnateMySQLStagingTable", "Truncating staging table: " << i_rStagingTableName << " using the mysql staging table truncate connection");
-		Database::Statement( *pMySQLStagingTableConnection, sql.str() ).Execute();
 	}
 
 	class ScopedTempTable
@@ -765,9 +753,10 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 	WriteDataFile( dataFileSpec, columns, usedParameters, i_rData, incomingHeaderColumns.size(), usedIndices );
 	MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.WritingDataFile.Finished", "Done writing data to file: " << dataFileSpec );
 
-	// get the database connection
+	// get the database connections needed
 	boost::scoped_ptr< ScopedTempTable > pTempTable;
-	Database& rDatabase = GetConnection( m_WriteConnectionName, m_WriteConnectionByTable, m_rDatabaseConnectionManager, i_rParameters );
+	Database& rTransactionDatabase = GetConnection( m_WriteConnectionName, m_WriteConnectionByTable, m_rDatabaseConnectionManager, i_rParameters );
+	Database& rDataDefinitionDatabase = GetDataDefinitionConnection( m_WriteConnectionName, m_WriteConnectionByTable, m_rDatabaseConnectionManager, i_rParameters );
 	std::string table = m_WriteTable;
 	std::string stagingTable = m_WriteStagingTable;
 	std::string mysqlMergeQuery = m_WriteMySqlMergeQuery;
@@ -786,10 +775,10 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 		databaseType = m_rDatabaseConnectionManager.GetDatabaseType( m_WriteConnectionName );
 	}
 
-	// if we're dynamically creating a staging table, create one and set the staging table name
+	// if we're dynamically creating a staging table, create one via a data-definition connection, and set the staging table name
 	if( m_WriteDynamicStagingTable )
 	{
-		pTempTable.reset( new ScopedTempTable( rDatabase, databaseType, table, stagingTable ) );
+		pTempTable.reset( new ScopedTempTable( rDataDefinitionDatabase, databaseType, table, stagingTable ) );
 	}
 	
 	// obtain a write-lock for entire manipulation
@@ -799,9 +788,18 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 		// ORACLE
 		if( databaseType == ORACLE_DB_TYPE )
 		{
+			// if this isn't a dynamic staging table, we need to truncate it
+			if( !m_WriteDynamicStagingTable )
+			{
+				std::stringstream sql;
+				sql << "CALL sp_truncate_table( '" << stagingTable << "' )";
+				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.TruncateStagingTable", "Truncating staging table: " << stagingTable << " using the ddl connection with statement: " << sql.str() );
+				Database::Statement( rDataDefinitionDatabase, sql.str() ).Execute();
+			}
+
 			// write the control file & prepare SQLLoader
 			WriteControlFile( controlFileSpec, dataFileSpec, columns, stagingTable );
-			SQLLoader loader( rDatabase.GetDBName(), rDatabase.GetUserName(), rDatabase.GetPassword(), controlFileSpec, logFileSpec );
+			SQLLoader loader( rTransactionDatabase.GetDBName(), rTransactionDatabase.GetUserName(), rTransactionDatabase.GetPassword(), controlFileSpec, logFileSpec );
 
 			// upload!
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Begin", "Uploading data to staging table: " << stagingTable );
@@ -815,20 +813,20 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			if (!m_PreStatement.IsNull())
 			{
 				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing pre-statement supplied in the DPL config file: " << m_PreStatement );
-				Database::Statement( rDatabase, ProxyUtilities::GetVariableSubstitutedString( m_PreStatement, i_rParameters ) ).Execute();
+				Database::Statement( rTransactionDatabase, ProxyUtilities::GetVariableSubstitutedString( m_PreStatement, i_rParameters ) ).Execute();
 				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Finished", "pre-statement complete");
 			}
 
 			// merge staging table data into primary table
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Begin", "Merging data from staging table with query: " << oracleMergeQuery );
-			Database::Statement( rDatabase, oracleMergeQuery ).Execute();
+			Database::Statement( rTransactionDatabase, oracleMergeQuery ).Execute();
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Finished", "Merge complete" );
 
 			// issue the post-statement query if one exists
 			if (!m_PostStatement.IsNull())
 			{
 				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing post-statement supplied in the DPL config file: " << m_PostStatement );
-				Database::Statement( rDatabase, ProxyUtilities::GetVariableSubstitutedString( m_PostStatement, i_rParameters ) ).Execute();
+				Database::Statement( rTransactionDatabase, ProxyUtilities::GetVariableSubstitutedString( m_PostStatement, i_rParameters ) ).Execute();
 				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Finished", "post-statement complete");
 			}
 
@@ -845,7 +843,10 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			// if this isn't a dynamic staging table, we need to truncate it
 			if( !m_WriteDynamicStagingTable )
 			{
-				TruncateMySQLStagingTable( stagingTable, m_WriteConnectionName, table, m_rDatabaseConnectionManager, m_WriteConnectionByTable );
+				std::stringstream sql;
+				sql << "TRUNCATE TABLE " << stagingTable;
+				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.TruncateStagingTable", "Truncating staging table: " << stagingTable << " using the ddl connection with statement: " << sql.str() );
+				Database::Statement( rDataDefinitionDatabase, sql.str() ).Execute();
 			}
 
 			std::stringstream sql;
@@ -857,27 +858,27 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 				<< "IGNORE 1 LINES" << std::endl
 				<< "( " << columns << " )" << std::endl;
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Begin", "Uploading data to staging table: " << stagingTable );
-			Database::Statement( rDatabase, sql.str() ).Execute();
+			Database::Statement( rTransactionDatabase, sql.str() ).Execute();
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Finished", "Done uploading data to staging table: " << stagingTable );
 
 			// issue the pre-statement query if one exists
 			if (!m_PreStatement.IsNull())
 			{
 				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing pre-statement supplied in the DPL config file: " << m_PreStatement );
-				Database::Statement( rDatabase, ProxyUtilities::GetVariableSubstitutedString( m_PreStatement, i_rParameters ) ).Execute();
+				Database::Statement( rTransactionDatabase, ProxyUtilities::GetVariableSubstitutedString( m_PreStatement, i_rParameters ) ).Execute();
 				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Finished", "pre-statement complete");
 			}
 
 			// merge staging table data into primary table
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Begin", "Merging data from staging table with query: " << mysqlMergeQuery );
-			Database::Statement( rDatabase, mysqlMergeQuery ).Execute();
+			Database::Statement( rTransactionDatabase, mysqlMergeQuery ).Execute();
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Finished", "Merge complete" );
 
 			// issue the post-statement query if one exists
 			if (!m_PostStatement.IsNull())
 			{
 				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing post-statement supplied in the DPL config file: " << m_PostStatement );
-				Database::Statement( rDatabase, ProxyUtilities::GetVariableSubstitutedString( m_PostStatement, i_rParameters ) ).Execute();
+				Database::Statement( rTransactionDatabase, ProxyUtilities::GetVariableSubstitutedString( m_PostStatement, i_rParameters ) ).Execute();
 				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Finished", "post-statement complete");
 			}
 		
@@ -895,7 +896,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 
 	{
 		boost::unique_lock< boost::shared_mutex > lock( m_PendingCommitsMutex );
-		m_PendingCommits.insert( &rDatabase );
+		m_PendingCommits.insert( &rTransactionDatabase );
 	}
 }
 

@@ -21,7 +21,7 @@
 
 namespace
 {
-	const std::string MYSQL_ACCESSORY_CONNECTION_PREFIX("__mysql_accessory_connection_");
+	const std::string DATA_DEFINITION_CONNECTION_PREFIX("__ddl_connection_");
 	const std::string CONNECTIONS_BY_TABLE_NODE("ConnectionsByTable");
 	const std::string CONNECTIONS_NODE_NAME_ATTRIBUTE( "connectionsNodeName" );
 	const std::string TABLES_NODE_NAME_ATTRIBUTE( "tablesNodeName" );
@@ -66,8 +66,12 @@ namespace
 		return i_Default;
 	}
 
-	void ReconnectIfNecessary( DatabaseConnectionDatum& i_rDatum )
+	void ReconnectIfNecessary( DatabaseConnectionDatum& i_rDatum, bool i_InsideTransaction )
 	{
+		if( i_InsideTransaction )
+		{
+			return;
+		}
 		double secondsElapsed = i_rDatum.GetReference< ConnectionTimer >()->GetElapsedSeconds();
 		if( secondsElapsed > i_rDatum.GetValue< ConnectionReconnect >() )
 		{
@@ -194,12 +198,10 @@ void DatabaseConnectionManager::Parse( const xercesc::DOMNode& i_rDatabaseConnec
 		datum.SetValue< DatabaseConfig >( databaseConfig );
 		datum.SetValue< ConnectionReconnect >( reconnectTimeout );
 		m_DatabaseConnectionContainer.InsertUpdate(datum);
-		if (type == MYSQL_DB_TYPE)
-		{
-			//for mysql db connections, we need to provide a different connection for truncating because truncating implicitly commits. 
-			datum.SetValue<ConnectionName>(MYSQL_ACCESSORY_CONNECTION_PREFIX + datum.GetValue<ConnectionName>());
-			m_DatabaseConnectionContainer.InsertUpdate(datum);
-		}
+
+		// also add a connection for ddl operations
+		datum.SetValue<ConnectionName>(DATA_DEFINITION_CONNECTION_PREFIX + datum.GetValue<ConnectionName>());
+		m_DatabaseConnectionContainer.InsertUpdate(datum);
 	}
 }
 
@@ -248,12 +250,10 @@ void DatabaseConnectionManager::FetchConnectionsByTable( const std::string& i_rN
 		configDatum.SetValue< DisableCache >( boost::lexical_cast< bool >( disableCache ) );
 		connectionDatum.SetValue< DatabaseConfig >( configDatum );
 		m_ShardDatabaseConnectionContainer.InsertUpdate( connectionDatum );
-		if (type == MYSQL_DB_TYPE)
-		{
-			//for mysql db connections, we need to provide a different connection for truncating because truncating implicitly commits. 
-			connectionDatum.SetValue<ConnectionName>(MYSQL_ACCESSORY_CONNECTION_PREFIX + connectionDatum.GetValue<ConnectionName>());
-			m_ShardDatabaseConnectionContainer.InsertUpdate(connectionDatum);
-		}
+
+		// also add a connection for ddl operations
+		connectionDatum.SetValue<ConnectionName>(DATA_DEFINITION_CONNECTION_PREFIX + connectionDatum.GetValue<ConnectionName>());
+		m_ShardDatabaseConnectionContainer.InsertUpdate(connectionDatum);
 	}
 
 	// now load the tables
@@ -343,15 +343,15 @@ Database& DatabaseConnectionManager::GetConnectionByTable( const std::string& i_
 	return GetConnection(connectionName);
 }
 
-Database& DatabaseConnectionManager::GetMySQLAccessoryConnectionByTable( const std::string& i_rTableName ) const
+Database& DatabaseConnectionManager::GetDataDefinitionConnectionByTable( const std::string& i_rTableName ) const
 {
 	std::string connectionName = PrivateGetConnectionNameByTable(i_rTableName);
-	return GetConnection(MYSQL_ACCESSORY_CONNECTION_PREFIX + connectionName);
+	return GetConnection(DATA_DEFINITION_CONNECTION_PREFIX + connectionName);
 }
 
-Database& DatabaseConnectionManager::GetMySQLAccessoryConnection(const std::string& i_ConnectionName) const
+Database& DatabaseConnectionManager::GetDataDefinitionConnection(const std::string& i_ConnectionName) const
 {
-	return GetConnection(MYSQL_ACCESSORY_CONNECTION_PREFIX + i_ConnectionName);
+	return GetConnection(DATA_DEFINITION_CONNECTION_PREFIX + i_ConnectionName);
 }
 
 Database& DatabaseConnectionManager::GetConnection(const std::string& i_ConnectionName) const
@@ -360,7 +360,7 @@ Database& DatabaseConnectionManager::GetConnection(const std::string& i_Connecti
 	boost::shared_ptr<Database>& rDatabase = rDatum.GetReference<DatabaseConnection>();
 	if (rDatabase.get() != NULL)
 	{
-		ReconnectIfNecessary( rDatum );
+		ReconnectIfNecessary( rDatum, m_rDataProxyClient.InsideTransaction() );
 		return *rDatabase;
 	}
 	// obtain a unique lock and re-check
@@ -369,7 +369,7 @@ Database& DatabaseConnectionManager::GetConnection(const std::string& i_Connecti
 		rDatabase = rDatum.GetReference<DatabaseConnection>();
 		if (rDatabase.get() != NULL)
 		{
-			ReconnectIfNecessary( rDatum );
+			ReconnectIfNecessary( rDatum, m_rDataProxyClient.InsideTransaction() );
 			return *rDatabase;
 		}
 

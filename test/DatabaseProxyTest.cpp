@@ -1398,7 +1398,6 @@ void DatabaseProxyTest::testMySqlStore()
 
 	MockDatabaseConnectionManager dbManager;
 	dbManager.InsertConnection( "myMySqlConnection", m_pMySQLDB );
-	dbManager.InsertMySQLAccessoryConnection("myMySqlConnection", m_pMySQLAccessoryDB);
 
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode type = \"db\" >"
@@ -1524,7 +1523,6 @@ void DatabaseProxyTest::testStoreColumnParameterCollisionBehaviors()
 
 	MockDatabaseConnectionManager dbManager;
 	dbManager.InsertConnection( "myMySqlConnection", m_pMySQLDB );
-	dbManager.InsertMySQLAccessoryConnection("myMySqlConnection", m_pMySQLAccessoryDB);
 
 	// CASE 0: default behavior (fail on collision)
 	std::stringstream xmlContents;
@@ -1716,7 +1714,6 @@ void DatabaseProxyTest::testStoreParameterOnly()
 
 	MockDatabaseConnectionManager dbManager;
 	dbManager.InsertConnection( "myMySqlConnection", m_pMySQLDB );
-	dbManager.InsertMySQLAccessoryConnection("myMySqlConnection", m_pMySQLAccessoryDB);
 
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode type = \"db\" >"
@@ -1773,7 +1770,6 @@ void DatabaseProxyTest::testMySqlStoreDynamicTables()
 
 	MockDatabaseConnectionManager dbManager;
 	dbManager.InsertConnection( "myMySqlConnection", m_pMySQLDB );
-	dbManager.InsertMySQLAccessoryConnection("myMySqlConnection", m_pMySQLAccessoryDB);
 
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode type = \"db\" >"
@@ -2689,7 +2685,6 @@ void DatabaseProxyTest::testMySqlStoreWithPreStatement()
 	MockDataProxyClient client;
 	MockDatabaseConnectionManager dbManager;
 	dbManager.InsertConnection("myMySQLConnection", m_pMySQLDB);
-	dbManager.InsertMySQLAccessoryConnection("myMySQLConnection", m_pMySQLAccessoryDB);
 
 	// create primary & staging tables
 	Database::Statement(*m_pMySQLDB, GetMySqlTableDDL("kna")).Execute();
@@ -2759,7 +2754,6 @@ void DatabaseProxyTest::testMySqlStoreWithPostStatement()
 	MockDataProxyClient client;
 	MockDatabaseConnectionManager dbManager;
 	dbManager.InsertConnection("myMySQLConnection", m_pMySQLDB);
-	dbManager.InsertMySQLAccessoryConnection("myMySQLConnection", m_pMySQLAccessoryDB);
 
 	// create primary & staging tables
 	Database::Statement(*m_pMySQLDB, GetMySqlTableDDL("kna")).Execute();
@@ -2830,7 +2824,6 @@ void DatabaseProxyTest::testMySqlStoreWithBothPreStatementAndPostStatement()
 	MockDataProxyClient client;
 	MockDatabaseConnectionManager dbManager;
 	dbManager.InsertConnection("myMySQLConnection", m_pMySQLDB);
-	dbManager.InsertMySQLAccessoryConnection("myMySQLConnection", m_pMySQLAccessoryDB);
 
 	// create primary & staging tables
 	Database::Statement(*m_pMySQLDB, GetMySqlTableDDL("kna")).Execute();
@@ -2985,7 +2978,6 @@ void DatabaseProxyTest::testMySqlMultipleStore()
 	MockDataProxyClient client;
 	MockDatabaseConnectionManager dbManager;
 	dbManager.InsertConnection("myMySQLConnection", m_pMySQLDB);
-	dbManager.InsertMySQLAccessoryConnection("myMySQLConnection", m_pMySQLAccessoryDB);
 
 	// create primary & staging tables
 	Database::Statement(*m_pMySQLDB, GetMySqlTableDDL("kna")).Execute();

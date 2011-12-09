@@ -117,8 +117,8 @@ public:
 
 	//For every mysql connection specified, we create a mysql accessory connection. This is used by DatabaseProxy to truncate staging tables. Without
 	//this mysql accessory connection, all pending commits would be forcefully committed on any truncate call.
-	MV_VIRTUAL Database& GetMySQLAccessoryConnection(const std::string& i_rConnectionName) const;
-	MV_VIRTUAL Database& GetMySQLAccessoryConnectionByTable(const std::string& i_rTableName) const;
+	MV_VIRTUAL Database& GetDataDefinitionConnection(const std::string& i_rConnectionName) const;
+	MV_VIRTUAL Database& GetDataDefinitionConnectionByTable(const std::string& i_rTableName) const;
 
 protected:
 	DatabaseConnectionContainer m_DatabaseConnectionContainer;

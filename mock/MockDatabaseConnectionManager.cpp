@@ -18,7 +18,7 @@
 namespace
 {
 	DataProxyClient DEFAULT_DATA_PROXY_CLIENT( true );
-	std::string MOCK_MYSQL_ACCESSORY_PREFIX("__mock_mysql_accessory");
+	std::string MOCK_DATA_DEFINITION_CONNECTION_PREFIX("__mock_ddl_connection_");
 }
 
 MockDatabaseConnectionManager::MockDatabaseConnectionManager()
@@ -66,9 +66,9 @@ void MockDatabaseConnectionManager::ValidateConnectionName(const std::string& i_
 		  << std::endl;
 }
 
-Database& MockDatabaseConnectionManager::GetMySQLAccessoryConnection(const std::string& i_rConnectionName) const
+Database& MockDatabaseConnectionManager::GetDataDefinitionConnection(const std::string& i_rConnectionName) const
 {
-	return GetConnection(MOCK_MYSQL_ACCESSORY_PREFIX + i_rConnectionName);
+	return GetConnection(MOCK_DATA_DEFINITION_CONNECTION_PREFIX + i_rConnectionName);
 }
 
 Database& MockDatabaseConnectionManager::GetConnection(const std::string& i_rConnectionName) const
@@ -101,29 +101,30 @@ void MockDatabaseConnectionManager::ClearConnections()
 	m_Log << "MockDatabaseConnectionManager::ClearLogs" << std::endl;
 }
 
-void MockDatabaseConnectionManager::InsertMySQLAccessoryConnection(const std::string& i_rConnectionName, boost::shared_ptr<Database>& i_rConnection)
-{
-	InsertConnection(MOCK_MYSQL_ACCESSORY_PREFIX + i_rConnectionName, i_rConnection, "mysql");
-}
-
-void MockDatabaseConnectionManager::InsertConnection(const std::string& i_rConnectionName, boost::shared_ptr<Database>& i_rConnection, const std::string& i_rType)
+void MockDatabaseConnectionManager::InsertConnection(const std::string& i_rConnectionName, boost::shared_ptr<Database>& i_rConnection)
 {
 	m_MockConnectionMap[i_rConnectionName] = i_rConnection;
-
-	if( i_rType != "unknown" )
-	{
-		m_DatabaseTypes[ i_rConnectionName ] = i_rType;
-		return;
-	}
 
 	Database* pDatabase = i_rConnection.get();
 	if( dynamic_cast<OracleUnitTestDatabase*>( pDatabase ) != NULL )
 	{
 		m_DatabaseTypes[ i_rConnectionName ] = "oracle";
+		m_DatabaseTypes[ MOCK_DATA_DEFINITION_CONNECTION_PREFIX + i_rConnectionName ] = "oracle";
+
+		// need to create ANOTHER connection just for the ddl operations
+		m_MockConnectionMap[MOCK_DATA_DEFINITION_CONNECTION_PREFIX + i_rConnectionName] = boost::shared_ptr<Database>
+			( new Database( Database::DBCONN_OCI_THREADSAFE_ORACLE, i_rConnection->GetServerName(), i_rConnection->GetDBName(),
+							i_rConnection->GetUserName(), i_rConnection->GetPassword(), false, i_rConnection->GetSchema() ) );
 	}
 	else if( dynamic_cast<MySqlUnitTestDatabase*>( pDatabase ) != NULL )
 	{
 		m_DatabaseTypes[ i_rConnectionName ] = "mysql";
+		m_DatabaseTypes[ MOCK_DATA_DEFINITION_CONNECTION_PREFIX + i_rConnectionName ] = "mysql";
+
+		// need to create ANOTHER connection just for the ddl operations
+		m_MockConnectionMap[MOCK_DATA_DEFINITION_CONNECTION_PREFIX + i_rConnectionName] = boost::shared_ptr<Database>
+			( new Database( Database::DBCONN_ODBC_MYSQL, i_rConnection->GetServerName(), i_rConnection->GetDBName(),
+							i_rConnection->GetUserName(), i_rConnection->GetPassword(), false ) );
 	}
 	else
 	{
