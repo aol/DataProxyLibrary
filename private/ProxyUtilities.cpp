@@ -231,6 +231,35 @@ namespace
 		result << " FROM dual ) ";
 		return result.str();
 	}
+
+	std::string GetKey( const std::map< std::string, std::string >& i_rMap, const std::string& i_rValue )
+	{
+		std::map< std::string, std::string >::const_iterator iter = i_rMap.begin();
+		for( ; iter != i_rMap.end(); ++iter )
+		{
+			if( iter->second == i_rValue )
+			{
+				return iter->first;
+			}
+		}
+		MV_THROW( ProxyUtilitiesException, "Unable to find value: " << i_rValue << " in map" );
+	}
+
+	void SetOutgoingBindColumns( std::vector< std::string >* o_pBindColumns,
+								 const std::vector< std::string >& i_rBindColumns,
+								 const std::map< std::string, std::string >& i_rRequiredColumns )
+	{
+		if( o_pBindColumns == NULL )
+		{
+			return;
+		}
+		o_pBindColumns->clear();
+		std::vector< std::string >::const_iterator iter = i_rBindColumns.begin();
+		for( ; iter != i_rBindColumns.end(); ++iter )
+		{
+			o_pBindColumns->push_back( GetKey( i_rRequiredColumns, *iter ) );
+		}
+	}
 }
 
 std::string ProxyUtilities::ToString( const std::map<std::string,std::string>& i_rParameters )
@@ -453,10 +482,7 @@ std::string ProxyUtilities::GetMergeQuery( const std::string& i_rDatabaseType,
 		{
 			result << "SELECT " << columnList.str() << " FROM " << i_rStagingTable;
 		}
-		if( o_pBindColumns != NULL )
-		{
-			*o_pBindColumns = bindColumns;
-		}
+		SetOutgoingBindColumns( o_pBindColumns, bindColumns, o_rRequiredColumns );
 		return result.str();
 	}
 
@@ -482,10 +508,7 @@ std::string ProxyUtilities::GetMergeQuery( const std::string& i_rDatabaseType,
 		{
 			result << " WHEN MATCHED THEN UPDATE SET " << GetResolvedEqualityList( ifMatchedColumns, resolvedStagingTable, i_rTable );
 		}
-		if( o_pBindColumns != NULL )
-		{
-			*o_pBindColumns = bindColumns;
-		}
+		SetOutgoingBindColumns( o_pBindColumns, bindColumns, o_rRequiredColumns );
 		return result.str();
 	}
 	
@@ -517,10 +540,7 @@ std::string ProxyUtilities::GetMergeQuery( const std::string& i_rDatabaseType,
 			   << " WHERE " << GetEqualityList( keyColumns, i_rStagingTable, i_rTable, " AND " );
 	}
 
-	if( o_pBindColumns != NULL )
-	{
-		*o_pBindColumns = bindColumns;
-	}
+	SetOutgoingBindColumns( o_pBindColumns, bindColumns, o_rRequiredColumns );
 	return result.str();
 }
 

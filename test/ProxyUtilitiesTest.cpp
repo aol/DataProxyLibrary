@@ -592,15 +592,15 @@ void ProxyUtilitiesTest::testGetNoStageQuery_FullMerge_Oracle()
 	CPPUNIT_ASSERT_EQUAL( std::string("data5"), columns["data5"] );
 
 	CPPUNIT_ASSERT_EQUAL( size_t(5), bindColumns.size() );
-	CPPUNIT_ASSERT( std::find( bindColumns.begin(), bindColumns.end(), std::string("key1") ) != bindColumns.end() );
+	CPPUNIT_ASSERT( std::find( bindColumns.begin(), bindColumns.end(), std::string("KEY1") ) != bindColumns.end() );
 	CPPUNIT_ASSERT( std::find( bindColumns.begin(), bindColumns.end(), std::string("key2") ) != bindColumns.end() );
 	CPPUNIT_ASSERT( std::find( bindColumns.begin(), bindColumns.end(), std::string("data3") ) != bindColumns.end() );
-	CPPUNIT_ASSERT( std::find( bindColumns.begin(), bindColumns.end(), std::string("data4") ) != bindColumns.end() );
+	CPPUNIT_ASSERT( std::find( bindColumns.begin(), bindColumns.end(), std::string("DATA4") ) != bindColumns.end() );
 	CPPUNIT_ASSERT( std::find( bindColumns.begin(), bindColumns.end(), std::string("data5") ) != bindColumns.end() );
-	CPPUNIT_ASSERT_EQUAL( std::string("key1"), bindColumns[0] );
+	CPPUNIT_ASSERT_EQUAL( std::string("KEY1"), bindColumns[0] );
 	CPPUNIT_ASSERT_EQUAL( std::string("key2"), bindColumns[1] );
 	CPPUNIT_ASSERT_EQUAL( std::string("data3"), bindColumns[2] );
-	CPPUNIT_ASSERT_EQUAL( std::string("data4"), bindColumns[3] );
+	CPPUNIT_ASSERT_EQUAL( std::string("DATA4"), bindColumns[3] );
 	CPPUNIT_ASSERT_EQUAL( std::string("data5"), bindColumns[4] );
 	
 	CPPUNIT_ASSERT_EQUAL( expected.str(), actual );
@@ -644,16 +644,16 @@ void ProxyUtilitiesTest::testGetNoStageQuery_FullMerge_MySql()
 	CPPUNIT_ASSERT_EQUAL( std::string("data5"), columns["data5"] );
 
 	CPPUNIT_ASSERT_EQUAL( size_t(5), bindColumns.size() );
-	CPPUNIT_ASSERT( std::find( bindColumns.begin(), bindColumns.end(), std::string("key1") ) != bindColumns.end() );
+	CPPUNIT_ASSERT( std::find( bindColumns.begin(), bindColumns.end(), std::string("KEY1") ) != bindColumns.end() );
 	CPPUNIT_ASSERT( std::find( bindColumns.begin(), bindColumns.end(), std::string("key2") ) != bindColumns.end() );
 	CPPUNIT_ASSERT( std::find( bindColumns.begin(), bindColumns.end(), std::string("data3") ) != bindColumns.end() );
 	CPPUNIT_ASSERT( std::find( bindColumns.begin(), bindColumns.end(), std::string("data5") ) != bindColumns.end() );
-	CPPUNIT_ASSERT( std::find( bindColumns.begin(), bindColumns.end(), std::string("data4") ) != bindColumns.end() );
-	CPPUNIT_ASSERT_EQUAL( std::string("key1"), bindColumns[0] );
+	CPPUNIT_ASSERT( std::find( bindColumns.begin(), bindColumns.end(), std::string("DATA4") ) != bindColumns.end() );
+	CPPUNIT_ASSERT_EQUAL( std::string("KEY1"), bindColumns[0] );
 	CPPUNIT_ASSERT_EQUAL( std::string("key2"), bindColumns[1] );
 	CPPUNIT_ASSERT_EQUAL( std::string("data3"), bindColumns[2] );
 	CPPUNIT_ASSERT_EQUAL( std::string("data5"), bindColumns[3] );
-	CPPUNIT_ASSERT_EQUAL( std::string("data4"), bindColumns[4] );
+	CPPUNIT_ASSERT_EQUAL( std::string("DATA4"), bindColumns[4] );
 	
 	CPPUNIT_ASSERT_EQUAL( expected.str(), actual );
 }
