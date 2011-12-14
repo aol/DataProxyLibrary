@@ -17,6 +17,7 @@
 #include "Nullable.hpp"
 #include <boost/regex.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/algorithm/string/join.hpp>
 #include <errno.h>
 #include <limits.h>
 
@@ -26,6 +27,9 @@ namespace
 	const std::string ESCAPED_KEY_VALUE_SEPARATOR( "\\~" );
 	const std::string KEY_SEPARATOR( "^" );
 	const std::string ESCAPED_KEY_SEPARATOR( "\\^" );
+	const std::string BIND_VAR( "?" );
+	const std::string DUMMY_STAGING( "tmp" );
+	const std::string DUAL_STAGING( "dual" );
 	boost::regex VARIABLE_NAME("\\$\\{.*?\\}");
 
 	const std::string COLUMN_NODE( "Column" );
@@ -49,12 +53,23 @@ namespace
 		RowEnd > >
 	DataColumn;
 
-	std::string GetPrefixedColumn( const std::string& i_rColumn, const std::string& i_rPrefix )
+	std::string GetPrefixedColumn( const std::string& i_rColumn, const std::string& i_rPrefix, bool i_SuppressBind = false )
 	{
+		if( i_rPrefix.empty() )
+		{
+			if( i_SuppressBind )
+			{
+				return i_rColumn;
+			}
+			return BIND_VAR;
+		}
 		return i_rPrefix + "." + i_rColumn;
 	}
 
-	std::string GetJoinedList( const std::vector< std::string > i_rColumns, Nullable< std::string > i_rPrefix = null )
+	std::string GetJoinedList( const std::vector< std::string > i_rColumns,
+							   Nullable< std::string > i_rPrefix = null,
+							   bool i_IncludeAsName = false,
+							   std::vector< std::string >* o_pBindColumns = NULL )
 	{
 		std::stringstream result;
 		std::vector< std::string >::const_iterator iter = i_rColumns.begin();
@@ -64,13 +79,24 @@ namespace
 			{
 				result << ", ";
 			}
+			std::string value = ( i_rPrefix.IsNull() ? *iter : GetPrefixedColumn( *iter, i_rPrefix ) );
+			if( value.find( BIND_VAR ) != std::string::npos && o_pBindColumns != NULL )
+			{
+				o_pBindColumns->push_back( *iter );
+			}
+
 			result << ( i_rPrefix.IsNull() ? *iter : GetPrefixedColumn( *iter, i_rPrefix ) );
+			if( i_IncludeAsName )
+			{
+				result << " AS " << *iter;
+			}
 		}
 
 		return result.str();
 	}
 
-	std::string GetJoinedList( const std::vector< DataColumn > i_rColumns, Nullable< std::string > i_rPrefix = null )
+	std::string GetJoinedList( const std::vector< DataColumn > i_rColumns,
+							   Nullable< std::string > i_rPrefix = null )
 	{
 		std::stringstream result;
 		std::vector< DataColumn >::const_iterator iter = i_rColumns.begin();
@@ -86,7 +112,11 @@ namespace
 		return result.str();
 	}
 
-	std::string GetResolvedJoinedList( const std::vector< DataColumn > i_rColumns, const std::string& i_rStagingTable, Nullable< std::string > i_rTable = null )
+	std::string GetResolvedJoinedList( const std::vector< DataColumn > i_rColumns, 
+									   const std::string& i_rStagingTable, 
+									   Nullable< std::string > i_rTable = null, 
+									   bool i_IncludeAsName = false,
+							   		   std::vector< std::string >* o_pBindColumns = NULL )
 	{
 		std::stringstream result;
 		std::vector< DataColumn >::const_iterator iter = i_rColumns.begin();
@@ -98,11 +128,19 @@ namespace
 			}
 			std::string value( iter->GetValue< Expression >() );
 			boost::replace_all( value, NEW_VALUE_PLACEHOLDER, GetPrefixedColumn( iter->GetValue< Name >(), i_rStagingTable ) );
+			if( value.find( BIND_VAR ) != std::string::npos && o_pBindColumns != NULL )
+			{
+				o_pBindColumns->push_back( iter->GetValue< Name >() );
+			}
 			if( !i_rTable.IsNull() )
 			{
 				boost::replace_all( value, EXISTING_VALUE_PLACEHOLDER, GetPrefixedColumn( iter->GetValue< Name >(), i_rTable ) );
 			}
 			result << value;
+			if( i_IncludeAsName )
+			{
+				result << " AS " << iter->GetValue< Name >();
+			}
 		}
 
 		return result.str();
@@ -121,13 +159,16 @@ namespace
 			{
 				result << i_rSeparator;
 			}
-			result << GetPrefixedColumn( *iter, i_rTable ) << " = " << GetPrefixedColumn( *iter, i_rStagingTable );
+			result << GetPrefixedColumn( *iter, i_rTable ) << " = " << GetPrefixedColumn( *iter, i_rStagingTable, true );
 		}
 
 		return result.str();
 	}
 
-	std::string GetResolvedEqualityList( const std::vector< DataColumn > i_rColumns, const std::string& i_rStagingTable, const std::string& i_rTable )
+	std::string GetResolvedEqualityList( const std::vector< DataColumn > i_rColumns,
+										 const std::string& i_rStagingTable, 
+										 const std::string& i_rTable, 
+										 std::vector< std::string >* o_pBindColumns = NULL )
 	{
 		std::stringstream result;
 		std::vector< DataColumn >::const_iterator iter = i_rColumns.begin();
@@ -138,12 +179,56 @@ namespace
 				result << ", ";
 			}
 			std::string value( iter->GetValue< Expression >() );
-			boost::replace_all( value, NEW_VALUE_PLACEHOLDER, GetPrefixedColumn( iter->GetValue< Name >(), i_rStagingTable ) );
+			std::string newValueReplacement( GetPrefixedColumn( iter->GetValue< Name >(), i_rStagingTable, true ) );
+			// if we're not in staging-table mode, we have a list of bind columns, and this column has NOT already been bound, then use a BIND_VAR
+			if( i_rStagingTable.empty() && o_pBindColumns != NULL && std::find( o_pBindColumns->begin(), o_pBindColumns->end(), iter->GetValue< Name >() ) == o_pBindColumns->end() )
+			{
+				newValueReplacement = BIND_VAR;
+				o_pBindColumns->push_back( iter->GetValue< Name >() );
+			}
+			boost::replace_all( value, NEW_VALUE_PLACEHOLDER, newValueReplacement );
 			boost::replace_all( value, EXISTING_VALUE_PLACEHOLDER, GetPrefixedColumn( iter->GetValue< Name >(), i_rTable ) );
 
 			result << GetPrefixedColumn( iter->GetValue< Name >(), i_rTable ) << " = " << value;
 		}
 
+		return result.str();
+	}
+
+	std::string GetDummyQueryIfNeeded( const std::vector< std::string > i_rKeyColumns,
+									   const std::vector< std::string > i_rDataColumns,
+									   const std::string& i_rStagingTable,
+									   std::vector< std::string >* o_pBindColumns = NULL )
+	{
+		if( !i_rStagingTable.empty() )
+		{
+			return std::string("");
+		}
+
+		std::stringstream result;
+		result << "( SELECT ";
+		std::vector< std::string >::const_iterator iter = i_rKeyColumns.begin();
+		for( ; iter != i_rKeyColumns.end(); ++iter )
+		{
+			if( iter != i_rKeyColumns.begin() )
+			{
+				result << ", ";
+			}
+			result << "? AS " << *iter;
+			if( o_pBindColumns != NULL )
+			{
+				o_pBindColumns->push_back( *iter );
+			}
+		}
+		for( iter = i_rDataColumns.begin(); iter != i_rDataColumns.end(); ++iter )
+		{
+			result << ", ? AS " << *iter;
+			if( o_pBindColumns != NULL )
+			{
+				o_pBindColumns->push_back( *iter );
+			}
+		}
+		result << " FROM dual ) ";
 		return result.str();
 	}
 }
@@ -221,7 +306,8 @@ std::string ProxyUtilities::GetMergeQuery( const std::string& i_rDatabaseType,
 										   const std::string& i_rStagingTable,
 										   const xercesc::DOMNode& i_rColumnsNode,
 										   bool i_InsertOnly,
-										   std::map< std::string, std::string >& o_rRequiredColumns )
+										   std::map< std::string, std::string >& o_rRequiredColumns,
+										   std::vector< std::string >* o_pBindColumns )
 {
 	if( i_rDatabaseType != ORACLE_DB_TYPE && i_rDatabaseType != MYSQL_DB_TYPE )
 	{
@@ -231,6 +317,8 @@ std::string ProxyUtilities::GetMergeQuery( const std::string& i_rDatabaseType,
 	o_rRequiredColumns.clear();
 	std::vector< std::string > allColumns;
 	std::vector< std::string > keyColumns;
+	std::vector< std::string > dataColumns;
+	std::vector< std::string > bindColumns;
 	std::vector< DataColumn > ifNewColumns;
 	std::vector< DataColumn > ifMatchedColumns;
 
@@ -295,6 +383,10 @@ std::string ProxyUtilities::GetMergeQuery( const std::string& i_rDatabaseType,
 		{
 			MV_THROW( ProxyUtilitiesException, "Illegal value for " << TYPE_ATTRIBUTE << ": " << type << ". Valid values are " << TYPE_KEY_VALUE << " and " << TYPE_DATA_VALUE );
 		}
+		else
+		{
+			dataColumns.push_back( name );
+		}
 
 		// at this point the column must be a data column
 		bool hasExpression( false );
@@ -344,21 +436,37 @@ std::string ProxyUtilities::GetMergeQuery( const std::string& i_rDatabaseType,
 			MV_THROW( ProxyUtilitiesException, "Write node is marked as insert-only, but there are columns with values for the " << IF_MATCHED_ATTRIBUTE << " attribute" );
 		}
 
+		std::stringstream columnList;
+		columnList << GetJoinedList( keyColumns, i_rStagingTable, false, &bindColumns );
+		columnList << ( !keyColumns.empty() && !ifNewColumns.empty() ? ", " : "" )
+				   << GetResolvedJoinedList( ifNewColumns, i_rStagingTable, null, false, &bindColumns );
+
 		result << "INSERT INTO " << i_rTable
-			   << "( " << GetJoinedList( allColumns ) << " ) "
-			   << "SELECT " << GetJoinedList( keyColumns, i_rStagingTable )
+			   << "( " << GetJoinedList( keyColumns )
 			   << ( !keyColumns.empty() && !ifNewColumns.empty() ? ", " : "" )
-			   << GetResolvedJoinedList( ifNewColumns, i_rStagingTable )
-			   << " FROM " << i_rStagingTable;
+			   << GetJoinedList( dataColumns ) << " ) ";
+		if( i_rStagingTable.empty() )
+		{
+			result << "VALUES( " << columnList.str() << " )";
+		}
+		else
+		{
+			result << "SELECT " << columnList.str() << " FROM " << i_rStagingTable;
+		}
+		if( o_pBindColumns != NULL )
+		{
+			*o_pBindColumns = bindColumns;
+		}
 		return result.str();
 	}
 
 	// from here we have to discern between oracle and mysql
 	if( i_rDatabaseType == ORACLE_DB_TYPE )
 	{
+		std::string resolvedStagingTable = ( i_rStagingTable.empty() ? DUMMY_STAGING : i_rStagingTable );
 		result << "MERGE INTO " << i_rTable
-			   << " USING " << i_rStagingTable
-			   << " ON ( " << GetEqualityList( keyColumns, i_rStagingTable, i_rTable, " AND " ) << " )";
+			   << " USING " << GetDummyQueryIfNeeded( keyColumns, dataColumns, i_rStagingTable, &bindColumns ) << resolvedStagingTable
+			   << " ON ( " << GetEqualityList( keyColumns, resolvedStagingTable, i_rTable, " AND " ) << " )";
 		if( !ifNewColumns.empty() || ( ifNewColumns.empty() && ifMatchedColumns.empty() ) )
 		{
 			result << " WHEN NOT MATCHED THEN INSERT( "
@@ -366,13 +474,17 @@ std::string ProxyUtilities::GetMergeQuery( const std::string& i_rDatabaseType,
 				   << ( !keyColumns.empty() && !ifNewColumns.empty() ? ", " : "" )
 				   << GetJoinedList( ifNewColumns )
 				   << " ) VALUES ( " 
-				   << GetJoinedList( keyColumns, i_rStagingTable )
+				   << GetJoinedList( keyColumns, resolvedStagingTable )
 				   << ( !keyColumns.empty() && !ifNewColumns.empty() ? ", " : "" )
-				   << GetResolvedJoinedList( ifNewColumns, i_rStagingTable ) << " )";
+				   << GetResolvedJoinedList( ifNewColumns, resolvedStagingTable ) << " )";
 		}
 		if( !ifMatchedColumns.empty() )
 		{
-			result << " WHEN MATCHED THEN UPDATE SET " << GetResolvedEqualityList( ifMatchedColumns, i_rStagingTable, i_rTable );
+			result << " WHEN MATCHED THEN UPDATE SET " << GetResolvedEqualityList( ifMatchedColumns, resolvedStagingTable, i_rTable );
+		}
+		if( o_pBindColumns != NULL )
+		{
+			*o_pBindColumns = bindColumns;
 		}
 		return result.str();
 	}
@@ -382,26 +494,33 @@ std::string ProxyUtilities::GetMergeQuery( const std::string& i_rDatabaseType,
 	// if there is at least one column with "ifNew"
 	if( !ifNewColumns.empty() || ( ifNewColumns.empty() && ifMatchedColumns.empty() ) )
 	{
+		std::string resolvedStagingTable = ( i_rStagingTable.empty() ? DUAL_STAGING : i_rStagingTable );
+		std::stringstream valueColumnList;
+		valueColumnList << GetJoinedList( keyColumns, i_rStagingTable, i_rStagingTable.empty(), &bindColumns );
+		valueColumnList << ( !keyColumns.empty() && !ifNewColumns.empty() ? ", " : "" )
+						<< GetResolvedJoinedList( ifNewColumns, i_rStagingTable, null, i_rStagingTable.empty(), &bindColumns );
+
 		result << "INSERT " << ( ifMatchedColumns.empty() ? "IGNORE " : "" ) << "INTO " << i_rTable << "( "
 			   << GetJoinedList( keyColumns )
 			   << ( !keyColumns.empty() && !ifNewColumns.empty() ? ", " : "" )
 			   << GetJoinedList( ifNewColumns ) << " ) "
-			   << "SELECT " << GetJoinedList( keyColumns, i_rStagingTable )
-			   << ( !keyColumns.empty() && !ifNewColumns.empty() ? ", " : "" )
-			   << GetResolvedJoinedList( ifNewColumns, i_rStagingTable )
-			   << " FROM " << i_rStagingTable;
+			   << "SELECT " << valueColumnList.str() << " FROM " << resolvedStagingTable;
 		if( !ifMatchedColumns.empty() )
 		{
-			result << " ON DUPLICATE KEY UPDATE " << GetResolvedEqualityList( ifMatchedColumns, i_rStagingTable, i_rTable );
+			result << " ON DUPLICATE KEY UPDATE " << GetResolvedEqualityList( ifMatchedColumns, i_rStagingTable, i_rTable, &bindColumns );
 		}
 	}
 	else
 	{
-		result << "UPDATE " << i_rTable << ", " << i_rStagingTable
+		result << "UPDATE " << i_rTable << ", " << GetDummyQueryIfNeeded( keyColumns, dataColumns, i_rStagingTable, &bindColumns ) << i_rStagingTable
 			   << " SET " << GetResolvedEqualityList( ifMatchedColumns, i_rStagingTable, i_rTable )
 			   << " WHERE " << GetEqualityList( keyColumns, i_rStagingTable, i_rTable, " AND " );
 	}
 
+	if( o_pBindColumns != NULL )
+	{
+		*o_pBindColumns = bindColumns;
+	}
 	return result.str();
 }
 

@@ -29,6 +29,14 @@ private:
 	CPPUNIT_TEST( testGetMergeQuery_NotMatch_MySql );
 	CPPUNIT_TEST( testGetMergeQuery_Match_Oracle );
 	CPPUNIT_TEST( testGetMergeQuery_Match_MySql );
+
+	CPPUNIT_TEST( testGetNoStageQuery_InsertOnly );
+	CPPUNIT_TEST( testGetNoStageQuery_FullMerge_Oracle );
+	CPPUNIT_TEST( testGetNoStageQuery_FullMerge_MySql );
+	CPPUNIT_TEST( testGetNoStageQuery_NotMatch_Oracle );
+	CPPUNIT_TEST( testGetNoStageQuery_NotMatch_MySql );
+	CPPUNIT_TEST( testGetNoStageQuery_Match_Oracle );
+	CPPUNIT_TEST( testGetNoStageQuery_Match_MySql );
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -47,6 +55,14 @@ public:
 	void testGetMergeQuery_NotMatch_MySql();
 	void testGetMergeQuery_Match_Oracle();
 	void testGetMergeQuery_Match_MySql();
+
+	void testGetNoStageQuery_InsertOnly();
+	void testGetNoStageQuery_FullMerge_Oracle();
+	void testGetNoStageQuery_FullMerge_MySql();
+	void testGetNoStageQuery_NotMatch_Oracle();
+	void testGetNoStageQuery_NotMatch_MySql();
+	void testGetNoStageQuery_Match_Oracle();
+	void testGetNoStageQuery_Match_MySql();
 
 private:
 	boost::scoped_ptr< TempDirectory > m_pTempDir;
