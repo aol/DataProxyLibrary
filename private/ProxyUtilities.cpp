@@ -257,7 +257,11 @@ namespace
 		std::vector< std::string >::const_iterator iter = i_rBindColumns.begin();
 		for( ; iter != i_rBindColumns.end(); ++iter )
 		{
-			o_pBindColumns->push_back( GetKey( i_rRequiredColumns, *iter ) );
+			try
+			{
+				o_pBindColumns->push_back( GetKey( i_rRequiredColumns, *iter ) );
+			}
+			catch( ... ){}
 		}
 	}
 }
@@ -346,6 +350,7 @@ std::string ProxyUtilities::GetMergeQuery( const std::string& i_rDatabaseType,
 	o_rRequiredColumns.clear();
 	std::vector< std::string > allColumns;
 	std::vector< std::string > keyColumns;
+	std::vector< std::string > valueDataColumns;
 	std::vector< std::string > dataColumns;
 	std::vector< std::string > bindColumns;
 	std::vector< DataColumn > ifNewColumns;
@@ -419,6 +424,7 @@ std::string ProxyUtilities::GetMergeQuery( const std::string& i_rDatabaseType,
 
 		// at this point the column must be a data column
 		bool hasExpression( false );
+		bool hasValueExpression( false );
 		pAttribute = XMLUtilities::GetAttribute( *iter, IF_NEW_ATTRIBUTE );
 		if( pAttribute != NULL )
 		{
@@ -426,6 +432,7 @@ std::string ProxyUtilities::GetMergeQuery( const std::string& i_rDatabaseType,
 			std::string expression( XMLUtilities::XMLChToString(pAttribute->getValue()) );
 			if( expression.find( NEW_VALUE_PLACEHOLDER ) != std::string::npos )
 			{
+				hasValueExpression = true;
 				o_rRequiredColumns[ sourceName ] = name;
 			}
 			DataColumn datum;
@@ -441,12 +448,18 @@ std::string ProxyUtilities::GetMergeQuery( const std::string& i_rDatabaseType,
 			std::string expression( XMLUtilities::XMLChToString(pAttribute->getValue()) );
 			if( expression.find( NEW_VALUE_PLACEHOLDER ) != std::string::npos )
 			{
+				hasValueExpression = true;
 				o_rRequiredColumns[ sourceName ] = name;
 			}
 			DataColumn datum;
 			datum.SetValue< Name >( name );
 			datum.SetValue< Expression >( expression );
 			ifMatchedColumns.push_back( datum );
+		}
+
+		if( hasValueExpression )
+		{
+			valueDataColumns.push_back( name );
 		}
 
 		if( !hasExpression )
@@ -491,7 +504,7 @@ std::string ProxyUtilities::GetMergeQuery( const std::string& i_rDatabaseType,
 	{
 		std::string resolvedStagingTable = ( i_rStagingTable.empty() ? DUMMY_STAGING : i_rStagingTable );
 		result << "MERGE INTO " << i_rTable
-			   << " USING " << GetDummyQueryIfNeeded( keyColumns, dataColumns, i_rStagingTable, &bindColumns ) << resolvedStagingTable
+			   << " USING " << GetDummyQueryIfNeeded( keyColumns, valueDataColumns, i_rStagingTable, &bindColumns ) << resolvedStagingTable
 			   << " ON ( " << GetEqualityList( keyColumns, resolvedStagingTable, i_rTable, " AND " ) << " )";
 		if( !ifNewColumns.empty() || ( ifNewColumns.empty() && ifMatchedColumns.empty() ) )
 		{
@@ -535,7 +548,7 @@ std::string ProxyUtilities::GetMergeQuery( const std::string& i_rDatabaseType,
 	}
 	else
 	{
-		result << "UPDATE " << i_rTable << ", " << GetDummyQueryIfNeeded( keyColumns, dataColumns, i_rStagingTable, &bindColumns ) << i_rStagingTable
+		result << "UPDATE " << i_rTable << ", " << GetDummyQueryIfNeeded( keyColumns, valueDataColumns, i_rStagingTable, &bindColumns ) << i_rStagingTable
 			   << " SET " << GetResolvedEqualityList( ifMatchedColumns, i_rStagingTable, i_rTable )
 			   << " WHERE " << GetEqualityList( keyColumns, i_rStagingTable, i_rTable, " AND " );
 	}

@@ -41,11 +41,15 @@ private:
 	CPPUNIT_TEST( testStoreException );
 	CPPUNIT_TEST( testOracleStore );
 	CPPUNIT_TEST( testMySqlStore );
+	CPPUNIT_TEST( testOracleStoreNoStaging );
+	CPPUNIT_TEST( testMySqlStoreNoStaging );
 	CPPUNIT_TEST( testMySqlStoreDynamicTables );
 	CPPUNIT_TEST( testOracleStoreDynamicTables );
 	CPPUNIT_TEST( testDynamicTableNameLength );
 	CPPUNIT_TEST( testStoreParameterOnly );
+	CPPUNIT_TEST( testStoreParameterOnlyNoStaging );
 	CPPUNIT_TEST( testStoreColumnParameterCollisionBehaviors );
+	CPPUNIT_TEST( testStoreColumnParameterCollisionBehaviorsNoStaging );
 
 	CPPUNIT_TEST( testOracleMultipleStore );
 	CPPUNIT_TEST( testMySqlMultipleStore );
@@ -93,14 +97,18 @@ public:
 	void testStoreException();
 
 	void testOracleStore();
+	void testOracleStoreNoStaging();
 	void testOracleMultipleStore();
 	void testMySqlStore();
+	void testMySqlStoreNoStaging();
 	void testMySqlMultipleStore();
 	void testMySqlStoreDynamicTables();
 	void testOracleStoreDynamicTables();
 	void testDynamicTableNameLength();
 	void testStoreParameterOnly();
+	void testStoreParameterOnlyNoStaging();
 	void testStoreColumnParameterCollisionBehaviors();
+	void testStoreColumnParameterCollisionBehaviorsNoStaging();
 
 	void testOracleStoreWithPreStatement();
 	void testOracleStoreWithPostStatement();

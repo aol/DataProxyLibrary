@@ -562,6 +562,7 @@ void ProxyUtilitiesTest::testGetNoStageQuery_FullMerge_Oracle()
 				<< " <Column name=\"data3\" type=\"data\" ifNew=\"NVL(%v,%t)\" ifMatched=\"%t + NVL(%v,0)\" />"	// %t will not be resolved since this is in a "ifNew" clause
 				<< " <Column name=\"data4\" type=\"data\"                      ifMatched=\"%t + %v\" sourceName=\"DATA4\"/>"
 				<< " <Column name=\"data5\" type=\"data\" ifNew=\"%v\"                                     />"
+				<< " <Column name=\"dummy\" type=\"data\" ifNew=\"10\"         ifMatched=\"20\"            />"
 				<< "</Columns>";
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Columns", nodes );
@@ -570,14 +571,17 @@ void ProxyUtilitiesTest::testGetNoStageQuery_FullMerge_Oracle()
 	std::stringstream expected;
 	expected << "MERGE INTO myTable"
 			 << " USING ( SELECT ? AS key1, ? AS key2, ? AS data3, ? AS data4, ? AS data5 FROM dual ) tmp ON ( myTable.key1 = tmp.key1 AND myTable.key2 = tmp.key2 )"
-			 << " WHEN NOT MATCHED THEN INSERT( key1, key2, data3, data5 ) VALUES ( tmp.key1, tmp.key2, NVL(tmp.data3,%t), tmp.data5 )"
+			 << " WHEN NOT MATCHED THEN INSERT( key1, key2, data3, data5, dummy ) VALUES ( tmp.key1, tmp.key2, NVL(tmp.data3,%t), tmp.data5, 10 )"
 			 << " WHEN MATCHED THEN UPDATE SET "
 			 	<< "myTable.data3 = myTable.data3 + NVL(tmp.data3,0), "
-			 	<< "myTable.data4 = myTable.data4 + tmp.data4";
+			 	<< "myTable.data4 = myTable.data4 + tmp.data4, "
+				<< "myTable.dummy = 20";
 
 	std::map< std::string, std::string > columns;
 	std::vector< std::string > bindColumns;
 	std::string actual = ProxyUtilities::GetMergeQuery( "oracle", "myTable", "", *nodes[0], false, columns, &bindColumns );
+	
+	CPPUNIT_ASSERT_EQUAL( expected.str(), actual );
 
 	CPPUNIT_ASSERT_EQUAL( size_t(5), columns.size() );
 	CPPUNIT_ASSERT( columns.find("KEY1") != columns.end() );
@@ -602,8 +606,6 @@ void ProxyUtilitiesTest::testGetNoStageQuery_FullMerge_Oracle()
 	CPPUNIT_ASSERT_EQUAL( std::string("data3"), bindColumns[2] );
 	CPPUNIT_ASSERT_EQUAL( std::string("DATA4"), bindColumns[3] );
 	CPPUNIT_ASSERT_EQUAL( std::string("data5"), bindColumns[4] );
-	
-	CPPUNIT_ASSERT_EQUAL( expected.str(), actual );
 }
 
 void ProxyUtilitiesTest::testGetNoStageQuery_FullMerge_MySql()
@@ -615,21 +617,25 @@ void ProxyUtilitiesTest::testGetNoStageQuery_FullMerge_MySql()
 				<< " <Column name=\"data3\" type=\"data\" ifNew=\"NVL(%v,%t)\" ifMatched=\"%t + NVL(%v,0)\" />"	// %t will not be resolved since this is in a "ifNew" clause
 				<< " <Column name=\"data4\" type=\"data\"                      ifMatched=\"%t + %v\" sourceName=\"DATA4\"/>"
 				<< " <Column name=\"data5\" type=\"data\" ifNew=\"%v\"                                     />"
+				<< " <Column name=\"dummy\" type=\"data\" ifNew=\"10\"         ifMatched=\"20\"            />"
 				<< "</Columns>";
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Columns", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	std::stringstream expected;
-	expected << "INSERT INTO myTable( key1, key2, data3, data5 ) "
-			 << "SELECT ? AS key1, ? AS key2, NVL(?,%t) AS data3, ? AS data5 FROM dual "
+	expected << "INSERT INTO myTable( key1, key2, data3, data5, dummy ) "
+			 << "SELECT ? AS key1, ? AS key2, NVL(?,%t) AS data3, ? AS data5, 10 AS dummy FROM dual "
 			 << "ON DUPLICATE KEY UPDATE "
 			 	<< "myTable.data3 = myTable.data3 + NVL(data3,0), "
-				<< "myTable.data4 = myTable.data4 + ?";
+				<< "myTable.data4 = myTable.data4 + ?, "
+				<< "myTable.dummy = 20";
 
 	std::map< std::string, std::string > columns;
 	std::vector< std::string > bindColumns;
 	std::string actual = ProxyUtilities::GetMergeQuery( "mysql", "myTable", "", *nodes[0], false, columns, &bindColumns );
+	
+	CPPUNIT_ASSERT_EQUAL( expected.str(), actual );
 
 	CPPUNIT_ASSERT_EQUAL( size_t(5), columns.size() );
 	CPPUNIT_ASSERT( columns.find("KEY1") != columns.end() );
@@ -654,8 +660,6 @@ void ProxyUtilitiesTest::testGetNoStageQuery_FullMerge_MySql()
 	CPPUNIT_ASSERT_EQUAL( std::string("data3"), bindColumns[2] );
 	CPPUNIT_ASSERT_EQUAL( std::string("data5"), bindColumns[3] );
 	CPPUNIT_ASSERT_EQUAL( std::string("DATA4"), bindColumns[4] );
-	
-	CPPUNIT_ASSERT_EQUAL( expected.str(), actual );
 }
 
 void ProxyUtilitiesTest::testGetNoStageQuery_InsertOnly()
@@ -720,6 +724,7 @@ void ProxyUtilitiesTest::testGetNoStageQuery_NotMatch_Oracle()
 				<< " <Column name=\"key2\" type=\"key\" />"
 				<< " <Column name=\"data3\" type=\"data\" ifNew=\"NVL(%v,%t)\" />"	// %t will not be resolved since this is in a "ifNew" clause
 				<< " <Column name=\"data5\" type=\"data\" ifNew=\"%v\" />"
+				<< " <Column name=\"dummy\" type=\"data\" ifNew=\"10\" />"
 				<< "</Columns>";
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Columns", nodes );
@@ -728,7 +733,7 @@ void ProxyUtilitiesTest::testGetNoStageQuery_NotMatch_Oracle()
 	std::stringstream expected;
 	expected << "MERGE INTO myTable"
 			 << " USING ( SELECT ? AS key1, ? AS key2, ? AS data3, ? AS data5 FROM dual ) tmp ON ( myTable.key1 = tmp.key1 AND myTable.key2 = tmp.key2 )"
-			 << " WHEN NOT MATCHED THEN INSERT( key1, key2, data3, data5 ) VALUES ( tmp.key1, tmp.key2, NVL(tmp.data3,%t), tmp.data5 )";
+			 << " WHEN NOT MATCHED THEN INSERT( key1, key2, data3, data5, dummy ) VALUES ( tmp.key1, tmp.key2, NVL(tmp.data3,%t), tmp.data5, 10 )";
 
 	std::map< std::string, std::string > columns;
 	std::vector< std::string > bindColumns;
@@ -788,14 +793,15 @@ void ProxyUtilitiesTest::testGetNoStageQuery_NotMatch_MySql()
 				<< " <Column name=\"key2\" type=\"key\" />"
 				<< " <Column name=\"data3\" type=\"data\" ifNew=\"NVL(%v,%t)\" />"	// %t will not be resolved since this is in a "ifNew" clause
 				<< " <Column name=\"data5\" type=\"data\" ifNew=\"%v\" />"
+				<< " <Column name=\"dummy\" type=\"data\" ifNew=\"10\" />"
 				<< "</Columns>";
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Columns", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	std::stringstream expected;
-	expected << "INSERT IGNORE INTO myTable( key1, key2, data3, data5 ) "
-			 << "SELECT ? AS key1, ? AS key2, NVL(?,%t) AS data3, ? AS data5 FROM dual";
+	expected << "INSERT IGNORE INTO myTable( key1, key2, data3, data5, dummy ) "
+			 << "SELECT ? AS key1, ? AS key2, NVL(?,%t) AS data3, ? AS data5, 10 AS dummy FROM dual";
 
 	std::map< std::string, std::string > columns;
 	std::vector< std::string > bindColumns;
@@ -853,6 +859,7 @@ void ProxyUtilitiesTest::testGetNoStageQuery_Match_Oracle()
 				<< " <Column name=\"key2\" type=\"key\" />"
 				<< " <Column name=\"data3\" type=\"data\" ifMatched=\"%t + NVL(%v,0)\" />"	// %t will not be resolved since this is in a "ifNew" clause
 				<< " <Column name=\"data4\" type=\"data\" ifMatched=\"%t + %v\" />"
+				<< " <Column name=\"dummy\" type=\"data\" ifMatched=\"20\" />"
 				<< "</Columns>";
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Columns", nodes );
@@ -863,7 +870,8 @@ void ProxyUtilitiesTest::testGetNoStageQuery_Match_Oracle()
 			 << " USING ( SELECT ? AS key1, ? AS key2, ? AS data3, ? AS data4 FROM dual ) tmp ON ( myTable.key1 = tmp.key1 AND myTable.key2 = tmp.key2 )"
 			 << " WHEN MATCHED THEN UPDATE SET "
 			 	<< "myTable.data3 = myTable.data3 + NVL(tmp.data3,0), "
-			 	<< "myTable.data4 = myTable.data4 + tmp.data4";
+			 	<< "myTable.data4 = myTable.data4 + tmp.data4, "
+				<< "myTable.dummy = 20";
 
 	std::map< std::string, std::string > columns;
 	std::vector< std::string > bindColumns;
@@ -900,6 +908,7 @@ void ProxyUtilitiesTest::testGetNoStageQuery_Match_MySql()
 				<< " <Column name=\"key2\" type=\"key\" />"
 				<< " <Column name=\"data3\" type=\"data\" ifMatched=\"%t + NVL(%v,0)\" />"	// %t will not be resolved since this is in a "ifNew" clause
 				<< " <Column name=\"data4\" type=\"data\" ifMatched=\"%t + %v\" />"
+				<< " <Column name=\"dummy\" type=\"data\" ifMatched=\"20\" />"
 				<< "</Columns>";
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Columns", nodes );
@@ -909,7 +918,8 @@ void ProxyUtilitiesTest::testGetNoStageQuery_Match_MySql()
 	expected << "UPDATE myTable, ( SELECT ? AS key1, ? AS key2, ? AS data3, ? AS data4 FROM dual )"
 			 << "  SET "
 			 	<< "myTable.data3 = myTable.data3 + NVL(data3,0), "
-			 	<< "myTable.data4 = myTable.data4 + data4"
+			 	<< "myTable.data4 = myTable.data4 + data4, "
+				<< "myTable.dummy = 20"
 			 << " WHERE myTable.key1 = key1 AND myTable.key2 = key2";
 
 	std::map< std::string, std::string > columns;
@@ -928,7 +938,6 @@ void ProxyUtilitiesTest::testGetNoStageQuery_Match_MySql()
 	CPPUNIT_ASSERT_EQUAL( std::string("data3"), columns["data3"] );
 	CPPUNIT_ASSERT_EQUAL( std::string("data4"), columns["data4"] );
 
-#if 0
 	CPPUNIT_ASSERT_EQUAL( size_t(4), bindColumns.size() );
 	CPPUNIT_ASSERT( std::find( bindColumns.begin(), bindColumns.end(), std::string("key1") ) != bindColumns.end() );
 	CPPUNIT_ASSERT( std::find( bindColumns.begin(), bindColumns.end(), std::string("key2") ) != bindColumns.end() );
@@ -938,5 +947,4 @@ void ProxyUtilitiesTest::testGetNoStageQuery_Match_MySql()
 	CPPUNIT_ASSERT_EQUAL( std::string("key2"), bindColumns[1] );
 	CPPUNIT_ASSERT_EQUAL( std::string("data3"), bindColumns[2] );
 	CPPUNIT_ASSERT_EQUAL( std::string("data4"), bindColumns[3] );
-#endif
 }
