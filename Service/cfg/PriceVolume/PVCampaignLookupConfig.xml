@@ -1,0 +1,27 @@
+<DplConfig>
+
+	<DatabaseConnections>
+
+		<Database connection="nacon"
+				  type="oracle"
+				  name="adlapp"
+				  user="nacon_user"
+				  password="frogfish09"
+				  schema="ADSERVE_RPT " />
+
+	</DatabaseConnections>
+	
+	<DataNode name="campaign_lookup" type="db" >
+		<Read connection="nacon"
+			  header="campaign_id"
+			  query="SELECT DISTINCT( campaignid ) FROM ace.admedia WHERE adid IN ( ${media_id} )" >
+			<StreamTransformers>
+				<StreamTransformer path="./libShellStreamTransformer.so" functionName="TransformStream" >
+					<Parameter name="command" value="tail -n +2 | tr '\n' ',' | sed 's/\(.*\),/\1/'" />
+					<Parameter name="timeout" value="10.0" />
+				</StreamTransformer>
+			</StreamTransformers>
+		</Read>
+	</DataNode>
+
+</DplConfig>

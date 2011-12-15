@@ -1,0 +1,14 @@
+	<TranslateParameters>
+		<!--extract media_id from the filter-->
+		<Parameter name="filter" valueTranslator='`media_ids=$(echo -n %v | sed -ne "s/.*[Mm]edia_\?[Ii][Dd]~\([^^]\+\).*/\1/p"); if [ "$media_ids" == "" ]; then exit 1; fi; echo -n $media_ids`' />
+		<!--create a media filter of the form: x && media_id != y && media_id != z-->
+		<Parameter name="media_filter" valueTranslator="`echo -n '|| media_id != %v' | sed 's/,/ \&amp;\&amp; media_id != /g'`" valueSource="filter" valueDefault="" />
+		<!--derive the campaign_id from the media_id list-->
+		<Parameter name="campaign_id" valueTranslator="`./bin/dplShell --i dplconfig/PVCampaignLookupConfig.xml --n campaign_lookup --p media_id~%v`" valueSource="filter" />
+	</TranslateParameters>
+	<StreamTransformers>
+		<StreamTransformer path="./libValidateStreamTransformer.so" functionName="Validate" >
+			<Parameter name="timeout" value="60.0" />
+			<Parameter name="discardIf" value="false %v" valueSource="media_filter" />
+		</StreamTransformer>
+	</StreamTransformers>
