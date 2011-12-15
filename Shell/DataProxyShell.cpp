@@ -13,6 +13,7 @@
 #include "DataProxyShell.hpp"
 #include "DataProxyShellConfig.hpp"
 #include "DataProxyClient.hpp"
+#include "MVLogger.hpp"
 
 int main(int argc, char* argv[]) 
 {
@@ -62,6 +63,7 @@ int main(int argc, char* argv[])
 	}
 	catch( const std::exception& i_rEx )
 	{
+		MVLOGGER( "root.lib.DataProxy.Shell.Exception", "Caught exception while processing request: " << i_rEx.what() );
 		std::cerr << i_rEx.what() << std::endl;
 		return 1;
 	}
