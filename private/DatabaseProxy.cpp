@@ -814,16 +814,35 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 		}
 		statement.CompleteBinding();
 
+		// issue the pre-statement query if one exists
+		if (!m_PreStatement.IsNull())
+		{
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing configured pre-statement: " << m_PreStatement );
+			Database::Statement( rTransactionDatabase, ProxyUtilities::GetVariableSubstitutedString( m_PreStatement, i_rParameters ) ).Execute();
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Finished", "pre-statement complete");
+		}
+
+		// perform a single execute if we don't need to do more
+		// (this should only happen if we're ignoring the stream & operating solely off parameters)
 		if( !needToRead )
 		{
 			statement.Execute();
 		}
 		else
 		{
+			// otherwise, execute the statement for every row in the incoming data
 			while( reader.NextRow() )
 			{
 				statement.Execute();
 			}
+		}
+
+		// issue the post-statement query if one exists
+		if (!m_PostStatement.IsNull())
+		{
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing configured post-statement: " << m_PostStatement );
+			Database::Statement( rTransactionDatabase, ProxyUtilities::GetVariableSubstitutedString( m_PostStatement, i_rParameters ) ).Execute();
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Finished", "post-statement complete");
 		}
 	}
 	else	// bulk-loading mode (uses staging table)
@@ -898,7 +917,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 				// issue the pre-statement query if one exists
 				if (!m_PreStatement.IsNull())
 				{
-					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing pre-statement supplied in the DPL config file: " << m_PreStatement );
+					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing configured pre-statement: " << m_PreStatement );
 					Database::Statement( rTransactionDatabase, ProxyUtilities::GetVariableSubstitutedString( m_PreStatement, i_rParameters ) ).Execute();
 					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Finished", "pre-statement complete");
 				}
@@ -911,7 +930,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 				// issue the post-statement query if one exists
 				if (!m_PostStatement.IsNull())
 				{
-					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing post-statement supplied in the DPL config file: " << m_PostStatement );
+					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing configured post-statement: " << m_PostStatement );
 					Database::Statement( rTransactionDatabase, ProxyUtilities::GetVariableSubstitutedString( m_PostStatement, i_rParameters ) ).Execute();
 					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Finished", "post-statement complete");
 				}
@@ -950,7 +969,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 				// issue the pre-statement query if one exists
 				if (!m_PreStatement.IsNull())
 				{
-					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing pre-statement supplied in the DPL config file: " << m_PreStatement );
+					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing configured pre-statement: " << m_PreStatement );
 					Database::Statement( rTransactionDatabase, ProxyUtilities::GetVariableSubstitutedString( m_PreStatement, i_rParameters ) ).Execute();
 					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Finished", "pre-statement complete");
 				}
@@ -963,7 +982,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 				// issue the post-statement query if one exists
 				if (!m_PostStatement.IsNull())
 				{
-					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing post-statement supplied in the DPL config file: " << m_PostStatement );
+					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing configured post-statement: " << m_PostStatement );
 					Database::Statement( rTransactionDatabase, ProxyUtilities::GetVariableSubstitutedString( m_PostStatement, i_rParameters ) ).Execute();
 					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Finished", "post-statement complete");
 				}

@@ -56,10 +56,12 @@ private:
 	CPPUNIT_TEST( testOracleStoreWithPreStatement );
 	CPPUNIT_TEST( testOracleStoreWithPostStatement );
 	CPPUNIT_TEST( testOracleStoreWithBothPreStatementAndPostStatement );
+	CPPUNIT_TEST( testOracleStoreWithBothPreStatementAndPostStatementNoStaging );
 
 	CPPUNIT_TEST( testMySqlStoreWithPreStatement );
 	CPPUNIT_TEST( testMySqlStoreWithPostStatement );
 	CPPUNIT_TEST( testMySqlStoreWithBothPreStatementAndPostStatement );
+	CPPUNIT_TEST( testMySqlStoreWithBothPreStatementAndPostStatementNoStaging );
 
 	CPPUNIT_TEST( testOracleDelete );
 	CPPUNIT_TEST( testMySQLDelete );
@@ -113,10 +115,12 @@ public:
 	void testOracleStoreWithPreStatement();
 	void testOracleStoreWithPostStatement();
 	void testOracleStoreWithBothPreStatementAndPostStatement();
+	void testOracleStoreWithBothPreStatementAndPostStatementNoStaging();
 
 	void testMySqlStoreWithPreStatement();
 	void testMySqlStoreWithPostStatement();
 	void testMySqlStoreWithBothPreStatementAndPostStatement();
+	void testMySqlStoreWithBothPreStatementAndPostStatementNoStaging();
 
 	void testOracleDelete();
 	void testMySQLDelete();

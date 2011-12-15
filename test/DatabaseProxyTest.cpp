@@ -3024,6 +3024,76 @@ void DatabaseProxyTest::testOracleStoreWithBothPreStatementAndPostStatement()
 
 }
 
+void DatabaseProxyTest::testOracleStoreWithBothPreStatementAndPostStatementNoStaging()
+{
+	MockDataProxyClient client;
+	MockDatabaseConnectionManager dbManager;
+	dbManager.InsertConnection("myOracleConnection", m_pOracleDB);
+
+	// create primary & staging tables
+	Database::Statement(*m_pOracleDB, GetOracleTableDDL("kna")).Execute();
+
+	//Create a Database XML node
+	std::string xmlContents
+	(
+		"<DataNode type = \"db\" >\n"
+		" <Write connection=\"myOracleConnection\"\n"
+		"        table=\"kna\"\n"
+		"        pre-statement=\"insert into kna (media_id,website_id,impressions,revenue,dummy,myConstant) VALUES (1000,2000,3999,4999,5999,${preConstant})\"\n"
+		"        post-statement=\"update kna set myConstant=${postConstant}\">\n"
+		"    <Columns>\n"
+		"      <Column name=\"media_id\" type=\"key\" />\n"
+		"      <Column name=\"website_id\" type=\"key\" />\n"
+		"      <Column name=\"impressions\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"revenue\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"dummy\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"myConstant\" type=\"data\" ifNew=\"%v\" />\n"
+		"	 </Columns>\n"
+		" </Write>\n"
+		"</DataNode>\n"
+	);
+
+	//the data to be stored
+	std::string data
+	(
+		"media_id,website_id,impressions,revenue,dummy,myConstant\n"
+		"1001,2001,3001,4001,5001,6001\n"
+		"1000,2000,3000,4000,5000,6000\n"
+	);
+
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents, "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	boost::scoped_ptr< DatabaseProxy > pProxy;
+	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+
+	std::map< std::string, std::string > parameters;
+	parameters["preConstant"] = "6999";
+	parameters["postConstant"] = "42";
+	std::stringstream dataStream(data);
+
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+	CPPUNIT_ASSERT_NO_THROW(pProxy->Store(parameters, dataStream));
+
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+
+	std::string expectedAfterCommit
+	(
+		"1000,2000,3999,4999,5999,42\n"
+		"1001,2001,3001,4001,5001,42\n"
+	);
+
+	//the following verifies that:
+	//a. 'pre-statement' was executed
+	//b. 'post-statement' was executed
+	//c.  the upload was executed
+	//d. the order was: 'pre-statement', upload, 'post-statement'
+	CPPUNIT_ASSERT_NO_THROW( pProxy->Commit() );
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expectedAfterCommit, *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+
+}
+
 void DatabaseProxyTest::testMySqlStoreWithPreStatement()
 {
 	MockDataProxyClient client;
@@ -3182,6 +3252,76 @@ void DatabaseProxyTest::testMySqlStoreWithBothPreStatementAndPostStatement()
 		"        stagingTable=\"stg_kna\"\n"
 		"        workingDir=\"" + m_pTempDir->GetDirectoryName() + "\"\n"
 		"        noCleanUp=\"true\"\n"
+		"        pre-statement=\"insert into kna (media_id,website_id,impressions,revenue,dummy,myConstant) VALUES (1000,2000,3999,4999,5999,${preConstant})\"\n"
+		"        post-statement=\"update kna set myConstant=${postConstant}\">\n"
+		"    <Columns>\n"
+		"      <Column name=\"media_id\" type=\"key\" />\n"
+		"      <Column name=\"website_id\" type=\"key\" />\n"
+		"      <Column name=\"impressions\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"revenue\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"dummy\" type=\"data\" ifNew=\"%v\" />\n"
+		"      <Column name=\"myConstant\" type=\"data\" ifNew=\"%v\" />\n"
+		"	 </Columns>\n"
+		" </Write>\n"
+		"</DataNode>\n"
+	);
+
+	//the data to be stored
+	std::string data
+	(
+		"media_id,website_id,impressions,revenue,dummy,myConstant\n"
+		"1001,2001,3001,4001,5001,6001\n"
+		"1000,2000,3000,4000,5000,6000\n"
+	);
+
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents, "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	boost::scoped_ptr< DatabaseProxy > pProxy;
+	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+
+	std::map< std::string, std::string > parameters;
+	parameters["preConstant"] = "6999";
+	parameters["postConstant"] = "42";
+	std::stringstream dataStream(data);
+
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+	CPPUNIT_ASSERT_NO_THROW(pProxy->Store(parameters, dataStream));
+
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+
+	std::string expectedAfterCommit
+	(
+		"1000,2000,3999,4999,5999,42\n"
+		"1001,2001,3001,4001,5001,42\n"
+	);
+
+	//the following verifies that:
+	//a. 'pre-statement' was executed
+	//b. 'post-statement' was executed
+	//c.  the upload was executed
+	//d. the order was: 'pre-statement', upload, 'post-statement'
+	CPPUNIT_ASSERT_NO_THROW( pProxy->Commit() );
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expectedAfterCommit, *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+
+}
+
+void DatabaseProxyTest::testMySqlStoreWithBothPreStatementAndPostStatementNoStaging()
+{
+	MockDataProxyClient client;
+	MockDatabaseConnectionManager dbManager;
+	dbManager.InsertConnection("myMySQLConnection", m_pMySQLDB);
+
+	// create primary & staging tables
+	Database::Statement(*m_pMySQLDB, GetMySqlTableDDL("kna")).Execute();
+
+	//Create a Database XML node
+	std::string xmlContents
+	(
+		"<DataNode type = \"db\" >\n"
+		" <Write connection=\"myMySQLConnection\"\n"
+		"        table=\"kna\"\n"
 		"        pre-statement=\"insert into kna (media_id,website_id,impressions,revenue,dummy,myConstant) VALUES (1000,2000,3999,4999,5999,${preConstant})\"\n"
 		"        post-statement=\"update kna set myConstant=${postConstant}\">\n"
 		"    <Columns>\n"
