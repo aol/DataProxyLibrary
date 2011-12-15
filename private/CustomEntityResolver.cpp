@@ -11,6 +11,7 @@
 #include "CustomEntityResolver.hpp"
 #include "XMLUtilities.hpp"
 #include "MVLogger.hpp"
+#include "FileUtilities.hpp"
 #include <xercesc/framework/LocalFileInputSource.hpp>
 
 namespace
@@ -41,6 +42,10 @@ xercesc::InputSource* CustomEntityResolver::resolveEntity( const XMLCh* const i_
 	if( i_PublicId != NULL )
 	{
 		msg << " with public id: " <<  XMLUtilities::XMLChToString( i_PublicId );
+	}
+	if( !FileUtilities::DoesExist( systemId ) )
+	{
+		MV_THROW( EntityResolverException, "Unable to find SYSTEM entity: " << systemId );
 	}
 	MVLOGGER( "root.lib.DataProxy.CustomEntityResolver.ResolveEntity.LocalFileInput", msg.str() );
 	return new LocalFileInputSource( i_SystemId );
