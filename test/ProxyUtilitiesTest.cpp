@@ -627,7 +627,7 @@ void ProxyUtilitiesTest::testGetNoStageQuery_FullMerge_MySql()
 	expected << "INSERT INTO myTable( key1, key2, data3, data5, dummy ) "
 			 << "SELECT ? AS key1, ? AS key2, NVL(?,%t) AS data3, ? AS data5, 10 AS dummy FROM dual "
 			 << "ON DUPLICATE KEY UPDATE "
-			 	<< "myTable.data3 = myTable.data3 + NVL(data3,0), "
+			 	<< "myTable.data3 = myTable.data3 + NVL(?,0), "
 				<< "myTable.data4 = myTable.data4 + ?, "
 				<< "myTable.dummy = 20";
 
@@ -649,7 +649,7 @@ void ProxyUtilitiesTest::testGetNoStageQuery_FullMerge_MySql()
 	CPPUNIT_ASSERT_EQUAL( std::string("data4"), columns["DATA4"] );
 	CPPUNIT_ASSERT_EQUAL( std::string("data5"), columns["data5"] );
 
-	CPPUNIT_ASSERT_EQUAL( size_t(5), bindColumns.size() );
+	CPPUNIT_ASSERT_EQUAL( size_t(6), bindColumns.size() );
 	CPPUNIT_ASSERT( std::find( bindColumns.begin(), bindColumns.end(), std::string("KEY1") ) != bindColumns.end() );
 	CPPUNIT_ASSERT( std::find( bindColumns.begin(), bindColumns.end(), std::string("key2") ) != bindColumns.end() );
 	CPPUNIT_ASSERT( std::find( bindColumns.begin(), bindColumns.end(), std::string("data3") ) != bindColumns.end() );
@@ -659,7 +659,8 @@ void ProxyUtilitiesTest::testGetNoStageQuery_FullMerge_MySql()
 	CPPUNIT_ASSERT_EQUAL( std::string("key2"), bindColumns[1] );
 	CPPUNIT_ASSERT_EQUAL( std::string("data3"), bindColumns[2] );
 	CPPUNIT_ASSERT_EQUAL( std::string("data5"), bindColumns[3] );
-	CPPUNIT_ASSERT_EQUAL( std::string("DATA4"), bindColumns[4] );
+	CPPUNIT_ASSERT_EQUAL( std::string("data3"), bindColumns[4] );
+	CPPUNIT_ASSERT_EQUAL( std::string("DATA4"), bindColumns[5] );
 }
 
 void ProxyUtilitiesTest::testGetNoStageQuery_InsertOnly()

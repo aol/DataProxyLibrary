@@ -179,9 +179,9 @@ namespace
 				result << ", ";
 			}
 			std::string value( iter->GetValue< Expression >() );
-			std::string newValueReplacement( GetPrefixedColumn( iter->GetValue< Name >(), i_rStagingTable, true ) );
-			// if we're not in staging-table mode, we have a list of bind columns, and this column has NOT already been bound, then use a BIND_VAR
-			if( i_rStagingTable.empty() && o_pBindColumns != NULL && std::find( o_pBindColumns->begin(), o_pBindColumns->end(), iter->GetValue< Name >() ) == o_pBindColumns->end() )
+			std::string newValueReplacement( GetPrefixedColumn( iter->GetValue< Name >(), i_rStagingTable ) );
+			// if we're not in staging-table mode, and we have a list of bind columns, then use a BIND_VAR
+			if( i_rStagingTable.empty() && o_pBindColumns != NULL )
 			{
 				newValueReplacement = BIND_VAR;
 				o_pBindColumns->push_back( iter->GetValue< Name >() );
