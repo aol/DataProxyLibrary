@@ -915,12 +915,12 @@ void ProxyUtilitiesTest::testGetNoStageQuery_Match_MySql()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	std::stringstream expected;
-	expected << "UPDATE myTable, ( SELECT ? AS key1, ? AS key2, ? AS data3, ? AS data4 FROM dual )"
-			 << "  SET "
-			 	<< "myTable.data3 = myTable.data3 + NVL(data3,0), "
-			 	<< "myTable.data4 = myTable.data4 + data4, "
+	expected << "UPDATE myTable, ( SELECT ? AS key1, ? AS key2, ? AS data3, ? AS data4 FROM dual ) tmp"
+			 << " SET "
+			 	<< "myTable.data3 = myTable.data3 + NVL(tmp.data3,0), "
+			 	<< "myTable.data4 = myTable.data4 + tmp.data4, "
 				<< "myTable.dummy = 20"
-			 << " WHERE myTable.key1 = key1 AND myTable.key2 = key2";
+			 << " WHERE myTable.key1 = tmp.key1 AND myTable.key2 = tmp.key2";
 
 	std::map< std::string, std::string > columns;
 	std::vector< std::string > bindColumns;

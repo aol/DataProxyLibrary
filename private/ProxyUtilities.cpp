@@ -548,9 +548,10 @@ std::string ProxyUtilities::GetMergeQuery( const std::string& i_rDatabaseType,
 	}
 	else
 	{
-		result << "UPDATE " << i_rTable << ", " << GetDummyQueryIfNeeded( keyColumns, valueDataColumns, i_rStagingTable, &bindColumns ) << i_rStagingTable
-			   << " SET " << GetResolvedEqualityList( ifMatchedColumns, i_rStagingTable, i_rTable )
-			   << " WHERE " << GetEqualityList( keyColumns, i_rStagingTable, i_rTable, " AND " );
+		std::string resolvedStagingTable = ( i_rStagingTable.empty() ? DUMMY_STAGING : i_rStagingTable );
+		result << "UPDATE " << i_rTable << ", " << GetDummyQueryIfNeeded( keyColumns, valueDataColumns, i_rStagingTable, &bindColumns ) << resolvedStagingTable
+			   << " SET " << GetResolvedEqualityList( ifMatchedColumns, resolvedStagingTable, i_rTable )
+			   << " WHERE " << GetEqualityList( keyColumns, resolvedStagingTable, i_rTable, " AND " );
 	}
 
 	SetOutgoingBindColumns( o_pBindColumns, bindColumns, o_rRequiredColumns );

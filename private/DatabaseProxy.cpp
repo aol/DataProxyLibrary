@@ -781,7 +781,8 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 		{
 			databaseType = m_rDatabaseConnectionManager.GetDatabaseType( m_WriteConnectionName );
 		}
-		Database::Statement statement( rTransactionDatabase, ( databaseType == ORACLE_DB_TYPE ? oracleMergeQuery : mysqlMergeQuery ) );
+		std::string sql( databaseType == ORACLE_DB_TYPE ? oracleMergeQuery : mysqlMergeQuery );
+		Database::Statement statement( rTransactionDatabase, sql );
 
 		// create a vector for all necessary pieces of data
 		std::vector< std::string > dataColumns( m_WriteBindColumns.size() );
@@ -826,15 +827,21 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 		// (this should only happen if we're ignoring the stream & operating solely off parameters)
 		if( !needToRead )
 		{
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Statement.Begin", "Executing the following statement once (since all fields have been provided via parameters: " << sql );
 			statement.Execute();
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Statement.Finished", "Statement finished" );
 		}
 		else
 		{
 			// otherwise, execute the statement for every row in the incoming data
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Statement.Begin", "Executing the following statement for every piece of input: " << sql );
+			long long i=0;
 			while( reader.NextRow() )
 			{
 				statement.Execute();
+				++i;
 			}
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Statement.Finished", "Statement finished executing " << i << " times" );
 		}
 
 		// issue the post-statement query if one exists
