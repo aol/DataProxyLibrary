@@ -71,8 +71,7 @@ namespace
 	const std::string LOG_EXTENSION( ".log" );
 	const uint MAX_FILES( 1024 );
 
-	//Disclaimer: this max string length is pretty arbitary. Not sure of the performance implications of increasing it.
-	const int DEFAULT_MAX_BIND_SIZE ( 64 );
+	const int DEFAULT_MAX_BIND_SIZE ( 256 );
 
 	void FillSet( const std::map< std::string, std::string >& i_rMap, std::set< std::string >& o_rSet )
 	{
@@ -340,6 +339,7 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 	m_ReadRecordSeparator( "\n" ),
 	m_ReadConnectionByTable( false ),
 	m_WriteEnabled( false ),
+	m_WriteMaxBindSize( DEFAULT_MAX_BIND_SIZE ),
 	m_WriteConnectionName(),
 	m_WriteTable(),
 	m_WriteStagingTable(),
@@ -384,6 +384,7 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 	allowedReadAttributes.insert(RECORD_SEPARATOR_ATTRIBUTE);
 	allowedWriteAttributes.insert( CONNECTION_ATTRIBUTE );
 	allowedWriteAttributes.insert( CONNECTION_BY_TABLE_ATTRIBUTE );
+	allowedWriteAttributes.insert( MAX_BIND_SIZE_ATTRIBUTE );
 	allowedWriteAttributes.insert( TABLE_ATTRIBUTE );
 	allowedWriteAttributes.insert( STAGING_TABLE_ATTRIBUTE );
 	allowedWriteAttributes.insert( WORKING_DIR_ATTRIBUTE );
@@ -491,6 +492,11 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 		m_WriteLocalDataFile = GetBool( *pNode, LOCAL_DATA_ATTRIBUTE, true );
 		m_WriteNoCleanUp = GetBool( *pNode, NO_CLEAN_UP_ATTRIBUTE, false );
 
+		pAttribute = XMLUtilities::GetAttribute( pNode, MAX_BIND_SIZE_ATTRIBUTE );
+		if( pAttribute != NULL )
+		{
+			m_WriteMaxBindSize = boost::lexical_cast< int >( XMLUtilities::XMLChToString(pAttribute->getValue()) );
+		}
 		pAttribute = XMLUtilities::GetAttribute( pNode, MAX_TABLE_NAME_LENGTH_ATTRIBUTE );
 		if( pAttribute != NULL )
 		{
@@ -811,7 +817,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			{
 				MV_THROW( DatabaseProxyException, "Unable to find column: " << *iter << " in incoming data or parameters" );
 			}
-			statement.BindVar( dataColumns[i], DEFAULT_MAX_BIND_SIZE );
+			statement.BindVar( dataColumns[i], m_WriteMaxBindSize );
 		}
 		statement.CompleteBinding();
 

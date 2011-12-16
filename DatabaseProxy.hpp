@@ -57,6 +57,7 @@ private:
 
 	// write settings
 	bool m_WriteEnabled;
+	int m_WriteMaxBindSize;
 	std::string m_WriteConnectionName;
 	std::string m_WriteTable;
 	std::string m_WriteStagingTable;

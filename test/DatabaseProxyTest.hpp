@@ -42,7 +42,9 @@ private:
 	CPPUNIT_TEST( testOracleStore );
 	CPPUNIT_TEST( testMySqlStore );
 	CPPUNIT_TEST( testOracleStoreNoStaging );
+	CPPUNIT_TEST( testOracleStoreNoStagingMaxBindSize );
 	CPPUNIT_TEST( testMySqlStoreNoStaging );
+	CPPUNIT_TEST( testMySqlStoreNoStagingMaxBindSize );
 	CPPUNIT_TEST( testMySqlStoreDynamicTables );
 	CPPUNIT_TEST( testOracleStoreDynamicTables );
 	CPPUNIT_TEST( testDynamicTableNameLength );
@@ -100,9 +102,11 @@ public:
 
 	void testOracleStore();
 	void testOracleStoreNoStaging();
+	void testOracleStoreNoStagingMaxBindSize();
 	void testOracleMultipleStore();
 	void testMySqlStore();
 	void testMySqlStoreNoStaging();
+	void testMySqlStoreNoStagingMaxBindSize();
 	void testMySqlMultipleStore();
 	void testMySqlStoreDynamicTables();
 	void testOracleStoreDynamicTables();
