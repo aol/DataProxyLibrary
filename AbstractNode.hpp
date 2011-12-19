@@ -81,6 +81,7 @@ private:
 	DATUMINFO( IncludeNodeNameAsParameter, Nullable<std::string> );
 	DATUMINFO( UseTranslatedParameters, bool );
 	DATUMINFO( UseTransformedStream, bool );
+	DATUMINFO( LogCritical, bool );
 
 	typedef
 		GenericDatum< Translator,					// parameter translator
@@ -92,7 +93,8 @@ private:
 		GenericDatum< IncludeNodeNameAsParameter,	// failure forwarding: include node name as parameters
 		GenericDatum< UseTranslatedParameters,		// failure forwarding: use translated params (or original)
 		GenericDatum< UseTransformedStream,			// failure forwarding: use transformed stream (or original)
-		RowEnd > > > > > > > > >
+		GenericDatum< LogCritical,					// failure forwarding: log an error (vs. warning)
+		RowEnd > > > > > > > > > >
 	NodeConfigDatum;
 
 	typedef

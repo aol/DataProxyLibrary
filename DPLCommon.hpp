@@ -24,6 +24,7 @@ const std::string LOCATION_ATTRIBUTE( "location" );
 const std::string RETRY_COUNT_ATTRIBUTE( "retryCount" );
 const std::string RETRY_DELAY_ATTRIBUTE( "retryDelay" );
 const std::string FORWARD_TO_ATTRIBUTE( "forwardTo" );
+const std::string LOG_CRITICAL_ATTRIBUTE( "logCritical" );
 const std::string FORWARD_TRANSLATED_PARAMETERS_ATTRIBUTE( "forwardTranslatedParameters" );
 const std::string FORWARD_TRANSFORMED_STREAM_ATTRIBUTE( "forwardTransformedStream" );
 const std::string INCLUDE_NAME_AS_PARAMETER_ATTRIBUTE( "includeNameAsParameter" );

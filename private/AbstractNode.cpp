@@ -77,10 +77,13 @@ AbstractNode::AbstractNode( const std::string& i_rName, DataProxyClient& i_rPare
 	// set defaults
 	m_ReadConfig.SetValue< RetryCount >( 0 );
 	m_ReadConfig.SetValue< RetryDelay >( 0.0 );
+	m_ReadConfig.SetValue< LogCritical >( true );
 	m_WriteConfig.SetValue< RetryCount >( 0 );
 	m_WriteConfig.SetValue< RetryDelay >( 0.0 );
+	m_WriteConfig.SetValue< LogCritical >( true );
 	m_DeleteConfig.SetValue< RetryCount >( 0 );
 	m_DeleteConfig.SetValue< RetryDelay >( 0.0 );
+	m_DeleteConfig.SetValue< LogCritical >( true );
 
 	// Validate 
 	
@@ -129,7 +132,6 @@ AbstractNode::AbstractNode( const std::string& i_rName, DataProxyClient& i_rPare
 		SetConfig( *pNode, m_DeleteConfig );
 		if( m_DeleteConfig.GetValue< UseTransformedStream >() )
 		{
-			
 			MVLOGGER( "root.lib.DataProxy.DataProxyClient.Delete.ForwardTransform", "Attribute forwardTransformedStream in Delete node"
 				<< " has been set to \"true\" but Delete nodes do not accept stream transformers. This attribute will be ignored." );
 		}
@@ -187,15 +189,18 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 				// if we have some attempts left, clear & seek the output
 				if( i < m_ReadConfig.GetValue< RetryCount >() )
 				{
-					MVLOGGER( "root.lib.DataProxy.DataProxyClient.Load.Exception", "Caught exception while issuing load request: " << ex.what() );
 					tempIOStream.str("");
 					tempIOStream.clear();
 
+					std::stringstream msg;
+					msg << "Caught exception while issuing load request: " << ex.what() << ". Retrying request";
+
 					if( m_ReadConfig.GetValue< RetryDelay >() > 0.0 )
 					{
-						MVLOGGER( "root.lib.DataProxy.DataProxyClient.Load.RetryDelay", "Sleeping for " <<  m_ReadConfig.GetValue< RetryDelay >() << " seconds before retrying" );
+						msg << " after " << m_ReadConfig.GetValue< RetryDelay >() << " seconds";
 						::usleep( ulong( m_ReadConfig.GetValue< RetryDelay >() * MICROSECONDS_PER_SECOND ) );
 					}
+					MVLOGGER( "root.lib.DataProxy.DataProxyClient.Load.Retry", msg.str() );
 				}
 				else
 				{
@@ -244,7 +249,14 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 	}
 	catch( const std::exception& ex )
 	{
-		MVLOGGER( "root.lib.DataProxy.DataProxyClient.Load.Exception", "Caught exception while issuing load request: " << ex.what() );
+		if( m_ReadConfig.GetValue< LogCritical >() )
+		{
+			MVLOGGER( "root.lib.DataProxy.DataProxyClient.Load.Error", "Error issuing load request to node: " << m_Name << ": " << ex.what() );
+		}
+		else
+		{
+			MVLOGGER( "root.lib.DataProxy.DataProxyClient.Load.Warning", "There was a non-critical error issuing load request to node: " << m_Name << ": " << ex.what() );
+		}
 
 		// if no forwardTo specified, then just rethrow the exception
 		Nullable< std::string > forwardName = m_ReadConfig.GetValue< ForwardNodeName >();
@@ -322,18 +334,21 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 			}
 			catch( const std::exception& ex )
 			{
-				MVLOGGER( "root.lib.DataProxy.DataProxyClient.Store.Exception", "Caught exception while issuing store request: " << ex.what() );
 				// if we have some attempts left, clear & seek the input
 				if( i < m_WriteConfig.GetValue< RetryCount >() )
 				{
 					pUseData->clear();
 					pUseData->seekg( retryPos );
 
+					std::stringstream msg;
+					msg << "Caught exception while issuing store request: " << ex.what() << ". Retrying request";
+
 					if( m_WriteConfig.GetValue< RetryDelay >() > 0.0 )
 					{
-						MVLOGGER( "root.lib.DataProxy.DataProxyClient.Store.RetryDelay", "Sleeping for " <<  m_WriteConfig.GetValue< RetryDelay >() << " seconds before retrying" );
+						msg << " after " <<  m_WriteConfig.GetValue< RetryDelay >() << " seconds";
 						::usleep( ulong( m_WriteConfig.GetValue< RetryDelay >() * MICROSECONDS_PER_SECOND ) );
 					}
+					MVLOGGER( "root.lib.DataProxy.DataProxyClient.Store.Retry", msg.str() );
 				}
 				else	// otherwise, we're out of retries; throw the exception so failure-forwarding can take place
 				{
@@ -344,6 +359,14 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 	}
 	catch( const std::exception& ex )
 	{
+		if( m_WriteConfig.GetValue< LogCritical >() )
+		{
+			MVLOGGER( "root.lib.DataProxy.DataProxyClient.Store.Error", "Error issuing store request to node: " << m_Name << ": " << ex.what() );
+		}
+		else
+		{
+			MVLOGGER( "root.lib.DataProxy.DataProxyClient.Store.Warning", "There was a non-critical error issuing store request to node: " << m_Name << ": " << ex.what() );
+		}
 		// if no forwardTo specified, then just rethrow the exception
 		Nullable< std::string > forwardName = m_WriteConfig.GetValue< ForwardNodeName >();
 		if( forwardName.IsNull() )
@@ -415,24 +438,35 @@ bool AbstractNode::Delete( const std::map<std::string,std::string>& i_rParameter
 			}
 			catch( const std::exception& ex )
 			{
-				MVLOGGER( "root.lib.DataProxy.DataProxyClient.Delete.Exception", "Caught exception while issuing delete request: " << ex.what() );
 				// if we are out of retries, throw the exception so failure-forwarding can take place
 				if( i >= m_DeleteConfig.GetValue< RetryCount >() )
 				{
 					throw;
 				}
+
+				std::stringstream msg;
+				msg << "Caught exception while issuing delete request: " << ex.what() << ". Retrying request";
+
 				if( m_DeleteConfig.GetValue< RetryDelay >() > 0.0 )
 				{
-					MVLOGGER( "root.lib.DataProxy.DataProxyClient.Delete.RetryDelay", "Sleeping for " <<  m_DeleteConfig.GetValue< RetryDelay >() << " seconds before retrying" );
+					msg << " after " <<  m_DeleteConfig.GetValue< RetryDelay >() << " seconds";
 					::usleep( ulong( m_DeleteConfig.GetValue< RetryDelay >() * MICROSECONDS_PER_SECOND ) );
 				}
+				MVLOGGER( "root.lib.DataProxy.DataProxyClient.Delete.Retry", msg.str() );
 			}
 		}
 	}
 
 	catch( const std::exception& ex )
 	{
-		MVLOGGER( "root.lib.DataProxy.DataProxyClient.Delete.Exception", "Caught exception while issuing delete request: " << ex.what() );
+		if( m_DeleteConfig.GetValue< LogCritical >() )
+		{
+			MVLOGGER( "root.lib.DataProxy.DataProxyClient.Delete.Error", "Error issuing delete request to node: " << m_Name << ": " << ex.what() );
+		}
+		else
+		{
+			MVLOGGER( "root.lib.DataProxy.DataProxyClient.Delete.Warning", "There was a non-critical error issuing delete request to node: " << m_Name << ": " << ex.what() );
+		}
 
 		// if no forwardTo specified, then just rethrow the exception
 		Nullable< std::string > forwardName = m_DeleteConfig.GetValue< ForwardNodeName >();
@@ -524,6 +558,7 @@ void AbstractNode::SetConfig( const xercesc::DOMNode& i_rNode, NodeConfigDatum& 
 	allowedAttributes.insert( INCLUDE_NAME_AS_PARAMETER_ATTRIBUTE );
 	allowedAttributes.insert( FORWARD_TRANSLATED_PARAMETERS_ATTRIBUTE );
 	allowedAttributes.insert( FORWARD_TRANSFORMED_STREAM_ATTRIBUTE );
+	allowedAttributes.insert( LOG_CRITICAL_ATTRIBUTE );
 	pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, ON_FAILURE_NODE );
 
 	if( pNode != NULL )
@@ -576,6 +611,13 @@ void AbstractNode::SetConfig( const xercesc::DOMNode& i_rNode, NodeConfigDatum& 
 		if( pAttribute != NULL && XMLUtilities::XMLChToString(pAttribute->getValue()) == "true" )
 		{
 			o_rConfig.SetValue< UseTransformedStream >( true );
+		}
+		
+		// check for log-critical attribute;
+		pAttribute = XMLUtilities::GetAttribute( pNode, LOG_CRITICAL_ATTRIBUTE );
+		if( pAttribute != NULL && XMLUtilities::XMLChToString(pAttribute->getValue()) == "false" )
+		{
+			o_rConfig.SetValue< LogCritical >( false );
 		}
 	}
 }

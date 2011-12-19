@@ -338,7 +338,6 @@ void AbstractNodeTest::testIllegalXml()
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( TestableNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: garbage in node: Parameter" );
-	
 }
 
 void AbstractNodeTest::testLoad()
@@ -1635,7 +1634,7 @@ void AbstractNodeTest::testDeleteFailureForwarding_UseTranslatedParams_False()
 				<< "      <TranslateParameters>" << std::endl
 				<< "        <Parameter name=\"default1\" valueDefault=\"defaultValue1\" />" << std::endl
 				<< "      </TranslateParameters>" << std::endl
-				<< "      <OnFailure forwardTo=\"failureName\" forwardTranslatedParameters=\"false\" />" << std::endl
+				<< "      <OnFailure forwardTo=\"failureName\" forwardTranslatedParameters=\"false\" logCritical=\"true\" />" << std::endl
 				<< "    </Delete>" << std::endl
 				<< "  </DataNode>" << std::endl;
 	std::vector<xercesc::DOMNode*> nodes;
@@ -1664,7 +1663,7 @@ void AbstractNodeTest::testDeleteFailureForwarding_UseTranslatedParams_True()
 				<< "      <TranslateParameters>" << std::endl
 				<< "        <Parameter name=\"default1\" valueDefault=\"defaultValue1\" />" << std::endl
 				<< "      </TranslateParameters>" << std::endl
-				<< "      <OnFailure forwardTo=\"failureName\" forwardTranslatedParameters=\"true\" />" << std::endl
+				<< "      <OnFailure forwardTo=\"failureName\" forwardTranslatedParameters=\"true\" logCritical=\"false\" />" << std::endl
 				<< "    </Delete>" << std::endl
 				<< "  </DataNode>" << std::endl;
 	std::vector<xercesc::DOMNode*> nodes;
