@@ -1159,3 +1159,34 @@ void DataProxyClientTest::testConfigFileMissing()
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( client.Initialize( fileSpec, factory ), DataProxyClientException,
 		".*:\\d+: Cannot find config file: randomfilenotexist" );
 }
+
+void DataProxyClientTest::testBadXml()
+{
+	DataProxyClient client;
+
+	std::string configFileSpec( m_pTempDir->GetDirectoryName() + "/dataProxyConfig.xml" );
+	std::ofstream file( configFileSpec.c_str() );
+	file << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" << std::endl
+		 << "<!DOCTYPE doc[" << std::endl
+		 << "<!ENTITY something \"blah\" >" << std::endl
+		 << ">]" << std::endl	// this should be ]>
+		 << "<DPLConfig>" << std::endl
+		 << "  <DataNode name=\"t\" type=\"local\" location=\"./\" />" << std::endl
+		 << "</DPLConfig>" << std::endl;
+	file.close();
+
+	// make sure the bad xml throws a descriptive exception
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( client.Initialize( configFileSpec ), DataProxyClientException,
+		".*:\\d+: Error parsing file: .*: Invalid character in internal subset.*" );
+
+	file.open( configFileSpec.c_str() );
+	file << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" << std::endl
+		 << "<DPLConfig>" << std::endl
+		 << "  <DataNode name=\"t\" type=\"lo<cal\" location=\"./\" />" << std::endl
+		 << "</DPLConfig>" << std::endl;
+	file.close();
+
+	// make sure the bad xml throws a descriptive exception
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( client.Initialize( configFileSpec ), DataProxyClientException,
+		".*:\\d+: Error parsing file: .*: A '<' character cannot be used in attribute.*" );
+}

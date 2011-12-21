@@ -95,29 +95,40 @@ namespace
 
 	std::string GetMD5( const std::string& i_rConfigFileSpec )
 	{
-		xercesc::XercesDOMParser parser;
-		xercesc::HandlerBase errorHandler;
-		CustomEntityResolver entityResolver;
-		xercesc::DOMDocument* pDocument = NULL;
-		xercesc::DOMElement* pConfig = NULL;
+		try
+		{
+			xercesc::XercesDOMParser parser;
+			xercesc::HandlerBase errorHandler;
+			CustomEntityResolver entityResolver;
+			xercesc::DOMDocument* pDocument = NULL;
+			xercesc::DOMElement* pConfig = NULL;
 
-		parser.setErrorHandler( &errorHandler );
-		parser.setEntityResolver( &entityResolver );
-		parser.setCreateEntityReferenceNodes( false );
-		parser.parse( i_rConfigFileSpec.c_str() );
+			parser.setErrorHandler( &errorHandler );
+			parser.setEntityResolver( &entityResolver );
+			parser.setCreateEntityReferenceNodes( false );
+			parser.parse( i_rConfigFileSpec.c_str() );
 
-		pDocument = parser.getDocument();
-		pConfig = pDocument->getDocumentElement();
+			pDocument = parser.getDocument();
+			pConfig = pDocument->getDocumentElement();
 
-		xercesc::DOMImplementation* pImpl = DOMImplementationRegistry::getDOMImplementation( XercesString( "LS" ) );
-		xercesc::MemBufFormatTarget target;
-		ScopedReleasePtr< DOMWriter > pSerializer( ((DOMImplementationLS*)pImpl)->createDOMWriter() );
-		pSerializer->setFeature(XMLUni::fgDOMWRTFormatPrettyPrint, false);
-		pSerializer->setFeature(XMLUni::fgDOMWRTDiscardDefaultContent, true);
-		pSerializer->writeNode( &target, *pDocument );
-		std::stringstream data;
-		data << target.getRawBuffer();
-		return MVUtility::GetMD5( data.str() );
+			xercesc::DOMImplementation* pImpl = DOMImplementationRegistry::getDOMImplementation( XercesString( "LS" ) );
+			xercesc::MemBufFormatTarget target;
+			ScopedReleasePtr< DOMWriter > pSerializer( ((DOMImplementationLS*)pImpl)->createDOMWriter() );
+			pSerializer->setFeature(XMLUni::fgDOMWRTFormatPrettyPrint, false);
+			pSerializer->setFeature(XMLUni::fgDOMWRTDiscardDefaultContent, true);
+			pSerializer->writeNode( &target, *pDocument );
+			std::stringstream data;
+			data << target.getRawBuffer();
+			return MVUtility::GetMD5( data.str() );
+		}
+		catch( const xercesc::SAXParseException& ex )
+		{
+			MV_THROW( DataProxyClientException, "Error parsing file: " << i_rConfigFileSpec << ": " << xercesc::XMLString::transcode( ex.getMessage() ) );
+		}
+		catch( const xercesc::XMLException& ex )
+		{
+			MV_THROW( DataProxyClientException, "Error parsing file: " << i_rConfigFileSpec << ": " << xercesc::XMLString::transcode( ex.getMessage() ) );
+		}
 	}
 }
 

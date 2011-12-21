@@ -44,6 +44,7 @@ private:
 	CPPUNIT_TEST( testEntityResolution );
 	CPPUNIT_TEST( testConfigFileMD5 );
 	CPPUNIT_TEST( testConfigFileMissing );
+	CPPUNIT_TEST( testBadXml );
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -76,6 +77,7 @@ public:
 	void testEntityResolution();
 	void testConfigFileMD5();
 	void testConfigFileMissing();
+	void testBadXml();
 
 private:
 	boost::scoped_ptr< TempDirectory > m_pTempDir;
