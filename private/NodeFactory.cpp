@@ -41,49 +41,59 @@ NodeFactory::~NodeFactory()
 
 AbstractNode* NodeFactory::CreateNode( const std::string& i_rName, const std::string& i_rNodeType, const xercesc::DOMNode& i_rNode )
 {
-	if( i_rNodeType == DATA_NODE )
+	try
 	{
-		std::string type = XMLUtilities::GetAttributeValue( &i_rNode, TYPE_ATTRIBUTE );
-		if( type == REST )
+		if( i_rNodeType == DATA_NODE )
 		{
-			return new RestDataProxy( i_rName, m_rParent, i_rNode );
-		}
-		else if( type == LOCAL )
-		{
-			return new LocalFileProxy( i_rName, m_rParent, i_rNode, m_UniqueIdGenerator );
-		}
-		else if( type == DB )
-		{
-			if( m_pDatabaseConnectionManager == NULL )
+			std::string type = XMLUtilities::GetAttributeValue( &i_rNode, TYPE_ATTRIBUTE );
+			if( type == REST )
 			{
-				MV_THROW( NodeFactoryException, "Attempted to construct a DatabaseProxy without first having registered a DatabaseConnectionManager" );
+				return new RestDataProxy( i_rName, m_rParent, i_rNode );
 			}
-			return new DatabaseProxy( i_rName, m_rParent, i_rNode, *m_pDatabaseConnectionManager );
+			else if( type == LOCAL )
+			{
+				return new LocalFileProxy( i_rName, m_rParent, i_rNode, m_UniqueIdGenerator );
+			}
+			else if( type == DB )
+			{
+				if( m_pDatabaseConnectionManager == NULL )
+				{
+					MV_THROW( NodeFactoryException, "Attempted to construct a DatabaseProxy without first having registered a DatabaseConnectionManager" );
+				}
+				return new DatabaseProxy( i_rName, m_rParent, i_rNode, *m_pDatabaseConnectionManager );
+			}
+			else if( type == EXE )
+			{
+				return new ExecutionProxy( i_rName, m_rParent, i_rNode );
+			}
+			else
+			{
+				MV_THROW( NodeFactoryException, "Attempted to construct unknown proxy type: " << type );
+			}
 		}
-		else if( type == EXE )
+		else if( i_rNodeType == ROUTER_NODE )
 		{
-			return new ExecutionProxy( i_rName, m_rParent, i_rNode );
+			return new RouterNode( i_rName, m_rParent, i_rNode );
+		}
+		else if( i_rNodeType == PARTITION_NODE )
+		{
+			return new PartitionNode( i_rName, m_rParent, i_rNode );
+		}
+		else if( i_rNodeType == JOIN_NODE )
+		{
+			return new JoinNode( i_rName, m_rParent, i_rNode );
 		}
 		else
 		{
-			MV_THROW( NodeFactoryException, "Attemped to construct unknown proxy type: " << type );
+			MV_THROW( NodeFactoryException, "Attempted to construct unknown node type: " << i_rNodeType );
 		}
 	}
-	else if( i_rNodeType == ROUTER_NODE )
+	catch( MVException& i_rException )
 	{
-		return new RouterNode( i_rName, m_rParent, i_rNode );
-	}
-	else if( i_rNodeType == PARTITION_NODE )
-	{
-		return new PartitionNode( i_rName, m_rParent, i_rNode );
-	}
-	else if( i_rNodeType == JOIN_NODE )
-	{
-		return new JoinNode( i_rName, m_rParent, i_rNode );
-	}
-	else
-	{
-		MV_THROW( NodeFactoryException, "Attemped to construct unknown node type: " << i_rNodeType );
+		std::stringstream details;
+		details << " while parsing " << i_rNodeType << ": '" << i_rName << "'";
+		i_rException.AppendError( details.str() );
+		throw i_rException;
 	}
 }
 

@@ -8,6 +8,7 @@
 // UPDATED BY:      $Author$
 
 #include "NodeFactoryTest.hpp"
+#include "NodeFactory.hpp"
 #include "PartitionNode.hpp"
 #include "RouterNode.hpp"
 #include "JoinNode.hpp"
@@ -15,6 +16,7 @@
 #include "RestDataProxy.hpp"
 #include "DatabaseProxy.hpp"
 #include "ExecutionProxy.hpp"
+#include "AssertThrowWithMessage.hpp"
 #include "MockDataProxyClient.hpp"
 #include "MockDatabaseConnectionManager.hpp"
 #include "ProxyTestHelpers.hpp"
@@ -59,7 +61,8 @@ void NodeFactoryTest::testCreateNode()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	// undefined type: exception
-	CPPUNIT_ASSERT_THROW( factory.CreateNode( "name", "undefined", *nodes[0] ), NodeFactoryException );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( factory.CreateNode( "name", "undefined", *nodes[0] ), MVException,
+		".*:\\d+: Attempted to construct unknown node type: undefined while parsing undefined: 'name'" );
 	
 	// DataNode: local
 	CPPUNIT_ASSERT_NO_THROW( pNode = factory.CreateNode( "name", "DataNode", *nodes[0] ) );

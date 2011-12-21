@@ -35,6 +35,7 @@ namespace
 	const std::string DATABASE_CONNECTIONS_NODE( "DatabaseConnections" );
 	const std::string STORE_OP( "Store" );
 	const std::string DELETE_OP( "Delete" );
+	const std::string BAD_MD5( "bad-md5" );
 
 	const int READ_PATH = 1;
 	const int WRITE_PATH = 2;
@@ -121,13 +122,9 @@ namespace
 			data << target.getRawBuffer();
 			return MVUtility::GetMD5( data.str() );
 		}
-		catch( const xercesc::SAXParseException& ex )
+		catch( ... )
 		{
-			MV_THROW( DataProxyClientException, "Error parsing file: " << i_rConfigFileSpec << ": " << xercesc::XMLString::transcode( ex.getMessage() ) );
-		}
-		catch( const xercesc::XMLException& ex )
-		{
-			MV_THROW( DataProxyClientException, "Error parsing file: " << i_rConfigFileSpec << ": " << xercesc::XMLString::transcode( ex.getMessage() ) );
+			return BAD_MD5;
 		}
 	}
 }
