@@ -71,7 +71,7 @@ CXXC = $(CXX) $(TARGETOPTS) -c $(INCS) $(DEFINE_FLAGS)	# compiling object files
 CXXT = $(CXX) $(TARGETOPTS) -c $(TESTINCS) $(DEFINE_FLAGS)	# compiling object files
 CXXL = $(CXX) $(TARGETOPTS) $(LIBLOC)					# linking executables
 CXXD = $(CXX) -MM $(TESTINCS) $(DEFINE_FLAGS)				# generating dependencies
-CXXS = $(CXX) -shared -Wl,-soname,$(VERSION_TARGET)
+CXXS = $(CXX) $(LIBLOC) -shared
 
 # Source Directories
 PRIVATEDIR				= private

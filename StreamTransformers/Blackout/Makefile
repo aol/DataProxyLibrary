@@ -71,7 +71,7 @@ LIBLOC=\
 	-L/data/lib \
 
 # Libraries
-LIBS		= -lDataProxy -lDatabase -lLogger -lmyodbc3 -lxerces-c -lpthread -lboost_regex -lboost_filesystem -llog4cxx -lboost_thread -lcurl -lDatabase -lclntsh -lmyodbc3
+LIBS		= -lDataProxy -lLogger -lclntsh -lmyodbc3 -lxerces-c -lpthread -lboost_regex -lboost_filesystem -llog4cxx -lboost_thread -lcurl
 TESTLIBS    = -lcppunit -lTestHelpers -lDatabase -lclntsh -lmyodbc3 
 
 # This is required on the 32 bit platform to prevent recursive
@@ -86,7 +86,7 @@ CXXC = $(CXX) $(TARGETOPTS) -c $(INCS) $(DEFINE_FLAGS)	# compiling object files
 CXXT = $(CXX) $(TARGETOPTS) -c $(TESTINCS) $(DEFINE_FLAGS)	# compiling object files
 CXXL = $(CXX) $(TARGETOPTS) $(LIBLOC)					# linking executables
 CXXD = $(CXX) -MM $(TESTINCS) $(DEFINE_FLAGS)				# generating dependencies
-CXXS = $(CXX) -shared -Wl,-soname,$(VERSION_TARGET)
+CXXS = $(CXX) $(LIBLOC) -shared
 
 # Source Directories
 PRIVATEDIR				= private
@@ -217,7 +217,7 @@ $(TEST_TARGET:%=$(TARGETDIR)/%): $(PRIVATEOBJSPEC) $(TESTOBJSPEC)
 
 # Building libraries & primary targets
 $(TARGETDIR)/$(PRIMARY_TARGET): $(PRIVATEOBJSPEC)
-	$(CXXS) -o $@ $^
+	$(CXXS) -o $@ $^ $(LIBS)
 
 # if necessary, build external libraries.
 extlibs: $(MODULESPEC) $(TESTMODULESPEC)

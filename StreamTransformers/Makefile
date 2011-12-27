@@ -18,3 +18,8 @@ $(NONTEST_TARGETS): $(TRANSFORMERS:%=%/Makefile)
 tests: $(TRANSFORMERS:%=%/Makefile)
 	$(TRANSFORMERS:%=(cd % && $(MAKE) $@ ) && ) true
 	$(TRANSFORMERS:%=(cd % && ./*_$@ ) && ) true
+
+install: opt
+	@test "$(LIB_DIR)" || (echo LIB_DIR must be defined for $@ && false)
+	@test "$(VERSION)" || (echo VERSION must be defined for $@ && false)
+	./install.sh $(VERSION) $(LIB_DIR)
