@@ -46,7 +46,8 @@ MockDataProxyClient::MockDataProxyClient()
 :	DataProxyClient( true ),
 	m_Log(),
 	m_ExceptionNames(),
-	m_DataToReturn()
+	m_DataForNodeParameterAgnostic(),
+	m_DataForNodeAndParameters()
 {
 }
 
@@ -59,6 +60,8 @@ void MockDataProxyClient::Initialize( const std::string& i_rConfigFileSpec )
 	m_Log << "Initialize called with ConfigFileSpec: " << i_rConfigFileSpec << std::endl;
 }
 
+//Mock Load first checks if the tester configured a particular response for the given data node AND parameters.
+//If not, then it checks if there is a response configured for just the data node.
 void MockDataProxyClient::Load( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData ) const
 {
 	m_Log << "Load called with Name: " << i_rName << " Parameters: " << ToString( i_rParameters ) << std::endl;
@@ -67,10 +70,20 @@ void MockDataProxyClient::Load( const std::string& i_rName, const std::map<std::
 		MV_THROW( DataProxyClientException, "Set to throw an exception for name: " << i_rName );
 	}
 
-	std::map< std::string, std::string >::const_iterator iter = m_DataToReturn.find( i_rName );
-	if( iter != m_DataToReturn.end() )
+	//first see if the tester configured a particular response for the given datanode AND parameters.
+	DataNodeAndParameters dataNodeAndParameters(i_rName, i_rParameters);
+	DataNodeAndParametersToResultMap::const_iterator dnapIter = m_DataForNodeAndParameters.find(dataNodeAndParameters);
+
+	if (dnapIter != m_DataForNodeAndParameters.end())
 	{
-		o_rData << iter->second;
+		o_rData << dnapIter->second;		
+	}
+
+	//now see if the tester configured a response for the given data node only
+	std::map< std::string, std::string >::const_iterator iter = m_DataForNodeParameterAgnostic.find( i_rName );
+	if( iter != m_DataForNodeParameterAgnostic.end() )
+	{
+		o_rData << iter->second;		
 	}
 }
 
@@ -132,5 +145,10 @@ void MockDataProxyClient::SetExceptionForName( const std::string& i_rName )
 
 void MockDataProxyClient::SetDataToReturn( const std::string& i_rName, const std::string& i_rData )
 {
-	m_DataToReturn[ i_rName ] = i_rData;
+	m_DataForNodeParameterAgnostic[ i_rName ] = i_rData;
+}
+
+void MockDataProxyClient::SetDataToReturn( const std::string& i_rName, const std::map<std::string, std::string>& i_rParameters, const std::string& i_rData )
+{
+	m_DataForNodeAndParameters[DataNodeAndParameters(i_rName, i_rParameters)] = i_rData;
 }
