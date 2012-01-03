@@ -76,14 +76,16 @@ void MockDataProxyClient::Load( const std::string& i_rName, const std::map<std::
 
 	if (dnapIter != m_DataForNodeAndParameters.end())
 	{
-		o_rData << dnapIter->second;		
+		o_rData << dnapIter->second;
+		return;
 	}
-
+	
 	//now see if the tester configured a response for the given data node only
 	std::map< std::string, std::string >::const_iterator iter = m_DataForNodeParameterAgnostic.find( i_rName );
 	if( iter != m_DataForNodeParameterAgnostic.end() )
 	{
-		o_rData << iter->second;		
+		o_rData << iter->second;
+		return;
 	}
 }
 
