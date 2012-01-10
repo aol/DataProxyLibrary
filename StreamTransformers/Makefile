@@ -22,4 +22,5 @@ tests: $(TRANSFORMERS:%=%/Makefile)
 install: opt
 	@test "$(LIB_DIR)" || (echo LIB_DIR must be defined for $@ && false)
 	@test "$(VERSION)" || (echo VERSION must be defined for $@ && false)
+	mkdir -p $(LIB_DIR)
 	./install.sh $(VERSION) $(LIB_DIR)
