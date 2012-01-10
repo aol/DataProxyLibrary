@@ -61,9 +61,13 @@ namespace
 		{
 			mxArray* pField;
 			pField = mxGetField( prhs[2], index, NAME );
-			std::string key( mxArrayToString(pField) );
+			char* pKey = mxArrayToString( pField );
+			std::string key( pKey );
+			mxFree( pKey );
 			pField = mxGetField( prhs[2], index, VALUE );
-			std::string value( mxArrayToString(pField) );
+			char* pValue = mxArrayToString( pField );
+			std::string value( pValue );
+			mxFree( pValue );
 
 			o_rParameters[key] = value;
 		}
@@ -75,9 +79,12 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 	try
 	{
 		static DataProxyClient* pDataProxyClient( NULL );
+		static mxArray* pResult( NULL );
+
+		char* pInputArg = mxArrayToString( prhs[0] );
+		std::string functionName( pInputArg );
+		mxFree( pInputArg );
 		
-		std::string functionName( mxArrayToString(prhs[0]) );
-	
 		if( functionName == INIT )
 		{
 			if( nrhs != 2 )
@@ -91,7 +98,9 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 				pDataProxyClient = new DataProxyClient();
 			}
 			
-			std::string configFileSpec( mxArrayToString(prhs[1]) );
+			pInputArg = mxArrayToString( prhs[1] );
+			std::string configFileSpec( pInputArg );
+			mxFree( pInputArg ); 
 	
 			try
 			{
@@ -117,6 +126,12 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 				delete pDataProxyClient;
 				pDataProxyClient = NULL;
 			}
+
+			if( !pResult )
+			{
+				mxDestroyArray( pResult );
+				pResult = NULL;
+			}
 		}
 		else if( functionName == LOAD )
 		{
@@ -134,11 +149,21 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 	
 			ReadParameters( prhs, parameters );
 	
-			std::string dataSource( mxArrayToString(prhs[1]) );
+			pInputArg = mxArrayToString( prhs[1] );
+			std::string dataSource( pInputArg );
+			mxFree( pInputArg );
+			
 			std::ostringstream result;
 	
 			pDataProxyClient->Load( dataSource, parameters, result );
-			plhs[0] = mxCreateString( result.str().c_str() );
+
+			if( !pResult )
+			{
+				mxDestroyArray( pResult );
+				pResult = NULL;
+			}
+			pResult = mxCreateString( result.str().c_str() );
+			plhs[0] = pResult;
 		}
 		else if( functionName == LOAD_TO_FILE )
 		{
@@ -156,11 +181,17 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 	
 			ReadParameters( prhs, parameters );
 	
-			std::string dataSource( mxArrayToString(prhs[1]) );
+			pInputArg = mxArrayToString( prhs[1] );
+			std::string dataSource( pInputArg );
+			mxFree( pInputArg );
 			std::stringstream output;
 	
 			pDataProxyClient->Load( dataSource, parameters, output );
-			std::ofstream result( mxArrayToString(prhs[3]) );
+
+			pInputArg = mxArrayToString( prhs[3] );
+			std::ofstream result( pInputArg );
+			mxFree( pInputArg );
+			
 			result << output.rdbuf();
 			result.close();
 		}
@@ -180,11 +211,17 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 	
 			ReadParameters( prhs, parameters );
 	
-			std::string dataSource( mxArrayToString(prhs[1]) );
+			pInputArg = mxArrayToString( prhs[1] );
+			std::string dataSource( pInputArg );
+			mxFree( pInputArg );
 			std::ostringstream result;
 	
+			char* pDataToStore = mxArrayToString(prhs[3]);
+			
 			std::stringstream data;
-			data << mxArrayToString(prhs[3]);
+			data << pDataToStore;
+			mxFree( pDataToStore );
+
 			pDataProxyClient->Store( dataSource, parameters, data );
 		}
 		else if( functionName == STORE_FROM_FILE )
@@ -203,8 +240,12 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 	
 			ReadParameters( prhs, parameters );
 	
-			std::string dataSource( mxArrayToString(prhs[1]) );
-			std::ifstream data( mxArrayToString(prhs[3]) );
+			pInputArg = mxArrayToString( prhs[1] );
+			std::string dataSource( pInputArg );
+			mxFree( pInputArg );
+			pInputArg = mxArrayToString( prhs[3] );
+			std::ifstream data( pInputArg );
+			mxFree( pInputArg );
 	
 			pDataProxyClient->Store( dataSource, parameters, data );
 			data.close();
