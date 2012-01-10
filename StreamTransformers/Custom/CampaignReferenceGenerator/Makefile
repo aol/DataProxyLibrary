@@ -192,7 +192,7 @@ $(TEST_TARGET:%=$(TARGETDIR)/%): $(PRIVATEOBJSPEC) $(TESTOBJSPEC)
 
 # Building libraries & primary targets
 $(TARGETDIR)/$(PRIMARY_TARGET): $(PRIVATEOBJSPEC)
-	$(CXXS) -o $@ $^
+	$(CXXS) -o $@ $^ $(LIBS)
 
 # if necessary, build external libraries.
 extlibs: $(MODULESPEC) $(TESTMODULESPEC)
