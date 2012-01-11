@@ -56,9 +56,9 @@ int main( int argc, char** argv )
 		DeleteHandler deleteHandler( client, config.GetDplConfig(), config.GetEnableXForwardedFor() );
 
 		// register handlers
-		rWebServer.AddWebService( HTTP_POST, MATCH_ALL, storeHandler );
-		rWebServer.AddWebService( HTTP_GET, MATCH_ALL, loadHandler );
-		rWebServer.AddWebService( HTTP_DELETE, MATCH_ALL, deleteHandler );
+		rWebServer.AddWebService( HTTP_POST, MATCH_ALL, storeHandler, config.GetStoreWhitelistFile() );
+		rWebServer.AddWebService( HTTP_GET, MATCH_ALL, loadHandler, config.GetLoadWhitelistFile() );
+		rWebServer.AddWebService( HTTP_DELETE, MATCH_ALL, deleteHandler, config.GetDeleteWhitelistFile() );
 
 		// start webservice
 		MVLOGGER( "root.lib.DataProxy.Service.CreatedWebserver", "Starting data proxy service, instance id: " << config.GetInstanceId() << ", listening on port: " << config.GetPort() );

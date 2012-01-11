@@ -48,6 +48,9 @@ void DataProxyServiceConfigTest::testParameters()
 		"--num_threads", "45",
 		"--max_request_size", "678",
 		"--zlib_compression_level", "7",
+		"--load_whitelist_file", "lwf",
+		"--store_whitelist_file", "swf",
+		"--delete_whitelist_file", "dwf",
 		"--stats_retention_hours", "17",
 		"--stats_retention_size", "123",
 		"--stats_per_hour_estimate", "468",
@@ -61,6 +64,9 @@ void DataProxyServiceConfigTest::testParameters()
 	CPPUNIT_ASSERT_EQUAL( std::string("my_instance_id"), config.GetInstanceId() );
 	CPPUNIT_ASSERT_EQUAL( std::string("my_log_config"), config.GetLogConfig() );
 	CPPUNIT_ASSERT_EQUAL( std::string("my_dpl_config"), config.GetDplConfig() );
+	CPPUNIT_ASSERT_EQUAL( std::string("lwf"), config.GetLoadWhitelistFile() );
+	CPPUNIT_ASSERT_EQUAL( std::string("swf"), config.GetStoreWhitelistFile() );
+	CPPUNIT_ASSERT_EQUAL( std::string("dwf"), config.GetDeleteWhitelistFile() );
 	CPPUNIT_ASSERT_EQUAL( uint(123), config.GetPort() );
 	CPPUNIT_ASSERT_EQUAL( uint(45), config.GetNumThreads() );
 	CPPUNIT_ASSERT_EQUAL( uint(678), config.GetMaxRequestSize() );
@@ -89,6 +95,9 @@ void DataProxyServiceConfigTest::testOptionalParameters()
 	CPPUNIT_ASSERT_EQUAL( std::string("my_instance_id"), config.GetInstanceId() );
 	CPPUNIT_ASSERT_EQUAL( std::string(""), config.GetLogConfig() );
 	CPPUNIT_ASSERT_EQUAL( std::string("my_dpl_config"), config.GetDplConfig() );
+	CPPUNIT_ASSERT_EQUAL( std::string(""), config.GetLoadWhitelistFile() );
+	CPPUNIT_ASSERT_EQUAL( std::string(""), config.GetStoreWhitelistFile() );
+	CPPUNIT_ASSERT_EQUAL( std::string(""), config.GetDeleteWhitelistFile() );
 	CPPUNIT_ASSERT_EQUAL( uint(123), config.GetPort() );
 	CPPUNIT_ASSERT_EQUAL( uint(45), config.GetNumThreads() );
 	CPPUNIT_ASSERT_EQUAL( uint(16384), config.GetMaxRequestSize() );

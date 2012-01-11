@@ -34,6 +34,10 @@ public:
 	MV_VIRTUAL int GetZLibCompressionLevel() const;
 	MV_VIRTUAL bool GetEnableXForwardedFor() const;
 
+	MV_VIRTUAL const std::string& GetLoadWhitelistFile() const;
+	MV_VIRTUAL const std::string& GetStoreWhitelistFile() const;
+	MV_VIRTUAL const std::string& GetDeleteWhitelistFile() const;
+
 	MV_VIRTUAL unsigned int GetStatsRetentionHours() const;
 	MV_VIRTUAL long GetStatsRetentionSize() const;
 	MV_VIRTUAL size_t GetStatsPerHourEstimate() const;

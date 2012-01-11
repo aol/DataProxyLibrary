@@ -16,12 +16,28 @@
 #include "NetworkUtilities.hpp"
 #include "ShellExecutor.hpp"
 #include "RESTClient.hpp"
+#include "AssertThrowWithMessage.hpp"
 #include <fstream>
 #include <vector>
 #include <boost/regex.hpp>
 #include <boost/lexical_cast.hpp>
 
 CPPUNIT_TEST_SUITE_REGISTRATION( DataProxyServiceSystest );
+
+#define VERIFY_ACCESS( i_Method, i_Endpoint, i_Parameters, i_Allowed ) \
+{ \
+	std::ostringstream result; \
+	i_Parameters.SetMethod( i_Method ); \
+	if( !i_Allowed ) \
+	{ \
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RESTClient().Execute( i_Endpoint, result, i_Parameters ), HttpBaseException, \
+			".*:\\d+: Server returned HTTP code 403: .* Incoming request cannot be satisfied because requesting client is not in the access whitelist .*" ); \
+	} \
+	else \
+	{ \
+		CPPUNIT_ASSERT_NO_THROW( RESTClient().Execute( i_Endpoint, result, i_Parameters ) ); \
+	} \
+}
 
 DataProxyServiceSystest::DataProxyServiceSystest( void )
 :   m_pTempDir(NULL)
@@ -47,6 +63,10 @@ void DataProxyServiceSystest::testHappyPath( void )
 	std::string nodeDir( m_pTempDir->GetDirectoryName() + "/nodeDir" );
 	CPPUNIT_ASSERT_NO_THROW( FileUtilities::CreateDirectory( nodeDir ) );
 
+	std::string loadWhitelistFile( m_pTempDir->GetDirectoryName() + "/load_whitelist" );
+	std::string storeWhitelistFile( m_pTempDir->GetDirectoryName() + "/store_whitelist" );
+	std::string deleteWhitelistFile( m_pTempDir->GetDirectoryName() + "/delete_whitelist" );
+
 	std::string dplConfigFileSpec = m_pTempDir->GetDirectoryName() + "/dplConfig.xml";
 	std::ofstream file( dplConfigFileSpec.c_str() );
 	file << "<DplConfig>" << std::endl
@@ -61,7 +81,10 @@ void DataProxyServiceSystest::testHappyPath( void )
 		<< " --dpl_config " << dplConfigFileSpec
 		<< " --port " << port
 		<< " --instance_id systemtest_instance"
-		<< " --num_threads 4";
+		<< " --num_threads 4"
+		<< " --load_whitelist_file " << loadWhitelistFile
+		<< " --store_whitelist_file " << storeWhitelistFile
+		<< " --delete_whitelist_file " << deleteWhitelistFile;
 	
 	ShellExecutor exe( cmd.str() );
 	std::stringstream out;
@@ -104,11 +127,59 @@ void DataProxyServiceSystest::testHappyPath( void )
 	params.SetCompression( IDENTITY );
 	CPPUNIT_ASSERT_NO_THROW( client.Execute( endpoint.str(), results, params ) );
 	CPPUNIT_ASSERT_EQUAL( std::string(""), results.str() );
-	CPPUNIT_ASSERT( !FileUtilities::DoesFileExist( nodeDir + "query1~value1^query2~value2" ) );
+	CPPUNIT_ASSERT( !FileUtilities::DoesFileExist( nodeDir + "/query1~value1^query2~value2" ) );
 
 	// DELETE the file again
 	results.str("");
 	CPPUNIT_ASSERT_NO_THROW( client.Execute( endpoint.str(), results, params ) );
 	CPPUNIT_ASSERT_EQUAL( std::string(""), results.str() );
-	CPPUNIT_ASSERT( !FileUtilities::DoesFileExist( nodeDir + "query1~value1^query2~value2" ) );
+	CPPUNIT_ASSERT( !FileUtilities::DoesFileExist( nodeDir + "/query1~value1^query2~value2" ) );
+
+	// verify load whitelist behavior
+	FileUtilities::Touch( nodeDir + "/query1~value1^query2~value2" );
+	VERIFY_ACCESS( std::string("GET"), endpoint.str(), params, true );
+	VERIFY_ACCESS( std::string("POST"), endpoint.str(), params, true );
+	VERIFY_ACCESS( std::string("DELETE"), endpoint.str(), params, true );
+	FileUtilities::Touch( loadWhitelistFile );
+	FileUtilities::Touch( nodeDir + "/query1~value1^query2~value2" );
+	VERIFY_ACCESS( std::string("GET"), endpoint.str(), params, false );
+	VERIFY_ACCESS( std::string("POST"), endpoint.str(), params, true );
+	VERIFY_ACCESS( std::string("DELETE"), endpoint.str(), params, true );
+	FileUtilities::Remove( loadWhitelistFile );
+	FileUtilities::Touch( nodeDir + "/query1~value1^query2~value2" );
+	VERIFY_ACCESS( std::string("GET"), endpoint.str(), params, true );
+	VERIFY_ACCESS( std::string("POST"), endpoint.str(), params, true );
+	VERIFY_ACCESS( std::string("DELETE"), endpoint.str(), params, true );
+
+	// verify store whitelist behavior
+	FileUtilities::Touch( nodeDir + "/query1~value1^query2~value2" );
+	VERIFY_ACCESS( std::string("GET"), endpoint.str(), params, true );
+	VERIFY_ACCESS( std::string("POST"), endpoint.str(), params, true );
+	VERIFY_ACCESS( std::string("DELETE"), endpoint.str(), params, true );
+	FileUtilities::Touch( storeWhitelistFile );
+	FileUtilities::Touch( nodeDir + "/query1~value1^query2~value2" );
+	VERIFY_ACCESS( std::string("GET"), endpoint.str(), params, true );
+	VERIFY_ACCESS( std::string("POST"), endpoint.str(), params, false );
+	VERIFY_ACCESS( std::string("DELETE"), endpoint.str(), params, true );
+	FileUtilities::Remove( storeWhitelistFile );
+	FileUtilities::Touch( nodeDir + "/query1~value1^query2~value2" );
+	VERIFY_ACCESS( std::string("GET"), endpoint.str(), params, true );
+	VERIFY_ACCESS( std::string("POST"), endpoint.str(), params, true );
+	VERIFY_ACCESS( std::string("DELETE"), endpoint.str(), params, true );
+
+	// verify delete whitelist behavior
+	FileUtilities::Touch( nodeDir + "/query1~value1^query2~value2" );
+	VERIFY_ACCESS( std::string("GET"), endpoint.str(), params, true );
+	VERIFY_ACCESS( std::string("POST"), endpoint.str(), params, true );
+	VERIFY_ACCESS( std::string("DELETE"), endpoint.str(), params, true );
+	FileUtilities::Touch( deleteWhitelistFile );
+	FileUtilities::Touch( nodeDir + "/query1~value1^query2~value2" );
+	VERIFY_ACCESS( std::string("GET"), endpoint.str(), params, true );
+	VERIFY_ACCESS( std::string("POST"), endpoint.str(), params, true );
+	VERIFY_ACCESS( std::string("DELETE"), endpoint.str(), params, false );
+	FileUtilities::Remove( deleteWhitelistFile );
+	FileUtilities::Touch( nodeDir + "/query1~value1^query2~value2" );
+	VERIFY_ACCESS( std::string("GET"), endpoint.str(), params, true );
+	VERIFY_ACCESS( std::string("POST"), endpoint.str(), params, true );
+	VERIFY_ACCESS( std::string("DELETE"), endpoint.str(), params, true );
 }

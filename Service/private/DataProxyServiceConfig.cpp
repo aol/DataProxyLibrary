@@ -23,6 +23,9 @@ namespace
 	const char* MAX_REQUEST_SIZE( "max_request_size" );
 	const char* ZLIB_COMPRESSION_LEVEL( "zlib_compression_level" );
 	const char* ENABLE_X_FORWARDED_FOR( "enable_x-forwarded-for" );
+	const char* LOAD_WHITELIST_FILE( "load_whitelist_file" );
+	const char* STORE_WHITELIST_FILE( "store_whitelist_file" );
+	const char* DELETE_WHITELIST_FILE( "delete_whitelist_file" );
 	const char* STATS_RETENTION_HOURS( "stats_retention_hours" );
 	const char* STATS_RETENTION_SIZE( "stats_retention_size" );
 	const char* STATS_PER_HOUR_ESTIMATE( "stats_per_hour_estimate" );
@@ -40,6 +43,9 @@ DataProxyServiceConfig::DataProxyServiceConfig( int argc, char** argv )
 		( MAX_REQUEST_SIZE, boost::program_options::value<uint>()->default_value(16384), "byte limit for url requests" )
 		( ENABLE_X_FORWARDED_FOR, boost::program_options::value<bool>()->default_value(false), "if toggled, enable parsing, appending, and forwarding of X-Forwarded-For HTTP header field" )
 		( ZLIB_COMPRESSION_LEVEL, boost::program_options::value<int>()->default_value(0), "zlib dynamic compression level\n  -1: use zlib default\n   0: disable compression\n 1-9: legal compression levels" )
+		( LOAD_WHITELIST_FILE, boost::program_options::value<std::string>()->default_value(""), "ip whitelist file for load (GET) operations.\nif empty or nonexistent, all incoming ips will be allowed.\nif present, only the ips defined in the file (newline-separated) will be allowed to load data.\nrequests may have multiple ip addresses for a single request (via X-Forwarded-For field); in this case at least one of the ips must be in the whitelist for the request to succeed" )
+		( STORE_WHITELIST_FILE, boost::program_options::value<std::string>()->default_value(""), "ip whitelist file for store (POST) operations.\nsame semantics as load whitelist" )
+		( DELETE_WHITELIST_FILE, boost::program_options::value<std::string>()->default_value(""), "ip whitelist file for delete (DELETE) operations.\nsame semantics as load whitelist" )
 		( STATS_RETENTION_HOURS, boost::program_options::value<unsigned int>()->default_value(24), "number of hours to keep stats information. 0 = off." )
 		( STATS_RETENTION_SIZE, boost::program_options::value<long>()->default_value(-1), "maximum number of stats logs to keep. -1 = no limit. 0 = off." )
 		( STATS_PER_HOUR_ESTIMATE, boost::program_options::value<size_t>()->default_value(5000), "estimated number of requests per hour. a good estimate optimizes insertion of stats information." );
@@ -95,6 +101,21 @@ int DataProxyServiceConfig::GetZLibCompressionLevel() const
 bool DataProxyServiceConfig::GetEnableXForwardedFor() const
 {
 	return m_Options[ENABLE_X_FORWARDED_FOR].as< bool >();
+}
+
+const std::string& DataProxyServiceConfig::GetLoadWhitelistFile() const
+{
+	return m_Options[LOAD_WHITELIST_FILE].as< std::string >();
+}
+
+const std::string& DataProxyServiceConfig::GetStoreWhitelistFile() const
+{
+	return m_Options[STORE_WHITELIST_FILE].as< std::string >();
+}
+
+const std::string& DataProxyServiceConfig::GetDeleteWhitelistFile() const
+{
+	return m_Options[DELETE_WHITELIST_FILE].as< std::string >();
 }
 
 unsigned int DataProxyServiceConfig::GetStatsRetentionHours() const
