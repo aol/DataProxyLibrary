@@ -84,7 +84,7 @@ LIBLOC=\
 	$(LIB_DIRS:%=-L%) \
 
 # Libraries
-LIBS		= -lmyodbc3 -lxerces-c -lpthread -lboost_regex -lboost_filesystem -llog4cxx -lboost_thread -lcurl -luuid -lssl -lclntsh -lLogger
+LIBS		= -lLogger -lclntsh -lmyodbc3 -lxerces-c -lpthread -lboost_regex -lboost_filesystem -llog4cxx -lboost_thread -lcurl -lssl -luuid
 TESTLIBS	= -lcppunit -lTestHelpers -lMockDatabase -lMockService -lMockUtility $(LIBS)
 MATLABLIBS	= -lMatlab -leng -lmx -lut -lmat
 
@@ -363,7 +363,7 @@ $(MATLAB_TEST_TARGET:%=$(TARGETDIR)/%): $(MATLAB_TARGET) $(MATLABTESTOBJSPEC)
 
 # Building libraries & primary targets
 $(TARGETDIR)/$(PRIMARY_TARGET): $(PRIVATEOBJSPEC)
-	$(CXXS) -o $@ $^ $(LIBS)
+	$(CXXS) -o $@ $^ $(LIBLOC) $(LIBS)
 
 $(TARGETDIR)/$(MATLAB_TARGET): $(MATLABWRAPPERFILE) $(PRIMARY_TARGET)
 	$(MEX) $(MATLABWRAPPERFILE) -DMV_OPTIMIZE $(INCS) $(LIBLOC) -L. -lDataProxy $(LIBS) -o $(TARGETDIR)/$(MATLAB_TARGET)
