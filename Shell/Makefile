@@ -116,10 +116,10 @@ SYSTESTOBJSPEC			= $(SYSTESTFILESPEC:$(SYSTESTDIR)/%.cpp=$(TARGETDIR)/%.o)
 THPP2HPPFILES			= $(THPPFILES:%.thpp=%.hpp)
 
 # Per-target specification
-DEBUGOPTS				= -ggdb3 -Wall -Werror
-OPTIMIZEOPTS			= -O3 -D MV_OPTIMIZE -Wall -Werror
-PROFILEOPTS				= -O3 -D MV_OPTIMIZE -pg -Wall -Werror
-COVERAGEOPTS			= -fprofile-arcs -ftest-coverage -Wall -Werror
+DEBUGOPTS		= -ggdb3 -Wall -Werror -fno-strict-aliasing
+OPTIMIZEOPTS	= -O3 -D MV_OPTIMIZE -Wall -Werror -fno-strict-aliasing
+PROFILEOPTS		= -O3 -D MV_OPTIMIZE -pg -Wall -Werror -fno-strict-aliasing
+COVERAGEOPTS	= -fprofile-arcs -ftest-coverage -Wall -Werror -fno-strict-aliasing
 
 # Executable targets
 PRIMARY_TARGET			= dplShell
