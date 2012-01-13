@@ -15,19 +15,29 @@ echo "--> Creating subdirectories..."
 mkdir -p ${TOPDIR}/shell/bin
 mkdir -p ${TOPDIR}/shell/cfg
 mkdir -p ${TOPDIR}/shell/log
-mkdir -p ${TOPDIR}/shell/sample
 mkdir -p ${TOPDIR}/service/bin
-mkdir -p ${TOPDIR}/service/cfg
 mkdir -p ${TOPDIR}/service/log
-mkdir -p ${TOPDIR}/service/sample
 
-echo "--> Setting up DPL app binaries"
+echo "--> Setting up dpl shell"
 mv ${TOPDIR}/${SHELL_EXE} ${TOPDIR}/shell/bin/${SHELL_VERSION_EXE}
-mv ${TOPDIR}/${SERVICE_EXE} ${TOPDIR}/shell/bin/${SERVICE_VERSION_EXE}
-ln -sfn ${SHELL_VERSION_EXE} ${TOPDIR}/bin/${SHELL_EXE}
-ln -sfn ${SERVICE_VERSION_EXE} ${TOPDIR}/bin/${SERVICE_EXE}
+ln -sfn ${SHELL_VERSION_EXE} ${TOPDIR}/shell/bin/${SHELL_EXE}
+
+echo "--> Setting up dpl service"
+mv ${TOPDIR}/${SERVICE_EXE} ${TOPDIR}/service/bin/${SERVICE_VERSION_EXE}
+ln -sfn ${SERVICE_VERSION_EXE} ${TOPDIR}/service/bin/${SERVICE_EXE}
+mv ${TOPDIR}/cfg ${TOPDIR}/sample ${TOPDIR}/service
+
+echo "--> Installing core libs to $LIBDIR"
+mv ${TOPDIR}/libDataProxy.so.* ${LIBDIR}
+ln -sfn libDataProxy.so.3.1.0 ${LIBDIR}/libDataProxy.so.3.1
+ln -sfn libDataProxy.so.3.1 ${LIBDIR}/libDataProxy.so.3
+ln -sfn libDataProxy.so.3 ${LIBDIR}/libDataProxy.so
+ln -sfn libDataProxy.so.3.0.2 ${LIBDIR}/libDataProxy.so.3.0
+for lib in `find ${TOPDIR} -name lib*.so.*`; do ln -sfn $(basename $lib) ${LIBDIR}/$(basename $lib .3.1.0); done
+mv ${TOPDIR}/lib* ${LIBDIR}
 
 echo "--> change user:group to adlearn:optimization"
 chown -R adlearn:optimization ${TOPDIR}
+chown -R adlearn:optimization ${LIBDIR}
 
 echo "--> DONE!"
