@@ -65,7 +65,7 @@ CXXC = $(CXX) $(TARGETOPTS) -c $(INCS) $(DEFINE_FLAGS)	# compiling object files
 CXXT = $(CXX) $(TARGETOPTS) -c $(TESTINCS) $(DEFINE_FLAGS)	# compiling object files
 CXXL = $(CXX) $(TARGETOPTS) $(LIBLOC)					# linking executables
 CXXD = $(CXX) -MM $(TESTINCS) $(DEFINE_FLAGS)				# generating dependencies
-CXXS = $(CXX) -shared -Wl,-soname,$(VERSION_TARGET)
+CXXS = $(CXX) -shared $(LIBLOC) $(LIBS)
 
 # Source Directories
 PRIVATEDIR				= private
@@ -186,7 +186,7 @@ $(TEST_TARGET:%=$(TARGETDIR)/%): $(PRIVATEOBJSPEC) $(TESTOBJSPEC)
 
 # Building libraries & primary targets
 $(TARGETDIR)/$(PRIMARY_TARGET): $(PRIVATEOBJSPEC)
-	$(CXXS) -o $@ $^ $(LIBS)
+	$(CXXS) -o $@ $^
 
 # if necessary, build external libraries.
 extlibs: $(MODULESPEC) $(TESTMODULESPEC)
