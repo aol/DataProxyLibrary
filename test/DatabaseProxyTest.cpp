@@ -57,6 +57,27 @@ namespace
 			   << "PRIMARY KEY cpk_" << i_rName << " (media_id, website_id) ) ENGINE=innodb";
 		return result.str();
 	}
+
+	std::string GetElementsOracleDDL(const std::string i_Name)
+	{
+		std::stringstream result;
+		result << "CREATE TABLE " << i_Name << " ( "
+			   << "fake_element_id NUMBER(*,0), "
+			   << "fake_element_name VARCHAR(2000), "
+			   << "CONSTRAINT cpk_" << i_Name << " PRIMARY KEY (fake_element_id) )";
+		return result.str();
+	}
+
+	std::string GetElementsMySqlDDL(const std::string i_Name)
+	{
+		std::stringstream result;
+		result << "CREATE TABLE " << i_Name << " ( "
+			   << "fake_element_id INT, "
+			   << "fake_element_name VARCHAR(2000), "
+			   << "PRIMARY KEY cpk_" << i_Name << " (fake_element_id) ) ENGINE=innodb";
+		return result.str();
+	}
+
 }
 
 DatabaseProxyTest::DatabaseProxyTest()
@@ -886,7 +907,7 @@ void DatabaseProxyTest::testLoadMaxStringParameter()
 	std::string cmd( "INSERT INTO OracleTable (ot_id, ot_desc) VALUES ");
 	std::vector<std::string> values;
 
-	//50 characters per line * 5. 250 characters is more than the default limit for string size.
+	//50 characters per line * 5. 250 characters is less than the default limit for string size(256).
 	values.push_back( "(1,'"
 					  "000000000X000000000X000000000X000000000X000000000X"
 					  "000000000X000000000X000000000X000000000X000000000X"
@@ -1433,65 +1454,6 @@ void DatabaseProxyTest::testOracleStoreNoStaging()
 	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" )
 }
 
-void DatabaseProxyTest::testOracleStoreNoStagingMaxBindSize()
-{
-	MockDataProxyClient client;
-	// create primary table
-	Database::Statement(*m_pOracleDB, GetOracleTableDDL("kna")).Execute();
-
-	MockDatabaseConnectionManager dbManager;
-	dbManager.InsertConnection( "myOracleConnection", m_pOracleDB );
-
-	std::stringstream xmlContents;
-	xmlContents << "<DataNode type = \"db\" >"
-				<< " <Write connection = \"myOracleConnection\""
-				<< "  maxBindSize = \"2\" "
-				<< "  table = \"kna\" >"
-				<< "	<Columns>"
-				<< "      <Column name=\"media_id\" sourceName=\"MEDIA_ID\" type=\"key\" />"
-				<< "      <Column name=\"website_id\" type=\"key\" />"
-				<< "      <Column name=\"impressions\" type=\"data\" ifNew=\"%v\" />"
-				<< "      <Column name=\"revenue\" type=\"data\" ifNew=\"%v\" />"
-				<< "      <Column name=\"dummy\" type=\"data\" ifNew=\"17\" />"
-				<< "      <Column name=\"myConstant\" sourceName=\"MY_CONSTANT\" type=\"data\" ifNew=\"%v\" />"
-				<< "	</Columns>"
-				<< " </Write>"
-				<< "</DataNode>";
-	
-	std::vector<xercesc::DOMNode*> nodes;
-	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
-	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
-	CPPUNIT_ASSERT( proxy.SupportsTransactions() );
-
-	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
-
-	std::stringstream data;
-	data << "MEDIA_ID,ignore,website_id,ignore,impressions,revenue,ignore" << std::endl
-		 << "12,-1,13,-1,14,15.5,-1\\,-9" << std::endl	// the escaped comma should validate that CSVReader allows escapes
-		 << "22,-2,23,-2,24,25.5,-2" << std::endl
-		 << "32,-3,33,-3,34,35.5,-3" << std::endl
-		 << "42,-4,43,-4,44,45.5,-4" << std::endl
-		 << "52,-5,53,-5,54,55.5,-5" << std::endl
-		 << "62,-6,63,-6,64,65.5,-6" << std::endl;
-	
-	std::map< std::string, std::string > parameters;
-	parameters[ "MY_CONSTANT" ] = "24";
-	parameters[ "ignore" ] = "ignoreMe4";
-	parameters[ "ignore5" ] = "ignoreMe5";
-
-	// we will get this "string is not terminated w/ null" error because
-	// we haven't left enough size in the maxBindSize (2) to catch
-	// the full string-value of every column (max = 4)
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Store( parameters, data ), DBException, ".*ORA-01480: trailing null missing from STR bind value.*" );
-
-	// check table contents: nothing yet since it hasn't been committed
-	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" )
-	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
-	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" )
-}
-
 void DatabaseProxyTest::testMySqlStore()
 {
 	MockDataProxyClient client;
@@ -1687,73 +1649,6 @@ void DatabaseProxyTest::testMySqlStoreNoStaging()
 	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" )
 }
 
-void DatabaseProxyTest::testMySqlStoreNoStagingMaxBindSize()
-{
-	MockDataProxyClient client;
-	// create primary table
-	Database::Statement(*m_pMySQLDB, GetMySqlTableDDL("kna")).Execute();
-
-	MockDatabaseConnectionManager dbManager;
-	dbManager.InsertConnection( "myMySqlConnection", m_pMySQLDB );
-
-	std::stringstream xmlContents;
-	xmlContents << "<DataNode type = \"db\" >"
-				<< " <Write connection = \"myMySqlConnection\""
-				<< "  maxBindSize = \"2\" "
-				<< "  table = \"kna\" >"
-				<< "	<Columns>"
-				<< "      <Column name=\"media_id\" type=\"key\" />"
-				<< "      <Column name=\"website_id\" type=\"key\" sourceName=\"WEBSITE_ID\" />"
-				<< "      <Column name=\"impressions\" type=\"data\" ifNew=\"%v\" />"
-				<< "      <Column name=\"revenue\" type=\"data\" ifNew=\"%v\" />"
-				<< "      <Column name=\"dummy\" type=\"data\" ifNew=\"17\" sourceName=\"WHATEVER\" />"
-				<< "      <Column name=\"myConstant\" type=\"data\" ifNew=\"%v\" sourceName=\"MY_CONSTANT\" />"
-				<< "	</Columns>"
-				<< " </Write>"
-				<< "</DataNode>";
-	
-	std::vector<xercesc::DOMNode*> nodes;
-	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
-	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
-	CPPUNIT_ASSERT( proxy.SupportsTransactions() );
-
-	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
-
-	std::stringstream data;
-	data << "media_id,ignore,WEBSITE_ID,ignore,impressions,revenue,ignore" << std::endl
-		 << "12,-1,13,-1,14,15.5,-1" << std::endl
-		 << "22,-2,23,-2,24,25.5,-2" << std::endl
-		 << "32,-3,33,-3,34,35.5,-3" << std::endl
-		 << "42,-4,43,-4,44,45.5,-4" << std::endl
-		 << "52,-5,53,-5,54,55.5,-5" << std::endl
-		 << "62,-6,63,-6,64,65.5,-6" << std::endl;
-	
-	std::map< std::string, std::string > parameters;
-	parameters[ "MY_CONSTANT" ] = "24";
-	parameters[ "ignore" ] = "ignoreMe4";
-	parameters[ "ignore5" ] = "ignoreMe5";
-
-	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data ) );
-
-	// check table contents; it will be empty since we haven't committed yet
-	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" )
-
-	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
-	// mysql does not throw an exception if you don't leave enough room to bind; it simply truncates the data.
-	// so all columns will be truncated to size 2
-	std::stringstream expected;
-	expected << "12,13,14,15,17,24" << std::endl
-			 << "22,23,24,25,17,24" << std::endl
-			 << "32,33,34,35,17,24" << std::endl
-			 << "42,43,44,45,17,24" << std::endl
-			 << "52,53,54,55,17,24" << std::endl
-			 << "62,63,64,65,17,24" << std::endl;
-
-	// check table contents
-	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" )
-}
 
 void DatabaseProxyTest::testStoreColumnParameterCollisionBehaviors()
 {
@@ -3660,6 +3555,275 @@ void DatabaseProxyTest::testMySqlMultipleStore()
 		"1002,2002,3002,4002,5002,6002\n"
 	);
 	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expectedData, *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );
+}
+
+void DatabaseProxyTest::testOracleStoreNoStagingWithMaxColumnLength()
+{
+	MockDataProxyClient client;
+	// create primary table
+	Database::Statement(*m_pOracleDB, GetElementsOracleDDL("fake_elements")).Execute();
+
+	MockDatabaseConnectionManager dbManager;
+	dbManager.InsertConnection( "myOracleConnection", m_pOracleDB );
+
+	std::stringstream xmlNoLengthAttribute;
+	xmlNoLengthAttribute << "<DataNode type = \"db\" >"
+						 << " <Write connection = \"myOracleConnection\""
+						 << "  table = \"fake_elements\" >"
+						 << "	<Columns>"
+						 << "      <Column name=\"fake_element_id\" type=\"key\" />"
+						 << "      <Column name=\"fake_element_name\" type=\"data\" ifNew=\"%v\"/>"
+						 << "	</Columns>"
+						 << " </Write>"
+						 << "</DataNode>";
+	
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlNoLengthAttribute.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
+
+	std::stringstream header;
+	header << "fake_element_id,fake_element_name" << std::endl;
+
+	std::stringstream row_14CharacterName;
+	row_14CharacterName << "1,joelonsoftware" << std::endl;
+
+	std::stringstream storeInputCSV0;
+	storeInputCSV0 << header.str()
+				  << row_14CharacterName.str();
+	std::map< std::string, std::string > parameters;
+
+	//should succeed because the default bind size of 256 is larger than the 14 character element name
+	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, storeInputCSV0 ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+
+	//check table contents
+	std::stringstream expected;
+	expected << row_14CharacterName.str();
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pOracleObservationDB, "fake_elements", "fake_element_id,fake_element_name", "fake_element_id" );
+
+	std::stringstream row_257CharacterName;
+	row_257CharacterName << "2,";
+	for (int i = 0; i < 257; i++)
+	{
+	 	row_257CharacterName << "g";
+	}
+	row_257CharacterName << std::endl;
+
+	std::stringstream storeInputCSV1;
+	
+	storeInputCSV1 << header.str()
+				   << row_257CharacterName.str();
+	
+	//now use a 257 character name: should fail because default bind size of 256 can not hold the 257 character element name
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Store( parameters, storeInputCSV1 ),
+									   DBException,
+									   ".*?trailing null missing from STR bind value.*");
+
+	std::stringstream xmlLengthOf257;
+	xmlLengthOf257 << "<DataNode type = \"db\" >"
+				   << " <Write connection = \"myOracleConnection\""
+				   << "  table = \"fake_elements\" >"
+				   << "	<Columns>"
+				   << "      <Column name=\"fake_element_id\" type=\"key\" />"
+				   << "      <Column name=\"fake_element_name\" type=\"data\" ifNew=\"%v\" length=\"257\" />"
+				   << "	</Columns>"
+				   << " </Write>"
+				   << "</DataNode>";
+
+	nodes.clear();
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlLengthOf257.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	DatabaseProxy proxy1( "name", client, *nodes[0], dbManager );
+	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
+
+	std::stringstream storeInputCSV2;
+	storeInputCSV2 << header.str()
+				   << row_257CharacterName.str();
+
+	//now add a length attribute and set it to 257: should succeed because it can hold the 257 character element name
+	CPPUNIT_ASSERT_NO_THROW( proxy1.Store( parameters, storeInputCSV2 ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy1.Commit() );
+
+	expected << row_257CharacterName.str();
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pOracleObservationDB, "fake_elements", "fake_element_id,fake_element_name", "fake_element_id" );
+
+}
+
+void DatabaseProxyTest::testOracleStoreWithStagingWithMaxColumnLength()
+{
+	MockDataProxyClient client;
+	// create primary table
+	Database::Statement(*m_pOracleDB, GetElementsOracleDDL("fake_elements")).Execute();
+	// create stagint table
+	Database::Statement(*m_pOracleDB, GetElementsOracleDDL("stg_fake_elements")).Execute();
+
+	MockDatabaseConnectionManager dbManager;
+	dbManager.InsertConnection( "myOracleConnection", m_pOracleDB );
+
+	std::stringstream xmlNoLengthAttribute;
+	xmlNoLengthAttribute << "<DataNode type = \"db\" >"
+						 << " <Write connection = \"myOracleConnection\""
+						 << "  table = \"fake_elements\" "
+						 << "  stagingTable = \"stg_fake_elements\" "
+						 << "  workingDir = \"" << m_pTempDir->GetDirectoryName() << "\" >"
+						 << "	<Columns>"
+						 << "      <Column name=\"fake_element_id\" type=\"key\" />"
+						 << "      <Column name=\"fake_element_name\" type=\"data\" ifNew=\"%v\"/>"
+						 << "	</Columns>"
+						 << " </Write>"
+						 << "</DataNode>";
+	
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlNoLengthAttribute.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
+
+	std::stringstream header;
+	header << "fake_element_id,fake_element_name" << std::endl;
+
+	std::stringstream row_14CharacterName;
+	row_14CharacterName << "1,joelonsoftware" << std::endl;
+
+	std::stringstream storeInputCSV0;
+	storeInputCSV0 << header.str()
+				  << row_14CharacterName.str();
+	std::map< std::string, std::string > parameters;
+
+	//should succeed because the default bind size of 256 is larger than the 14 character element name
+	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, storeInputCSV0 ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+
+	//check table contents
+	std::stringstream expected;
+	expected << row_14CharacterName.str();
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pOracleObservationDB, "fake_elements", "fake_element_id,fake_element_name", "fake_element_id" );
+
+	std::stringstream row_257CharacterName;
+	row_257CharacterName << "2,";
+	for (int i = 0; i < 257; i++)
+	{
+	 	row_257CharacterName << "g";
+	}
+	row_257CharacterName << std::endl;
+
+	std::stringstream storeInputCSV1;
+	
+	storeInputCSV1 << header.str()
+				   << row_257CharacterName.str();
+	
+	//now use a 257 character name: should fail because default bind size of 256 can not hold the 257 character element name
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Store( parameters, storeInputCSV1 ),
+									   DatabaseProxyException,
+									   ".*?SQLLoader failed!.*");
+
+	std::stringstream xmlLengthOf257;
+	xmlLengthOf257 << "<DataNode type = \"db\" >"
+				   << " <Write connection = \"myOracleConnection\""
+				   << "  table = \"fake_elements\" "
+				   << "  stagingTable = \"stg_fake_elements\" "
+				   << "  workingDir = \"" << m_pTempDir->GetDirectoryName() << "\" >"
+				   << "	<Columns>"
+				   << "      <Column name=\"fake_element_id\" type=\"key\" />"
+				   << "      <Column name=\"fake_element_name\" type=\"data\" ifNew=\"%v\" length=\"257\" />"
+				   << "	</Columns>"
+				   << " </Write>"
+				   << "</DataNode>";
+
+	nodes.clear();
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlLengthOf257.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	DatabaseProxy proxy1( "name", client, *nodes[0], dbManager );
+	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
+
+	std::stringstream storeInputCSV2;
+	storeInputCSV2 << header.str()
+				   << row_257CharacterName.str();
+
+	//now add a length attribute and set it to 257: should succeed because it can hold the 257 character element name
+	CPPUNIT_ASSERT_NO_THROW( proxy1.Store( parameters, storeInputCSV2 ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy1.Commit() );
+
+	expected << row_257CharacterName.str();
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pOracleObservationDB, "fake_elements", "fake_element_id,fake_element_name", "fake_element_id" );
+}
+
+void DatabaseProxyTest::testMySQLStoreWithStagingWithMaxColumnLength()
+{
+	MockDataProxyClient client;
+	// create primary table
+	Database::Statement(*m_pMySQLDB, GetElementsMySqlDDL("fake_elements")).Execute();
+	// create stagint table
+	Database::Statement(*m_pMySQLDB, GetElementsMySqlDDL("stg_fake_elements")).Execute();
+
+	MockDatabaseConnectionManager dbManager;
+	dbManager.InsertConnection( "myMySQLConnection", m_pMySQLDB );
+
+	std::stringstream xmlNoLengthAttribute;
+	xmlNoLengthAttribute << "<DataNode type = \"db\" >"
+						 << " <Write connection = \"myMySQLConnection\""
+						 << "  table = \"fake_elements\" "
+						 << "  stagingTable = \"stg_fake_elements\" "
+						 << "  workingDir = \"" << m_pTempDir->GetDirectoryName() << "\" >"
+						 << "	<Columns>"
+						 << "      <Column name=\"fake_element_id\" type=\"key\" />"
+						 << "      <Column name=\"fake_element_name\" type=\"data\" ifNew=\"%v\"/>"
+						 << "	</Columns>"
+						 << " </Write>"
+						 << "</DataNode>";
+	
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlNoLengthAttribute.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
+
+	std::stringstream header;
+	header << "fake_element_id,fake_element_name" << std::endl;
+
+	std::stringstream row_14CharacterName;
+	row_14CharacterName << "1,joelonsoftware" << std::endl;
+
+	std::stringstream storeInputCSV0;
+	storeInputCSV0 << header.str()
+				   << row_14CharacterName.str();
+	std::map< std::string, std::string > parameters;
+
+	//should succeed because the default bind size of 256 is larger than the 14 character element name
+	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, storeInputCSV0 ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+
+	//check table contents
+	std::stringstream expected;
+	expected << row_14CharacterName.str();
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pMySQLObservationDB, "fake_elements", "fake_element_id,fake_element_name", "fake_element_id" );
+
+	std::stringstream field_257CharacterName;
+	for (int i = 0; i < 257; i++)
+	{
+	 	field_257CharacterName << "g";
+	}
+
+	std::stringstream row_257CharacterName;
+	row_257CharacterName << "2," << field_257CharacterName.str() << std::endl;
+
+	std::stringstream storeInputCSV1;
+	storeInputCSV1 << header.str()
+				   << row_257CharacterName.str();
+	
+	//now use a 257 character name: should succeed because we use a 'load data infile' to load into the staging table and that doesn't require us to specify a buffer size.
+	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, storeInputCSV1 ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+
+	expected << row_257CharacterName.str();
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pMySQLObservationDB, "fake_elements", "fake_element_id,fake_element_name", "fake_element_id" );
 }
 
 

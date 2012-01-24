@@ -25,6 +25,11 @@ class DatabaseConnectionManager;
 namespace xercesc_2_7 { class DOMNode; }
 namespace xercesc = xercesc_2_7;
 
+DATUMINFO( InputName, std::string);
+DATUMINFO( OutputName, std::string);
+DATUMINFO( InputRequired, bool);
+DATUMINFO( BindSize, size_t);
+
 class DatabaseProxy : public AbstractNode
 {
 public:
@@ -69,10 +74,15 @@ private:
 	Nullable<std::string> m_PreStatement;
 	Nullable<std::string> m_PostStatement;
 	Nullable< size_t > m_WriteMaxTableNameLength;
+	//Stores configured lengths for columns in the Write element. These are used when binding
+	//to the input csv and also to specify the buffer size for the field in the sqlloader control file.
+	//These are keyed by the column names (not source names).
+	std::map<std::string, size_t> m_WriteNodeColumnLengths;
 	bool m_WriteDynamicStagingTable;
 	bool m_WriteDirectLoad;
 	bool m_WriteLocalDataFile;
 	bool m_WriteNoCleanUp;
+
 	std::map< std::string, std::string > m_WriteRequiredColumns;
 	bool m_WriteConnectionByTable;
 	

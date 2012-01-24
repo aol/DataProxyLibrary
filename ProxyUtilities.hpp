@@ -37,6 +37,7 @@ namespace ProxyUtilities
 							   const xercesc::DOMNode& i_rColumnsNode,
 							   bool i_InsertOnly,
 							   std::map< std::string, std::string >& o_rRequiredColumns,
+							   std::map<std::string, size_t>& o_rWriteNodeColumnLengths,
 							   std::vector< std::string >* o_pBindColumns = NULL );
 
 	std::string GetVariableSubstitutedString( const std::string& i_rInput, const std::map< std::string, std::string >& i_rParameters );

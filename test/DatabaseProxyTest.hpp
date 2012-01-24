@@ -22,6 +22,11 @@ class DatabaseProxyTest : public CppUnit::TestFixture
 {
 private:
 	CPPUNIT_TEST_SUITE( DatabaseProxyTest );
+	
+	CPPUNIT_TEST( testOracleStoreNoStagingWithMaxColumnLength);
+	CPPUNIT_TEST( testOracleStoreWithStagingWithMaxColumnLength);
+	CPPUNIT_TEST( testMySQLStoreWithStagingWithMaxColumnLength);
+
 	CPPUNIT_TEST( testConstructorExceptionWithNoReadOrWriteOrDeleteNode );
 	CPPUNIT_TEST( testConstructorExceptionIllegalXml );
 	CPPUNIT_TEST( testOperationNotSupported );
@@ -42,9 +47,7 @@ private:
 	CPPUNIT_TEST( testOracleStore );
 	CPPUNIT_TEST( testMySqlStore );
 	CPPUNIT_TEST( testOracleStoreNoStaging );
-	CPPUNIT_TEST( testOracleStoreNoStagingMaxBindSize );
 	CPPUNIT_TEST( testMySqlStoreNoStaging );
-	CPPUNIT_TEST( testMySqlStoreNoStagingMaxBindSize );
 	CPPUNIT_TEST( testMySqlStoreDynamicTables );
 	CPPUNIT_TEST( testOracleStoreDynamicTables );
 	CPPUNIT_TEST( testDynamicTableNameLength );
@@ -73,6 +76,7 @@ private:
 	CPPUNIT_TEST( testDeleteSameVarNameReplacedTwice );
 	CPPUNIT_TEST( testDeleteExceptionMissingVariableNameDefinition );
 	CPPUNIT_TEST( testDeleteExceptionEmptyVarName );
+
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -102,11 +106,9 @@ public:
 
 	void testOracleStore();
 	void testOracleStoreNoStaging();
-	void testOracleStoreNoStagingMaxBindSize();
 	void testOracleMultipleStore();
 	void testMySqlStore();
 	void testMySqlStoreNoStaging();
-	void testMySqlStoreNoStagingMaxBindSize();
 	void testMySqlMultipleStore();
 	void testMySqlStoreDynamicTables();
 	void testOracleStoreDynamicTables();
@@ -134,6 +136,10 @@ public:
 	void testDeleteSameVarNameReplacedTwice();
 	void testDeleteExceptionMissingVariableNameDefinition();
 	void testDeleteExceptionEmptyVarName();
+
+	void testOracleStoreNoStagingWithMaxColumnLength();
+	void testOracleStoreWithStagingWithMaxColumnLength();
+	void testMySQLStoreWithStagingWithMaxColumnLength();
 
 private:
 	boost::shared_ptr<TempDirectory> m_pTempDir;

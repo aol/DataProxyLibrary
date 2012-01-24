@@ -177,8 +177,30 @@ namespace
 		file.close();
 	}
 
-	void WriteControlFile( const std::string& i_rFileSpec, const std::string& i_rDataFileSpec, const std::string& i_rColumns, const std::string& i_rStagingTable )
+	void WriteControlFile( const std::string& i_rFileSpec, const std::string& i_rDataFileSpec, const std::string& i_rColumns, const std::string& i_rStagingTable, const std::map<std::string, size_t> i_rWriteColumnSizes )
 	{
+		std::stringstream columnsWithSizes;
+		std::vector<std::string> columnVector;
+		std::string separator(",");
+		Tokenize(columnVector, i_rColumns, separator);
+		for (std::vector<std::string>::const_iterator iter = columnVector.begin(); iter != columnVector.end(); ++iter)
+		{
+			if (iter == columnVector.begin())
+			{
+				columnsWithSizes << *iter;
+			}
+			else
+			{
+				columnsWithSizes << "," << *iter;
+			}
+			
+			std::map<std::string, size_t>::const_iterator size_iter = i_rWriteColumnSizes.find(*iter);
+			if (size_iter != i_rWriteColumnSizes.end())
+			{
+				columnsWithSizes << " char(" << size_iter->second << ")";
+			}
+		}
+
 		// open the file for writing
 		std::ofstream file( i_rFileSpec.c_str() );
 		if( !file.good() )
@@ -190,7 +212,7 @@ namespace
 			 << "LOAD DATA INFILE '" << i_rDataFileSpec << "'" << std::endl
 			 << "INTO TABLE " << i_rStagingTable << " FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED by '\"'" << std::endl
 			 << "TRAILING NULLCOLS" << std::endl
-			 << "(" << i_rColumns << ")" << std::endl;
+			 << "(" << columnsWithSizes.str() << ")" << std::endl;
 
 		if( !file.good() )
 		{
@@ -289,6 +311,23 @@ namespace
 		return finalTableName;
 	}
 
+	size_t GetWriteNodeBindSizeWithSourceName(const std::string& i_rSourceName, 
+											  const std::map<std::string, std::string>& i_rWriteRequiredColumns,
+											  const std::map<std::string, size_t>& i_rWriteNodeColumnLengths)
+	{
+		std::map<std::string, std::string>::const_iterator iter = i_rWriteRequiredColumns.find(i_rSourceName);
+		if (iter == i_rWriteRequiredColumns.end())
+		{
+			MV_THROW(DatabaseProxyException, "Could not find column name for given source name.");
+		}
+		std::map<std::string, size_t>::const_iterator size_iter = i_rWriteNodeColumnLengths.find(iter->second);
+		if (size_iter != i_rWriteNodeColumnLengths.end())
+		{
+			return size_iter->second;
+		}
+		return DEFAULT_MAX_BIND_SIZE;
+	}
+
 	class ScopedTempTable
 	{
 	public:
@@ -339,7 +378,6 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 	m_ReadRecordSeparator( "\n" ),
 	m_ReadConnectionByTable( false ),
 	m_WriteEnabled( false ),
-	m_WriteMaxBindSize( DEFAULT_MAX_BIND_SIZE ),
 	m_WriteConnectionName(),
 	m_WriteTable(),
 	m_WriteStagingTable(),
@@ -351,6 +389,7 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 	m_PreStatement(),
 	m_PostStatement(),
 	m_WriteMaxTableNameLength(),
+	m_WriteNodeColumnLengths(),
 	m_WriteDynamicStagingTable( true ),
 	m_WriteDirectLoad( true ),
 	m_WriteLocalDataFile( true ),
@@ -492,11 +531,6 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 		m_WriteLocalDataFile = GetBool( *pNode, LOCAL_DATA_ATTRIBUTE, true );
 		m_WriteNoCleanUp = GetBool( *pNode, NO_CLEAN_UP_ATTRIBUTE, false );
 
-		pAttribute = XMLUtilities::GetAttribute( pNode, MAX_BIND_SIZE_ATTRIBUTE );
-		if( pAttribute != NULL )
-		{
-			m_WriteMaxBindSize = boost::lexical_cast< int >( XMLUtilities::XMLChToString(pAttribute->getValue()) );
-		}
 		pAttribute = XMLUtilities::GetAttribute( pNode, MAX_TABLE_NAME_LENGTH_ATTRIBUTE );
 		if( pAttribute != NULL )
 		{
@@ -550,7 +584,7 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 			std::string dbType = m_rDatabaseConnectionManager.GetDatabaseType( m_WriteConnectionName );
 			std::string query = ProxyUtilities::GetMergeQuery( dbType, m_WriteTable, m_WriteStagingTable,
 															   *XMLUtilities::GetSingletonChildByName( pNode, COLUMNS_NODE ),
-															   insertOnly, m_WriteRequiredColumns, &m_WriteBindColumns );
+															   insertOnly, m_WriteRequiredColumns, m_WriteNodeColumnLengths, &m_WriteBindColumns );
 			if( dbType == MYSQL_DB_TYPE )
 			{
 				m_WriteMySqlMergeQuery = query;
@@ -564,10 +598,10 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 		{
 			m_WriteMySqlMergeQuery = ProxyUtilities::GetMergeQuery( MYSQL_DB_TYPE, m_WriteTable, m_WriteStagingTable,
 																	*XMLUtilities::GetSingletonChildByName( pNode, COLUMNS_NODE ),
-																	insertOnly, m_WriteRequiredColumns, &m_WriteBindColumns );
+																	insertOnly, m_WriteRequiredColumns, m_WriteNodeColumnLengths, &m_WriteBindColumns );
 			m_WriteOracleMergeQuery = ProxyUtilities::GetMergeQuery( ORACLE_DB_TYPE, m_WriteTable, m_WriteStagingTable,
 																	 *XMLUtilities::GetSingletonChildByName( pNode, COLUMNS_NODE ),
-																	 insertOnly, m_WriteRequiredColumns );
+																	 insertOnly, m_WriteRequiredColumns, m_WriteNodeColumnLengths );
 		}
 	}
 
@@ -817,7 +851,8 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			{
 				MV_THROW( DatabaseProxyException, "Unable to find column: " << *iter << " in incoming data or parameters" );
 			}
-			statement.BindVar( dataColumns[i], m_WriteMaxBindSize );
+			size_t bindSize = GetWriteNodeBindSizeWithSourceName(*iter, m_WriteRequiredColumns, m_WriteNodeColumnLengths);
+			statement.BindVar( dataColumns[i], bindSize );
 		}
 		statement.CompleteBinding();
 
@@ -916,7 +951,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 				}
 
 				// write the control file & prepare SQLLoader
-				WriteControlFile( controlFileSpec, dataFileSpec, columns, stagingTable );
+				WriteControlFile( controlFileSpec, dataFileSpec, columns, stagingTable, m_WriteNodeColumnLengths);
 				SQLLoader loader( rTransactionDatabase.GetDBName(), rTransactionDatabase.GetUserName(), rTransactionDatabase.GetPassword(), controlFileSpec, logFileSpec );
 
 				// upload!

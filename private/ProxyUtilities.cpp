@@ -18,6 +18,7 @@
 #include <boost/regex.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/algorithm/string/join.hpp>
+#include <boost/lexical_cast.hpp>
 #include <errno.h>
 #include <limits.h>
 
@@ -36,6 +37,7 @@ namespace
 	const std::string SOURCE_NAME_ATTRIBUTE( "sourceName" );
 	const std::string IF_NEW_ATTRIBUTE( "ifNew" );
 	const std::string IF_MATCHED_ATTRIBUTE( "ifMatched" );
+	const std::string LENGTH_ATTRIBUTE( "length" );
 	const std::string NEW_VALUE_PLACEHOLDER( "%v" );
 	const std::string EXISTING_VALUE_PLACEHOLDER( "%t" );
 
@@ -340,7 +342,9 @@ std::string ProxyUtilities::GetMergeQuery( const std::string& i_rDatabaseType,
 										   const xercesc::DOMNode& i_rColumnsNode,
 										   bool i_InsertOnly,
 										   std::map< std::string, std::string >& o_rRequiredColumns,
-										   std::vector< std::string >* o_pBindColumns )
+										   std::map<std::string, size_t>& o_rWriteNodeColumnLengths,
+										   std::vector< std::string >* o_pBindColumns)
+
 {
 	if( i_rDatabaseType != ORACLE_DB_TYPE && i_rDatabaseType != MYSQL_DB_TYPE )
 	{
@@ -348,6 +352,8 @@ std::string ProxyUtilities::GetMergeQuery( const std::string& i_rDatabaseType,
 	}
 	
 	o_rRequiredColumns.clear();
+	o_rWriteNodeColumnLengths.clear();
+	
 	std::vector< std::string > allColumns;
 	std::vector< std::string > keyColumns;
 	std::vector< std::string > valueDataColumns;
@@ -369,6 +375,7 @@ std::string ProxyUtilities::GetMergeQuery( const std::string& i_rDatabaseType,
 	allowedAttributes.insert( TYPE_ATTRIBUTE );
 	allowedAttributes.insert( IF_NEW_ATTRIBUTE );
 	allowedAttributes.insert( IF_MATCHED_ATTRIBUTE );
+	allowedAttributes.insert( LENGTH_ATTRIBUTE );
 
 	std::vector<xercesc::DOMNode*>::const_iterator iter = columns.begin();
 	for( iter = columns.begin(); iter != columns.end(); ++iter )
@@ -381,10 +388,18 @@ std::string ProxyUtilities::GetMergeQuery( const std::string& i_rDatabaseType,
 		std::string name = XMLUtilities::GetAttributeValue( *iter, NAME_ATTRIBUTE );
 		std::string type = XMLUtilities::GetAttributeValue( *iter, TYPE_ATTRIBUTE );
 		std::string sourceName = name;
+		Nullable<size_t> length;
 		xercesc::DOMAttr* pAttribute = XMLUtilities::GetAttribute( *iter, SOURCE_NAME_ATTRIBUTE );
 		if( pAttribute != NULL )
 		{
 			sourceName = XMLUtilities::XMLChToString(pAttribute->getValue());
+		}
+
+		pAttribute = XMLUtilities::GetAttribute( *iter, LENGTH_ATTRIBUTE );
+		if( pAttribute != NULL )
+		{
+			std::string lengthString = XMLUtilities::XMLChToString(pAttribute->getValue());
+			length = boost::lexical_cast<size_t>(lengthString);
 		}
 
 		// be sure it's not ambiguous
@@ -399,6 +414,12 @@ std::string ProxyUtilities::GetMergeQuery( const std::string& i_rDatabaseType,
 
 		// insert into all columns
 		allColumns.push_back( name );
+
+		// if a length was specified for the column, store the value.
+		if (!length.IsNull())
+		{
+			o_rWriteNodeColumnLengths[name] = length;
+		}
 
 		// if it's a key, store it as such and continue
 		if( type == TYPE_KEY_VALUE )
