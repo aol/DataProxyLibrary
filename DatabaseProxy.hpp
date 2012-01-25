@@ -25,11 +25,6 @@ class DatabaseConnectionManager;
 namespace xercesc_2_7 { class DOMNode; }
 namespace xercesc = xercesc_2_7;
 
-DATUMINFO( InputName, std::string);
-DATUMINFO( OutputName, std::string);
-DATUMINFO( InputRequired, bool);
-DATUMINFO( BindSize, size_t);
-
 class DatabaseProxy : public AbstractNode
 {
 public:
