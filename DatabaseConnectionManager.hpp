@@ -13,6 +13,7 @@
 
 #include "MVException.hpp"
 #include "MVCommon.hpp"
+#include "IncludeHashMap.hpp"
 #include "GenericDataContainer.hpp"
 #include "GenericDataObject.hpp"
 #include <boost/shared_ptr.hpp>
@@ -76,7 +77,7 @@ MV_MAKEEXCEPTIONCLASS(DatabaseConnectionManagerException, MVException);
 		RowEnd > > > > > > >
 	DatabaseConnectionContainerDescription;
 
-	typedef GenericDataContainer< DatabaseConnectionDatum, DatabaseConnectionContainerDescription, std::map > DatabaseConnectionContainer;
+	typedef GenericOrderedDataContainer< DatabaseConnectionDatum, DatabaseConnectionContainerDescription > DatabaseConnectionContainer;
 
 	DATUMINFO( ShardCollectionName, std::string);
 	DATUMINFO( ConnectionNodeName, std::string);
@@ -98,7 +99,7 @@ MV_MAKEEXCEPTIONCLASS(DatabaseConnectionManagerException, MVException);
 		RowEnd > > > >
 	ShardCollectionContainerDescription;
 
-	typedef GenericDataContainer< ShardCollectionDatum, ShardCollectionContainerDescription, std::map > ShardCollectionContainer;
+	typedef GenericOrderedDataContainer< ShardCollectionDatum, ShardCollectionContainerDescription > ShardCollectionContainer;
 
 class DatabaseConnectionManager
 {
@@ -111,26 +112,27 @@ public:
 	MV_VIRTUAL void ValidateConnectionName(const std::string& i_rConnectionName ) const;
 	MV_VIRTUAL std::string GetDatabaseType(const std::string& i_rConnectionName) const;
 	MV_VIRTUAL std::string GetDatabaseTypeByTable(const std::string& i_rTableName) const;
-	MV_VIRTUAL Database& GetConnection(const std::string& i_rConnectionName) const;
-	MV_VIRTUAL Database& GetConnectionByTable( const std::string& i_rTableName ) const;
+	MV_VIRTUAL Database& GetConnection(const std::string& i_rConnectionName);
+	MV_VIRTUAL Database& GetConnectionByTable( const std::string& i_rTableName );
 	MV_VIRTUAL void ClearConnections();
 
 	//For every mysql connection specified, we create a mysql accessory connection. This is used by DatabaseProxy to truncate staging tables. Without
 	//this mysql accessory connection, all pending commits would be forcefully committed on any truncate call.
-	MV_VIRTUAL Database& GetDataDefinitionConnection(const std::string& i_rConnectionName) const;
-	MV_VIRTUAL Database& GetDataDefinitionConnectionByTable(const std::string& i_rTableName) const;
+	MV_VIRTUAL Database& GetDataDefinitionConnection(const std::string& i_rConnectionName);
+	MV_VIRTUAL Database& GetDataDefinitionConnectionByTable(const std::string& i_rTableName);
 
 protected:
 	DatabaseConnectionContainer m_DatabaseConnectionContainer;
 	mutable DatabaseConnectionContainer m_ShardDatabaseConnectionContainer;
 	ShardCollectionContainer m_ShardCollections;
-	mutable __gnu_cxx::hash_map< std::string, std::string > m_ConnectionsByTableName;
+	mutable std_ext::unordered_map< std::string, std::string > m_ConnectionsByTableName;
 	DataProxyClient& m_rDataProxyClient;
 
 private:
 	void RefreshConnectionsByTable() const;
 	void FetchConnectionsByTable( const std::string& i_rName, const std::string& i_rConnectionsNode, const std::string& i_rTablesNode, double i_ConnectionReconnect ) const;
-	DatabaseConnectionDatum& PrivateGetConnection(const std::string& i_rConnectionName ) const;
+	DatabaseConnectionDatum& PrivateGetConnection(const std::string& i_rConnectionName );
+	const DatabaseConnectionDatum& PrivateGetConnection(const std::string& i_rConnectionName ) const;
 	std::string PrivateGetConnectionNameByTable(const std::string& i_rTableName ) const;
 
 	mutable boost::shared_mutex m_ConfigVersion;

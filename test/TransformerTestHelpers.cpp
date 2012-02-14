@@ -11,6 +11,7 @@
 
 #include "TransformerTestHelpers.hpp"
 #include <fstream>
+#include <stdlib.h>
 
 void TransformerTestHelpers::SetupLibraryFile( const std::string& i_rTempDirectory, std::string& o_rLibrarySpec )
 {

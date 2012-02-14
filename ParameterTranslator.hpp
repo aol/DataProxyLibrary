@@ -55,7 +55,7 @@ private:
 		RowEnd > > >
 	TranslatorDesc;
 
-	typedef GenericDataContainer< TranslatorDatum, TranslatorDesc, std::map > TranslatorContainer;
+	typedef GenericOrderedDataContainer< TranslatorDatum, TranslatorDesc > TranslatorContainer;
 
 	typedef
 		GenericDatum< ParameterName,
@@ -73,7 +73,7 @@ private:
 		RowEnd > > > >
 	DerivedValueDesc;
 
-	typedef GenericDataContainer< DerivedValueDatum, DerivedValueDesc, std::map > DerivedValueContainer;
+	typedef GenericOrderedDataContainer< DerivedValueDatum, DerivedValueDesc > DerivedValueContainer;
 
 	bool IsSilenced( const std::string& i_rName ) const;
 

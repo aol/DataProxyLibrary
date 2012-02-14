@@ -187,9 +187,9 @@ void RestRequestBuilder::BuildRequest( std::string& o_rUri, RESTParameters& o_rP
 	for( ; groupIter != m_QueryGroups.end(); ++groupIter )
 	{
 		std::string value;
-		if( groupIter->second->GetValue< Dpl::Elements >().empty() )
+		if( groupIter->second.GetValue< Dpl::Elements >().empty() )
 		{
-			Nullable< std::string > defaultValue = groupIter->second->GetValue< Dpl::DefaultValue >();
+			Nullable< std::string > defaultValue = groupIter->second.GetValue< Dpl::DefaultValue >();
 			if( defaultValue.IsNull() )
 			{
 				continue;
@@ -198,10 +198,10 @@ void RestRequestBuilder::BuildRequest( std::string& o_rUri, RESTParameters& o_rP
 		}
 		else
 		{
-			value = BuildGroupedValue( groupIter->second->GetValue< Dpl::Elements >(), groupIter->second->GetValue< Dpl::Separator >() );
+			value = BuildGroupedValue( groupIter->second.GetValue< Dpl::Elements >(), groupIter->second.GetValue< Dpl::Separator >() );
 		}
 
-		std::string query = BuildString( groupIter->second->GetValue< Dpl::Name >(), value, groupIter->second->GetValue< Dpl::Format >(), false );
+		std::string query = BuildString( groupIter->second.GetValue< Dpl::Name >(), value, groupIter->second.GetValue< Dpl::Format >(), false );
 		AppendQuery( o_rUri, query, numQueries );
 	}
 }
@@ -213,7 +213,7 @@ void RestRequestBuilder::Clear()
 	Dpl::GroupContainer::iterator iter = m_QueryGroups.begin();
 	for( ; iter != m_QueryGroups.end(); ++iter )
 	{
-		iter->second->GetReference< Dpl::Elements >().clear();
+		iter->second.GetReference< Dpl::Elements >().clear();
 	}
 
 	m_Queries.clear();
@@ -231,12 +231,12 @@ void RestRequestBuilder::AddQuery( const std::string& i_rKey, const std::string&
 	{
 		Dpl::GroupConfigDatum datum;
 		datum.SetValue< Dpl::Name >( static_cast<const std::string&>( i_rGroup ) );
-		Dpl::GroupContainer::const_iterator iter = m_QueryGroups.find( datum );
+		Dpl::GroupContainer::iterator iter = m_QueryGroups.find( datum );
 		if( iter == m_QueryGroups.end() )
 		{
 			MV_THROW( RestRequestBuilderException, "Attempted to add query parameter: '" << i_rKey << "' to unknown group: '" << i_rGroup << "'" );
 		}
-		iter->second->GetReference< Dpl::Elements >().push_back( BuildString( i_rKey, i_rValue, i_rFormat ) );
+		iter->second.GetReference< Dpl::Elements >().push_back( BuildString( i_rKey, i_rValue, i_rFormat ) );
 	}
 }
 

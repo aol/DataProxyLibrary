@@ -37,7 +37,7 @@ GenericDataContainerDescriptor< TestHelpersGDPTypes::Col1Entry, RetainFirstDatum
 GenericDataContainerDescriptor< TestHelpersGDPTypes::Col2Entry, RetainFirstDatum,
 RowEnd > > > > ContainerDescription;
 
-typedef GenericDataContainer<TestDatum,ContainerDescription,std::map> TestContainer;
+typedef GenericOrderedDataContainer<TestDatum,ContainerDescription> TestContainer;
 
 typedef
 GenericDataObjectBindColumn< TestHelpersGDPTypes::Key1Entry, `Key1Column`, 0,

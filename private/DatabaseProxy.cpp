@@ -257,7 +257,7 @@ namespace
 
 	Database& GetConnection( const std::string& i_rConnection,
 							 bool i_IsConnectionByTable,
-							 const DatabaseConnectionManager& i_rManager,
+							 DatabaseConnectionManager& i_rManager,
 							 const std::map< std::string, std::string >& i_rParameters )
 	{
 		if( i_IsConnectionByTable )
@@ -269,7 +269,7 @@ namespace
 
 	Database& GetDataDefinitionConnection( const std::string& i_rConnection,
 										   bool i_IsConnectionByTable,
-										   const DatabaseConnectionManager& i_rManager,
+										   DatabaseConnectionManager& i_rManager,
 										   const std::map< std::string, std::string >& i_rParameters )
 	{
 		if( i_IsConnectionByTable )

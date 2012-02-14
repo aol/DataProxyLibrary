@@ -84,7 +84,7 @@ LIBLOC=\
 	$(LIB_DIRS:%=-L%) \
 
 # Libraries
-LIBS		= -lLogger -lclntsh -lmyodbc3 -lxerces-c -lpthread -lboost_regex -lboost_filesystem -llog4cxx -lboost_thread -lcurl -lssl -luuid
+LIBS		= -lLogger -lclntsh -lmyodbc3 -lxerces-c -lpthread -lboost_regex -lboost_filesystem -llog4cxx -lboost_thread -lcurl -lssl -luuid -lnnz10 
 TESTLIBS	= -lcppunit -lTestHelpers -lMockDatabase -lMockService -lMockUtility $(LIBS)
 MATLABLIBS	= -lMatlab -leng -lmx -lut -lmat
 
@@ -229,6 +229,7 @@ DATABASEFILES=\
 	LargeScaleSelectStatement.cpp \
 	Statement.cpp \
 
+EXCHANGEFEEFILES= ExchangeFee.cpp
 
 # Creating explicit paths to sets of source files
 PRIVATEFILESPEC			= $(PRIVATEFILES:%=$(PRIVATEDIR)/%)
@@ -240,6 +241,7 @@ THREADTESTFILESPEC		= $(TESTFILES:%=$(TESTDIR)/%)
 MATLABTESTFILESPEC		= $(MATLABTESTFILES:%=$(TESTDIR)/%)
 MOCKFILESPEC			= $(MOCKFILES:%=$(MOCKDIR)/%)
 TESTHELPERFILESPEC		= $(TESTHELPERFILES:%=$(TESTHELPERDIR)/private/%)
+EXCHANGEFEEFILESPEC		= $(EXCHANGEFEEFILES)
 
 # Specifying object destinations
 MATLABOBJSPEC			= $(MATLABWRAPPERFILE:%.cpp=%.mexa64)
@@ -253,12 +255,13 @@ THREADTESTOBJSPEC		= $(THREADTESTFILES:%.cpp=$(TARGETDIR)/%.o)
 MATLABTESTOBJSPEC		= $(MATLABTESTFILES:%.cpp=$(TARGETDIR)/%.o)
 MOCKOBJSPEC				= $(MOCKFILES:%.cpp=$(TARGETDIR)/%.o)
 THPP2HPPFILES			= $(THPPFILES:%.thpp=%.hpp)
+EXCHANGEFEEOBJSPEC		= $(EXCHANGEFEEFILES:%.cpp=$(TARGETDIR)/%.o)
 
 # Per-target specification
-DEBUGOPTS		= -ggdb3 -Wall -Werror -fno-strict-aliasing -fPIC -D DPL_TEST
-OPTIMIZEOPTS	= -O3 -D MV_OPTIMIZE -Wall -Werror -fno-strict-aliasing -fPIC
-PROFILEOPTS		= -O3 -D MV_OPTIMIZE -pg -Wall -Werror -fno-strict-aliasing -fPIC
-COVERAGEOPTS	= -fprofile-arcs -ftest-coverage -Wall -Werror -fno-strict-aliasing -fPIC
+DEBUGOPTS		= -ggdb3 -Wall -Werror -fno-strict-aliasing -fPIC -D DPL_TEST -std=c++0x
+OPTIMIZEOPTS	= -O3 -D MV_OPTIMIZE -Wall -Werror -fno-strict-aliasing -fPIC -std=c++0x
+PROFILEOPTS		= -O3 -D MV_OPTIMIZE -pg -Wall -Werror -fno-strict-aliasing -fPIC -std=c++0x
+COVERAGEOPTS	= -fprofile-arcs -ftest-coverage -Wall -Werror -fno-strict-aliasing -fPIC -std=c++0x
 
 # Executable targets
 BASE_NAME						= DataProxy
@@ -272,7 +275,8 @@ MATLAB_TARGET					= DataProxy.mexa64
 TEST_TARGET						= data_proxy_tests
 THREADTEST_TARGET				= multithread_data_proxy_test
 MATLAB_TEST_TARGET				= matlab_wrapper_tests
-OTHER_TARGETS = $(MATLAB_TARGET) $(TEST_TARGET) $(THREADTEST_TARGET) $(MATLAB_TEST_TARGET) $(MOCK_TARGET)
+EXCHANGE_FEE_TARGET				= exchange_fee_test
+OTHER_TARGETS = $(MATLAB_TARGET) $(TEST_TARGET) $(THREADTEST_TARGET) $(MATLAB_TEST_TARGET) $(MOCK_TARGET) $(EXCHANGE_FEE_TARGET)
 ALL_TARGETS = $(PRIMARY_TARGET) $(MAJOR_VERSION_TARGET) $(FRIENDLY_TARGET) $(OTHER_TARGETS)
 
 # Defaults for target dir and options
@@ -368,6 +372,9 @@ $(TARGETDIR)/$(PRIMARY_TARGET): $(PRIVATEOBJSPEC)
 $(TARGETDIR)/$(MATLAB_TARGET): $(MATLABWRAPPERFILE) $(PRIMARY_TARGET)
 	$(MEX) $(MATLABWRAPPERFILE) -DMV_OPTIMIZE $(INCS) $(LIBLOC) -L. -lDataProxy $(LIBS) -o $(TARGETDIR)/$(MATLAB_TARGET)
 
+$(EXCHANGE_FEE_TARGET:%=$(TARGETDIR)/%): $(EXCHANGEFEEOBJSPEC) $(PRIVATEOBJSPEC)
+	$(CXXL) -o $@ $(PRIVATEOBJSPEC) $(EXCHANGEFEEOBJSPEC) $(LIBS)
+
 # if necessary, build external libraries.
 extlibs: $(MODULESPEC) $(TESTMODULESPEC)
 	$(MODULESPEC:%=(cd % && ${MAKE} $(SUBTARGET)) && ) true
@@ -424,6 +431,7 @@ DEPENDFILES = $(PRIVATEFILESPEC) \
 			  $(TESTFILESPEC) \
 			  $(THREADTESTFILESPEC) \
 			  $(MOCKFILESPEC) \
+			  $(EXCHANGEFEEFILESPEC) \
 			  $(TESTHELPERFILESPEC) \
 			  $(THPP2HPPFILES)
 
@@ -437,7 +445,7 @@ depend: localdepend $(MODULESPEC) $(TESTMODULESPEC)
 	${TESTMODULESPEC:%=(cd % && ${MAKE} localdepend) &&} true
 
 localdepend: $(THPP2HPPFILES)
-	$(CXXD) $(DEPENDFILES) | sed '/^\(\S\)/ s/^/$$(TARGETDIR)\//' > Makefile.depend
+	$(CXXD) -std=c++0x $(DEPENDFILES) | sed '/^\(\S\)/ s/^/$$(TARGETDIR)\//' > Makefile.depend
 
 nodepend:
 	rm -f Makefile.depend

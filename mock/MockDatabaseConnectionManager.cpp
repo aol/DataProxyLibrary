@@ -66,12 +66,12 @@ void MockDatabaseConnectionManager::ValidateConnectionName(const std::string& i_
 		  << std::endl;
 }
 
-Database& MockDatabaseConnectionManager::GetDataDefinitionConnection(const std::string& i_rConnectionName) const
+Database& MockDatabaseConnectionManager::GetDataDefinitionConnection(const std::string& i_rConnectionName)
 {
 	return GetConnection(MOCK_DATA_DEFINITION_CONNECTION_PREFIX + i_rConnectionName);
 }
 
-Database& MockDatabaseConnectionManager::GetConnection(const std::string& i_rConnectionName) const
+Database& MockDatabaseConnectionManager::GetConnection(const std::string& i_rConnectionName)
 {
 	m_Log << "MockDatabaseConnectionManager::GetConnection" << std::endl
 		  << "ConnectionName: " << i_rConnectionName << std::endl

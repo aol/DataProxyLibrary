@@ -16,8 +16,7 @@
 #include <vector>
 #include <set>
 #include <fstream>
-#include <ext/hash_set>
-#include <ext/hash_map>
+#include "IncludeHashMap.hpp"
 #include "Hashers.hpp"
 #include "Nullable.hpp"
 #include "WrappedPrimitive.hpp"
@@ -48,16 +47,16 @@ private:
 	
 	bool m_bInitialized;
 
-	std_ext::hash_map<MediaSECId, std::set<MediaId> > m_MediaSECs;
-	std_ext::hash_map<MediaId, MediaSECId> m_MediaId2SECId;
+	std_ext::unordered_map<MediaSECId, std::set<MediaId> > m_MediaSECs;
+	std_ext::unordered_map<MediaId, MediaSECId> m_MediaId2SECId;
 
-	std_ext::hash_map<WebsiteSECId, std::set<WebsiteId> > m_WebsiteSECs;
-	std_ext::hash_map<WebsiteId, WebsiteSECId> m_WebsiteId2SECId;
+	std_ext::unordered_map<WebsiteSECId, std::set<WebsiteId> > m_WebsiteSECs;
+	std_ext::unordered_map<WebsiteId, WebsiteSECId> m_WebsiteId2SECId;
 
 	std::set<CampaignId> m_CrossCampaignIds;	
 	std::set<MediaId> m_CrossCampaignMediaIds;	
 	std::set<MediaId> m_CurrentCampaignMediaIds;	
-	std_ext::hash_map<MediaId, CampaignId> m_MediaId2CampaignId;	
+	std_ext::unordered_map<MediaId, CampaignId> m_MediaId2CampaignId;	
 
 	void LoadSEC( const DataProxyClient& i_rDpc, const std::string& i_rSECDataNodeName );
 	void LoadMediaToCampaignMap( const DataProxyClient& i_rDpc, CampaignId i_CurrCampaignId, const std::string& i_rMediaProperties );

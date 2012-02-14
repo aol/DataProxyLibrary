@@ -25,10 +25,10 @@ namespace
 		TestContainer::iterator iter = i_rTestContainer.begin();
 		for (; iter != i_rTestContainer.end(); ++iter)
 		{
-			containerStream << iter->second->GetValue<TestHelpersGDPTypes::Key1Entry>() << ", " ;
-			containerStream	<< iter->second->GetValue<TestHelpersGDPTypes::Key2Entry>() << ", ";
-			containerStream	<< iter->second->GetValue<TestHelpersGDPTypes::Col1Entry>() << ", ";
-			containerStream	<< iter->second->GetValue<TestHelpersGDPTypes::Col2Entry>() << std::endl;
+			containerStream << iter->second.GetValue<TestHelpersGDPTypes::Key1Entry>() << ", " ;
+			containerStream	<< iter->second.GetValue<TestHelpersGDPTypes::Key2Entry>() << ", ";
+			containerStream	<< iter->second.GetValue<TestHelpersGDPTypes::Col1Entry>() << ", ";
+			containerStream	<< iter->second.GetValue<TestHelpersGDPTypes::Col2Entry>() << std::endl;
 		}
 		return containerStream.str();
 	}

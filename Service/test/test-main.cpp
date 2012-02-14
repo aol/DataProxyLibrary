@@ -13,7 +13,8 @@
 
 #include <iostream>
 #include <fstream>
-
+#include <string.h>
+#include <stdlib.h>
 #include <cppunit/extensions/TestFactoryRegistry.h>
 #include <cppunit/TestResult.h>
 #include <cppunit/TestResultCollector.h>

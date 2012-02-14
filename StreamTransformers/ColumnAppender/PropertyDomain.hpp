@@ -11,9 +11,8 @@
 #ifndef _PROPERTY_DOMAIN_HPP_
 #define _PROPERTY_DOMAIN_HPP_
 
-#include <ext/hash_map>
+#include "IncludeHashMap.hpp"
 #include <string>
-#include "Hashers.hpp"
 #include <boost/noncopyable.hpp>
 #include <map>
 
@@ -34,7 +33,7 @@ public :
 	const std::string* GetDefaultProperties();
 
 private :
-	__gnu_cxx::hash_map< std::string, std::string, stringHasher > m_Properties;
+	std_ext::unordered_map< std::string, std::string > m_Properties;
 	std::string m_DefaultProperties;
 };
 

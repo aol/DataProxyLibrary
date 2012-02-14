@@ -43,10 +43,10 @@ namespace
 	}
 
 	template <class T, class U>
-	void LogSEC ( const std::string& i_rLogId, const std_ext::hash_map<T, std::set<U> >& i_rSECs )
+	void LogSEC ( const std::string& i_rLogId, const std_ext::unordered_map<T, std::set<U> >& i_rSECs )
 	{
 		std::stringstream secEntry;
-		typename std_ext::hash_map<T, std::set<U> >::const_iterator secIterator;
+		typename std_ext::unordered_map<T, std::set<U> >::const_iterator secIterator;
 		MVLOGGER ( i_rLogId, "Seeder Equivalence Class Start" );
 		for ( secIterator = i_rSECs.begin(); secIterator != i_rSECs.end(); ++secIterator )
 		{
@@ -169,7 +169,7 @@ void SeederEquivalenceClassDomain::LoadSEC( const DataProxyClient& i_rDpc, const
 		}
 
 		// Get equivalence class MediaIds
-		std_ext::hash_map<MediaSECId, std::set<MediaId> >::const_iterator mediaSECIterator = m_MediaSECs.find ( mediaSECId );
+		std_ext::unordered_map<MediaSECId, std::set<MediaId> >::const_iterator mediaSECIterator = m_MediaSECs.find ( mediaSECId );
 		if ( mediaSECIterator == m_MediaSECs.end() )
 		{
 			// should not happen. Skip media id 
@@ -231,7 +231,7 @@ void SeederEquivalenceClassDomain::LoadMediaToCampaignMap( const DataProxyClient
 
 Nullable<CampaignId> SeederEquivalenceClassDomain::GetCampaignIdOfMediaId( MediaId i_MediaId ) const
 {
-	std_ext::hash_map<MediaId, CampaignId>::const_iterator mediaIdIterator = m_MediaId2CampaignId.find ( i_MediaId );
+	std_ext::unordered_map<MediaId, CampaignId>::const_iterator mediaIdIterator = m_MediaId2CampaignId.find ( i_MediaId );
 	if ( mediaIdIterator == m_MediaId2CampaignId.end() )
 	{
 		return null;
@@ -242,7 +242,7 @@ Nullable<CampaignId> SeederEquivalenceClassDomain::GetCampaignIdOfMediaId( Media
 
 Nullable<MediaSECId> SeederEquivalenceClassDomain::GetSECIdOfMediaId( MediaId i_MediaId ) const
 {
-	std_ext::hash_map<MediaId, MediaSECId>::const_iterator mediaIdIterator = m_MediaId2SECId.find ( i_MediaId );
+	std_ext::unordered_map<MediaId, MediaSECId>::const_iterator mediaIdIterator = m_MediaId2SECId.find ( i_MediaId );
 	if ( mediaIdIterator == m_MediaId2SECId.end() )
 	{
 		return null;
@@ -252,7 +252,7 @@ Nullable<MediaSECId> SeederEquivalenceClassDomain::GetSECIdOfMediaId( MediaId i_
 
 Nullable<WebsiteSECId> SeederEquivalenceClassDomain::GetSECIdOfWebsiteId( WebsiteId i_WebsiteId ) const
 {
-	std_ext::hash_map<WebsiteId, WebsiteSECId>::const_iterator websiteIdIterator = m_WebsiteId2SECId.find ( i_WebsiteId );
+	std_ext::unordered_map<WebsiteId, WebsiteSECId>::const_iterator websiteIdIterator = m_WebsiteId2SECId.find ( i_WebsiteId );
 	if ( websiteIdIterator == m_WebsiteId2SECId.end() )
 	{
 		return null;
@@ -309,7 +309,7 @@ void SeederEquivalenceClassDomain::WriteSeededKNARows( const std::string& i_rKNA
 	else
 	{
 		// Get SEC member mediaids
-		std_ext::hash_map<MediaSECId, std::set<MediaId> >::iterator mediaSECIdIterator = m_MediaSECs.find ( mediaSECId );
+		std_ext::unordered_map<MediaSECId, std::set<MediaId> >::iterator mediaSECIdIterator = m_MediaSECs.find ( mediaSECId );
 		if ( mediaSECIdIterator == m_MediaSECs.end() )
 		{
 			// This should never happen
@@ -334,7 +334,7 @@ void SeederEquivalenceClassDomain::WriteSeededKNARows( const std::string& i_rKNA
 	else
 	{
 		// Get Website SEC member websiteids
-		std_ext::hash_map<WebsiteSECId, std::set<WebsiteId> >::iterator websiteSECIdIterator = m_WebsiteSECs.find ( websiteSECId );
+		std_ext::unordered_map<WebsiteSECId, std::set<WebsiteId> >::iterator websiteSECIdIterator = m_WebsiteSECs.find ( websiteSECId );
 		// This should never happen
 		if ( websiteSECIdIterator == m_WebsiteSECs.end() )
 		{

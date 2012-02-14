@@ -38,7 +38,7 @@ void DataProxyServiceConfigTest::tearDown()
 
 void DataProxyServiceConfigTest::testParameters()
 {
-	char* argv[] = 
+	const char* argv[] = 
 	{
 		"dpls",
 		"--instance_id", "my_instance_id",
@@ -59,7 +59,7 @@ void DataProxyServiceConfigTest::testParameters()
 	int argc = sizeof(argv)/sizeof(char*);
 
 	
-	DataProxyServiceConfig config( argc, argv );
+	DataProxyServiceConfig config( argc, const_cast<char**>(argv) );
 
 	CPPUNIT_ASSERT_EQUAL( std::string("my_instance_id"), config.GetInstanceId() );
 	CPPUNIT_ASSERT_EQUAL( std::string("my_log_config"), config.GetLogConfig() );
@@ -79,7 +79,7 @@ void DataProxyServiceConfigTest::testParameters()
 
 void DataProxyServiceConfigTest::testOptionalParameters()
 {
-	char* argv[] = 
+	const char* argv[] = 
 	{
 		"dpls",
 		"--instance_id", "my_instance_id",
@@ -90,7 +90,7 @@ void DataProxyServiceConfigTest::testOptionalParameters()
 	int argc = sizeof(argv)/sizeof(char*);
 
 	
-	DataProxyServiceConfig config( argc, argv );
+	DataProxyServiceConfig config( argc, const_cast<char**>(argv) );
 
 	CPPUNIT_ASSERT_EQUAL( std::string("my_instance_id"), config.GetInstanceId() );
 	CPPUNIT_ASSERT_EQUAL( std::string(""), config.GetLogConfig() );
@@ -110,7 +110,7 @@ void DataProxyServiceConfigTest::testOptionalParameters()
 
 void DataProxyServiceConfigTest::testIllegalParameters()
 {
-	char* argv3[] = 
+	const char* argv3[] = 
 	{
 		"dpls",
 		"--instance_id", "my_instance_id",
@@ -121,10 +121,10 @@ void DataProxyServiceConfigTest::testIllegalParameters()
 	};
 	int argc3 = sizeof(argv3)/sizeof(char*);
 	
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( DataProxyServiceConfig( argc3, argv3 ), DataProxyServiceConfigException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( DataProxyServiceConfig( argc3, const_cast<char**>(argv3) ), DataProxyServiceConfigException,
 		".*:\\d+: zlib_compression_level: -2 is not in the range: \\[-1,9\\]" );
 
-	char* argv4[] = 
+	const char* argv4[] = 
 	{
 		"dpls",
 		"--instance_id", "my_instance_id",
@@ -135,7 +135,7 @@ void DataProxyServiceConfigTest::testIllegalParameters()
 	};
 	int argc4 = sizeof(argv4)/sizeof(char*);
 	
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( DataProxyServiceConfig( argc4, argv4 ), DataProxyServiceConfigException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( DataProxyServiceConfig( argc4, const_cast<char**>(argv4) ), DataProxyServiceConfigException,
 		".*:\\d+: zlib_compression_level: 10 is not in the range: \\[-1,9\\]" );
 
 }

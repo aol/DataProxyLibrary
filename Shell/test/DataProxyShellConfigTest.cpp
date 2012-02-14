@@ -44,19 +44,21 @@ void DataProxyShellConfigTest::testInit()
 {
 	std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
 	
-	char* argv[] = 
+	const char* argv[] = 
 	{
 		"dpls",
-		"--init", const_cast< char* >( configFileSpec.c_str() )
+		"--init",
+		configFileSpec.c_str()
 	};
 	int argc = sizeof(argv)/sizeof(char*);
 
 	boost::scoped_ptr< DataProxyShellConfig > pConfig;
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pConfig.reset( new DataProxyShellConfig( argc, argv ) ), DataProxyShellConfigException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pConfig.reset( new DataProxyShellConfig( argc, const_cast<char**>(argv) ) ),
+		DataProxyShellConfigException,
 		".*:\\d+: Shell dpl config file spec does not exist: " << configFileSpec );
 
 	FileUtilities::Touch( configFileSpec );
-	CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, argv ) ) );
+	CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc,  const_cast<char**>(argv) ) ) );
 
 	CPPUNIT_ASSERT_EQUAL( configFileSpec, pConfig->GetDplConfig() );
 	CPPUNIT_ASSERT_EQUAL( INIT_OPERATION, pConfig->GetOperation() );
@@ -72,10 +74,10 @@ void DataProxyShellConfigTest::testLoadNoParams()
 	{
 		std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
 		
-		char* argv[] = 
+		const char* argv[] = 
 		{
 			"dpls",
-			"--init", const_cast< char* >( configFileSpec.c_str() ),
+			"--init", configFileSpec.c_str(),
 			"--name", "name1"
 		};
 		int argc = sizeof(argv)/sizeof(char*);
@@ -83,7 +85,7 @@ void DataProxyShellConfigTest::testLoadNoParams()
 		FileUtilities::Touch( configFileSpec );
 
 		boost::scoped_ptr< DataProxyShellConfig > pConfig;
-		CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, argv ) ) );
+		CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc,  const_cast<char**>(argv) ) ) );
 
 		CPPUNIT_ASSERT( !pConfig->IsTransactional() );
 		CPPUNIT_ASSERT_EQUAL( configFileSpec, pConfig->GetDplConfig() );
@@ -95,10 +97,10 @@ void DataProxyShellConfigTest::testLoadNoParams()
 	{
 		std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
 		
-		char* argv[] = 
+		const char* argv[] = 
 		{
 			"dpls",
-			"--init", const_cast< char* >( configFileSpec.c_str() ),
+			"--init", configFileSpec.c_str() ,
 			"--name", "name1",
 			"--transactional"
 		};
@@ -107,7 +109,7 @@ void DataProxyShellConfigTest::testLoadNoParams()
 		FileUtilities::Touch( configFileSpec );
 
 		boost::scoped_ptr< DataProxyShellConfig > pConfig;
-		CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, argv ) ) );
+		CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc,  const_cast<char**>(argv) ) ) );
 
 		CPPUNIT_ASSERT( pConfig->IsTransactional() );
 		CPPUNIT_ASSERT_EQUAL( configFileSpec, pConfig->GetDplConfig() );
@@ -122,10 +124,10 @@ void DataProxyShellConfigTest::testLoadWithParams()
 {
 	std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
 	
-	char* argv[] = 
+	const char* argv[] = 
 	{
 		"dpls",
-		"--init", const_cast< char* >( configFileSpec.c_str() ),
+		"--init", configFileSpec.c_str(),
 		"--name", "name1",
 		"--params", "pname1~value1^pname2~value2"
 	};
@@ -134,7 +136,7 @@ void DataProxyShellConfigTest::testLoadWithParams()
 	FileUtilities::Touch( configFileSpec );
 	
 	boost::scoped_ptr< DataProxyShellConfig > pConfig;
-	CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, argv ) ) );
+	CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc,  const_cast<char**>(argv) ) ) );
 
 	std::map< std::string, std::string > params;
 	params[ "pname1" ] = "value1";
@@ -152,10 +154,10 @@ void DataProxyShellConfigTest::testLoadWithMultiParams()
 {
 	std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
 	
-	char* argv[] = 
+	const char* argv[] = 
 	{
 		"dpls",
-		"--init", const_cast< char* >( configFileSpec.c_str() ),
+		"--init", configFileSpec.c_str(),
 		"--name", "name1",
 		"--params", "pname1~value1^pname2~value2",
 		"--params", "pname2~IGNORED_VALUE2^pname3~value3",	// pname2 value is ignored here since we retain the first one (from above)
@@ -166,7 +168,7 @@ void DataProxyShellConfigTest::testLoadWithMultiParams()
 	FileUtilities::Touch( configFileSpec );
 	
 	boost::scoped_ptr< DataProxyShellConfig > pConfig;
-	CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, argv ) ) );
+	CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc,  const_cast<char**>(argv) ) ) );
 
 	std::map< std::string, std::string > params;
 	params[ "pname1" ] = "value1";
@@ -186,10 +188,10 @@ void DataProxyShellConfigTest::testStoreNoParams()
 	{
 		std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
 		
-		char* argv[] = 
+		const char* argv[] = 
 		{
 			"dpls",
-			"--init", const_cast< char* >( configFileSpec.c_str() ),
+			"--init", configFileSpec.c_str(),
 			"--name", "name1",
 			"--data", "data1"
 		};
@@ -198,7 +200,7 @@ void DataProxyShellConfigTest::testStoreNoParams()
 		FileUtilities::Touch( configFileSpec );
 
 		boost::scoped_ptr< DataProxyShellConfig > pConfig;
-		CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, argv ) ) );
+		CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc,  const_cast<char**>(argv) ) ) );
 
 		CPPUNIT_ASSERT( !pConfig->IsTransactional() );
 		CPPUNIT_ASSERT_EQUAL( configFileSpec, pConfig->GetDplConfig() );
@@ -212,10 +214,10 @@ void DataProxyShellConfigTest::testStoreNoParams()
 	{
 		std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
 		
-		char* argv[] = 
+		const char* argv[] = 
 		{
 			"dpls",
-			"--init", const_cast< char* >( configFileSpec.c_str() ),
+			"--init", configFileSpec.c_str(),
 			"--name", "name1",
 			"--data", "data1",
 			"--transactional"
@@ -225,7 +227,7 @@ void DataProxyShellConfigTest::testStoreNoParams()
 		FileUtilities::Touch( configFileSpec );
 
 		boost::scoped_ptr< DataProxyShellConfig > pConfig;
-		CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, argv ) ) );
+		CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc,  const_cast<char**>(argv) ) ) );
 
 		CPPUNIT_ASSERT( pConfig->IsTransactional() );
 		CPPUNIT_ASSERT_EQUAL( configFileSpec, pConfig->GetDplConfig() );
@@ -242,10 +244,10 @@ void DataProxyShellConfigTest::testStoreWithParams()
 {
 	std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
 	
-	char* argv[] = 
+	const char* argv[] = 
 	{
 		"dpls",
-		"--init", const_cast< char* >( configFileSpec.c_str() ),
+		"--init", configFileSpec.c_str(),
 		"--name", "name1",
 		"--data", "data1",
 		"--params", "pname1~value1^pname2~value2"
@@ -255,7 +257,7 @@ void DataProxyShellConfigTest::testStoreWithParams()
 	FileUtilities::Touch( configFileSpec );
 	
 	boost::scoped_ptr< DataProxyShellConfig > pConfig;
-	CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, argv ) ) );
+	CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, const_cast<char**>(argv) ) ) );
 
 	std::map< std::string, std::string > params;
 	params[ "pname1" ] = "value1";
@@ -275,10 +277,10 @@ void DataProxyShellConfigTest::testStoreWithMultiParams()
 {
 	std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
 	
-	char* argv[] = 
+	const char* argv[] = 
 	{
 		"dpls",
-		"--init", const_cast< char* >( configFileSpec.c_str() ),
+		"--init", configFileSpec.c_str(),
 		"--name", "name1",
 		"--data", "data1",
 		"--params", "pname1~value1^pname2~value2",
@@ -290,7 +292,7 @@ void DataProxyShellConfigTest::testStoreWithMultiParams()
 	FileUtilities::Touch( configFileSpec );
 	
 	boost::scoped_ptr< DataProxyShellConfig > pConfig;
-	CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, argv ) ) );
+	CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, const_cast<char**>(argv) ) ) );
 
 	std::map< std::string, std::string > params;
 	params[ "pname1" ] = "value1";
@@ -313,13 +315,13 @@ void DataProxyShellConfigTest::testStoreWithMultiData()
 	std::string data2FileSpec = m_pTempDir->GetDirectoryName() + "/data_file_2.txt";
 	std::string data2FileSpecConfig = std::string("@") + data2FileSpec;
 	
-	char* argv[] = 
+	const char* argv[] = 
 	{
 		"dpls",
-		"--init", const_cast< char* >( configFileSpec.c_str() ),
+		"--init", configFileSpec.c_str(),
 		"--name", "name1",
 		"--data", "data1/",
-		"--data", const_cast< char* >( data2FileSpecConfig.c_str() ),
+		"--data", data2FileSpecConfig.c_str(),
 		"--data", "data3",
 		"--params", "null"
 	};
@@ -332,7 +334,7 @@ void DataProxyShellConfigTest::testStoreWithMultiData()
 	FileUtilities::Touch( configFileSpec );
 	
 	boost::scoped_ptr< DataProxyShellConfig > pConfig;
-	CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, argv ) ) );
+	CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, const_cast<char**>(argv) ) ) );
 
 	CPPUNIT_ASSERT_EQUAL( configFileSpec, pConfig->GetDplConfig() );
 	CPPUNIT_ASSERT_EQUAL( STORE_OPERATION, pConfig->GetOperation() );
@@ -348,10 +350,10 @@ void DataProxyShellConfigTest::testDeleteNoParams()
 	{
 		std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
 		
-		char* argv[] = 
+		const char* argv[] = 
 		{
 			"dpls",
-			"--init", const_cast< char* >( configFileSpec.c_str() ),
+			"--init", configFileSpec.c_str(),
 			"--Delete",
 			"--name", "name1"
 		};
@@ -360,7 +362,7 @@ void DataProxyShellConfigTest::testDeleteNoParams()
 		FileUtilities::Touch( configFileSpec );
 
 		boost::scoped_ptr< DataProxyShellConfig > pConfig;
-		CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, argv ) ) );
+		CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, const_cast<char**>(argv) ) ) );
 
 		CPPUNIT_ASSERT( !pConfig->IsTransactional() );
 		CPPUNIT_ASSERT_EQUAL( configFileSpec, pConfig->GetDplConfig() );
@@ -372,10 +374,10 @@ void DataProxyShellConfigTest::testDeleteNoParams()
 	{
 		std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
 		
-		char* argv[] = 
+		const char* argv[] = 
 		{
 			"dpls",
-			"--init", const_cast< char* >( configFileSpec.c_str() ),
+			"--init", configFileSpec.c_str(),
 			"--Delete",
 			"--name", "name1",
 			"--transactional"
@@ -385,7 +387,7 @@ void DataProxyShellConfigTest::testDeleteNoParams()
 		FileUtilities::Touch( configFileSpec );
 
 		boost::scoped_ptr< DataProxyShellConfig > pConfig;
-		CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, argv ) ) );
+		CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, const_cast<char**>(argv) ) ) );
 
 		CPPUNIT_ASSERT( pConfig->IsTransactional() );
 		CPPUNIT_ASSERT_EQUAL( configFileSpec, pConfig->GetDplConfig() );
@@ -400,10 +402,10 @@ void DataProxyShellConfigTest::testDeleteWithParams()
 {
 	std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
 	
-	char* argv[] = 
+	const char* argv[] = 
 	{
 		"dpls",
-		"--init", const_cast< char* >( configFileSpec.c_str() ),
+		"--init", configFileSpec.c_str(),
 		"--Delete",
 		"--name", "name1",
 		"--params", "pname1~value1^pname2~value2"
@@ -413,7 +415,7 @@ void DataProxyShellConfigTest::testDeleteWithParams()
 	FileUtilities::Touch( configFileSpec );
 	
 	boost::scoped_ptr< DataProxyShellConfig > pConfig;
-	CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, argv ) ) );
+	CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, const_cast<char**>(argv) ) ) );
 
 	std::map< std::string, std::string > params;
 	params[ "pname1" ] = "value1";
@@ -431,10 +433,10 @@ void DataProxyShellConfigTest::testDeleteWithMultiParams()
 {
 	std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
 	
-	char* argv[] = 
+	const char* argv[] = 
 	{
 		"dpls",
-		"--init", const_cast< char* >( configFileSpec.c_str() ),
+		"--init", configFileSpec.c_str(),
 		"--Delete",
 		"--name", "name1",
 		"--params", "pname1~value1^pname2~value2",
@@ -446,7 +448,7 @@ void DataProxyShellConfigTest::testDeleteWithMultiParams()
 	FileUtilities::Touch( configFileSpec );
 	
 	boost::scoped_ptr< DataProxyShellConfig > pConfig;
-	CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, argv ) ) );
+	CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, const_cast<char**>(argv) ) ) );
 
 	std::map< std::string, std::string > params;
 	params[ "pname1" ] = "value1";
@@ -465,10 +467,10 @@ void DataProxyShellConfigTest::testDeleteWithData()
 {
 	std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
 	
-	char* argv[] = 
+	const char* argv[] = 
 	{
 		"dpls",
-		"--init", const_cast< char* >( configFileSpec.c_str() ),
+		"--init", configFileSpec.c_str(),
 		"--Delete",
 		"--name", "name1",
 		"--params", "pname1~value1^pname2~value2",
@@ -479,5 +481,5 @@ void DataProxyShellConfigTest::testDeleteWithData()
 	FileUtilities::Touch( configFileSpec );
 	
 	boost::scoped_ptr< DataProxyShellConfig > pConfig;
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pConfig.reset( new DataProxyShellConfig( argc, argv ) ), DataProxyShellConfigException, ".*:\\d+: Invalid argument: data cannot be supplied with a Delete request" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pConfig.reset( new DataProxyShellConfig( argc, const_cast<char**>(argv) ) ), DataProxyShellConfigException, ".*:\\d+: Invalid argument: data cannot be supplied with a Delete request" );
 }

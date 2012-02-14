@@ -277,7 +277,26 @@ void DatabaseConnectionManager::FetchConnectionsByTable( const std::string& i_rN
 	}
 }
 
-DatabaseConnectionDatum& DatabaseConnectionManager::PrivateGetConnection( const std::string& i_rConnectionName ) const
+DatabaseConnectionDatum& DatabaseConnectionManager::PrivateGetConnection( const std::string& i_rConnectionName )
+{
+	boost::shared_lock< boost::shared_mutex > lock( m_ConfigVersion );
+	DatabaseConnectionDatum datum;
+	datum.SetValue<ConnectionName>(i_rConnectionName);
+	DatabaseConnectionContainer::iterator iter = m_DatabaseConnectionContainer.find(datum);
+	if (iter == m_DatabaseConnectionContainer.end())
+	{
+		// if it's not a named connection, try a shard connection
+		iter = m_ShardDatabaseConnectionContainer.find( datum );
+		if (iter == m_ShardDatabaseConnectionContainer.end())
+		{
+			MV_THROW(DatabaseConnectionManagerException,
+					 "DatabaseConnection '" << i_rConnectionName << "' was not found. Make sure the dpl config's 'DatabaseConnections' node is configured correctly.");
+		}
+	}
+	return iter->second;
+}
+
+const DatabaseConnectionDatum& DatabaseConnectionManager::PrivateGetConnection( const std::string& i_rConnectionName ) const
 {
 	boost::shared_lock< boost::shared_mutex > lock( m_ConfigVersion );
 	DatabaseConnectionDatum datum;
@@ -293,7 +312,7 @@ DatabaseConnectionDatum& DatabaseConnectionManager::PrivateGetConnection( const 
 					 "DatabaseConnection '" << i_rConnectionName << "' was not found. Make sure the dpl config's 'DatabaseConnections' node is configured correctly.");
 		}
 	}
-	return *(iter->second);
+	return iter->second;
 }
 
 
@@ -309,16 +328,16 @@ void DatabaseConnectionManager::RefreshConnectionsByTable() const
 	ShardCollectionContainer::const_iterator shardIter = m_ShardCollections.begin();
 	for( ; shardIter != m_ShardCollections.end(); ++shardIter )
 	{
-		FetchConnectionsByTable( shardIter->second->GetValue< ShardCollectionName >(),
-								 shardIter->second->GetValue< ConnectionNodeName >(),
-								 shardIter->second->GetValue< TablesNodeName >(),
-								 shardIter->second->GetValue< ConnectionReconnect >() );
+		FetchConnectionsByTable( shardIter->second.GetValue< ShardCollectionName >(),
+								 shardIter->second.GetValue< ConnectionNodeName >(),
+								 shardIter->second.GetValue< TablesNodeName >(),
+								 shardIter->second.GetValue< ConnectionReconnect >() );
 	}
 }
 
 std::string DatabaseConnectionManager::PrivateGetConnectionNameByTable(const std::string& i_rTableName ) const
 {
-	__gnu_cxx::hash_map< std::string, std::string >::const_iterator iter;
+	std_ext::unordered_map< std::string, std::string >::const_iterator iter;
 	{
 		boost::unique_lock< boost::shared_mutex > lock( m_ShardVersion );
 		iter = m_ConnectionsByTableName.find( i_rTableName );
@@ -337,24 +356,24 @@ std::string DatabaseConnectionManager::PrivateGetConnectionNameByTable(const std
 	return iter->second;
 }
 
-Database& DatabaseConnectionManager::GetConnectionByTable( const std::string& i_rTableName ) const
+Database& DatabaseConnectionManager::GetConnectionByTable( const std::string& i_rTableName )
 {
 	std::string connectionName = PrivateGetConnectionNameByTable(i_rTableName);
 	return GetConnection(connectionName);
 }
 
-Database& DatabaseConnectionManager::GetDataDefinitionConnectionByTable( const std::string& i_rTableName ) const
+Database& DatabaseConnectionManager::GetDataDefinitionConnectionByTable( const std::string& i_rTableName )
 {
 	std::string connectionName = PrivateGetConnectionNameByTable(i_rTableName);
 	return GetConnection(DATA_DEFINITION_CONNECTION_PREFIX + connectionName);
 }
 
-Database& DatabaseConnectionManager::GetDataDefinitionConnection(const std::string& i_ConnectionName) const
+Database& DatabaseConnectionManager::GetDataDefinitionConnection(const std::string& i_ConnectionName)
 {
 	return GetConnection(DATA_DEFINITION_CONNECTION_PREFIX + i_ConnectionName);
 }
 
-Database& DatabaseConnectionManager::GetConnection(const std::string& i_ConnectionName) const
+Database& DatabaseConnectionManager::GetConnection(const std::string& i_ConnectionName)
 {
 	DatabaseConnectionDatum& rDatum = PrivateGetConnection(i_ConnectionName);
 	boost::shared_ptr<Database>& rDatabase = rDatum.GetReference<DatabaseConnection>();

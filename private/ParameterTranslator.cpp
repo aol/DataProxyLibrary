@@ -242,17 +242,17 @@ ParameterTranslator::ParameterTranslator( const xercesc::DOMNode& i_rNode )
 	TranslatorContainer::const_iterator iter = m_Parameters.begin();
 	for( ; iter != m_Parameters.end(); ++iter )
 	{
-		if( !iter->second->GetValue< TranslatedName >().IsNull() )
+		if( !iter->second.GetValue< TranslatedName >().IsNull() )
 		{
 			TranslatorDatum datum;
-			datum.SetValue< ParameterName >( iter->second->GetValue< TranslatedName >() );
+			datum.SetValue< ParameterName >( iter->second.GetValue< TranslatedName >() );
 			TranslatorContainer::const_iterator findIter = m_Parameters.find( datum );
-			if( findIter != m_Parameters.end() && !findIter->second->GetValue< TranslatedName >().IsNull() )
+			if( findIter != m_Parameters.end() && !findIter->second.GetValue< TranslatedName >().IsNull() )
 			{
 				MV_THROW( ParameterTranslatorException, "Parameter name translations must not be chained. Violating chain: "
-					<< iter->second->GetValue< ParameterName >() << "->" 
-					<< iter->second->GetValue< TranslatedName >() << "->" 
-					<< findIter->second->GetValue< TranslatedName >() );
+					<< iter->second.GetValue< ParameterName >() << "->" 
+					<< iter->second.GetValue< TranslatedName >() << "->" 
+					<< findIter->second.GetValue< TranslatedName >() );
 			}
 		}
 	}
@@ -263,13 +263,13 @@ ParameterTranslator::ParameterTranslator( const xercesc::DOMNode& i_rNode )
 	{
 		DerivedValueDatum datum;
 		std::set< std::string > sources;
-		if( derivedIter->second->GetValue< ValueSource >() == VALUE_SOURCE_MULTIPLE )
+		if( derivedIter->second.GetValue< ValueSource >() == VALUE_SOURCE_MULTIPLE )
 		{
-			GetReferencedParameters( derivedIter->second->GetValue< ValueDerivation >(), sources );
+			GetReferencedParameters( derivedIter->second.GetValue< ValueDerivation >(), sources );
 		}
 		else
 		{
-			sources.insert( derivedIter->second->GetValue< ValueSource >() );
+			sources.insert( derivedIter->second.GetValue< ValueSource >() );
 		}
 		std::set< std::string >::const_iterator sourceIter = sources.begin();
 		for( ; sourceIter != sources.end(); ++sourceIter )
@@ -278,15 +278,15 @@ ParameterTranslator::ParameterTranslator( const xercesc::DOMNode& i_rNode )
 			DerivedValueContainer::const_iterator findIter = m_DerivedValues.find( datum );
 			if( findIter != m_DerivedValues.end() )
 			{
-				std::string source = findIter->second->GetValue< ValueSource >();
+				std::string source = findIter->second.GetValue< ValueSource >();
 				if( source == VALUE_SOURCE_MULTIPLE )
 				{
-					std::set< std::string > sources;
-					GetReferencedParameters( findIter->second->GetValue< ValueDerivation >(), sources );
-					source = ContainerToString( sources );
+					std::set< std::string > multiSource;
+					GetReferencedParameters( findIter->second.GetValue< ValueDerivation >(), multiSource );
+					source = OrderedContainerToString( multiSource );
 				}
 				MV_THROW( ParameterTranslatorException, "Cannot make values derive from other derived values. Violating parameters: "
-					<< derivedIter->second->GetValue< ParameterName >() << " derives from " << findIter->second->GetValue< ParameterName >()
+					<< derivedIter->second.GetValue< ParameterName >() << " derives from " << findIter->second.GetValue< ParameterName >()
 					<< ", which derives from " << source );
 			}
 		}
@@ -320,14 +320,14 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 		}
 
 		// get the translated name if it exists
-		if( !findIter->second->GetValue< TranslatedName >().IsNull() )
+		if( !findIter->second.GetValue< TranslatedName >().IsNull() )
 		{
-			name = findIter->second->GetValue< TranslatedName >();
+			name = findIter->second.GetValue< TranslatedName >();
 			// first check to see if the incoming parameters actually HAS a parameter for the target name; if so log & skip it
 			if( i_rInputParameters.find( name ) != i_rInputParameters.end() )
 			{
 				MVLOGGER( "root.lib.DataProxy.ParameterTranslator.IgnoringDuplicate",
-					"Incoming parameter map has a value for both source parameter name: '" << findIter->second->GetValue< ParameterName >()
+					"Incoming parameter map has a value for both source parameter name: '" << findIter->second.GetValue< ParameterName >()
 					<< "' and target translated parameter name: '" << name << "'. Ignoring the former since it is most likely obsolete." );
 				continue;
 			}
@@ -342,9 +342,9 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 			}
 		}
 		// get the translated value if it exists
-		if( !findIter->second->GetValue< ValueTranslator >().IsNull() )
+		if( !findIter->second.GetValue< ValueTranslator >().IsNull() )
 		{
-			std::string valueTranslator = findIter->second->GetValue< ValueTranslator >();
+			std::string valueTranslator = findIter->second.GetValue< ValueTranslator >();
 			// if it's an expression, evaluate it
 			if( IsExpression( valueTranslator ) )
 			{
@@ -384,12 +384,12 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 	DerivedValueContainer::const_iterator derivedIter = m_DerivedValues.begin();
 	for( ; derivedIter != m_DerivedValues.end(); ++derivedIter )
 	{
-		std::string nameSource = derivedIter->second->GetValue< ValueSource >();
+		std::string nameSource = derivedIter->second.GetValue< ValueSource >();
 		std::string derivedValue;
 		// if valueSource comes from multiple entities
 		if( nameSource == VALUE_SOURCE_MULTIPLE )
 		{
-			derivedValue = ProxyUtilities::GetVariableSubstitutedString( derivedIter->second->GetValue< ValueDerivation >(), o_rTranslatedParameters );
+			derivedValue = ProxyUtilities::GetVariableSubstitutedString( derivedIter->second.GetValue< ValueDerivation >(), o_rTranslatedParameters );
 		}
 		else // valueSource is from a single source
 		{
@@ -400,7 +400,7 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 				continue;
 			}
 			std::string sourceValue = findIter->second;
-			derivedValue = derivedIter->second->GetValue< ValueDerivation >();
+			derivedValue = derivedIter->second.GetValue< ValueDerivation >();
 			boost::replace_all( derivedValue, VALUE_FORMATTER, sourceValue );
 		}
 
@@ -411,8 +411,8 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 		}
 
 		// if it's an override or it's currently missing from the output parameters, add it
-		std::string paramName = derivedIter->second->GetValue< ParameterName >();
-		if( derivedIter->second->GetValue< IsOverride >() || o_rTranslatedParameters.find( paramName ) == o_rTranslatedParameters.end() )
+		std::string paramName = derivedIter->second.GetValue< ParameterName >();
+		if( derivedIter->second.GetValue< IsOverride >() || o_rTranslatedParameters.find( paramName ) == o_rTranslatedParameters.end() )
 		{
 			o_rTranslatedParameters[ paramName ] = derivedValue;
 		}
@@ -439,7 +439,7 @@ bool ParameterTranslator::IsSilenced( const std::string& i_rName ) const
 	datum.SetValue< ParameterName >( i_rName );
 	TranslatorContainer::const_iterator iter = m_Parameters.find( datum );
 	return ( iter != m_Parameters.end()								// it's in the parameters
-		  && iter->second->GetValue< TranslatedName >().IsNull()	// there is not translated name
-		  && iter->second->GetValue< ValueTranslator >().IsNull()	// there is no value translator
+		  && iter->second.GetValue< TranslatedName >().IsNull()	// there is not translated name
+		  && iter->second.GetValue< ValueTranslator >().IsNull()	// there is no value translator
 		  && m_PrimaryDefaults.find( i_rName ) == m_PrimaryDefaults.end() );		// there is no value default
 }

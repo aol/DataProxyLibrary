@@ -65,7 +65,7 @@ void PropertyDomain::Load( DataProxyClient& i_rDPLClient, const std::string& i_r
 
 const std::string* PropertyDomain::GetProperties( const std::string& i_rPropertyKeyValue ) const
 {
-	__gnu_cxx::hash_map< std::string, std::string, stringHasher >::const_iterator foundIter = m_Properties.find( i_rPropertyKeyValue );
+	std_ext::unordered_map< std::string, std::string >::const_iterator foundIter = m_Properties.find( i_rPropertyKeyValue );
 	if( foundIter == m_Properties.end() )
 	{
 		return NULL;

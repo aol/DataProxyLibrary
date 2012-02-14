@@ -161,9 +161,9 @@ TESTOBJSPEC				= $(TESTFILES:%.cpp=$(TARGETDIR)/%.o)
 THPP2HPPFILES			= $(THPPFILES:%.thpp=%.hpp)
 
 # Per-target specification
-DEBUGOPTS		= -ggdb3 -Wall -Werror -fno-strict-aliasing -fPIC -D DPL_TEST
-OPTIMIZEOPTS	= -O3 -D MV_OPTIMIZE -Wall -Werror -fno-strict-aliasing -fPIC
-PROFILEOPTS		= -O3 -D MV_OPTIMIZE -pg -Wall -Werror -fno-strict-aliasing -fPIC
+DEBUGOPTS		= -ggdb3 -Wall -Werror -fno-strict-aliasing -fPIC -D DPL_TEST -std=c++0x
+OPTIMIZEOPTS	= -O3 -D MV_OPTIMIZE -Wall -Werror -fno-strict-aliasing -fPIC -std=c++0x
+PROFILEOPTS		= -O3 -D MV_OPTIMIZE -pg -Wall -Werror -fno-strict-aliasing -fPIC -std=c++0x
 
 # Executable targets
 PRIMARY_TARGET					= libBlackoutStreamTransformer.so
@@ -275,7 +275,7 @@ depend: localdepend $(MODULESPEC) $(TESTMODULESPEC)
 	${TESTMODULESPEC:%=(cd % && ${MAKE} localdepend) &&} true
 
 localdepend: $(THPP2HPPFILES)
-	$(CXXD) $(DEPENDFILES) | sed '/^\(\S\)/ s/^/$$(TARGETDIR)\//' > Makefile.depend
+	$(CXXD) -std=c++0x $(DEPENDFILES) | sed '/^\(\S\)/ s/^/$$(TARGETDIR)\//' > Makefile.depend
 
 nodepend:
 	rm -f Makefile.depend

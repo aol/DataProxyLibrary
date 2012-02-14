@@ -47,7 +47,7 @@ namespace Dpl
 		RowEnd > > > > >
 	GroupContainerDescription;
 
-	typedef GenericDataContainer< GroupConfigDatum, GroupContainerDescription, std::map > GroupContainer;
+	typedef GenericOrderedDataContainer< GroupConfigDatum, GroupContainerDescription > GroupContainer;
 
 	typedef
 		GenericDatum< Name,
@@ -65,7 +65,7 @@ namespace Dpl
 		RowEnd > > > >
 	ParameterContainerDescription;
 
-	typedef GenericDataContainer< ParameterDatum, ParameterContainerDescription, std::map > ParameterContainer;
+	typedef GenericOrderedDataContainer< ParameterDatum, ParameterContainerDescription > ParameterContainer;
 
 	typedef std::vector< std::string > UriPathSegmentList;
 

@@ -91,7 +91,7 @@ CXX ?= g++
 CXXC = $(CXX) $(TARGETOPTS) -c $(INCS) $(DEFINE_FLAGS)	# compiling object files
 CXXT = $(CXX) $(TARGETOPTS) -c $(TESTINCS) $(DEFINE_FLAGS)	# compiling object files
 CXXL = $(CXX) $(TARGETOPTS) $(LIBLOC)					# linking executables
-CXXD = $(CXX) -MM $(TESTINCS) $(DEFINE_FLAGS)				# generating dependencies
+CXXD = $(CXX) -std=c++0x -MM $(TESTINCS) $(DEFINE_FLAGS)	# generating dependencies
 CXXS = $(CXX) $(LIBLOC) -shared $(LIBLOC) $(LIBS)
 
 # Source Directories
@@ -148,9 +148,9 @@ TESTCOMMONOBJSPEC		= $(TESTCOMMONFILES:%.cpp=$(TARGETDIR)/%.o)
 THPP2HPPFILES			= $(THPPFILES:%.thpp=%.hpp)
 
 # Per-target specification
-DEBUGOPTS		= -ggdb3 -Wall -Werror -fno-strict-aliasing -fPIC -D DPL_TEST
-OPTIMIZEOPTS	= -O3 -D MV_OPTIMIZE -Wall -Werror -fno-strict-aliasing -fPIC
-PROFILEOPTS		= -O3 -D MV_OPTIMIZE -pg -Wall -Werror -fno-strict-aliasing -fPIC
+DEBUGOPTS		= -ggdb3 -Wall -Werror -fno-strict-aliasing -fPIC -D DPL_TEST -std=c++0x
+OPTIMIZEOPTS	= -O3 -D MV_OPTIMIZE -Wall -Werror -fno-strict-aliasing -fPIC -std=c++0x
+PROFILEOPTS		= -O3 -D MV_OPTIMIZE -pg -Wall -Werror -fno-strict-aliasing -fPIC -std=c++0x
 
 # Executable targets
 PRIMARY_TARGET					= libSeederStreamTransformer.so

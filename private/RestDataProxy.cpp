@@ -354,7 +354,7 @@ namespace
 				continue;
 			}
 
-			const Dpl::ParameterDatum& rParamConfig = *paramConfigIter->second;
+			const Dpl::ParameterDatum& rParamConfig = paramConfigIter->second;
 			o_rBuilder.AddParameter( rParamConfig.GetValue< Dpl::ParameterType >(),
 									 iter->first, iter->second,
 									 rParamConfig.GetValue< Dpl::Format >(),

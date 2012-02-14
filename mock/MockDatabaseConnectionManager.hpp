@@ -24,8 +24,8 @@ public:
 
 	virtual void Parse(const xercesc::DOMNode& i_rDatabaseConnectionNode);
 	virtual void ValidateConnectionName(const std::string& i_rConnectionName ) const;
-	virtual Database& GetConnection(const std::string& i_rConnectionName) const;
-	virtual Database& GetDataDefinitionConnection(const std::string& i_rConnectionName) const;
+	virtual Database& GetConnection(const std::string& i_rConnectionName) ;
+	virtual Database& GetDataDefinitionConnection(const std::string& i_rConnectionName) ;
 	virtual std::string GetDatabaseType(const std::string& i_rConnectionName) const;
 	virtual void ClearConnections();
 

@@ -55,7 +55,7 @@ private:
 		RowEnd > > >
 	TransformerParameterDesc;
 
-	typedef GenericDataContainer< TransformerParameterDatum, TransformerParameterDesc, std::map > TransformerParameterContainer;
+	typedef GenericOrderedDataContainer< TransformerParameterDatum, TransformerParameterDesc > TransformerParameterContainer;
 
 	typedef boost::shared_ptr<std::stringstream>(*TransformFunction)( std::istream&, const std::map<std::string, std::string>& );
 

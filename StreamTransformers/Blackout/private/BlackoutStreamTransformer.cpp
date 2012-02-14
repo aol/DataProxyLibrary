@@ -17,7 +17,6 @@
 #include "TransformerUtilities.hpp"
 #include <boost/algorithm/string/split.hpp>
 #include <boost/noncopyable.hpp>
-#include <ext/hash_map>
 #include <boost/algorithm/string/trim.hpp>
 #include <sstream>
 #include <string>
@@ -94,7 +93,7 @@ namespace
 				RowEnd > > > > 
 			DataNodeContainerDescription;
 	
-			typedef GenericDataContainer<DataNode, DataNodeContainerDescription, __gnu_cxx::hash_map > DataNodeContainer;
+			typedef GenericUnorderedDataContainer<DataNode, DataNodeContainerDescription > DataNodeContainer;
 
 			bool CheckBlackoutRange( const DataNode& i_rNode, const TimePeriodType& i_rSourcedTimePeriod ) const;
 
@@ -164,7 +163,7 @@ void BlackoutWindowDomain::Load( const std::string& i_rDplConfig, const std::str
 		timePeriodWindow.SetValue< StartTimePeriod >( startTimePeriod );
 		timePeriodWindow.SetValue< EndTimePeriod >( endTimePeriod );
 	
-		DataNodeContainer::const_iterator findIter = m_BlackoutWindowDataNodes.find( dataNode );
+		DataNodeContainer::iterator findIter = m_BlackoutWindowDataNodes.find( dataNode );
 		if( findIter == m_BlackoutWindowDataNodes.end() )
 		{	
 			timePeriodWindows.push_back( timePeriodWindow );
@@ -173,7 +172,7 @@ void BlackoutWindowDomain::Load( const std::string& i_rDplConfig, const std::str
 		}
 		else 
 		{
-	    	findIter->second->GetReference< BlackoutTimePeriodWindows >().push_back( timePeriodWindow );
+	    	findIter->second.GetReference< BlackoutTimePeriodWindows >().push_back( timePeriodWindow );
 		}
 	}
 }
@@ -183,7 +182,7 @@ bool BlackoutWindowDomain::CheckBlackoutRange( const DataNode& i_rNode, const Ti
 	DataNodeContainer::const_iterator findIter = m_BlackoutWindowDataNodes.find( i_rNode );
 	if( findIter != m_BlackoutWindowDataNodes.end() )	
 	{
-		const std::vector<NodeBlackoutWindowDatum >& timePeriodWindows = findIter->second->GetValue< BlackoutTimePeriodWindows >();
+		const std::vector<NodeBlackoutWindowDatum >& timePeriodWindows = findIter->second.GetValue< BlackoutTimePeriodWindows >();
 		std::vector<NodeBlackoutWindowDatum >::const_iterator timePeriodIter = timePeriodWindows.begin();
 		for( ; timePeriodIter != timePeriodWindows.end(); ++timePeriodIter )
 		{

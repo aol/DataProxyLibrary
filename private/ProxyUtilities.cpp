@@ -617,7 +617,7 @@ std::string ProxyUtilities::GetVariableSubstitutedString( const std::string& i_r
 	
 	if (missingDefinitions.size() != 0)
 	{
-		MV_THROW( ProxyUtilitiesException, "The following parameters are referenced, but are not specified in the parameters: " << ContainerToString(missingDefinitions) );
+		MV_THROW( ProxyUtilitiesException, "The following parameters are referenced, but are not specified in the parameters: " << OrderedContainerToString(missingDefinitions) );
 	}
 
 	//replace the variables in the sql query with their specified values

@@ -209,12 +209,12 @@ void StreamTransformer::EvaluateParameters( const std::map<std::string, std::str
 	for( ; listIter != m_Parameters.end(); ++listIter )
 	{
 		// name and value are required values
-		name = listIter->second->GetValue< ParameterName >();
-		value = listIter->second->GetValue< ParameterValue >();
+		name = listIter->second.GetValue< ParameterName >();
+		value = listIter->second.GetValue< ParameterValue >();
 		// try to see if value source exists or not
-		if( !listIter->second->GetValue< ValueSource >().IsNull() )
+		if( !listIter->second.GetValue< ValueSource >().IsNull() )
 		{
-			std::string valueSourceName = listIter->second->GetValue< ValueSource >();
+			std::string valueSourceName = listIter->second.GetValue< ValueSource >();
 			if( valueSourceName == MULTI_VALUE_SOURCE )
 			{
 				value = ProxyUtilities::GetVariableSubstitutedString( value, i_rParameters );
