@@ -559,6 +559,14 @@ void AbstractNodeTest::testLoadRetryCount()
 
 	expected.str("");
 	CPPUNIT_ASSERT_EQUAL( expected.str(), results.str() );
+
+	// now repeat the test with success
+	node.SetLoadException( false );
+	node.SetDataToReturn( "this is some data" );
+	CPPUNIT_ASSERT_NO_THROW( node.Load( parameters, results ) );
+	expected.str("");
+	expected << "this is some data";
+	CPPUNIT_ASSERT_EQUAL( expected.str(), results.str() );
 }
 
 void AbstractNodeTest::testLoadFailureForwarding_ParameterTranslationFail()

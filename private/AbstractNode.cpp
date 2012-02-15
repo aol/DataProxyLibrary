@@ -183,6 +183,7 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 			try
 			{
 				LoadImpl( *pUseParameters, *pUseData );
+				break;
 			}
 			catch( const std::exception& ex )
 			{
