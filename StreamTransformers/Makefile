@@ -9,6 +9,7 @@ TRANSFORMERS=\
 	Validator \
 	Custom/CampaignReferenceGenerator \
 	Custom/CampaignRevenueVector \
+	EquivalenceClass \
 
 NONTEST_TARGETS=depend localdepend clean localclean debug prof opt opt_debug opt_pic
 

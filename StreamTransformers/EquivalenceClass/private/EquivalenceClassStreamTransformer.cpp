@@ -56,7 +56,7 @@ namespace
 		return true;
 	}
 
-	const std::string delimiter = ",";
+	const std::string DELIMITER = ",";
 
 }
 
@@ -106,13 +106,9 @@ boost::shared_ptr<std::stringstream > GenerateEquivalenceClasses( std::istream& 
 	ClassIdType classId(1);
 	while( reader.NextRow() )
 	{
+		MapMemberToClass::const_iterator itSeed = mapMemberToClass.find( std::make_pair(seedId, typeId) );
 
-		MapMemberToClass::iterator itSeed = mapMemberToClass.find( std::make_pair(seedId, typeId) );
-	
-
-		MapMemberToClass::iterator itNew = mapMemberToClass.find( std::make_pair(newId, typeId) );
-
-		MapClassToMembers::iterator itClass;
+		MapMemberToClass::const_iterator itNew = mapMemberToClass.find( std::make_pair(newId, typeId) );
 
 		if( itSeed == mapMemberToClass.end() && itNew == mapMemberToClass.end() )
 		{
@@ -142,7 +138,7 @@ boost::shared_ptr<std::stringstream > GenerateEquivalenceClasses( std::istream& 
 
 				std::pair<MapClassToMembers::iterator,MapClassToMembers::iterator> range = mapClassToMembers.equal_range( std::make_pair( lookforClassId, typeId ) );
 
-				for( MapClassToMembers::iterator it = range.first; it != range.second; it++ )
+				for( MapClassToMembers::const_iterator it = range.first; it != range.second; it++ )
 				{
 					mapMemberToClass[ std::make_pair( it->second, typeId ) ] = replaceWithClassId;
 					mapClassToMembers.insert( MapClassToMembers::value_type( std::make_pair( replaceWithClassId, typeId), it->second ) );
@@ -153,10 +149,10 @@ boost::shared_ptr<std::stringstream > GenerateEquivalenceClasses( std::istream& 
 
 	}
 
-	MapMemberToClass::iterator it = mapMemberToClass.begin();
+	MapMemberToClass::const_iterator it = mapMemberToClass.begin();
 	for( ; it != mapMemberToClass.end(); it++ )
 	{
-		*pResult << it->first.first << delimiter << it->second << delimiter << it->first.second << std::endl;
+		*pResult << it->first.first << DELIMITER << it->second << DELIMITER << it->first.second << std::endl;
 	}
 
 	
