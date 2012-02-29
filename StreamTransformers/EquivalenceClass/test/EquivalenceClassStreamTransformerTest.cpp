@@ -58,11 +58,14 @@ void EquivalenceClassStreamTransformerTest::testEquivalenceClass()
 {
 	std::stringstream inputStream;
 	inputStream << SEED_ID_COLUMN_NAME << "," << NEW_ID_COLUMN_NAME << "," << TYPE_ID_COLUMN_NAME << std::endl
-				<< "100,200,1" << std::endl   
-				<< "100,300,1" << std::endl   
-				<< "300,400,1" << std::endl  
-				<< "300,500,2" << std::endl  
-				<< "500,600,1" << std::endl;  
+				<< "100,200,1" << std::endl  // both ids are new 
+				<< "100,300,1" << std::endl  // second id is new 
+				<< "400,300,1" << std::endl  // first id is new
+				<< "300,500,2" << std::endl  // different type
+				<< "500,600,1" << std::endl  
+				<< "700,800,1" << std::endl  
+				<< "100,400,1" << std::endl  // both ids are old and the corresponding class ids are the same 
+				<< "800,100,1" << std::endl; // both ids are old and the corresponding class ids are different 
 
 	std::map<std::string, std::string > parameters;
 	
@@ -70,14 +73,16 @@ void EquivalenceClassStreamTransformerTest::testEquivalenceClass()
 
 	std::stringstream expected;
 	expected << EQUIVALENCE_CLASS_TABLE_HEADER << std::endl
-		 << "100,1,1" << std::endl
-		 << "200,1,1" << std::endl
-		 << "300,1,1" << std::endl
+		 << "100,4,1" << std::endl
+		 << "200,4,1" << std::endl
+		 << "300,4,1" << std::endl
 		 << "300,2,2" << std::endl
-		 << "400,1,1" << std::endl
+		 << "400,4,1" << std::endl
 		 << "500,3,1" << std::endl
 		 << "500,2,2" << std::endl
-		 << "600,3,1" << std::endl;
+		 << "600,3,1" << std::endl
+		 << "700,4,1" << std::endl
+		 << "800,4,1" << std::endl;
 
 	CPPUNIT_ASSERT_EQUAL( expected.str(), pResult->str() );
 

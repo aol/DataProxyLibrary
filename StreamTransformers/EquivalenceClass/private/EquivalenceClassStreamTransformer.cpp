@@ -60,7 +60,6 @@ namespace
 
 }
 
-
 boost::shared_ptr<std::stringstream > GenerateEquivalenceClasses( std::istream& i_rInputStream, const std::map<std::string, std::string >& i_rParameters )
 {
 	boost::shared_ptr<std::stringstream > pResult( new std::stringstream() );
@@ -122,12 +121,12 @@ boost::shared_ptr<std::stringstream > GenerateEquivalenceClasses( std::istream& 
 		else if( itSeed == mapMemberToClass.end() && itNew != mapMemberToClass.end() )
 		{
 			mapMemberToClass.insert( MapMemberToClass::value_type( std::make_pair( seedId, typeId ), itNew->second ) );
-			mapClassToMembers.insert( MapClassToMembers::value_type( std::make_pair(classId, typeId), newId ) );
+			mapClassToMembers.insert( MapClassToMembers::value_type( std::make_pair(itNew->second, typeId), seedId ) );
 		}
 		else if( itSeed != mapMemberToClass.end() && itNew == mapMemberToClass.end() )
 		{
 			mapMemberToClass.insert( MapMemberToClass::value_type( std::make_pair( newId, typeId ), itSeed->second ) );
-			mapClassToMembers.insert( MapClassToMembers::value_type( std::make_pair(classId, typeId), seedId ) );
+			mapClassToMembers.insert( MapClassToMembers::value_type( std::make_pair(itSeed->second, typeId), newId ) );
 		}
 		else // both exists in the map
 		{
