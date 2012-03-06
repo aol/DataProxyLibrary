@@ -69,7 +69,7 @@ ifndef DEFINE_FLAGS
 endif
 
 # Variables for compiler invocation
-CXX ?= g++
+CXX ?= g++ -std=c++0x
 CXXC = $(CXX) $(TARGETOPTS) -c $(INCS) $(DEFINE_FLAGS)		# compiling object files
 CXXT = $(CXX) $(TARGETOPTS) -c $(TESTINCS) $(DEFINE_FLAGS)	# compiling object files for test
 CXXL = $(CXX) $(TARGETOPTS) $(LIBLOC)						# linking executables
