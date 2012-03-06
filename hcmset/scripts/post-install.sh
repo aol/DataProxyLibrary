@@ -5,7 +5,7 @@ set -e
 TOPDIR=/data/app/dpl
 LIBDIR=/data/lib
 
-VERSION=v3.1.1
+VERSION=v3.1.2
 SHELL_EXE=dplShell
 SHELL_VERSION_EXE=${SHELL_EXE}_${VERSION}
 SERVICE_EXE=dplService
@@ -25,15 +25,16 @@ ln -sfn ${SHELL_VERSION_EXE} ${TOPDIR}/shell/bin/${SHELL_EXE}
 echo "--> Setting up dpl service"
 mv ${TOPDIR}/${SERVICE_EXE} ${TOPDIR}/service/bin/${SERVICE_VERSION_EXE}
 ln -sfn ${SERVICE_VERSION_EXE} ${TOPDIR}/service/bin/${SERVICE_EXE}
-mv ${TOPDIR}/cfg ${TOPDIR}/sample ${TOPDIR}/service
+mv ${TOPDIR}/cfg/* ${TOPDIR}/service/cfg && rmdir ${TOPDIR}/cfg
+mv ${TOPDIR}/sample/* ${TOPDIR}/service/sample && rmdir ${TOPDIR}/sample
 
 echo "--> Installing core libs to $LIBDIR"
 mv ${TOPDIR}/libDataProxy.so.* ${LIBDIR}
-ln -sfn libDataProxy.so.3.1.1 ${LIBDIR}/libDataProxy.so.3.1
+ln -sfn libDataProxy.so.3.1.2 ${LIBDIR}/libDataProxy.so.3.1
 ln -sfn libDataProxy.so.3.1 ${LIBDIR}/libDataProxy.so.3
 ln -sfn libDataProxy.so.3 ${LIBDIR}/libDataProxy.so
 ln -sfn libDataProxy.so.3.0.2 ${LIBDIR}/libDataProxy.so.3.0
-for lib in `find ${TOPDIR} -name lib*.so.*`; do ln -sfn $(basename $lib) ${LIBDIR}/$(basename $lib .3.1.1); done
+for lib in `find ${TOPDIR} -name lib*.so.*`; do ln -sfn $(basename $lib) ${LIBDIR}/$(basename $lib .3.1.2); done
 mv ${TOPDIR}/lib* ${LIBDIR}
 
 echo "--> change user:group to adlearn:optimization"
