@@ -65,6 +65,7 @@ INCS=\
 	-I${ORACLE_HOME}/network/public \
 	-I${ORACLE_HOME}/rdbms/public \
 	$(INCLUDE_DIRS:%=-I%) \
+	-I$(MATLABDIR)/extern/include \
 
 TESTINCS=\
 	$(INCS) \
