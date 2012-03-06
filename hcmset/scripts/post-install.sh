@@ -25,8 +25,8 @@ ln -sfn ${SHELL_VERSION_EXE} ${TOPDIR}/shell/bin/${SHELL_EXE}
 echo "--> Setting up dpl service"
 mv ${TOPDIR}/${SERVICE_EXE} ${TOPDIR}/service/bin/${SERVICE_VERSION_EXE}
 ln -sfn ${SERVICE_VERSION_EXE} ${TOPDIR}/service/bin/${SERVICE_EXE}
-mv ${TOPDIR}/cfg/* ${TOPDIR}/service/cfg && rmdir ${TOPDIR}/cfg
-mv ${TOPDIR}/sample/* ${TOPDIR}/service/sample && rmdir ${TOPDIR}/sample
+cp -r ${TOPDIR}/cfg/ ${TOPDIR}/service && rm -rf ${TOPDIR}/cfg
+cp -r ${TOPDIR}/sample/ ${TOPDIR}/service && rm -rf ${TOPDIR}/sample
 
 echo "--> Installing core libs to $LIBDIR"
 mv ${TOPDIR}/libDataProxy.so.* ${LIBDIR}
