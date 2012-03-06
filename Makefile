@@ -112,7 +112,7 @@ CXXT = $(CXX) $(TARGETOPTS) -c $(TESTINCS) $(DEFINE_FLAGS)	# compiling object fi
 CXXL = $(CXX) $(TARGETOPTS) $(LIBLOC)						# linking executables
 CXXD = $(CXX) -MM $(TESTINCS) $(DEFINE_FLAGS)				# generating dependencies
 CXXS = $(CXX) -shared -Wl,-soname,$(MINOR_VERSION_TARGET)
-MEX ?= mex CFLAGS="\$CFLAGS -std=c++0x"
+MEX ?= mex CXXFLAGS='-std=c++0x -fPIC -fno-omit-frame-pointer -pthread'
 
 # Source Directories
 PRIVATEDIR		= private
