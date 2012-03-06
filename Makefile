@@ -112,7 +112,8 @@ CXXT = $(CXX) $(TARGETOPTS) -c $(TESTINCS) $(DEFINE_FLAGS)	# compiling object fi
 CXXL = $(CXX) $(TARGETOPTS) $(LIBLOC)						# linking executables
 CXXD = $(CXX) -MM $(TESTINCS) $(DEFINE_FLAGS)				# generating dependencies
 CXXS = $(CXX) -shared -Wl,-soname,$(MINOR_VERSION_TARGET)
-MEX ?= mex CXXFLAGS='-std=c++0x -fPIC -fno-omit-frame-pointer -pthread'
+MEX ?= mex
+MEXC ?= $(MEX) CXXFLAGS='-std=c++0x -fPIC -fno-omit-frame-pointer -pthread'
 
 # Source Directories
 PRIVATEDIR		= private
@@ -366,7 +367,7 @@ $(TARGETDIR)/$(PRIMARY_TARGET): $(PRIVATEOBJSPEC)
 	$(CXXS) -o $@ $^ $(LIBLOC) $(LIBS)
 
 $(TARGETDIR)/$(MATLAB_TARGET): $(MATLABWRAPPERFILE) $(PRIMARY_TARGET)
-	$(MEX) $(MATLABWRAPPERFILE) -DMV_OPTIMIZE $(INCS) $(LIBLOC) -L. -lDataProxy $(LIBS) -o $(TARGETDIR)/$(MATLAB_TARGET)
+	$(MEXC) $(MATLABWRAPPERFILE) -DMV_OPTIMIZE $(INCS) $(LIBLOC) -L. -lDataProxy $(LIBS) -o $(TARGETDIR)/$(MATLAB_TARGET)
 
 # if necessary, build external libraries.
 extlibs: $(MODULESPEC) $(TESTMODULESPEC)
