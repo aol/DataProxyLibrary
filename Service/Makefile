@@ -69,10 +69,10 @@ ifndef DEFINE_FLAGS
 endif
 
 # Variables for compiler invocation
-CXX ?= g++ -std=c++0x
-CXXC = $(CXX) $(TARGETOPTS) -c $(INCS) $(DEFINE_FLAGS)		# compiling object files
-CXXT = $(CXX) $(TARGETOPTS) -c $(TESTINCS) $(DEFINE_FLAGS)	# compiling object files for test
-CXXL = $(CXX) $(TARGETOPTS) $(LIBLOC)						# linking executables
+CXX ?= g++
+CXXC = $(CXX) -std=c++0x $(TARGETOPTS) -c $(INCS) $(DEFINE_FLAGS)		# compiling object files
+CXXT = $(CXX) -std=c++0x $(TARGETOPTS) -c $(TESTINCS) $(DEFINE_FLAGS)	# compiling object files for test
+CXXL = $(CXX) -std=c++0x $(TARGETOPTS) $(LIBLOC)						# linking executables
 CXXD = $(CXX) -std=c++0x -MM $(TESTINCS) $(DEFINE_FLAGS)				# generating dependencies
 
 # Source Directories
@@ -131,10 +131,10 @@ SYSTESTOBJSPEC			= $(SYSTESTFILESPEC:$(SYSTESTDIR)/%.cpp=$(TARGETDIR)/%.o)
 THPP2HPPFILES			= $(THPPFILES:%.thpp=%.hpp)
 
 # Per-target specification
-DEBUGOPTS		= -ggdb3 -Wall -Werror -fno-strict-aliasing -std=c++0x
-OPTIMIZEOPTS	= -O3 -D MV_OPTIMIZE -Wall -Werror -fno-strict-aliasing -std=c++0x
-PROFILEOPTS		= -O3 -D MV_OPTIMIZE -pg -Wall -Werror -fno-strict-aliasing -std=c++0x
-COVERAGEOPTS	= -fprofile-arcs -ftest-coverage -Wall -Werror -fno-strict-aliasing -std=c++0x
+DEBUGOPTS		= -ggdb3 -Wall -Werror -fno-strict-aliasing
+OPTIMIZEOPTS	= -O3 -D MV_OPTIMIZE -Wall -Werror -fno-strict-aliasing
+PROFILEOPTS		= -O3 -D MV_OPTIMIZE -pg -Wall -Werror -fno-strict-aliasing
+COVERAGEOPTS	= -fprofile-arcs -ftest-coverage -Wall -Werror -fno-strict-aliasing
 
 # Executable targets
 PRIMARY_TARGET			= dplService

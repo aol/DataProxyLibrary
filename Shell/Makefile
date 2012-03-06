@@ -63,11 +63,11 @@ ifndef DEFINE_FLAGS
 endif
 
 # Variables for compiler invocation
-CXX ?= g++ -std=c++0x
-CXXC = $(CXX) $(TARGETOPTS) -c $(INCS) $(DEFINE_FLAGS)		# compiling object files
-CXXT = $(CXX) $(TARGETOPTS) -c $(TESTINCS) $(DEFINE_FLAGS)	# compiling object files for test
-CXXL = $(CXX) $(TARGETOPTS) $(LIBLOC)						# linking executables
-CXXD = $(CXX) -MM $(TESTINCS) $(DEFINE_FLAGS)				# generating dependencies
+CXX ?= g++
+CXXC = $(CXX) -std=c++0x $(TARGETOPTS) -c $(INCS) $(DEFINE_FLAGS)		# compiling object files
+CXXT = $(CXX) -std=c++0x $(TARGETOPTS) -c $(TESTINCS) $(DEFINE_FLAGS)	# compiling object files for test
+CXXL = $(CXX) -std=c++0x $(TARGETOPTS) $(LIBLOC)						# linking executables
+CXXD = $(CXX) -std=c++0x -MM $(TESTINCS) $(DEFINE_FLAGS)				# generating dependencies
 
 # Source Directories
 PRIVATEDIR				= private
