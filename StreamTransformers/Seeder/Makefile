@@ -20,13 +20,13 @@ LIB_DIRS ?= /usr/local/lib
 
 # folders that contain files we need to manually compile
 # in order to build a self-contained dynamic library
-UTILITYDIR		= ${ROOTDIR}/lib/cpp/Utility
-SERVICEDIR		= ${ROOTDIR}/lib/cpp/Service
+UTILITYDIR	= ${ROOTDIR}/lib/cpp/Utility
+SERVICEDIR	= ${ROOTDIR}/lib/cpp/Service
 DATAPROXYDIR	= ${ROOTDIR}/lib/cpp/DataProxy
-DATABASEDIR		= ${ROOTDIR}/lib/cpp/Database
+DATABASEDIR	= ${ROOTDIR}/lib/cpp/Database
 
 # for auto-generating hpp files from thpp for GDP
-GDPDIR			= ${ROOTDIR}/lib/GDP
+GDPDIR		= ${ROOTDIR}/lib/GDP
 THPP2HPP        = $(GDPDIR)/scripts/thpp2hpp
 
 TRANSFORMERSCOMMONDIR = ../Common
@@ -47,7 +47,7 @@ TESTMODULES=\
 MOCKMODULES=\
 	lib/cpp/DataProxy \
 
-MODULESPEC		= $(MODULES:%=$(ROOTDIR)/%)
+MODULESPEC	= $(MODULES:%=$(ROOTDIR)/%)
 TESTMODULESPEC  = $(TESTMODULES:%=$(ROOTDIR)/%)
 MOCKMODULESPEC  = $(MOCKMODULES:%=$(ROOTDIR)/%)
 
@@ -77,7 +77,7 @@ LIBLOC=\
 	-L/data/lib \
 
 # Libraries
-LIBS		= -lDataProxy -lDatabase -lLogger -lmyodbc3 -lxerces-c -lpthread -lboost_regex -lboost_filesystem -llog4cxx -lboost_thread -lcurl -lDatabase -lclntsh -lmyodbc3
+LIBS	    = -lDataProxy -lDatabase -lLogger -lmyodbc3 -lxerces-c -lpthread -lboost_regex -lboost_filesystem -llog4cxx -lboost_thread -lcurl -lDatabase -lclntsh -lmyodbc3
 TESTLIBS    = -lcppunit -lTestHelpers -lDatabase -lclntsh -lmyodbc3 -lMockDataProxy
 
 # This is required on the 32 bit platform to prevent recursive
@@ -130,7 +130,7 @@ UTILITYFILES=\
 	StringUtilities.cpp \
 	MVException.cpp \
 	Nullable.cpp \
-    ShellExecutor.cpp \
+	ShellExecutor.cpp \
 	Stopwatch.cpp \
 
 # Creating explicit paths to sets of source files
@@ -210,6 +210,7 @@ $(TARGETDIR)/$(PRIMARY_TARGET): $(PRIVATEOBJSPEC)
 extlibs: $(MODULESPEC) $(TESTMODULESPEC)
 	$(MODULESPEC:%=(cd % && ${MAKE} $(SUBTARGET)) && ) true
 	${TESTMODULESPEC:%=(cd % && ${MAKE} ${SUBTARGET}) &&} true
+	${MOCKMODULESPEC:%=(cd % && ${MAKE} mock) &&} true
 
 # Default Builder rules
 $(ALLTARGETDIRS):

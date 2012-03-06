@@ -24,8 +24,8 @@ namespace
 	const std::string SEC_CLASSID_HEADER ( "class_id" );
 	const std::string SEC_IDTYPE_HEADER ( "id_type" );
 
-	const int SEC_IDTYPE_MEDIA ( 0 );
-	const int SEC_IDTYPE_WEBSITE ( 1 );
+	const int SEC_IDTYPE_MEDIA ( 1 );
+	const int SEC_IDTYPE_WEBSITE ( 2 );
 
 	// MediaIdToCampaignId stream constants
 	const std::string MEDIA_ID_HEADER ( "media_id" );

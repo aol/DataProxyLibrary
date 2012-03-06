@@ -47,10 +47,10 @@ void SeederEquivalenceClassDomainTest::testIdBelongsToMultipleSECThrowsSECExcept
 	// Media belongs to Multiple SECs
 	std::stringstream secData;
 	secData << "id,class_id,id_type" << std::endl;
-	secData << "100001, 10, 0" << std::endl;  
-	secData << "100001, 20, 0" << std::endl;  
-	secData << "1003, 20, 1" << std::endl;  
-	secData << "1004, 20, 1";  
+	secData << "100001, 10, 1" << std::endl;  
+	secData << "100001, 20, 1" << std::endl;  
+	secData << "1003, 20, 2" << std::endl;  
+	secData << "1004, 20, 2";  
 	mockDpl.SetDataToReturn( std::string("SeederEquivalenceClasses"), secData.str() );
 
 	//  Load CampaignIds Mappings
@@ -69,10 +69,10 @@ void SeederEquivalenceClassDomainTest::testIdBelongsToMultipleSECThrowsSECExcept
 	secData.clear();
 	secData.str( "" );
 	secData << "id,class_id,id_type" << std::endl;
-	secData << "100001, 10, 0" << std::endl;  
-	secData << "100002, 20, 0" << std::endl;  
-	secData << "1003, 20, 1" << std::endl;  
-	secData << "1003, 2, 1";  
+	secData << "100001, 10, 1" << std::endl;  
+	secData << "100002, 20, 1" << std::endl;  
+	secData << "1003, 20, 2" << std::endl;  
+	secData << "1003, 2, 2";  
 	mockDpl.SetDataToReturn( std::string("SeederEquivalenceClasses"), secData.str() );
 
 	//  Load CampaignIds Mappings
@@ -202,10 +202,10 @@ void SeederEquivalenceClassDomainTest::testCurrentCampaignDataMediaSeedingSucces
 	std::stringstream secData;
 	secData << "id,class_id,id_type" << std::endl;
 
-	secData << "100001, 10, 0" << std::endl;  
-	secData << "200002, 10, 0" << std::endl;  
+	secData << "100001, 10, 1" << std::endl;  
+	secData << "200002, 10, 1" << std::endl;  
 
-	secData << "1001, 10, 1" << std::endl;  
+	secData << "1001, 10, 2" << std::endl;  
 	mockDpl.SetDataToReturn( std::string("SeederEquivalenceClasses"), secData.str() );
 
 	//  Load MediaId To CampaignIds
@@ -242,14 +242,14 @@ void SeederEquivalenceClassDomainTest::testCurrentCampaignDataWebsiteSeedingSucc
 	std::stringstream secData;
 	secData << "id,class_id,id_type" << std::endl;
 
-	secData << "100001, 10, 0" << std::endl;  
+	secData << "100001, 10, 1" << std::endl;  
 
-	secData << "200002, 20, 0" << std::endl;  
+	secData << "200002, 20, 1" << std::endl;  
  
-	secData << "1001, 10, 1" << std::endl;  
-	secData << "1002, 10, 1" << std::endl;  
+	secData << "1001, 10, 2" << std::endl;  
+	secData << "1002, 10, 2" << std::endl;  
 
-	secData << "1004, 20, 1";  
+	secData << "1004, 20, 2";  
 	mockDpl.SetDataToReturn( std::string("SeederEquivalenceClasses"), secData.str() );
 
 	//  Load MediaId To CampaignIds
@@ -286,11 +286,11 @@ void SeederEquivalenceClassDomainTest::testCurrentCampaignDataMediaAndWebsiteSee
 	std::stringstream secData;
 	secData << "id,class_id,id_type" << std::endl;
 
-	secData << "100001, 10, 0" << std::endl;  
-	secData << "200002, 10, 0" << std::endl;  
+	secData << "100001, 10, 1" << std::endl;  
+	secData << "200002, 10, 1" << std::endl;  
 
-	secData << "1001, 10, 1" << std::endl;  
-	secData << "1002, 10, 1";  
+	secData << "1001, 10, 2" << std::endl;  
+	secData << "1002, 10, 2";  
 
 	mockDpl.SetDataToReturn( std::string("SeederEquivalenceClasses"), secData.str() );
 
@@ -329,13 +329,13 @@ void SeederEquivalenceClassDomainTest::testCrossCampaignDataMediaSeedingSuccess 
 	//  seeder equivalence classes
 	std::stringstream secData;
 	secData << "id,class_id,id_type" << std::endl;
-	secData << "100001, 10, 0" << std::endl;  
+	secData << "100001, 10, 1" << std::endl;  
 
-	secData << "100003, 20, 0" << std::endl;  
-	secData << "100004, 20, 0" << std::endl;  
-	secData << "100005, 20, 0" << std::endl;  
-	secData << "100006, 20, 0" << std::endl;  
-	secData << "100007, 20, 0" << std::endl;  
+	secData << "100003, 20, 1" << std::endl;  
+	secData << "100004, 20, 1" << std::endl;  
+	secData << "100005, 20, 1" << std::endl;  
+	secData << "100006, 20, 1" << std::endl;  
+	secData << "100007, 20, 1" << std::endl;  
 	mockDpl.SetDataToReturn( std::string("SeederEquivalenceClasses"), secData.str() );
 
 	//  Load MediaId To CampaignIds
@@ -374,10 +374,10 @@ void SeederEquivalenceClassDomainTest::testCrossCampaignDataWebsiteSeedingSucces
 	//  seeder equivalence classes
 	std::stringstream secData;
 	secData << "id,class_id,id_type" << std::endl;
-	secData << "100001, 10, 0" << std::endl;  
-	secData << "200002, 10, 0" << std::endl;  
-	secData << "1001, 10, 1" << std::endl;  
-	secData << "1002, 10, 1" << std::endl;  
+	secData << "100001, 10, 1" << std::endl;  
+	secData << "200002, 10, 1" << std::endl;  
+	secData << "1001, 10, 2" << std::endl;  
+	secData << "1002, 10, 2" << std::endl;  
 	
 	mockDpl.SetDataToReturn( std::string("SeederEquivalenceClasses"), secData.str() );
 
@@ -412,21 +412,21 @@ void SeederEquivalenceClassDomainTest::testCrossCampaignDataMediaAndWebsiteSeedi
 	//  seeder equivalence classes
 	std::stringstream secData;
 	secData << "id,class_id,id_type" << std::endl;
-	secData << "100001, 10, 0" << std::endl;  
-	secData << "200002, 10, 0" << std::endl;  
+	secData << "100001, 10, 1" << std::endl;  
+	secData << "200002, 10, 1" << std::endl;  
 
-	secData << "100004, 20, 0" << std::endl;  
-	secData << "100005, 20, 0" << std::endl;  
-	secData << "100006, 20, 0" << std::endl;  
-	secData << "100007, 20, 0" << std::endl;  
-	secData << "100008, 20, 0" << std::endl;  
-	secData << "100009, 20, 0" << std::endl;  
-	secData << "100010, 20, 0" << std::endl;  
+	secData << "100004, 20, 1" << std::endl;  
+	secData << "100005, 20, 1" << std::endl;  
+	secData << "100006, 20, 1" << std::endl;  
+	secData << "100007, 20, 1" << std::endl;  
+	secData << "100008, 20, 1" << std::endl;  
+	secData << "100009, 20, 1" << std::endl;  
+	secData << "100010, 20, 1" << std::endl;  
 
-	secData << "1001, 10, 1" << std::endl;  
-	secData << "1002, 10, 1" << std::endl;  
-	secData << "1003, 10, 1" << std::endl;  
-	secData << "1004, 10, 1";  
+	secData << "1001, 10, 2" << std::endl;  
+	secData << "1002, 10, 2" << std::endl;  
+	secData << "1003, 10, 2" << std::endl;  
+	secData << "1004, 10, 2";  
 	
 	mockDpl.SetDataToReturn( std::string("SeederEquivalenceClasses"), secData.str() );
 
@@ -474,21 +474,21 @@ void SeederEquivalenceClassDomainTest::testComplexCampaignDataMediaAndWebsiteSee
 	//  seeder equivalence classes
 	std::stringstream secData;
 	secData << "id,class_id,id_type" << std::endl;
-	secData << "100001, 10, 0" << std::endl;  
-	secData << "200002, 10, 0" << std::endl;  
+	secData << "100001, 10, 1" << std::endl;  
+	secData << "200002, 10, 1" << std::endl;  
 
-	secData << "100004, 20, 0" << std::endl;  
-	secData << "100005, 20, 0" << std::endl;  
-	secData << "100006, 20, 0" << std::endl;  
-	secData << "100007, 20, 0" << std::endl;  
-	secData << "100008, 20, 0" << std::endl;  
-	secData << "100009, 20, 0" << std::endl;  
-	secData << "100010, 20, 0" << std::endl;  
+	secData << "100004, 20, 1" << std::endl;  
+	secData << "100005, 20, 1" << std::endl;  
+	secData << "100006, 20, 1" << std::endl;  
+	secData << "100007, 20, 1" << std::endl;  
+	secData << "100008, 20, 1" << std::endl;  
+	secData << "100009, 20, 1" << std::endl;  
+	secData << "100010, 20, 1" << std::endl;  
 
-	secData << "1001, 10, 1" << std::endl;  
-	secData << "1002, 10, 1" << std::endl;  
-	secData << "1003, 10, 1" << std::endl;  
-	secData << "1004, 10, 1";  
+	secData << "1001, 10, 2" << std::endl;  
+	secData << "1002, 10, 2" << std::endl;  
+	secData << "1003, 10, 2" << std::endl;  
+	secData << "1004, 10, 2";  
 	
 	mockDpl.SetDataToReturn( std::string("SeederEquivalenceClasses"), secData.str() );
 

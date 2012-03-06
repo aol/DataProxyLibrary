@@ -62,11 +62,11 @@ void SeederStreamTransformerTest::testMissingParametersThrowsSeederException()
 	std::string secFileName ( m_pSECDir->GetDirectoryName() + "/null");
 	std::ofstream secFile ( secFileName.c_str() );
 	secFile << "id,class_id,id_type" << std::endl;
-	secFile << "100001, 10, 0" << std::endl;
-	secFile << "100002, 10, 0" << std::endl;
-	secFile << "100003, 10, 0" << std::endl;
-	secFile << "1001, 10, 1" << std::endl;
-	secFile << "1002, 10, 1" << std::endl;
+	secFile << "100001, 10, 1" << std::endl;
+	secFile << "100002, 10, 1" << std::endl;
+	secFile << "100003, 10, 1" << std::endl;
+	secFile << "1001, 10, 2" << std::endl;
+	secFile << "1002, 10, 2" << std::endl;
 	secFile.close();
 
 	//  Load MediaId To CampaignIds
@@ -241,10 +241,10 @@ void SeederStreamTransformerTest::testCurrentCampaignDataMultipleRowsSuccess()
 	std::string secFileName ( m_pSECDir->GetDirectoryName() + "/null");
 	std::ofstream secFile ( secFileName.c_str() );
 	secFile << "id,class_id,id_type" << std::endl;
-	secFile << "100001, 10, 0" << std::endl;
-	secFile << "100002, 10, 0" << std::endl;
-	secFile << "1001, 10, 1" << std::endl;
-	secFile << "1002, 10, 1" << std::endl;
+	secFile << "100001, 10, 1" << std::endl;
+	secFile << "100002, 10, 1" << std::endl;
+	secFile << "1001, 10, 2" << std::endl;
+	secFile << "1002, 10, 2" << std::endl;
 	secFile.close();
 
 	//  Load MediaId To CampaignIds
@@ -324,11 +324,11 @@ void SeederStreamTransformerTest::testCrossCampaignDataMultipleRowsSuccess()
 	std::string secFileName ( m_pSECDir->GetDirectoryName() + "/null");
 	std::ofstream secFile ( secFileName.c_str() );
 	secFile << "id,class_id,id_type" << std::endl;
-	secFile << "100001, 10, 0" << std::endl;
-	secFile << "100002, 10, 0" << std::endl;
-	secFile << "100003, 10, 0" << std::endl;
-	secFile << "1001, 100, 1" << std::endl;
-	secFile << "1002, 100, 1" << std::endl;
+	secFile << "100001, 10, 1" << std::endl;
+	secFile << "100002, 10, 1" << std::endl;
+	secFile << "100003, 10, 1" << std::endl;
+	secFile << "1001, 100, 2" << std::endl;
+	secFile << "1002, 100, 2" << std::endl;
 	secFile.close();
 
 	//  Load MediaId To CampaignIds
