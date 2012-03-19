@@ -1,0 +1,17 @@
+<DplConfig>
+    <DatabaseConnections>
+		<!-- UPDATE THE USER INFORMATION -->
+        <Database connection="RTD"
+                  type="oracle"
+                  name="ADLAPPT"
+                  user="username"
+                  password="password"
+                  schema="" />
+    </DatabaseConnections>
+    <DataNode name="rtd_lookup" type="db" >
+        <Read connection="RTD"
+              header="rtd"
+              query="SELECT DISTINCT( adlearn_rtd ) FROM ace.admedia WHERE campaignid IN ( ${campaign_id} )" >
+        </Read>
+    </DataNode>
+</DplConfig>
