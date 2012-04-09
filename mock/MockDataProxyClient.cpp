@@ -45,6 +45,17 @@ namespace
 MockDataProxyClient::MockDataProxyClient()
 :	DataProxyClient( true ),
 	m_Log(),
+	m_rLog( m_Log ),
+	m_ExceptionNames(),
+	m_DataForNodeParameterAgnostic(),
+	m_DataForNodeAndParameters()
+{
+}
+
+MockDataProxyClient::MockDataProxyClient( std::ostream& o_rLog )
+:	DataProxyClient( true ),
+	m_Log(),
+	m_rLog( o_rLog ),
 	m_ExceptionNames(),
 	m_DataForNodeParameterAgnostic(),
 	m_DataForNodeAndParameters()
@@ -57,14 +68,14 @@ MockDataProxyClient::~MockDataProxyClient()
 
 void MockDataProxyClient::Initialize( const std::string& i_rConfigFileSpec )
 {
-	m_Log << "Initialize called with ConfigFileSpec: " << i_rConfigFileSpec << std::endl;
+	m_rLog << "Initialize called with ConfigFileSpec: " << i_rConfigFileSpec << std::endl;
 }
 
 //Mock Load first checks if the tester configured a particular response for the given data node AND parameters.
 //If not, then it checks if there is a response configured for just the data node.
 void MockDataProxyClient::Load( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData ) const
 {
-	m_Log << "Load called with Name: " << i_rName << " Parameters: " << ToString( i_rParameters ) << std::endl;
+	m_rLog << "Load called with Name: " << i_rName << " Parameters: " << ToString( i_rParameters ) << std::endl;
 	if( m_ExceptionNames.find( i_rName ) != m_ExceptionNames.end() )
 	{
 		MV_THROW( DataProxyClientException, "Set to throw an exception for name: " << i_rName );
@@ -93,7 +104,7 @@ void MockDataProxyClient::Store( const std::string& i_rName, const std::map<std:
 {
 	std::stringstream data;
 	data << i_rData.rdbuf();
-	m_Log << "Store called with Name: " << i_rName << " Parameters: " << ToString( i_rParameters ) << " Data: " << data.str() << std::endl;
+	m_rLog << "Store called with Name: " << i_rName << " Parameters: " << ToString( i_rParameters ) << " Data: " << data.str() << std::endl;
 	if( m_ExceptionNames.find( i_rName ) != m_ExceptionNames.end() )
 	{
 		MV_THROW( DataProxyClientException, "Set to throw an exception for name: " << i_rName );
@@ -102,7 +113,7 @@ void MockDataProxyClient::Store( const std::string& i_rName, const std::map<std:
 
 void MockDataProxyClient::Delete( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters ) const
 {
-	m_Log << "Delete called with Name: " << i_rName << " Parameters: " << ToString( i_rParameters ) << std::endl;
+	m_rLog << "Delete called with Name: " << i_rName << " Parameters: " << ToString( i_rParameters ) << std::endl;
 	if( m_ExceptionNames.find( i_rName ) != m_ExceptionNames.end() )
 	{
 		MV_THROW( DataProxyClientException, "Set to throw an exception for name: " << i_rName );
@@ -111,17 +122,17 @@ void MockDataProxyClient::Delete( const std::string& i_rName, const std::map<std
 
 void MockDataProxyClient::BeginTransaction( bool i_AbortCurrent )
 {
-	m_Log << "BeginTransaction called" << ( i_AbortCurrent ? ", aborting current" : "" ) << std::endl;
+	m_rLog << "BeginTransaction called" << ( i_AbortCurrent ? ", aborting current" : "" ) << std::endl;
 }
 
 void MockDataProxyClient::Commit()
 {
-	m_Log << "Commit called" << std::endl;
+	m_rLog << "Commit called" << std::endl;
 }
 
 void MockDataProxyClient::Rollback()
 {
-	m_Log << "Rollback called" << std::endl;
+	m_rLog << "Rollback called" << std::endl;
 }
 
 

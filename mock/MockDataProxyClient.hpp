@@ -17,6 +17,7 @@
 class MockDataProxyClient : public DataProxyClient
 {
 public:
+	MockDataProxyClient( std::ostream& o_rLog );
 	MockDataProxyClient();
 	virtual ~MockDataProxyClient();
 
@@ -37,6 +38,7 @@ public:
 
 private:
 	mutable std::stringstream m_Log;
+	std::ostream& m_rLog;
 	std::set< std::string > m_ExceptionNames;
 	std::map< std::string, std::string > m_DataForNodeParameterAgnostic;
 	typedef std::pair<std::string, std::map<std::string, std::string> > DataNodeAndParameters;
