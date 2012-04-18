@@ -21,7 +21,7 @@
 
 namespace
 {
-	const std::string SHELL_VERSION( "DataProxy Shell v3.1.2" );
+	const std::string SHELL_VERSION( "DataProxy Shell v3.1.3" );
 
 	const char* INIT( "init" );
 	const char* NAME( "name" );

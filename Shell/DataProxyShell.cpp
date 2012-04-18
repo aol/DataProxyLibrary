@@ -13,10 +13,12 @@
 #include "DataProxyShell.hpp"
 #include "DataProxyShellConfig.hpp"
 #include "DataProxyClient.hpp"
+#include "Stopwatch.hpp"
 #include "MVLogger.hpp"
 
 int main(int argc, char* argv[]) 
 {
+	Stopwatch stopwatch;
 	try
 	{
 		DataProxyShellConfig config( argc, argv );
@@ -56,6 +58,7 @@ int main(int argc, char* argv[])
 		{
 			client.Commit();
 		}
+		MVLOGGER( "root.lib.DataProxy.Shell.Finished", "Successfully processed request. Operation took " << stopwatch.GetElapsedSeconds() << " seconds" );
 	}
 	catch( const cli::QuietException& i_rExitMessage )
 	{
@@ -63,13 +66,13 @@ int main(int argc, char* argv[])
 	}
 	catch( const std::exception& i_rEx )
 	{
-		MVLOGGER( "root.lib.DataProxy.Shell.Exception", "Caught exception while processing request: " << i_rEx.what() );
+		MVLOGGER( "root.lib.DataProxy.Shell.Exception", "Caught exception while processing request: " << i_rEx.what() << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
 		std::cerr << i_rEx.what() << std::endl;
 		return 1;
 	}
 	catch( ... )
 	{
-		std::cerr << "Unknown exception" << std::endl;
+		std::cerr << "Unknown exception" << " after " << stopwatch.GetElapsedSeconds() << " seconds" << std::endl;
 		return 1;
 	}
 

@@ -21,6 +21,7 @@
 #include "StringUtilities.hpp"
 #include "CSVReader.hpp"
 #include "SQLLoader.hpp"
+#include "Stopwatch.hpp"
 #include "DataProxyClient.hpp"
 #include <iostream>
 #include <fstream>
@@ -673,7 +674,9 @@ void DatabaseProxy::LoadImpl( const std::map<std::string,std::string>& i_rParame
 	stmt.CompleteBinding();
 	//write the header
 	o_rData << m_ReadHeader << m_ReadRecordSeparator;
+
 	//now iterate over the results, writing them into the stream in csv format
+	Stopwatch stopwatch;
 	std::vector< Nullable<std::string> >::iterator colIter;
 	size_t rowCount = 0;
 	for (; stmt.NextRow(); ++rowCount)
@@ -695,7 +698,8 @@ void DatabaseProxy::LoadImpl( const std::map<std::string,std::string>& i_rParame
 	o_rData << std::flush;
 
 	MVLOGGER("root.lib.DataProxy.DatabaseProxy.Load.ExecutingStmt.Finished", 
-			  "Finished Processing SQL results. Processed " << rowCount << " Rows. Memory usage: - " << MVUtility::MemCheck());
+			  "Finished Processing SQL results. Processed " << rowCount << " Rows. Memory usage: - " << MVUtility::MemCheck()
+			  << ". Elapsed time: " << stopwatch.GetElapsedSeconds() << " seconds" );
 }
 
 void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData )
@@ -859,22 +863,27 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 		// issue the pre-statement query if one exists
 		if (!m_PreStatement.IsNull())
 		{
-			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing configured pre-statement: " << m_PreStatement );
-			Database::Statement( rTransactionDatabase, ProxyUtilities::GetVariableSubstitutedString( m_PreStatement, i_rParameters ) ).Execute();
-			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Finished", "pre-statement complete");
+			Stopwatch stopwatch;
+			std::string preStatement( ProxyUtilities::GetVariableSubstitutedString( m_PreStatement, i_rParameters ) );
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing configured pre-statement: " << preStatement );
+			Database::Statement( rTransactionDatabase, preStatement ).Execute();
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Finished",
+				"Finished executing pre-statement: " << preStatement << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
 		}
 
 		// perform a single execute if we don't need to do more
 		// (this should only happen if we're ignoring the stream & operating solely off parameters)
 		if( !needToRead )
 		{
+			Stopwatch stopwatch;
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Statement.Begin", "Executing the following statement once (since all fields have been provided via parameters: " << sql );
 			statement.Execute();
-			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Statement.Finished", "Statement finished" );
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Statement.Finished", "Statement:" << sql << " finished after " << stopwatch.GetElapsedSeconds() << " seconds" );
 		}
 		else
 		{
 			// otherwise, execute the statement for every row in the incoming data
+			Stopwatch stopwatch;
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Statement.Begin", "Executing the following statement for every piece of input: " << sql );
 			long long i=0;
 			while( reader.NextRow() )
@@ -882,15 +891,18 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 				statement.Execute();
 				++i;
 			}
-			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Statement.Finished", "Statement finished executing " << i << " times" );
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Statement.Finished", "Statement: " << sql << " finished executing " << i << " times after" << stopwatch.GetElapsedSeconds() << " seconds" );
 		}
 
 		// issue the post-statement query if one exists
 		if (!m_PostStatement.IsNull())
 		{
-			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing configured post-statement: " << m_PostStatement );
-			Database::Statement( rTransactionDatabase, ProxyUtilities::GetVariableSubstitutedString( m_PostStatement, i_rParameters ) ).Execute();
-			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Finished", "post-statement complete");
+			Stopwatch stopwatch;
+			std::string postStatement( ProxyUtilities::GetVariableSubstitutedString( m_PostStatement, i_rParameters ) );
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing configured post-statement: " << postStatement );
+			Database::Statement( rTransactionDatabase, postStatement ).Execute();
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Finished",
+				"Finished executing post-statement: " << postStatement << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
 		}
 	}
 	else	// bulk-loading mode (uses staging table)
@@ -904,8 +916,9 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 		// write the data file
 		MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.WritingDataFile.Begin", "Writing data to file: " << dataFileSpec );
 		std::string columns = GetOutputColumns( foundColumns, m_WriteRequiredColumns );
+		Stopwatch stopwatch;
 		WriteDataFile( dataFileSpec, columns, usedParameters, i_rData, incomingHeaderColumns.size(), usedIndeces );
-		MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.WritingDataFile.Finished", "Done writing data to file: " << dataFileSpec );
+		MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.WritingDataFile.Finished", "Done writing data to file: " << dataFileSpec << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
 
 		// get the database connections needed
 		boost::scoped_ptr< ScopedTempTable > pTempTable;
@@ -956,31 +969,39 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 
 				// upload!
 				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Begin", "Uploading data to staging table: " << stagingTable );
+				stopwatch.Reset();
 				if( loader.Upload( m_WriteDirectLoad ) )
 				{
 					MV_THROW( DatabaseProxyException, "SQLLoader failed! Standard output: " << loader.GetStandardOutput() << ". Standard error: " << loader.GetStandardError());
 				}
-				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Finished", "Done uploading data to staging table: " << stagingTable );
+				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Finished", "Done uploading data to staging table: " << stagingTable << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
 
 				// issue the pre-statement query if one exists
 				if (!m_PreStatement.IsNull())
 				{
-					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing configured pre-statement: " << m_PreStatement );
-					Database::Statement( rTransactionDatabase, ProxyUtilities::GetVariableSubstitutedString( m_PreStatement, i_rParameters ) ).Execute();
-					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Finished", "pre-statement complete");
+					stopwatch.Reset();
+					std::string preStatement( ProxyUtilities::GetVariableSubstitutedString( m_PreStatement, i_rParameters ) );
+					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing configured pre-statement: " << preStatement );
+					Database::Statement( rTransactionDatabase, preStatement ).Execute();
+					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Finished",
+						"Finished executing pre-statement: " << preStatement << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
 				}
 
 				// merge staging table data into primary table
 				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Begin", "Merging data from staging table with query: " << oracleMergeQuery );
+				stopwatch.Reset();
 				Database::Statement( rTransactionDatabase, oracleMergeQuery ).Execute();
-				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Finished", "Merge complete" );
+				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Finished", "Merge complete after " << stopwatch.GetElapsedSeconds() << " seconds" );
 
 				// issue the post-statement query if one exists
 				if (!m_PostStatement.IsNull())
 				{
-					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing configured post-statement: " << m_PostStatement );
-					Database::Statement( rTransactionDatabase, ProxyUtilities::GetVariableSubstitutedString( m_PostStatement, i_rParameters ) ).Execute();
-					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Finished", "post-statement complete");
+					stopwatch.Reset();
+					std::string postStatement( ProxyUtilities::GetVariableSubstitutedString( m_PostStatement, i_rParameters ) );
+					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing configured post-statement: " << postStatement );
+					Database::Statement( rTransactionDatabase, postStatement ).Execute();
+					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Finished",
+						"Finished executing post-statement: " << postStatement << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
 				}
 
 				// if cleaning up, remove files
@@ -1011,28 +1032,36 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 					<< "IGNORE 1 LINES" << std::endl
 					<< "( " << columns << " )" << std::endl;
 				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Begin", "Uploading data to staging table: " << stagingTable );
+				stopwatch.Reset();
 				Database::Statement( rTransactionDatabase, sql.str() ).Execute();
-				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Finished", "Done uploading data to staging table: " << stagingTable );
+				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Finished", "Done uploading data to staging table: " << stagingTable << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
 
 				// issue the pre-statement query if one exists
 				if (!m_PreStatement.IsNull())
 				{
-					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing configured pre-statement: " << m_PreStatement );
-					Database::Statement( rTransactionDatabase, ProxyUtilities::GetVariableSubstitutedString( m_PreStatement, i_rParameters ) ).Execute();
-					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Finished", "pre-statement complete");
+					stopwatch.Reset();
+					std::string preStatement( ProxyUtilities::GetVariableSubstitutedString( m_PreStatement, i_rParameters ) );
+					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing configured pre-statement: " << preStatement );
+					Database::Statement( rTransactionDatabase, preStatement ).Execute();
+					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Finished",
+						"Finished executing pre-statement: " << preStatement << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
 				}
 
 				// merge staging table data into primary table
 				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Begin", "Merging data from staging table with query: " << mysqlMergeQuery );
+				stopwatch.Reset();
 				Database::Statement( rTransactionDatabase, mysqlMergeQuery ).Execute();
-				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Finished", "Merge complete" );
+				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Finished", "Merge complete after " << stopwatch.GetElapsedSeconds() << " seconds" );
 
 				// issue the post-statement query if one exists
 				if (!m_PostStatement.IsNull())
 				{
-					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing configured post-statement: " << m_PostStatement );
-					Database::Statement( rTransactionDatabase, ProxyUtilities::GetVariableSubstitutedString( m_PostStatement, i_rParameters ) ).Execute();
-					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Finished", "post-statement complete");
+					stopwatch.Reset();
+					std::string postStatement( ProxyUtilities::GetVariableSubstitutedString( m_PostStatement, i_rParameters ) );
+					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing configured post-statement: " << postStatement );
+					Database::Statement( rTransactionDatabase, postStatement ).Execute();
+					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Finished",
+						"Finished executing post-statement: " << postStatement << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
 				}
 			
 				// if cleaning up, remove file
