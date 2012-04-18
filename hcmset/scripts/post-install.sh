@@ -5,7 +5,7 @@ set -e
 TOPDIR=/data/app/dpl
 LIBDIR=/data/lib
 
-VERSION=v3.1.2
+VERSION=v3.1.3
 SHELL_EXE=dplShell
 SHELL_VERSION_EXE=${SHELL_EXE}_${VERSION}
 SERVICE_EXE=dplService
@@ -30,11 +30,11 @@ cp -r ${TOPDIR}/sample/ ${TOPDIR}/service && rm -rf ${TOPDIR}/sample
 
 echo "--> Installing core libs to $LIBDIR"
 mv ${TOPDIR}/libDataProxy.so.* ${LIBDIR}
-ln -sfn libDataProxy.so.3.1.2 ${LIBDIR}/libDataProxy.so.3.1
+ln -sfn libDataProxy.so.3.1.3 ${LIBDIR}/libDataProxy.so.3.1
 ln -sfn libDataProxy.so.3.1 ${LIBDIR}/libDataProxy.so.3
 ln -sfn libDataProxy.so.3 ${LIBDIR}/libDataProxy.so
 ln -sfn libDataProxy.so.3.0.2 ${LIBDIR}/libDataProxy.so.3.0
-for lib in `find ${TOPDIR} -name lib*.so.*`; do ln -sfn $(basename $lib) ${LIBDIR}/$(basename $lib .3.1.2); done
+for lib in `find ${TOPDIR} -name lib*.so.*`; do ln -sfn $(basename $lib) ${LIBDIR}/$(basename $lib .3.1.3); done
 mv ${TOPDIR}/lib* ${LIBDIR}
 
 echo "--> change user:group to adlearn:optimization"
