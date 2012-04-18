@@ -123,6 +123,7 @@ void ValidateStreamTransformerTest::testValidate_DiscardModifyRecords()
 	parameters["discardIf"] = "col1 == 21, _NR < 0, NR % 4 == 0, col6+col7 == 113";
 	parameters["modifyIf"] = "NR % 3 == 0: _2col2=-_2col2; col6=-col6, NR == 7: col1=-7";
 	parameters["failIf"] = "NR > 9";
+	parameters["verbose"] = "true";
 
 	std::stringstream expected;
 	expected << "col1, 2 c o\tl 2.:;!@#$%^&*() ,col3,NR,col5,col6,col7" << std::endl
@@ -153,7 +154,7 @@ void ValidateStreamTransformerTest::testValidate_Fail()
 	parameters["failIf"] = "false, false, ( col1 == 44 && col2 == 52 ) || ( col3 == 53 && col4 == 54 )";
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( Validate( inputStream, parameters ), ValidationFailedException,
-		".*:\\d+: Validation failed\\. Return code: 3:\nLine number: 1 failed inclusion .*Line number: 5 failed critical validation criteria: .*\\. Violating row: \\{55,52,53,54,55,56,57\\}\\. Exiting\\.\n" );
+		".*:\\d+: Validation failed\\. Return code: 3:\nLine number: 1 failed inclusion .*Line number: 5 failed critical validation criteria: .*\\. Violating row: \\{55,52,53,54,55,56,57\\}\\. Exiting\\.\nNumber of lines discarded: 1\n" );
 	
 	// no verbose
 	inputStream.clear();

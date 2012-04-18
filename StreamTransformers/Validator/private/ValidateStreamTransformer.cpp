@@ -88,7 +88,7 @@ namespace
 			if( i_Verbose )
 			{
 				result << "print \"Line number: \" NR \" failed inclusion validation criteria: ( "
-					   << boost::trim_copy( *iter ) << " ). Discarding row: {\" $0 \"}\" > \"/dev/stderr\"; ";
+					   << boost::trim_copy( *iter ) << " ). Discarding row: {\" $0 \"}\" > \"/dev/stderr\"; __numDiscarded++; ";
 			}
 			result << "next; } ";
 		}
@@ -99,7 +99,7 @@ namespace
 		{
 			result << "if( " << ruleIter->GetValue< Expression >() << " ) { print \"Line number: \" NR \" fulfilled modification criteria: ( "
 				   << boost::trim_copy( ruleIter->GetValue< Expression >() ) << " ). Executing modification: "
-				   << boost::trim_copy( ruleIter->GetValue< Modification >() ) << " on row: {\" $0 \"}\" > \"/dev/stderr\"; ";
+				   << boost::trim_copy( ruleIter->GetValue< Modification >() ) << " on row: {\" $0 \"}\" > \"/dev/stderr\"; __numModified++; ";
 			result << ruleIter->GetValue< Modification >() << "; };" ;
 		}
 
@@ -112,7 +112,17 @@ namespace
 
 		result << printStatement.str();
 		
-		result << "}'";
+		result << "} ";
+
+		if( i_Verbose )
+		{
+			result << "END{"
+				   << " if( __numDiscarded > 0 ){ print \"Number of lines discarded: \" __numDiscarded >\"/dev/stderr\"; }"
+				   << " if( __numModified > 0 ){ print \"Number of lines modified: \" __numModified >\"/dev/stderr\"; }"
+				   << " }";
+		}
+
+		result << "'";
 		return result.str();
 	}
 
