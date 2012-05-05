@@ -160,11 +160,11 @@ LocalFileProxy::~LocalFileProxy()
 void LocalFileProxy::LoadImpl( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData )
 {
 	std::string fileSpec( BuildFileSpec( m_BaseLocation, m_NameFormat, i_rParameters ) );
-	FileUtilities::ValidateDirectory( FileUtilities::GetDirName( fileSpec ), R_OK );
 	if( !FileUtilities::DoesExist(fileSpec) )
 	{
 		MV_THROW( LocalFileMissingException, "Could not locate file: " << fileSpec );
 	}
+	FileUtilities::ValidateDirectory( FileUtilities::GetDirName( fileSpec ), R_OK );
 
 	if( !m_FailIfOlderThan.IsNull() )
 	{
