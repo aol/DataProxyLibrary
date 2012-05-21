@@ -29,6 +29,7 @@ cp -r ${TOPDIR}/cfg/ ${TOPDIR}/service && rm -rf ${TOPDIR}/cfg
 cp -r ${TOPDIR}/sample/ ${TOPDIR}/service && rm -rf ${TOPDIR}/sample
 
 echo "--> Installing core libs to $LIBDIR"
+mkdir -p $LIBDIR
 mv ${TOPDIR}/libDataProxy.so.* ${LIBDIR}
 ln -sfn libDataProxy.so.3.1.3 ${LIBDIR}/libDataProxy.so.3.1
 ln -sfn libDataProxy.so.3.1 ${LIBDIR}/libDataProxy.so.3
