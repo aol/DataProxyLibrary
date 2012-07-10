@@ -103,12 +103,12 @@ namespace
 		return result.str();
 	}
 
-	void WriteDataFile( const std::string& i_rFileSpec,
-						const std::string& i_rHeader,
-						const std::map< std::string, std::string >& i_rParameters,
-						std::istream& i_rData,
-						int i_NumCols,
-						const std::vector< uint >& i_rIndices )
+	long long WriteDataFile( const std::string& i_rFileSpec,
+							 const std::string& i_rHeader,
+							 const std::map< std::string, std::string >& i_rParameters,
+							 std::istream& i_rData,
+							 int i_NumCols,
+							 const std::vector< uint >& i_rIndices )
 	{
 		// open the file for writing
 		std::ofstream file( i_rFileSpec.c_str() );
@@ -139,7 +139,7 @@ namespace
 				MV_THROW( DatabaseProxyException, "Error encountered while writing to file: " << i_rFileSpec << ". eof: " << file.eof() << ", fail: " << file.fail() << ", bad: " << file.bad() );
 			}
 			file.close();
-			return;
+			return 1;
 		}
 		
 		// form the constants string that we will append to every line
@@ -163,12 +163,14 @@ namespace
 		}
 
 		// write all the data columns
+		long long count( 0 );
 		while( reader.NextRow() )
 		{
 			std::string line;
 			Join( dataColumns, line, ',' );
 			line += constants;
 			file << line << std::endl;
+			++count;
 		}
 
 		if( !file.good() )
@@ -176,6 +178,7 @@ namespace
 			MV_THROW( DatabaseProxyException, "Error encountered while writing to file: " << i_rFileSpec << ". eof: " << file.eof() << ", fail: " << file.fail() << ", bad: " << file.bad() );
 		}
 		file.close();
+		return count;
 	}
 
 	void WriteControlFile( const std::string& i_rFileSpec, const std::string& i_rDataFileSpec, const std::string& i_rColumns, const std::string& i_rStagingTable, const std::map<std::string, size_t> i_rWriteColumnSizes )
@@ -917,8 +920,9 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 		MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.WritingDataFile.Begin", "Writing data to file: " << dataFileSpec );
 		std::string columns = GetOutputColumns( foundColumns, m_WriteRequiredColumns );
 		Stopwatch stopwatch;
-		WriteDataFile( dataFileSpec, columns, usedParameters, i_rData, incomingHeaderColumns.size(), usedIndeces );
-		MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.WritingDataFile.Finished", "Done writing data to file: " << dataFileSpec << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
+		long long count = WriteDataFile( dataFileSpec, columns, usedParameters, i_rData, incomingHeaderColumns.size(), usedIndeces );
+		MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.WritingDataFile.Finished", "Done writing " << count
+			<< " rows of data to file: " << dataFileSpec << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
 
 		// get the database connections needed
 		boost::scoped_ptr< ScopedTempTable > pTempTable;
@@ -968,13 +972,13 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 				SQLLoader loader( rTransactionDatabase.GetDBName(), rTransactionDatabase.GetUserName(), rTransactionDatabase.GetPassword(), controlFileSpec, logFileSpec );
 
 				// upload!
-				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Begin", "Uploading data to staging table: " << stagingTable );
+				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Begin", "Uploading " << count << " rows of data to staging table: " << stagingTable );
 				stopwatch.Reset();
 				if( loader.Upload( m_WriteDirectLoad ) )
 				{
 					MV_THROW( DatabaseProxyException, "SQLLoader failed! Standard output: " << loader.GetStandardOutput() << ". Standard error: " << loader.GetStandardError());
 				}
-				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Finished", "Done uploading data to staging table: " << stagingTable << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
+				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Finished", "Done uploading " << count << " rows of data to staging table: " << stagingTable << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
 
 				// issue the pre-statement query if one exists
 				if (!m_PreStatement.IsNull())
@@ -988,10 +992,10 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 				}
 
 				// merge staging table data into primary table
-				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Begin", "Merging data from staging table with query: " << oracleMergeQuery );
+				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Begin", "Merging " << count << " rows of data from staging table with query: " << oracleMergeQuery );
 				stopwatch.Reset();
 				Database::Statement( rTransactionDatabase, oracleMergeQuery ).Execute();
-				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Finished", "Merge complete after " << stopwatch.GetElapsedSeconds() << " seconds" );
+				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Finished", "Merge of " << count << " rows complete after " << stopwatch.GetElapsedSeconds() << " seconds" );
 
 				// issue the post-statement query if one exists
 				if (!m_PostStatement.IsNull())
@@ -1031,10 +1035,10 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 					<< "FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"'" << std::endl
 					<< "IGNORE 1 LINES" << std::endl
 					<< "( " << columns << " )" << std::endl;
-				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Begin", "Uploading data to staging table: " << stagingTable );
+				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Begin", "Uploading " << count << " rows of data to staging table: " << stagingTable );
 				stopwatch.Reset();
 				Database::Statement( rTransactionDatabase, sql.str() ).Execute();
-				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Finished", "Done uploading data to staging table: " << stagingTable << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
+				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Finished", "Done uploading " << count << " rows of data to staging table: " << stagingTable << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
 
 				// issue the pre-statement query if one exists
 				if (!m_PreStatement.IsNull())
@@ -1048,10 +1052,10 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 				}
 
 				// merge staging table data into primary table
-				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Begin", "Merging data from staging table with query: " << mysqlMergeQuery );
+				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Begin", "Merging " << count << " rows of data from staging table with query: " << mysqlMergeQuery );
 				stopwatch.Reset();
 				Database::Statement( rTransactionDatabase, mysqlMergeQuery ).Execute();
-				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Finished", "Merge complete after " << stopwatch.GetElapsedSeconds() << " seconds" );
+				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Finished", "Merge of " << count << " rows complete after " << stopwatch.GetElapsedSeconds() << " seconds" );
 
 				// issue the post-statement query if one exists
 				if (!m_PostStatement.IsNull())
