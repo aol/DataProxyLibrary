@@ -328,7 +328,7 @@ test_coverage: $(COVERAGEDIR) extlibs
 	SUBTARGET=coverage $(TEST_TARGET) \
 
 mock: $(TARGETDIR) extlibs
-	$(MAKE) SUBTARGET=debug $(MOCK_TARGET) \
+	$(MAKE) SUBTARGET=debug $(MOCK_TARGET) TARGETOPTS='${DEBUGOPTS}'\
 
 opt_pic: $(OPTIMIZEDIR) extlibs
 	$(MAKE) TARGETDIR='$(OPTIMIZEDIR)' TARGETOPTS='$(OPTIMIZEOPTS)' \
