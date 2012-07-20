@@ -268,7 +268,9 @@ void ProxyUtilitiesTest::testGetMergeQuery_FullMerge_Oracle()
 
 	std::stringstream expected;
 	expected << "MERGE INTO myTable"
-			 << " USING stagingTable ON ( myTable.key1 = stagingTable.key1 AND myTable.key2 = stagingTable.key2 )"
+			 << " USING stagingTable "
+			 << "ON ( ( myTable.key1 = stagingTable.key1 OR myTable.key1 IS NULL AND stagingTable.key1 IS NULL )"
+			 << " AND ( myTable.key2 = stagingTable.key2 OR myTable.key2 IS NULL AND stagingTable.key2 IS NULL ) )"
 			 << " WHEN NOT MATCHED THEN INSERT( key1, key2, data3, data5 ) VALUES ( stagingTable.key1, stagingTable.key2, NVL(stagingTable.data3,%t), stagingTable.data5 )"
 			 << " WHEN MATCHED THEN UPDATE SET "
 			 	<< "myTable.data3 = myTable.data3 + NVL(stagingTable.data3,0), "
@@ -388,7 +390,9 @@ void ProxyUtilitiesTest::testGetMergeQuery_NotMatch_Oracle()
 
 	std::stringstream expected;
 	expected << "MERGE INTO myTable"
-			 << " USING stagingTable ON ( myTable.key1 = stagingTable.key1 AND myTable.key2 = stagingTable.key2 )"
+			 << " USING stagingTable "
+			 << "ON ( ( myTable.key1 = stagingTable.key1 OR myTable.key1 IS NULL AND stagingTable.key1 IS NULL )"
+			 << " AND ( myTable.key2 = stagingTable.key2 OR myTable.key2 IS NULL AND stagingTable.key2 IS NULL ) )"
 			 << " WHEN NOT MATCHED THEN INSERT( key1, key2, data3, data5 ) VALUES ( stagingTable.key1, stagingTable.key2, NVL(stagingTable.data3,%t), stagingTable.data5 )";
 
 	std::map< std::string, std::string > columns;
@@ -418,7 +422,9 @@ void ProxyUtilitiesTest::testGetMergeQuery_NotMatch_Oracle()
 
 	expected.str("");
 	expected << "MERGE INTO myTable"
-			 << " USING stagingTable ON ( myTable.key1 = stagingTable.key1 AND myTable.key2 = stagingTable.key2 )"
+			 << " USING stagingTable "
+			 << "ON ( ( myTable.key1 = stagingTable.key1 OR myTable.key1 IS NULL AND stagingTable.key1 IS NULL )"
+			 << " AND ( myTable.key2 = stagingTable.key2 OR myTable.key2 IS NULL AND stagingTable.key2 IS NULL ) )"
 			 << " WHEN NOT MATCHED THEN INSERT( key1, key2 ) VALUES ( stagingTable.key1, stagingTable.key2 )";
 
 	actual = ProxyUtilities::GetMergeQuery( "oracle", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths );
@@ -502,7 +508,9 @@ void ProxyUtilitiesTest::testGetMergeQuery_Match_Oracle()
 
 	std::stringstream expected;
 	expected << "MERGE INTO myTable"
-			 << " USING stagingTable ON ( myTable.key1 = stagingTable.key1 AND myTable.key2 = stagingTable.key2 )"
+			 << " USING stagingTable "
+			 << "ON ( ( myTable.key1 = stagingTable.key1 OR myTable.key1 IS NULL AND stagingTable.key1 IS NULL )"
+			 << " AND ( myTable.key2 = stagingTable.key2 OR myTable.key2 IS NULL AND stagingTable.key2 IS NULL ) )"
 			 << " WHEN MATCHED THEN UPDATE SET "
 			 	<< "myTable.data3 = myTable.data3 + NVL(stagingTable.data3,0), "
 			 	<< "myTable.data4 = myTable.data4 + stagingTable.data4";
@@ -548,7 +556,8 @@ void ProxyUtilitiesTest::testGetMergeQuery_Match_MySql()
 			 << " SET "
 			 	<< "myTable.data3 = myTable.data3 + NVL(stagingTable.data3,0), "
 			 	<< "myTable.data4 = myTable.data4 + stagingTable.data4"
-			 << " WHERE myTable.key1 = stagingTable.key1 AND myTable.key2 = stagingTable.key2";
+			 << " WHERE ( myTable.key1 = stagingTable.key1 OR myTable.key1 IS NULL AND stagingTable.key1 IS NULL )"
+			 << " AND ( myTable.key2 = stagingTable.key2 OR myTable.key2 IS NULL AND stagingTable.key2 IS NULL )";
 
 	std::map< std::string, std::string > columns;
 	std::map< std::string, size_t > columnLengths;
@@ -584,7 +593,9 @@ void ProxyUtilitiesTest::testGetNoStageQuery_FullMerge_Oracle()
 
 	std::stringstream expected;
 	expected << "MERGE INTO myTable"
-			 << " USING ( SELECT ? AS key1, ? AS key2, ? AS data3, ? AS data4, ? AS data5 FROM dual ) tmp ON ( myTable.key1 = tmp.key1 AND myTable.key2 = tmp.key2 )"
+			 << " USING ( SELECT ? AS key1, ? AS key2, ? AS data3, ? AS data4, ? AS data5 FROM dual ) tmp "
+			 << "ON ( ( myTable.key1 = tmp.key1 OR myTable.key1 IS NULL AND tmp.key1 IS NULL )"
+			 << " AND ( myTable.key2 = tmp.key2 OR myTable.key2 IS NULL AND tmp.key2 IS NULL ) )"
 			 << " WHEN NOT MATCHED THEN INSERT( key1, key2, data3, data5, dummy ) VALUES ( tmp.key1, tmp.key2, NVL(tmp.data3,%t), tmp.data5, 10 )"
 			 << " WHEN MATCHED THEN UPDATE SET "
 			 	<< "myTable.data3 = myTable.data3 + NVL(tmp.data3,0), "
@@ -750,7 +761,9 @@ void ProxyUtilitiesTest::testGetNoStageQuery_NotMatch_Oracle()
 
 	std::stringstream expected;
 	expected << "MERGE INTO myTable"
-			 << " USING ( SELECT ? AS key1, ? AS key2, ? AS data3, ? AS data5 FROM dual ) tmp ON ( myTable.key1 = tmp.key1 AND myTable.key2 = tmp.key2 )"
+			 << " USING ( SELECT ? AS key1, ? AS key2, ? AS data3, ? AS data5 FROM dual ) tmp "
+			 << "ON ( ( myTable.key1 = tmp.key1 OR myTable.key1 IS NULL AND tmp.key1 IS NULL )"
+			 << " AND ( myTable.key2 = tmp.key2 OR myTable.key2 IS NULL AND tmp.key2 IS NULL ) )"
 			 << " WHEN NOT MATCHED THEN INSERT( key1, key2, data3, data5, dummy ) VALUES ( tmp.key1, tmp.key2, NVL(tmp.data3,%t), tmp.data5, 10 )";
 
 	std::map< std::string, std::string > columns;
@@ -790,7 +803,9 @@ void ProxyUtilitiesTest::testGetNoStageQuery_NotMatch_Oracle()
 
 	expected.str("");
 	expected << "MERGE INTO myTable"
-			 << " USING ( SELECT ? AS key1, ? AS key2 FROM dual ) tmp ON ( myTable.key1 = tmp.key1 AND myTable.key2 = tmp.key2 )"
+			 << " USING ( SELECT ? AS key1, ? AS key2 FROM dual ) tmp "
+			 << "ON ( ( myTable.key1 = tmp.key1 OR myTable.key1 IS NULL AND tmp.key1 IS NULL )"
+			 << " AND ( myTable.key2 = tmp.key2 OR myTable.key2 IS NULL AND tmp.key2 IS NULL ) )"
 			 << " WHEN NOT MATCHED THEN INSERT( key1, key2 ) VALUES ( tmp.key1, tmp.key2 )";
 
 	actual = ProxyUtilities::GetMergeQuery( "oracle", "myTable", "", *nodes[0], false, columns, columnLengths, &bindColumns );
@@ -887,7 +902,9 @@ void ProxyUtilitiesTest::testGetNoStageQuery_Match_Oracle()
 
 	std::stringstream expected;
 	expected << "MERGE INTO myTable"
-			 << " USING ( SELECT ? AS key1, ? AS key2, ? AS data3, ? AS data4 FROM dual ) tmp ON ( myTable.key1 = tmp.key1 AND myTable.key2 = tmp.key2 )"
+			 << " USING ( SELECT ? AS key1, ? AS key2, ? AS data3, ? AS data4 FROM dual ) tmp "
+			 << "ON ( ( myTable.key1 = tmp.key1 OR myTable.key1 IS NULL AND tmp.key1 IS NULL )"
+			 << " AND ( myTable.key2 = tmp.key2 OR myTable.key2 IS NULL AND tmp.key2 IS NULL ) )"
 			 << " WHEN MATCHED THEN UPDATE SET "
 			 	<< "myTable.data3 = myTable.data3 + NVL(tmp.data3,0), "
 			 	<< "myTable.data4 = myTable.data4 + tmp.data4, "
@@ -940,8 +957,9 @@ void ProxyUtilitiesTest::testGetNoStageQuery_Match_MySql()
 			 << " SET "
 			 	<< "myTable.data3 = myTable.data3 + NVL(tmp.data3,0), "
 			 	<< "myTable.data4 = myTable.data4 + tmp.data4, "
-				<< "myTable.dummy = 20"
-			 << " WHERE myTable.key1 = tmp.key1 AND myTable.key2 = tmp.key2";
+				<< "myTable.dummy = 20 "
+			 << "WHERE ( myTable.key1 = tmp.key1 OR myTable.key1 IS NULL AND tmp.key1 IS NULL )"
+			 << " AND ( myTable.key2 = tmp.key2 OR myTable.key2 IS NULL AND tmp.key2 IS NULL )";
 
 	std::map< std::string, std::string > columns;
 	std::map< std::string, size_t > columnLengths;

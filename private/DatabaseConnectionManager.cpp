@@ -219,7 +219,7 @@ void DatabaseConnectionManager::FetchConnectionsByTable( const std::string& i_rN
 	boost::scoped_ptr< CSVReader > pReader;
 	pReader.reset( new CSVReader( *pTempStream ) );
 	DatabaseConfigDatum configDatum;
-	int disableCache;
+	Nullable< int > disableCache;
 	std::string type;
 	std::string node;
 	DatabaseConfigBinder::Bind( configDatum, *pReader );
@@ -247,7 +247,7 @@ void DatabaseConnectionManager::FetchConnectionsByTable( const std::string& i_rN
 			MV_THROW( DatabaseConnectionManagerException, "Duplicate node id: " << node << " loaded from connections node: " << i_rConnectionsNode << " (conflicts with shard connection)" );
 		}
 		connectionDatum.SetValue< DatabaseConnectionType >( type );
-		configDatum.SetValue< DisableCache >( boost::lexical_cast< bool >( disableCache ) );
+		configDatum.SetValue< DisableCache >( disableCache.IsNull() ? false : boost::lexical_cast< bool >( disableCache ) );
 		connectionDatum.SetValue< DatabaseConfig >( configDatum );
 		m_ShardDatabaseConnectionContainer.InsertUpdate( connectionDatum );
 

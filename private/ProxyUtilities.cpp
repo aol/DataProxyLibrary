@@ -161,7 +161,11 @@ namespace
 			{
 				result << i_rSeparator;
 			}
-			result << GetPrefixedColumn( *iter, i_rTable ) << " = " << GetPrefixedColumn( *iter, i_rStagingTable, true );
+			// if there is a direct equality...
+			result << "( " << GetPrefixedColumn( *iter, i_rTable ) << " = " << GetPrefixedColumn( *iter, i_rStagingTable, true );
+
+			// or if they're both null!
+			result << " OR " << GetPrefixedColumn( *iter, i_rTable ) << " IS NULL AND " << GetPrefixedColumn( *iter, i_rStagingTable, true ) << " IS NULL )";
 		}
 
 		return result.str();
