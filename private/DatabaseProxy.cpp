@@ -369,6 +369,12 @@ namespace
 		}
 		return -1;
 	}
+
+	// this function prefixes the table ONLY if necessary
+	std::string PrefixTable( const std::string& i_rTable, const std::string& i_rSchema )
+	{
+		return i_rTable.find( '.' ) != std::string::npos ? i_rTable : i_rSchema + "." + i_rTable;
+	}
 }
 
 DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rParent, const xercesc::DOMNode& i_rNode, DatabaseConnectionManager& i_rDatabaseConnectionManager )
@@ -968,7 +974,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 				}
 
 				// write the control file & prepare SQLLoader
-				WriteControlFile( controlFileSpec, dataFileSpec, columns, stagingTable, m_WriteNodeColumnLengths);
+				WriteControlFile( controlFileSpec, dataFileSpec, columns, PrefixTable( stagingTable, rTransactionDatabase.GetSchema() ), m_WriteNodeColumnLengths);
 				SQLLoader loader( rTransactionDatabase.GetDBName(), rTransactionDatabase.GetUserName(), rTransactionDatabase.GetPassword(), controlFileSpec, logFileSpec );
 
 				// upload!

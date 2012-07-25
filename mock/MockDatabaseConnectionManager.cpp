@@ -101,12 +101,12 @@ void MockDatabaseConnectionManager::ClearConnections()
 	m_Log << "MockDatabaseConnectionManager::ClearLogs" << std::endl;
 }
 
-void MockDatabaseConnectionManager::InsertConnection(const std::string& i_rConnectionName, boost::shared_ptr<Database>& i_rConnection)
+void MockDatabaseConnectionManager::InsertConnection(const std::string& i_rConnectionName, boost::shared_ptr<Database>& i_rConnection, const std::string& i_rType)
 {
 	m_MockConnectionMap[i_rConnectionName] = i_rConnection;
 
 	Database* pDatabase = i_rConnection.get();
-	if( dynamic_cast<OracleUnitTestDatabase*>( pDatabase ) != NULL )
+	if( i_rType == "oracle" || dynamic_cast<OracleUnitTestDatabase*>( pDatabase ) != NULL )
 	{
 		m_DatabaseTypes[ i_rConnectionName ] = "oracle";
 		m_DatabaseTypes[ MOCK_DATA_DEFINITION_CONNECTION_PREFIX + i_rConnectionName ] = "oracle";
@@ -116,7 +116,7 @@ void MockDatabaseConnectionManager::InsertConnection(const std::string& i_rConne
 			( new Database( Database::DBCONN_OCI_THREADSAFE_ORACLE, i_rConnection->GetServerName(), i_rConnection->GetDBName(),
 							i_rConnection->GetUserName(), i_rConnection->GetPassword(), false, i_rConnection->GetSchema() ) );
 	}
-	else if( dynamic_cast<MySqlUnitTestDatabase*>( pDatabase ) != NULL )
+	else if( i_rType == "mysql" || dynamic_cast<MySqlUnitTestDatabase*>( pDatabase ) != NULL )
 	{
 		m_DatabaseTypes[ i_rConnectionName ] = "mysql";
 		m_DatabaseTypes[ MOCK_DATA_DEFINITION_CONNECTION_PREFIX + i_rConnectionName ] = "mysql";

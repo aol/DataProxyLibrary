@@ -1389,6 +1389,124 @@ void DatabaseProxyTest::testOracleStore()
 	CPPUNIT_ASSERT_EQUAL( size_t(0), files.size() );
 }
 
+void DatabaseProxyTest::testOracleStoreDifferentSchema()
+{
+	MockDataProxyClient client;
+	// create primary & staging tables
+	Database::Statement(*m_pOracleDB, GetOracleTableDDL("kna")).Execute();
+	Database::Statement(*m_pOracleDB, GetOracleTableDDL("stg_kna")).Execute();
+
+	// insert some dummy data into the staging table to be cleared
+	std::string prefix = "INSERT INTO stg_kna (media_id, website_id, impressions, revenue, dummy, myConstant) VALUES ";
+	Database::Statement( *m_pOracleDB, prefix + "(12, 13, -1, -2, -3, -4)" ).Execute();
+	m_pOracleDB->Commit();
+
+	MockDatabaseConnectionManager dbManager;
+	// create a db connection that is connected to username five0test, but attached to the unittestdb's SCHEMA
+	boost::shared_ptr< Database > pDifferentSchemaDB( new Database( Database::DBCONN_OCI_THREADSAFE_ORACLE, "", "ADLAPPD", "five0test", "five0test", false, m_pOracleDB->GetSchema() ) );
+	CPPUNIT_ASSERT_NO_THROW( Database::Statement( *m_pOracleDB, "GRANT SELECT, INSERT, UPDATE ON stg_kna TO five0test" ).Execute() );
+	CPPUNIT_ASSERT_NO_THROW( Database::Statement( *m_pOracleDB, "GRANT INSERT, UPDATE ON kna TO five0test" ).Execute() );
+	CPPUNIT_ASSERT_NO_THROW( Database::Statement( *m_pOracleDB, "GRANT EXECUTE ON sp_truncate_table TO five0test" ).Execute() );
+	dbManager.InsertConnection( "myOracleConnection", pDifferentSchemaDB, "oracle" );
+
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode type = \"db\" >"
+				<< " <Write connection = \"myOracleConnection\""
+				<< "  table = \"kna\" "
+				<< "  stagingTable = \"stg_kna\" "
+				<< "  workingDir = \"" << m_pTempDir->GetDirectoryName() << "\""
+				<< "  directLoad = \"true\" >"
+				<< "	<Columns>"
+				<< "      <Column name=\"media_id\" sourceName=\"MEDIA_ID\" type=\"key\" />"
+				<< "      <Column name=\"website_id\" type=\"key\" />"
+				<< "      <Column name=\"impressions\" type=\"data\" ifNew=\"%v\" />"
+				<< "      <Column name=\"revenue\" type=\"data\" ifNew=\"%v\" />"
+				<< "      <Column name=\"dummy\" type=\"data\" ifNew=\"17\" />"
+				<< "      <Column name=\"myConstant\" sourceName=\"MY_CONSTANT\" type=\"data\" ifNew=\"%v\" />"
+				<< "	</Columns>"
+				<< " </Write>"
+				<< "</DataNode>";
+	
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	CPPUNIT_ASSERT( proxy.SupportsTransactions() );
+
+	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
+
+	std::stringstream data;
+	data << "MEDIA_ID,ignore,website_id,ignore,impressions,revenue,ignore" << std::endl
+		 << "12,-1,13,-1,14,15.5,-1\\,-9" << std::endl	// the escaped comma should validate that CSVReader allows escapes
+		 << "22,-2,23,-2,24,25.5,-2" << std::endl
+		 << "32,-3,33,-3,34,35.5,-3" << std::endl
+		 << "42,-4,43,-4,44,45.5,-4" << std::endl
+		 << "52,-5,53,-5,54,55.5,-5" << std::endl
+		 << "62,-6,63,-6,64,65.5,-6" << std::endl;
+	
+	std::map< std::string, std::string > parameters;
+	parameters[ "MY_CONSTANT" ] = "24";
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
+
+	// check table contents
+	std::stringstream expected;
+	expected << "12,13,14,15.5,17,24" << std::endl
+			 << "22,23,24,25.5,17,24" << std::endl
+			 << "32,33,34,35.5,17,24" << std::endl
+			 << "42,43,44,45.5,17,24" << std::endl
+			 << "52,53,54,55.5,17,24" << std::endl
+			 << "62,63,64,65.5,17,24" << std::endl;
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" )
+
+	// no cleanup was off (by default), so files should still exist in temporary directory
+	std::vector< std::string > files;
+	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), files, false );
+	CPPUNIT_ASSERT_EQUAL( size_t(0), files.size() );
+
+	// truncate & do it again with the prefix already supplied
+	Database::Statement( *m_pOracleDB, "TRUNCATE TABLE kna" ).Execute();
+	xmlContents.str("");
+	xmlContents << "<DataNode type = \"db\" >"
+				<< " <Write connection = \"myOracleConnection\""
+				<< "  table = \"kna\" "
+				<< "  stagingTable = \"" << pDifferentSchemaDB->GetSchema() << ".stg_kna\" "
+				<< "  workingDir = \"" << m_pTempDir->GetDirectoryName() << "\""
+				<< "  directLoad = \"true\" >"
+				<< "	<Columns>"
+				<< "      <Column name=\"media_id\" sourceName=\"MEDIA_ID\" type=\"key\" />"
+				<< "      <Column name=\"website_id\" type=\"key\" />"
+				<< "      <Column name=\"impressions\" type=\"data\" ifNew=\"%v\" />"
+				<< "      <Column name=\"revenue\" type=\"data\" ifNew=\"%v\" />"
+				<< "      <Column name=\"dummy\" type=\"data\" ifNew=\"17\" />"
+				<< "      <Column name=\"myConstant\" sourceName=\"MY_CONSTANT\" type=\"data\" ifNew=\"%v\" />"
+				<< "	</Columns>"
+				<< " </Write>"
+				<< "</DataNode>";
+	
+	nodes.clear();
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	DatabaseProxy proxy2( "name", client, *nodes[0], dbManager );
+
+	data.clear();
+	data.seekg( 0L, std::ios_base::beg );
+	
+	CPPUNIT_ASSERT_NO_THROW( proxy2.Store( parameters, data ) );
+	CPPUNIT_ASSERT_NO_THROW( proxy2.Commit() );
+
+	// check table contents
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pOracleObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" )
+
+	// no cleanup was off (by default), so files should still exist in temporary directory
+	files.clear();
+	FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), files, false );
+	CPPUNIT_ASSERT_EQUAL( size_t(0), files.size() );
+}
+
 void DatabaseProxyTest::testOracleStoreNoStaging()
 {
 	MockDataProxyClient client;

@@ -46,6 +46,7 @@ private:
 	CPPUNIT_TEST( testStoreException );
 	CPPUNIT_TEST( testOracleStore );
 	CPPUNIT_TEST( testMySqlStore );
+	CPPUNIT_TEST( testOracleStoreDifferentSchema );
 	CPPUNIT_TEST( testOracleStoreNoStaging );
 	CPPUNIT_TEST( testMySqlStoreNoStaging );
 	CPPUNIT_TEST( testMySqlStoreDynamicTables );
@@ -105,6 +106,7 @@ public:
 	void testStoreException();
 
 	void testOracleStore();
+	void testOracleStoreDifferentSchema();
 	void testOracleStoreNoStaging();
 	void testOracleMultipleStore();
 	void testMySqlStore();
