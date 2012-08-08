@@ -26,7 +26,7 @@ namespace
 {
 	bool ValidateColumns( const std::set<std::string >& i_rRequiredColumns, 
 								const std::vector<std::string >& i_rIncomingColumns,
-								std::stringstream& missingColumns ) 
+								std::stringstream& o_rMissingColumns ) 
 										
 	{
 		std::set<std::string >::const_iterator iter = i_rRequiredColumns.begin();
@@ -36,14 +36,14 @@ namespace
 			incIter = find( i_rIncomingColumns.begin(), i_rIncomingColumns.end(), *iter );
 		    if( incIter == i_rIncomingColumns.end() )
 			{
-				if( missingColumns.str().size() > 0 )
+				if( o_rMissingColumns.str().size() > 0 )
 				{
-					missingColumns << ", ";
+					o_rMissingColumns << ", ";
                 }
-                missingColumns << *iter;
+                o_rMissingColumns << *iter;
 			}
 		}
-		if( missingColumns.str().size() > 0 )
+		if( o_rMissingColumns.str().size() > 0 )
 		{
 			return false;
 		}
@@ -70,12 +70,12 @@ namespace
 				GenericDatum< StartTimePeriod,
 				GenericDatum< EndTimePeriod,
 				RowEnd > > 
-			NodeBlackoutWindowDatum;
+			BlackoutWindowDatum;
 
 			DATUMINFO( CampaignId, CampaignIdType );
 			DATUMINFO( MediaId, MediaIdType );
 			DATUMINFO( WebsiteId, WebsiteIdType );
-			DATUMINFO( BlackoutTimePeriodWindows, std::vector<NodeBlackoutWindowDatum > );
+			DATUMINFO( BlackoutTimePeriodWindows, std::vector<BlackoutWindowDatum > );
 
 			typedef
 				GenericDatum< CampaignId,
@@ -133,7 +133,7 @@ void BlackoutWindowDomain::Load( const std::string& i_rDplConfig, const std::str
 	requiredColumns.insert( START_TIME_PERIOD );
 	requiredColumns.insert( END_TIME_PERIOD );
 	
-    std::stringstream missingColumns;
+    	std::stringstream missingColumns;
 	if( !( ValidateColumns( requiredColumns, headerTokens, missingColumns ) ) )
 	{
 		MV_THROW( BlackoutTransformerException, "Incoming blackout data is missing the following column headers: " << missingColumns.str() );
@@ -154,12 +154,12 @@ void BlackoutWindowDomain::Load( const std::string& i_rDplConfig, const std::str
 	while( reader.NextRow() )
 	{
 		DataNode dataNode;
-        dataNode.SetValue< MediaId >( mediaId );
-        dataNode.SetValue< CampaignId >( campaignId );
-        dataNode.SetValue< WebsiteId >( websiteId );
+		dataNode.SetValue< MediaId >( mediaId );
+		dataNode.SetValue< CampaignId >( campaignId );
+		dataNode.SetValue< WebsiteId >( websiteId );
 
-		NodeBlackoutWindowDatum timePeriodWindow;
-		std::vector<NodeBlackoutWindowDatum > timePeriodWindows;
+		BlackoutWindowDatum timePeriodWindow;
+		std::vector<BlackoutWindowDatum > timePeriodWindows;
 		timePeriodWindow.SetValue< StartTimePeriod >( startTimePeriod );
 		timePeriodWindow.SetValue< EndTimePeriod >( endTimePeriod );
 	
@@ -182,8 +182,8 @@ bool BlackoutWindowDomain::CheckBlackoutRange( const DataNode& i_rNode, const Ti
 	DataNodeContainer::const_iterator findIter = m_BlackoutWindowDataNodes.find( i_rNode );
 	if( findIter != m_BlackoutWindowDataNodes.end() )	
 	{
-		const std::vector<NodeBlackoutWindowDatum >& timePeriodWindows = findIter->second.GetValue< BlackoutTimePeriodWindows >();
-		std::vector<NodeBlackoutWindowDatum >::const_iterator timePeriodIter = timePeriodWindows.begin();
+		const std::vector<BlackoutWindowDatum >& timePeriodWindows = findIter->second.GetValue< BlackoutTimePeriodWindows >();
+		std::vector<BlackoutWindowDatum >::const_iterator timePeriodIter = timePeriodWindows.begin();
 		for( ; timePeriodIter != timePeriodWindows.end(); ++timePeriodIter )
 		{
 			if( ( i_rSourcedTimePeriod >= timePeriodIter->GetValue< StartTimePeriod >() ) && 
@@ -263,21 +263,23 @@ boost::shared_ptr<std::stringstream > ApplyBlackouts( std::istream& i_rInputStre
 	*pResult << headerText << std::endl;
 
 	std::set<std::string > requiredColumns;
+	requiredColumns.insert( campaignIdColumnName );
 	requiredColumns.insert( mediaIdColumnName );
 	requiredColumns.insert( websiteIdColumnName );
 	requiredColumns.insert( sourcedTimePeriodColumnName );
 
-    std::stringstream missingColumns;
+	std::stringstream missingColumns;
 	if( !( ValidateColumns( requiredColumns, headerTokens, missingColumns ) ) )
 	{
 		MV_THROW( BlackoutTransformerException, "Incoming KNA Stream is missing the following column headers: " << missingColumns.str() );	
 	}
 
-	CampaignIdType campaignId( boost::lexical_cast< int >( strCampaignId ) );
+	CampaignIdType campaignId;
 	MediaIdType mediaId;
 	WebsiteIdType websiteId;
 	TimePeriodType sourcedTimePeriod;
 
+	reader.BindCol( campaignIdColumnName, campaignId );
 	reader.BindCol( mediaIdColumnName, mediaId );
 	reader.BindCol( websiteIdColumnName, websiteId );
 	reader.BindCol( sourcedTimePeriodColumnName, sourcedTimePeriod );

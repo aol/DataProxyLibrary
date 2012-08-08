@@ -27,7 +27,7 @@ private:
 	CPPUNIT_TEST( testBlackout );
 	CPPUNIT_TEST_SUITE_END();
 
-	void PrepareBlackoutDataFile();
+	void PrepareBlackoutDataFile( const std::string& i_rCampaignId );
     void PrepareCorruptHeaderBlackoutDataFile();
 
 public:

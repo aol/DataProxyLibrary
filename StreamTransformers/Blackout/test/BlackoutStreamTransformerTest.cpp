@@ -39,9 +39,9 @@ void BlackoutStreamTransformerTest::tearDown()
 	m_pTempDir.reset( NULL );
 }
 
-void BlackoutStreamTransformerTest::PrepareBlackoutDataFile()
+void BlackoutStreamTransformerTest::PrepareBlackoutDataFile( const std::string& i_rCampaignId )
 {
-	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/" + CAMPAIGN_ID + "~100" );
+	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/" + CAMPAIGN_ID + "~" + i_rCampaignId );
 	std::ofstream file( fileSpec.c_str() );
 	
 	file << CAMPAIGN_ID << "," << MEDIA_ID << "," << WEBSITE_ID << "," << START_TIME_PERIOD << "," << END_TIME_PERIOD << std::endl
@@ -51,6 +51,11 @@ void BlackoutStreamTransformerTest::PrepareBlackoutDataFile()
 		<< "100,-1,300,1600,1650" << std::endl // campaign-website level blackout window
 		<< "100,-1,300,1600,1650" << std::endl // duplicate blackout window
 		<< "100,200,-1,1300,1350" << std::endl // campaign-media blackout window
+		<< "101,-1,-1,1700,1750" << std::endl  // campaign level blackout window
+		<< "101,-1,-1,1800,1900" << std::endl  // multiple windows for the same level 
+		<< "101,-1,-1,1900,1950" << std::endl  // another window for the same level
+		<< "101,-1,300,1600,1650" << std::endl // campaign-website level blackout window
+		<< "101,200,-1,1300,1350" << std::endl // campaign-media blackout window
 		<< "-1,-1,300,1400,1450" << std::endl  // website level blackout window
 		<< "-1,200,-1,1100,1300" << std::endl  // media level blackout window
 		<< "-1,200,300,1500,1550" << std::endl // media-website level blackout window
@@ -92,20 +97,20 @@ void BlackoutStreamTransformerTest::testCorruptStreamHeader()
 
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ApplyBlackouts( inputStream, parameters ), BlackoutTransformerException,
 				"private/BlackoutStreamTransformer\\.cpp:\\d+: Incoming KNA Stream is missing the following column headers: "
-								<< MEDIA_ID << ", " << WEBSITE_ID );
+								<< CAMPAIGN_ID << ", " << MEDIA_ID << ", " << WEBSITE_ID );
 	}
 
 	{
 		PrepareCorruptHeaderBlackoutDataFile();
 		std::stringstream inputStream;
-		inputStream << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << std::endl
-		            << "200,300,1000" << std::endl;
+		inputStream << CAMPAIGN_ID << "," << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << std::endl
+		            << "100,200,300,1000" << std::endl;
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ApplyBlackouts( inputStream, parameters ), BlackoutTransformerException, 
 				"private/BlackoutStreamTransformer\\.cpp:\\d+: Incoming blackout data is missing the following column headers: "
 								<< CAMPAIGN_ID << ", " << MEDIA_ID << ", " << START_TIME_PERIOD );
 		std::stringstream inputStreamOne;
-		inputStreamOne << MEDIA_ID << ",," << "colum\\,column," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << "\r\n"
-					   << "200,300,1000" << std::endl;
+		inputStreamOne << CAMPAIGN_ID << "," << MEDIA_ID << ",," << "colum\\,column," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << "\r\n"
+					   << "100,200,300,1000" << std::endl;
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ApplyBlackouts( inputStreamOne, parameters ), BlackoutTransformerException,
 				"private/BlackoutStreamTransformer\\.cpp:\\d+: Incoming blackout data is missing the following column headers: "
 								<< CAMPAIGN_ID << ", " << MEDIA_ID << ", " << START_TIME_PERIOD );
@@ -160,20 +165,20 @@ void BlackoutStreamTransformerTest::testStreamTransformerParameters()
 	parameters[ "camp_id" ] = "100";
 
 	std::stringstream inputStream;
-	inputStream << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << std::endl
-				<< "200,300,1000" << std::endl;
+	inputStream << CAMPAIGN_ID << "," << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << std::endl
+				<< "100,200,300,1000" << std::endl;
 	
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ApplyBlackouts( inputStream, parameters ), BlackoutTransformerException, 
 		"private/BlackoutStreamTransformer\\.cpp:\\d+: Incoming KNA Stream is missing the following column headers: "
-									<< "med_id, src_hourperiod, web_id" );
+									<< "camp_id, med_id, src_hourperiod, web_id" );
 
 	std::stringstream inputStreamOne;
-	inputStreamOne << "med_id,web_id,src_hourperiod" << std::endl
-				   << "200,300,7000" << std::endl;
+	inputStreamOne << "camp_id,med_id,web_id,src_hourperiod" << std::endl
+				   << "100,200,300,7000" << std::endl;
 	std::stringstream expected;
-	expected << "med_id,web_id,src_hourperiod" << std::endl
-			 << "200,300,7000" << std::endl;
-	PrepareBlackoutDataFile();
+	expected << "camp_id,med_id,web_id,src_hourperiod" << std::endl
+			 << "100,200,300,7000" << std::endl;
+	PrepareBlackoutDataFile( "100" );
 
 	boost::shared_ptr<std::stringstream > pResult;
 	pResult = ApplyBlackouts( inputStreamOne, parameters );
@@ -192,57 +197,57 @@ void BlackoutStreamTransformerTest::testBlackout()
     file.close();
 
 	std::stringstream inputStream;
-	inputStream << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << std::endl
-				<< "200,300,1000" << std::endl  // Check for all levels of blackout; srchp does not fall in any window 
-				<< "200,300,1600" << std::endl 	// all levels; srchp in window for camp-web level 
-				<< "200,300,1525" << std::endl  // all levels; srchp in window for media-web level
-				<< "200,300,1900" << std::endl  // all levels; srchp in window for camp level
-				<< "200,300,7000" << std::endl  // all levels; srchp in no window
-				<< "200,300,1325" << std::endl  // all levels; srchp in camp-media level
-				<< "200,300,2000" << std::endl  // all levels; srchp in media level
-				<< "200,300,2200" << std::endl  // all levels; srchp in website level
-				<< "201,301,1710" << std::endl  // only camp level; srchp in window
-				<< "201,301,2000" << std::endl  // only camp level; srchp not in any window 
-				<< "201,301,1860" << std::endl  // only camp level; check if all blackout windows are searched
-				<< "201,300,1710" << std::endl  // camp and web level and its combination; in window for camp level
-				<< "201,300,1770" << std::endl  // camp and web level; not in any window 
-				<< "201,300,1620" << std::endl  // camp and web level; in window for camp-web level
-				<< "200,301,1150" << std::endl  // camp and media level; found in camp level
-				<< "200,301,1325" << std::endl  // camp and media level; found in camp-media level
-				<< "200,301,1400" << std::endl  // camp and media level; not found
-				<< "200,301,1400" << std::endl  // camp and media level; check for duplicate kna 
-				<< "200,300,2500" << std::endl 	//check global level; srchp falls in blackout window
-				<< "202,302,2600" << std::endl	//check global level; srchp does not fall in blackout window
-				<< "200,300,1601" << std::endl  // check time period border condition +1;  
-				<< "200,300,1599" << std::endl; // check time period border condition -1
+	inputStream << CAMPAIGN_ID << "," << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << std::endl
+				<< "100,200,300,1000" << std::endl  // Check for all levels of blackout; srchp does not fall in any window 
+				<< "100,200,300,1600" << std::endl 	// all levels; srchp in window for camp-web level 
+				<< "100,200,300,1525" << std::endl  // all levels; srchp in window for media-web level
+				<< "100,200,300,1900" << std::endl  // all levels; srchp in window for camp level
+				<< "100,200,300,7000" << std::endl  // all levels; srchp in no window
+				<< "100,200,300,1325" << std::endl  // all levels; srchp in camp-media level
+				<< "100,200,300,2000" << std::endl  // all levels; srchp in media level
+				<< "100,200,300,2200" << std::endl  // all levels; srchp in website level
+				<< "101,201,301,1710" << std::endl  // only camp level; srchp in window
+				<< "101,201,301,2000" << std::endl  // only camp level; srchp not in any window 
+				<< "101,201,301,1860" << std::endl  // only camp level; check if all blackout windows are searched
+				<< "101,201,300,1710" << std::endl  // camp and web level and its combination; in window for camp level
+				<< "101,201,300,1770" << std::endl  // camp and web level; not in any window 
+				<< "101,201,300,1620" << std::endl  // camp and web level; in window for camp-web level
+				<< "100,200,301,1150" << std::endl  // camp and media level; found in camp level
+				<< "100,200,301,1325" << std::endl  // camp and media level; found in camp-media level
+				<< "100,200,301,1400" << std::endl  // camp and media level; not found
+				<< "100,200,301,1400" << std::endl  // camp and media level; check for duplicate kna 
+				<< "100,200,300,2500" << std::endl 	//check global level; srchp falls in blackout window
+				<< "100,202,302,2600" << std::endl	//check global level; srchp does not fall in blackout window
+				<< "100,200,300,1601" << std::endl  // check time period border condition +1;  
+				<< "100,200,300,1599" << std::endl; // check time period border condition -1
 
 	std::map<std::string, std::string > parameters;
 	parameters[ DPL_CONFIG ] = fileSpec;
-	parameters[ CAMPAIGN_ID ] = "100"; 
+	parameters[ CAMPAIGN_ID ] = "100,101"; 
 	
-	PrepareBlackoutDataFile();
+	PrepareBlackoutDataFile( "100,101" );
 	boost::shared_ptr<std::stringstream > pResult = ApplyBlackouts( inputStream, parameters );
 
 	std::stringstream expected;
-	expected << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << std::endl
-		 << "200,300,1000" << std::endl
-		 << "200,300,7000" << std::endl
-		 << "201,301,2000" << std::endl
-		 << "201,300,1770" << std::endl
-		 << "200,301,1400" << std::endl
-		 << "200,301,1400" << std::endl
-		 << "202,302,2600" << std::endl
-		 << "200,300,1599" << std::endl;
+	expected << CAMPAIGN_ID << "," << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << std::endl
+		 << "100,200,300,1000" << std::endl
+		 << "100,200,300,7000" << std::endl
+		 << "101,201,301,2000" << std::endl
+		 << "101,201,300,1770" << std::endl
+		 << "100,200,301,1400" << std::endl
+		 << "100,200,301,1400" << std::endl
+		 << "100,202,302,2600" << std::endl
+		 << "100,200,300,1599" << std::endl;
 
 	CPPUNIT_ASSERT_EQUAL( expected.str(), pResult->str() );
 
 	std::stringstream inputStreamOne;
-	inputStreamOne << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << ",NEWCOL" << std::endl
-					<< "200,300,7002,10000" << std::endl;
+	inputStreamOne << CAMPAIGN_ID << "," << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << ",NEWCOL" << std::endl
+					<< "100,200,300,7002,10000" << std::endl;
 
 	std::stringstream expectedOne;
-	expectedOne << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << ",NEWCOL" << std::endl
-				<< "200,300,7002,10000" << std::endl;
+	expectedOne << CAMPAIGN_ID << "," << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << ",NEWCOL" << std::endl
+				<< "100,200,300,7002,10000" << std::endl;
 
 	pResult = ApplyBlackouts( inputStreamOne, parameters );
 	CPPUNIT_ASSERT_EQUAL( expectedOne.str(), pResult->str() );
