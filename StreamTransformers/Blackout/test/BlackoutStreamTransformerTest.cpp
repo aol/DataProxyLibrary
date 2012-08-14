@@ -39,9 +39,9 @@ void BlackoutStreamTransformerTest::tearDown()
 	m_pTempDir.reset( NULL );
 }
 
-void BlackoutStreamTransformerTest::PrepareBlackoutDataFile( const std::string& i_rCampaignId )
+void BlackoutStreamTransformerTest::PrepareBlackoutDataFile()
 {
-	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/" + CAMPAIGN_ID + "~" + i_rCampaignId );
+	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/null" );
 	std::ofstream file( fileSpec.c_str() );
 	
 	file << CAMPAIGN_ID << "," << MEDIA_ID << "," << WEBSITE_ID << "," << START_TIME_PERIOD << "," << END_TIME_PERIOD << std::endl
@@ -67,7 +67,7 @@ void BlackoutStreamTransformerTest::PrepareBlackoutDataFile( const std::string& 
 
 void BlackoutStreamTransformerTest::PrepareCorruptHeaderBlackoutDataFile()
 {
-    std::string fileSpec( m_pTempDir->GetDirectoryName() + "/" + CAMPAIGN_ID + "~100" );
+    std::string fileSpec( m_pTempDir->GetDirectoryName() + "/null" );
     std::ofstream file( fileSpec.c_str() );
 
 	//header with different names than default
@@ -120,27 +120,12 @@ void BlackoutStreamTransformerTest::testCorruptStreamHeader()
 void BlackoutStreamTransformerTest::testInputParameters()
 {
 	std::map<std::string, std::string > parameters;
-	parameters[ CAMPAIGN_ID ] = "100";
 	std::stringstream inputStream;
 	inputStream << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << std::endl 
 				<< "200,300,1000" << std::endl;
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ApplyBlackouts( inputStream, parameters ), TransformerUtilitiesException,
 			"../Common/private/TransformerUtilities\\.cpp:\\d+: Attempted to fetch missing required parameter: '" << DPL_CONFIG << "'" );
 
-	parameters.clear();
-	parameters[ DPL_CONFIG ] = "/path/to/file.xml";
-	std::stringstream inputStreamOne;
-	inputStreamOne << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << std::endl
-				   << "200,300,1000" << std::endl;
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ApplyBlackouts( inputStreamOne, parameters ), TransformerUtilitiesException,
-			"../Common/private/TransformerUtilities\\.cpp:\\d+: Attempted to fetch missing required parameter: '" << CAMPAIGN_ID << "'" );
-
-	parameters.clear();
-	std::stringstream inputStreamThree;
-	inputStreamThree << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << std::endl
-				   << "200,300,1000" << std::endl;
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ApplyBlackouts( inputStreamThree, parameters ), TransformerUtilitiesException,
-	            "../Common/private/TransformerUtilities\\.cpp:\\d+: Attempted to fetch missing required parameter: '" << CAMPAIGN_ID << "'" );
 }
 
 void BlackoutStreamTransformerTest::testStreamTransformerParameters()
@@ -178,7 +163,7 @@ void BlackoutStreamTransformerTest::testStreamTransformerParameters()
 	std::stringstream expected;
 	expected << "camp_id,med_id,web_id,src_hourperiod" << std::endl
 			 << "100,200,300,7000" << std::endl;
-	PrepareBlackoutDataFile( "100" );
+	PrepareBlackoutDataFile();
 
 	boost::shared_ptr<std::stringstream > pResult;
 	pResult = ApplyBlackouts( inputStreamOne, parameters );
@@ -225,7 +210,7 @@ void BlackoutStreamTransformerTest::testBlackout()
 	parameters[ DPL_CONFIG ] = fileSpec;
 	parameters[ CAMPAIGN_ID ] = "100,101"; 
 	
-	PrepareBlackoutDataFile( "100,101" );
+	PrepareBlackoutDataFile();
 	boost::shared_ptr<std::stringstream > pResult = ApplyBlackouts( inputStream, parameters );
 
 	std::stringstream expected;

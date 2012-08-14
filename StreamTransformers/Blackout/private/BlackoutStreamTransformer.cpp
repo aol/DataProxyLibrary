@@ -57,7 +57,7 @@ namespace
 			BlackoutWindowDomain();
 			virtual ~BlackoutWindowDomain();
 
-			void Load( const std::string& i_rDplConfig, const std::string& i_rCampaignId );
+			void Load( const std::string& i_rDplConfig );
 			bool InBlackoutPeriod( CampaignIdType i_CampaignId, 
 										      MediaIdType i_MediaId, 
 											  WebsiteIdType i_WebsiteId, 
@@ -109,10 +109,9 @@ BlackoutWindowDomain::~BlackoutWindowDomain()
 {
 }
 
-void BlackoutWindowDomain::Load( const std::string& i_rDplConfig, const std::string& i_rCampaignId  ) 
+void BlackoutWindowDomain::Load( const std::string& i_rDplConfig ) 
 {
 	std::map<std::string, std::string > blackoutParameters;
-	blackoutParameters[ CAMPAIGN_ID ] = i_rCampaignId;
 
 	DataProxyClient client;
 	client.Initialize( i_rDplConfig );
@@ -252,7 +251,6 @@ boost::shared_ptr<std::stringstream > ApplyBlackouts( std::istream& i_rInputStre
 	std::string websiteIdColumnName = TransformerUtilities::GetValue( WEBSITE_ID_COLUMN_NAME, i_rParameters, WEBSITE_ID );
 	std::string sourcedTimePeriodColumnName = TransformerUtilities::GetValue( SOURCED_TIME_PERIOD_COLUMN_NAME, i_rParameters, SOURCED_TIME_PERIOD );
 	
-	std::string strCampaignId = TransformerUtilities::GetValue( campaignIdColumnName, i_rParameters );	
 	std::string dplConfig = TransformerUtilities::GetValue( DPL_CONFIG, i_rParameters );
 
 	CSVReader reader( i_rInputStream, ',', true );
@@ -285,7 +283,7 @@ boost::shared_ptr<std::stringstream > ApplyBlackouts( std::istream& i_rInputStre
 	reader.BindCol( sourcedTimePeriodColumnName, sourcedTimePeriod );
 
 	BlackoutWindowDomain boWinTransformer;
-	boWinTransformer.Load( dplConfig, strCampaignId );
+	boWinTransformer.Load( dplConfig );
 
 	while( reader.NextRow() )
 	{
