@@ -82,11 +82,11 @@ endif
 
 # Variables for compiler invocation
 CXX ?= g++
-CXXC = $(CXX) $(TARGETOPTS) -c $(INCS) $(DEFINE_FLAGS)	# compiling object files
-CXXT = $(CXX) $(TARGETOPTS) -c $(TESTINCS) $(DEFINE_FLAGS)	# compiling object files
-CXXL = $(CXX) $(TARGETOPTS) $(LIBLOC)					# linking executables
-CXXD = $(CXX) -MM $(TESTINCS) $(DEFINE_FLAGS)				# generating dependencies
-CXXS = $(CXX) $(LIBLOC) -shared $(LIBLOC) $(LIBS)
+CXXC = $(CXX) $(TARGETOPTS) -c $(INCS) $(DEFINE_FLAGS) -std=c++0x	# compiling object files
+CXXT = $(CXX) $(TARGETOPTS) -c $(TESTINCS) $(DEFINE_FLAGS) -std=c++0x	# compiling object files
+CXXL = $(CXX) $(TARGETOPTS) $(LIBLOC) -std=c++0x			# linking executables
+CXXD = $(CXX) -MM $(TESTINCS) $(DEFINE_FLAGS) -std=c++0x		# generating dependencies
+CXXS = $(CXX) $(LIBLOC) -shared $(LIBLOC) $(LIBS) -std=c++0x
 
 # Source Directories
 PRIVATEDIR				= private
