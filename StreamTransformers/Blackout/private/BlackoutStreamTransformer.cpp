@@ -232,6 +232,11 @@ bool BlackoutWindowDomain::InBlackoutPeriod( CampaignIdType i_CampaignId,
 				dataNode.SetValue< MediaId >( i_MediaId );
 				dataNode.SetValue< WebsiteId >( i_WebsiteId );
 				break;
+			case( CAMP_MED_WEB_LEVEL ):
+				dataNode.SetValue< CampaignId >( i_CampaignId );
+				dataNode.SetValue< MediaId >( i_MediaId );
+				dataNode.SetValue< WebsiteId >( i_WebsiteId );
+				break;
 		}
 		if( CheckBlackoutRange( dataNode, i_SourcedTimePeriod ) )
 		{ 	

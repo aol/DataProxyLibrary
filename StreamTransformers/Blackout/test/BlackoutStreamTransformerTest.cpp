@@ -61,7 +61,8 @@ void BlackoutStreamTransformerTest::PrepareBlackoutDataFile()
 		<< "-1,200,300,1500,1550" << std::endl // media-website level blackout window
 		<< "-1,200,-1,2000,2100" << std::endl // only media level
 		<< "-1,-1,300,2200,2300" << std::endl // only website level
-		<< "-1,-1,-1,2400,2500" << std::endl;  // for all media and all websites
+		<< "-1,-1,-1,2400,2500" << std::endl  // for all media and all websites
+		<< "100,200,300,2750,2800" << std::endl;  // campaign-media-website level
 	file.close();
 }
 
@@ -204,7 +205,9 @@ void BlackoutStreamTransformerTest::testBlackout()
 				<< "100,200,300,2500" << std::endl 	//check global level; srchp falls in blackout window
 				<< "100,202,302,2600" << std::endl	//check global level; srchp does not fall in blackout window
 				<< "100,200,300,1601" << std::endl  // check time period border condition +1;  
-				<< "100,200,300,1599" << std::endl; // check time period border condition -1
+				<< "100,200,300,1599" << std::endl // check time period border condition -1
+				<< "100,200,300,2700" << std::endl // camp-med-web level; srchp not in any window
+				<< "100,200,300,2775" << std::endl; // camp-med-web level; srchp falls in blackout window
 
 	std::map<std::string, std::string > parameters;
 	parameters[ DPL_CONFIG ] = fileSpec;
@@ -222,7 +225,8 @@ void BlackoutStreamTransformerTest::testBlackout()
 		 << "100,200,301,1400" << std::endl
 		 << "100,200,301,1400" << std::endl
 		 << "100,202,302,2600" << std::endl
-		 << "100,200,300,1599" << std::endl;
+		 << "100,200,300,1599" << std::endl
+		 << "100,200,300,2700" << std::endl;
 
 	CPPUNIT_ASSERT_EQUAL( expected.str(), pResult->str() );
 
