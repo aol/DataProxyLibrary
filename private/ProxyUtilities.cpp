@@ -272,6 +272,9 @@ namespace
 	}
 }
 
+/* A version of this method has been moved to Utilities/MapUtilites.cpp
+ * Future edits to DPL should reference that version of this method
+ */
 std::string ProxyUtilities::ToString( const std::map<std::string,std::string>& i_rParameters )
 {
 	if( i_rParameters.size() == 0 )
