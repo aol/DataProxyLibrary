@@ -106,7 +106,9 @@ private:
 
 	void SetConfig( const xercesc::DOMNode& i_rNode, NodeConfigDatum& o_rConfig ) const;
 	
+	protected:
 	std::string m_Name;
+	private:
 	DataProxyClient& m_rParent;
 	NodeConfigDatum m_ReadConfig;
 	NodeConfigDatum m_WriteConfig;

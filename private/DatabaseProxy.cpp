@@ -23,6 +23,7 @@
 #include "SQLLoader.hpp"
 #include "Stopwatch.hpp"
 #include "DataProxyClient.hpp"
+#include "UniqueIdGenerator.hpp"
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -225,8 +226,14 @@ namespace
 		file.close();
 	}
 
+	const std::string LEGAL_CHARS( "_.-" );
+	bool IsLegalChar( char i_Char )
+	{
+		return ( !std::isalnum( i_Char ) && LEGAL_CHARS.find( i_Char ) == std::string::npos );
+	}
+
 	void GetUniqueFileSpecs( const std::string& i_rWorkingDir,
-							 const std::map< std::string, std::string >& i_rParameters,
+							 const std::string& i_rName,
 							 std::string& o_rDataFileSpec,
 							 std::string& o_rControlFileSpec,
 							 std::string& o_rLogFileSpec )
@@ -234,7 +241,10 @@ namespace
 		std::stringstream baseFileSpec;
 		std::stringstream uniqueString;
 
-		baseFileSpec << i_rWorkingDir << '/' << ProxyUtilities::ToString( i_rParameters ) << '.' << DateTime().GetFormattedString("%F_%H-%M-%S") << '.' << ::getpid();
+		std::string cleanName( i_rName );
+		cleanName.erase( std::remove_if( cleanName.begin(), cleanName.end(), IsLegalChar ), cleanName.end() );
+
+		baseFileSpec << i_rWorkingDir << '/' << cleanName << '.' << DateTime().SecondsFromEpoch() << '.' << ::getpid() << '.' << UniqueIdGenerator().GetUniqueId();
 		o_rDataFileSpec = baseFileSpec.str() + DAT_EXTENSION;
 		o_rControlFileSpec = baseFileSpec.str() + CONTROL_EXTENSION;
 		o_rLogFileSpec = baseFileSpec.str() + LOG_EXTENSION;
@@ -251,7 +261,7 @@ namespace
 			}
 
 			uniqueString.str("");
-			uniqueString << '_' << uniqueId;
+			uniqueString << '-' << uniqueId;
 
 			o_rDataFileSpec = baseFileSpec.str() + uniqueString.str() + DAT_EXTENSION;
 			o_rControlFileSpec = baseFileSpec.str() + uniqueString.str() + CONTROL_EXTENSION;
@@ -920,7 +930,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 		std::string dataFileSpec;
 		std::string controlFileSpec;
 		std::string logFileSpec;
-		GetUniqueFileSpecs( m_WriteWorkingDir, i_rParameters, dataFileSpec, controlFileSpec, logFileSpec );
+		GetUniqueFileSpecs( m_WriteWorkingDir, m_Name, dataFileSpec, controlFileSpec, logFileSpec );
 
 		// write the data file
 		MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.WritingDataFile.Begin", "Writing data to file: " << dataFileSpec );
@@ -930,159 +940,193 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 		MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.WritingDataFile.Finished", "Done writing " << count
 			<< " rows of data to file: " << dataFileSpec << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
 
-		// get the database connections needed
-		boost::scoped_ptr< ScopedTempTable > pTempTable;
-		Database& rDataDefinitionDatabase = GetDataDefinitionConnection( m_WriteConnectionName, m_WriteConnectionByTable, m_rDatabaseConnectionManager, i_rParameters );
-		std::string table = m_WriteTable;
-		std::string stagingTable = m_WriteStagingTable;
-		std::string mysqlMergeQuery = m_WriteMySqlMergeQuery;
-		std::string oracleMergeQuery = m_WriteOracleMergeQuery;
-		std::string databaseType;
-		if( m_WriteConnectionByTable )
+		// if there's no data, we can remove the file and just do the pre / post statements
+		if( count == 0LL )
 		{
-			stagingTable = ProxyUtilities::GetVariableSubstitutedString( stagingTable, i_rParameters );
-			mysqlMergeQuery = ProxyUtilities::GetVariableSubstitutedString( mysqlMergeQuery, i_rParameters );
-			oracleMergeQuery = ProxyUtilities::GetVariableSubstitutedString( oracleMergeQuery, i_rParameters );
-			table = ProxyUtilities::GetVariableSubstitutedString( m_WriteConnectionName, i_rParameters );
-			databaseType = m_rDatabaseConnectionManager.GetDatabaseTypeByTable( table );
+			// issue the pre-statement query if one exists
+			if (!m_PreStatement.IsNull())
+			{
+				stopwatch.Reset();
+				std::string preStatement( ProxyUtilities::GetVariableSubstitutedString( m_PreStatement, i_rParameters ) );
+				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing configured pre-statement: " << preStatement );
+				Database::Statement( rTransactionDatabase, preStatement ).Execute();
+				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Finished",
+					"Finished executing pre-statement: " << preStatement << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
+			}
+
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.NoData", "There is no data to upload; skipping the upload / merge stage" );
+			if( !m_WriteNoCleanUp )
+			{
+				FileUtilities::Remove( dataFileSpec );
+			}
+
+			// issue the post-statement query if one exists
+			if (!m_PostStatement.IsNull())
+			{
+				stopwatch.Reset();
+				std::string postStatement( ProxyUtilities::GetVariableSubstitutedString( m_PostStatement, i_rParameters ) );
+				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing configured post-statement: " << postStatement );
+				Database::Statement( rTransactionDatabase, postStatement ).Execute();
+				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Finished",
+					"Finished executing post-statement: " << postStatement << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
+			}
 		}
 		else
 		{
-			databaseType = m_rDatabaseConnectionManager.GetDatabaseType( m_WriteConnectionName );
-		}
-
-		// if we're dynamically creating a staging table, create one via a data-definition connection, and set the staging table name
-		if( m_WriteDynamicStagingTable )
-		{
-			pTempTable.reset( new ScopedTempTable( rDataDefinitionDatabase, databaseType, table, stagingTable ) );
-		}
-		
-		// obtain a write-lock for entire manipulation
-		{
-			boost::unique_lock< boost::shared_mutex > lock( m_TableMutex );
-
-			// ORACLE
-			if( databaseType == ORACLE_DB_TYPE )
+			// get the database connections needed
+			boost::scoped_ptr< ScopedTempTable > pTempTable;
+			Database& rDataDefinitionDatabase = GetDataDefinitionConnection( m_WriteConnectionName, m_WriteConnectionByTable, m_rDatabaseConnectionManager, i_rParameters );
+			std::string table = m_WriteTable;
+			std::string stagingTable = m_WriteStagingTable;
+			std::string mysqlMergeQuery = m_WriteMySqlMergeQuery;
+			std::string oracleMergeQuery = m_WriteOracleMergeQuery;
+			std::string databaseType;
+			if( m_WriteConnectionByTable )
 			{
-				// if this isn't a dynamic staging table, we need to truncate it
-				if( !m_WriteDynamicStagingTable )
-				{
-					std::stringstream sql;
-					sql << "CALL sp_truncate_table( '" << stagingTable << "' )";
-					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.TruncateStagingTable", "Truncating staging table: " << stagingTable << " using the ddl connection with statement: " << sql.str() );
-					Database::Statement( rDataDefinitionDatabase, sql.str() ).Execute();
-				}
-
-				// write the control file & prepare SQLLoader
-				WriteControlFile( controlFileSpec, dataFileSpec, columns, PrefixTable( stagingTable, rTransactionDatabase.GetSchema() ), m_WriteNodeColumnLengths);
-				SQLLoader loader( rTransactionDatabase.GetDBName(), rTransactionDatabase.GetUserName(), rTransactionDatabase.GetPassword(), controlFileSpec, logFileSpec );
-
-				// upload!
-				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Begin", "Uploading " << count << " rows of data to staging table: " << stagingTable );
-				stopwatch.Reset();
-				if( loader.Upload( m_WriteDirectLoad ) )
-				{
-					MV_THROW( DatabaseProxyException, "SQLLoader failed! Standard output: " << loader.GetStandardOutput() << ". Standard error: " << loader.GetStandardError());
-				}
-				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Finished", "Done uploading " << count << " rows of data to staging table: " << stagingTable << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
-
-				// issue the pre-statement query if one exists
-				if (!m_PreStatement.IsNull())
-				{
-					stopwatch.Reset();
-					std::string preStatement( ProxyUtilities::GetVariableSubstitutedString( m_PreStatement, i_rParameters ) );
-					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing configured pre-statement: " << preStatement );
-					Database::Statement( rTransactionDatabase, preStatement ).Execute();
-					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Finished",
-						"Finished executing pre-statement: " << preStatement << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
-				}
-
-				// merge staging table data into primary table
-				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Begin", "Merging " << count << " rows of data from staging table with query: " << oracleMergeQuery );
-				stopwatch.Reset();
-				Database::Statement( rTransactionDatabase, oracleMergeQuery ).Execute();
-				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Finished", "Merge of " << count << " rows complete after " << stopwatch.GetElapsedSeconds() << " seconds" );
-
-				// issue the post-statement query if one exists
-				if (!m_PostStatement.IsNull())
-				{
-					stopwatch.Reset();
-					std::string postStatement( ProxyUtilities::GetVariableSubstitutedString( m_PostStatement, i_rParameters ) );
-					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing configured post-statement: " << postStatement );
-					Database::Statement( rTransactionDatabase, postStatement ).Execute();
-					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Finished",
-						"Finished executing post-statement: " << postStatement << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
-				}
-
-				// if cleaning up, remove files
-				if( !m_WriteNoCleanUp )
-				{
-					FileUtilities::Remove( dataFileSpec );
-					FileUtilities::Remove( controlFileSpec );
-					FileUtilities::Remove( logFileSpec );
-				}
-			}
-			else if( databaseType == MYSQL_DB_TYPE )
-			{
-				// if this isn't a dynamic staging table, we need to truncate it
-				if( !m_WriteDynamicStagingTable )
-				{
-					std::stringstream sql;
-					sql << "TRUNCATE TABLE " << stagingTable;
-					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.TruncateStagingTable", "Truncating staging table: " << stagingTable << " using the ddl connection with statement: " << sql.str() );
-					Database::Statement( rDataDefinitionDatabase, sql.str() ).Execute();
-				}
-
-				std::stringstream sql;
-				// load the data into the table
-				sql.str("");
-				sql << "LOAD DATA" << ( m_WriteLocalDataFile ? " LOCAL" : "" ) << " INFILE '" << dataFileSpec << "'" << std::endl
-					<< "INTO TABLE " << stagingTable << std::endl
-					<< "FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"'" << std::endl
-					<< "IGNORE 1 LINES" << std::endl
-					<< "( " << columns << " )" << std::endl;
-				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Begin", "Uploading " << count << " rows of data to staging table: " << stagingTable );
-				stopwatch.Reset();
-				Database::Statement( rTransactionDatabase, sql.str() ).Execute();
-				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Finished", "Done uploading " << count << " rows of data to staging table: " << stagingTable << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
-
-				// issue the pre-statement query if one exists
-				if (!m_PreStatement.IsNull())
-				{
-					stopwatch.Reset();
-					std::string preStatement( ProxyUtilities::GetVariableSubstitutedString( m_PreStatement, i_rParameters ) );
-					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing configured pre-statement: " << preStatement );
-					Database::Statement( rTransactionDatabase, preStatement ).Execute();
-					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Finished",
-						"Finished executing pre-statement: " << preStatement << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
-				}
-
-				// merge staging table data into primary table
-				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Begin", "Merging " << count << " rows of data from staging table with query: " << mysqlMergeQuery );
-				stopwatch.Reset();
-				Database::Statement( rTransactionDatabase, mysqlMergeQuery ).Execute();
-				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Finished", "Merge of " << count << " rows complete after " << stopwatch.GetElapsedSeconds() << " seconds" );
-
-				// issue the post-statement query if one exists
-				if (!m_PostStatement.IsNull())
-				{
-					stopwatch.Reset();
-					std::string postStatement( ProxyUtilities::GetVariableSubstitutedString( m_PostStatement, i_rParameters ) );
-					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing configured post-statement: " << postStatement );
-					Database::Statement( rTransactionDatabase, postStatement ).Execute();
-					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Finished",
-						"Finished executing post-statement: " << postStatement << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
-				}
-			
-				// if cleaning up, remove file
-				if( !m_WriteNoCleanUp )
-				{
-					FileUtilities::Remove( dataFileSpec );
-				}
+				stagingTable = ProxyUtilities::GetVariableSubstitutedString( stagingTable, i_rParameters );
+				mysqlMergeQuery = ProxyUtilities::GetVariableSubstitutedString( mysqlMergeQuery, i_rParameters );
+				oracleMergeQuery = ProxyUtilities::GetVariableSubstitutedString( oracleMergeQuery, i_rParameters );
+				table = ProxyUtilities::GetVariableSubstitutedString( m_WriteConnectionName, i_rParameters );
+				databaseType = m_rDatabaseConnectionManager.GetDatabaseTypeByTable( table );
 			}
 			else
 			{
-				MV_THROW( DatabaseProxyException, "Unrecognized database type: " << databaseType );
+				databaseType = m_rDatabaseConnectionManager.GetDatabaseType( m_WriteConnectionName );
+			}
+
+			// if we're dynamically creating a staging table, create one via a data-definition connection, and set the staging table name
+			if( m_WriteDynamicStagingTable )
+			{
+				pTempTable.reset( new ScopedTempTable( rDataDefinitionDatabase, databaseType, table, stagingTable ) );
+			}
+			
+			// obtain a write-lock for entire manipulation
+			{
+				boost::unique_lock< boost::shared_mutex > lock( m_TableMutex );
+
+				// ORACLE
+				if( databaseType == ORACLE_DB_TYPE )
+				{
+					// if this isn't a dynamic staging table, we need to truncate it
+					if( !m_WriteDynamicStagingTable )
+					{
+						std::stringstream sql;
+						sql << "CALL sp_truncate_table( '" << stagingTable << "' )";
+						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.TruncateStagingTable", "Truncating staging table: " << stagingTable << " using the ddl connection with statement: " << sql.str() );
+						Database::Statement( rDataDefinitionDatabase, sql.str() ).Execute();
+					}
+
+					// write the control file & prepare SQLLoader
+					WriteControlFile( controlFileSpec, dataFileSpec, columns, PrefixTable( stagingTable, rTransactionDatabase.GetSchema() ), m_WriteNodeColumnLengths);
+					SQLLoader loader( rTransactionDatabase.GetDBName(), rTransactionDatabase.GetUserName(), rTransactionDatabase.GetPassword(), controlFileSpec, logFileSpec );
+
+					// upload!
+					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Begin", "Uploading " << count << " rows of data to staging table: " << stagingTable );
+					stopwatch.Reset();
+					if( loader.Upload( m_WriteDirectLoad ) )
+					{
+						MV_THROW( DatabaseProxyException, "SQLLoader failed! Standard output: " << loader.GetStandardOutput() << ". Standard error: " << loader.GetStandardError());
+					}
+					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Finished", "Done uploading " << count << " rows of data to staging table: " << stagingTable << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
+
+					// issue the pre-statement query if one exists
+					if (!m_PreStatement.IsNull())
+					{
+						stopwatch.Reset();
+						std::string preStatement( ProxyUtilities::GetVariableSubstitutedString( m_PreStatement, i_rParameters ) );
+						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing configured pre-statement: " << preStatement );
+						Database::Statement( rTransactionDatabase, preStatement ).Execute();
+						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Finished",
+							"Finished executing pre-statement: " << preStatement << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
+					}
+
+					// merge staging table data into primary table
+					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Begin", "Merging " << count << " rows of data from staging table with query: " << oracleMergeQuery );
+					stopwatch.Reset();
+					Database::Statement( rTransactionDatabase, oracleMergeQuery ).Execute();
+					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Finished", "Merge of " << count << " rows complete after " << stopwatch.GetElapsedSeconds() << " seconds" );
+
+					// issue the post-statement query if one exists
+					if (!m_PostStatement.IsNull())
+					{
+						stopwatch.Reset();
+						std::string postStatement( ProxyUtilities::GetVariableSubstitutedString( m_PostStatement, i_rParameters ) );
+						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing configured post-statement: " << postStatement );
+						Database::Statement( rTransactionDatabase, postStatement ).Execute();
+						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Finished",
+							"Finished executing post-statement: " << postStatement << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
+					}
+
+					// if cleaning up, remove files
+					if( !m_WriteNoCleanUp )
+					{
+						FileUtilities::Remove( dataFileSpec );
+						FileUtilities::Remove( controlFileSpec );
+						FileUtilities::Remove( logFileSpec );
+					}
+				}
+				else if( databaseType == MYSQL_DB_TYPE )
+				{
+					// if this isn't a dynamic staging table, we need to truncate it
+					if( !m_WriteDynamicStagingTable )
+					{
+						std::stringstream sql;
+						sql << "TRUNCATE TABLE " << stagingTable;
+						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.TruncateStagingTable", "Truncating staging table: " << stagingTable << " using the ddl connection with statement: " << sql.str() );
+						Database::Statement( rDataDefinitionDatabase, sql.str() ).Execute();
+					}
+
+					std::stringstream sql;
+					// load the data into the table
+					sql.str("");
+					sql << "LOAD DATA" << ( m_WriteLocalDataFile ? " LOCAL" : "" ) << " INFILE '" << dataFileSpec << "'" << std::endl
+						<< "INTO TABLE " << stagingTable << std::endl
+						<< "FIELDS TERMINATED BY ',' OPTIONALLY ENCLOSED BY '\"'" << std::endl
+						<< "IGNORE 1 LINES" << std::endl
+						<< "( " << columns << " )" << std::endl;
+					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Begin", "Uploading " << count << " rows of data to staging table: " << stagingTable );
+					stopwatch.Reset();
+					Database::Statement( rTransactionDatabase, sql.str() ).Execute();
+					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Finished", "Done uploading " << count << " rows of data to staging table: " << stagingTable << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
+
+					// issue the pre-statement query if one exists
+					if (!m_PreStatement.IsNull())
+					{
+						stopwatch.Reset();
+						std::string preStatement( ProxyUtilities::GetVariableSubstitutedString( m_PreStatement, i_rParameters ) );
+						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing configured pre-statement: " << preStatement );
+						Database::Statement( rTransactionDatabase, preStatement ).Execute();
+						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Finished",
+							"Finished executing pre-statement: " << preStatement << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
+					}
+
+					// merge staging table data into primary table
+					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Begin", "Merging " << count << " rows of data from staging table with query: " << mysqlMergeQuery );
+					stopwatch.Reset();
+					Database::Statement( rTransactionDatabase, mysqlMergeQuery ).Execute();
+					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Finished", "Merge of " << count << " rows complete after " << stopwatch.GetElapsedSeconds() << " seconds" );
+
+					// issue the post-statement query if one exists
+					if (!m_PostStatement.IsNull())
+					{
+						stopwatch.Reset();
+						std::string postStatement( ProxyUtilities::GetVariableSubstitutedString( m_PostStatement, i_rParameters ) );
+						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing configured post-statement: " << postStatement );
+						Database::Statement( rTransactionDatabase, postStatement ).Execute();
+						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Finished",
+							"Finished executing post-statement: " << postStatement << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
+					}
+				
+					// if cleaning up, remove file
+					if( !m_WriteNoCleanUp )
+					{
+						FileUtilities::Remove( dataFileSpec );
+					}
+				}
+				else
+				{
+					MV_THROW( DatabaseProxyException, "Unrecognized database type: " << databaseType );
+				}
 			}
 		}
 	}
