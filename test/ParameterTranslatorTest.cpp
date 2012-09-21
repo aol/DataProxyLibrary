@@ -134,7 +134,7 @@ void ParameterTranslatorTest::testTranslate()
 				<< "  <Parameter name=\"param01\" translatedName=\"renamed01\" />"	// param01 will be renamed to renamed01
 				<< "  <Parameter name=\"param02\" />"								// param02 will be removed
 				<< "  <Parameter name=\"param03\" translatedName=\"renamed03\" />"	// param03 will be renamed to renamed03
-				<< "  <Parameter name=\"renamed03\" valueTranslator=\"VALUE03\" valueDefault=\"DEFAULT03\" />"	// renamed03 will be translated to VALUE03 if it exists; otherwise defaulted to DEFAULT03
+				<< "  <Parameter name=\"renamed03\" valueTranslator=\"VALUE03_%v\" valueDefault=\"DEFAULT03\" />"	// renamed03 will be translated to VALUE03_<value> if it exists; otherwise defaulted to DEFAULT03
 				<< "  <Parameter name=\"param04\" valueTranslator=\"`echo -n %v | sed 's/alu/ALU/' | sed 's/04/Four/'`\" />" // translated
 				<< "  <Parameter name=\"missing01\" valueTranslator=\"`missingVal01`\"/>"	// will not be present so no translation
 				<< "  <Parameter name=\"missing02\" valueTranslator=\"missingVal02\"/>"	// will not be present so no translation
@@ -183,7 +183,7 @@ void ParameterTranslatorTest::testTranslate()
 	CPPUNIT_ASSERT_NO_THROW( translator.Translate( inputParameters, translatedParameters ) );
 	expectedParameters.clear();
 	expectedParameters["renamed01"] = "value01";	// param01 renamed to renamed01
-	expectedParameters["renamed03"] = "VALUE03";	// param03 renamed to renamed03 and value translated to literal
+	expectedParameters["renamed03"] = "VALUE03_value03";	// param03 renamed to renamed03 and value translated to literal
 	expectedParameters["param04"] = "vALUeFour";	// value translated via expression
 	expectedParameters["param05"] = "`value05`";	// value defaulted via expression
 	expectedParameters["param06"] = "value06";		// value not defaulted since already provided

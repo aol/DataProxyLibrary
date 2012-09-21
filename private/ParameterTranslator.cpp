@@ -355,7 +355,8 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 			// otherwise use it as a literal
 			else
 			{
-				value = valueTranslator;
+				std::string valueSubbedTranslator = boost::replace_all_copy( valueTranslator, VALUE_FORMATTER, value );
+				value = valueSubbedTranslator;
 			}
 		}
 		
