@@ -108,7 +108,7 @@ int main(int argc, char** argv)
 			textOut.printFailures();
 		}
 	
-		std::ofstream outFile("aggregator_tests_result");
+		std::ofstream outFile("grouping_aggregator_tests_result");
 	
 		if(outFile)
 		{	

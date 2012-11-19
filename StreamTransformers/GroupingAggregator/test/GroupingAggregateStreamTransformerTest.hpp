@@ -8,8 +8,8 @@
 // LAST UPDATED:    $Date$
 // UPDATED BY:      $Author$
 
-#ifndef _AGGREGATE_STREAM_TRANSFORMER_TEST_HPP_
-#define _AGGREGATE_STREAM_TRANSFORMER_TEST_HPP_
+#ifndef _GROUPING_AGGREGATE_STREAM_TRANSFORMER_TEST_HPP_
+#define _GROUPING_AGGREGATE_STREAM_TRANSFORMER_TEST_HPP_
 
 #include <cppunit/TestFixture.h>
 #include <cppunit/extensions/HelperMacros.h>
@@ -17,10 +17,10 @@
 
 class TempDirectory;
 
-class AggregateStreamTransformerTest : public CppUnit::TestFixture
+class GroupingAggregateStreamTransformerTest : public CppUnit::TestFixture
 {
 private:
-	CPPUNIT_TEST_SUITE( AggregateStreamTransformerTest );
+	CPPUNIT_TEST_SUITE( GroupingAggregateStreamTransformerTest );
 	CPPUNIT_TEST( testMissingParameters );
 	CPPUNIT_TEST( testAmbiguousProperty );
 	CPPUNIT_TEST( testBadAwkType );
@@ -36,8 +36,8 @@ private:
 	CPPUNIT_TEST( testAggregateFieldsSortOptimization );
 	CPPUNIT_TEST_SUITE_END();
 public:
-	AggregateStreamTransformerTest();
-	virtual ~AggregateStreamTransformerTest();
+	GroupingAggregateStreamTransformerTest();
+	virtual ~GroupingAggregateStreamTransformerTest();
 	
 	void setUp();
 	void tearDown();
@@ -57,4 +57,4 @@ public:
 	void testAggregateFieldsSortOptimization();
 };
 
-#endif //_AGGREGATE_STREAM_TRANSFORMER_TEST_HPP_
+#endif //_GROUPING_AGGREGATE_STREAM_TRANSFORMER_TEST_HPP_

@@ -56,7 +56,7 @@
 //          printf("%s,%i,%i,%i,%i,%i\n", __prevKey, impressions, clicks, impressionConversions, clickConversions, prematchedConversions);
 //      }
 
-#include "AggregateStreamTransformer.hpp"
+#include "GroupingAggregateStreamTransformer.hpp"
 #include "ShellExecutor.hpp"
 #include "MVLogger.hpp"
 #include "Nullable.hpp"
@@ -87,6 +87,7 @@ namespace
 
 	const std::string NEW_VALUE_FORMATTER( "%v" );
 	const std::string AGGREGATE_VALUE_FORMATTER( "%a" );
+	const std::string KEY_VALUE_FORMATTER( "%k" );
 
 	const boost::regex INIT_REGEX( "init\\((.+)\\)" );
 	const boost::regex TYPE_REGEX( "type\\((.+)\\)" );
@@ -110,7 +111,7 @@ namespace
 		}
 		if( boost::trim_copy( fieldString ).empty() )
 		{
-			MV_THROW( AggregateStreamTransformerException, "No " << ( i_IsKey ? "keys" : "fields" ) << " have been specified" );
+			MV_THROW( GroupingAggregateStreamTransformerException, "No " << ( i_IsKey ? "keys" : "fields" ) << " have been specified" );
 		}
 
 		// first split the fields by comma
@@ -189,14 +190,14 @@ namespace
 								<< dataField.GetValue< Name >() << "'. Format for each comma-separated " << (i_IsKey ? "key" : "field" ) << " is: "
 								<< "column:param1(value1) param2(value2) ... paramN(valueN) where each param is one of: type, rename, modify"
 								<< ( i_IsKey ? "" : ", init, op, output" );
-						MV_THROW( AggregateStreamTransformerException, message.str() );
+						MV_THROW( GroupingAggregateStreamTransformerException, message.str() );
 					}
 				}
 
 				// if this is a data field (non-key), ensure that it has at least an operation or an output defined
 				if( !i_IsKey && !foundOp && !foundOutput )
 				{
-					MV_THROW( AggregateStreamTransformerException, "No operation or output defined for field: '" << dataField.GetValue< Name >() << "'" );
+					MV_THROW( GroupingAggregateStreamTransformerException, "No operation or output defined for field: '" << dataField.GetValue< Name >() << "'" );
 				}
 			}
 
@@ -250,7 +251,7 @@ namespace
 			if( !keyIndeces.insert( awkIndex ).second )
 			{
 				// this should NEVER happen!
-				MV_THROW( AggregateStreamTransformerException, "Multiple keys have the same awk-index: " << fieldIter->GetValue< AwkIndex >() );
+				MV_THROW( GroupingAggregateStreamTransformerException, "Multiple keys have the same awk-index: " << fieldIter->GetValue< AwkIndex >() );
 			}
 
 			if( fieldIter != i_rKeys.begin() )
@@ -427,6 +428,30 @@ namespace
 		return result.str();
 	}
 
+	// the print command dictates how every fully-aggregated line will be formatted once it is ready
+	std::string GetPrintCommand( const std::vector< Field >& i_rFields, const std::string& i_rKeyContainer, const std::string& i_rIndexName )
+	{
+		std::stringstream result;
+		std::stringstream fields;
+		result << "printf(\"%s";
+		std::vector< Field >::const_iterator iter = i_rFields.begin();
+		fields << i_rIndexName;
+		for( ; iter != i_rFields.end(); ++iter )
+		{
+			std::string outputColumn = iter->GetValue< Output >();
+			if( outputColumn.empty() )
+			{
+				continue;
+			}
+			boost::replace_all( outputColumn, AGGREGATE_VALUE_FORMATTER, iter->GetValue< VarName >() + "[" + i_rIndexName + "]" );
+			boost::replace_all( outputColumn, KEY_VALUE_FORMATTER, i_rIndexName );
+			result << "," << iter->GetValue< AwkType >();
+			fields << "," << outputColumn;
+		}
+		result << "\\n\", " << i_rKeyContainer << "[" << i_rIndexName << "]" << fields.str() << ");";
+		return result.str();
+	}
+
 	// we will have to call the init assignment at the beginning of the function,
 	// as well as whenever we move onto the next key, so our aggregations start
 	// from the requested value every time
@@ -437,6 +462,19 @@ namespace
 		for( ; iter != i_rFields.end(); ++iter )
 		{
 			result << iter->GetValue< VarName >() << " = " << iter->GetValue< InitValue >() << "; ";
+		}
+		return result.str();
+	}
+
+	// we will have to call the init assignment whenever we find a new key, so our aggregations start
+	// from the requested value every time
+	std::string GetInitAssignment( const std::vector< Field >& i_rFields, const std::string& i_rIndexName )
+	{
+		std::stringstream result;
+		std::vector< Field >::const_iterator iter = i_rFields.begin();
+		for( ; iter != i_rFields.end(); ++iter )
+		{
+			result << iter->GetValue< VarName >() << "[" << i_rIndexName << "] = " << iter->GetValue< InitValue >() << "; ";
 		}
 		return result.str();
 	}
@@ -456,6 +494,26 @@ namespace
 			}
 			boost::replace_all( operation, NEW_VALUE_FORMATTER, iter->GetValue< AwkIndex >() );
 			boost::replace_all( operation, AGGREGATE_VALUE_FORMATTER, iter->GetValue< VarName >() );
+			result << operation << "; ";
+		}
+		return result.str();
+	}
+
+	// every time we process a row, we have to perform operations on the appropriate aggregations
+	// at the appropriate index.
+	std::string GetIncrementAssignment( const std::vector< Field >& i_rFields, const std::string& i_rIndexName )
+	{
+		std::stringstream result;
+		std::vector< Field >::const_iterator iter = i_rFields.begin();
+		for( ; iter != i_rFields.end(); ++iter )
+		{
+			std::string operation = iter->GetValue< Operation >();
+			if( operation.empty() )
+			{
+				continue;
+			}
+			boost::replace_all( operation, NEW_VALUE_FORMATTER, iter->GetValue< AwkIndex >() );
+			boost::replace_all( operation, AGGREGATE_VALUE_FORMATTER, iter->GetValue< VarName >() + "[" + i_rIndexName + "]");
 			result << operation << "; ";
 		}
 		return result.str();
@@ -490,11 +548,11 @@ namespace
 			int count = CountOf( i_rHeaders, iter->GetValue< Name >() );
 			if( iter->GetValue< IsRequired >() && count == 0 )
 			{
-				MV_THROW( AggregateStreamTransformerException, "Input stream is missing required column: '" << iter->GetValue< Name >() << "'" );
+				MV_THROW( GroupingAggregateStreamTransformerException, "Input stream is missing required column: '" << iter->GetValue< Name >() << "'" );
 			}
 			if( count > 1 )
 			{
-				MV_THROW( AggregateStreamTransformerException, "Input stream has ambiguous required column: '" << iter->GetValue< Name >() << "'" );
+				MV_THROW( GroupingAggregateStreamTransformerException, "Input stream has ambiguous required column: '" << iter->GetValue< Name >() << "'" );
 			}
 		}
 	}
@@ -543,32 +601,40 @@ boost::shared_ptr< std::stringstream > AggregateFields( std::istream& i_rInputSt
 	boost::iter_split( headerFields, inputHeader, boost::first_finder(COMMA) );
 	ValidateUniquePresence( headerFields, keys, fields );
 
-	// get the string that will represent our key & the initial command that will order key-columns first
-	std::string keyFields;
-	std::string orderCommand;
-	std::string sortCommand;
-	ParseFieldOrder( keys, fields, headerFields, skipSort, tempDirectory, keyFields, orderCommand, sortCommand );
-	command << orderCommand << sortCommand;
-
-	// form the awk command
-	std::string printCommand = GetPrintCommand( fields );
-	command << "awk -F, 'BEGIN { print \"" << outputHeader << "\"; " << GetInitAssignment( fields ) << " } { ";
-	command << "__currentKey = " << keyFields << "; "
-			<< "if( __count == 0 ) { __prevKey = __currentKey; } "
-			<< "else if( __currentKey != __prevKey ) { " << printCommand << " "
-			<< "__count = 1; __prevKey = __currentKey; "
-			<< GetInitAssignment( fields ) << " "
-			<< "}"
-			<< GetIncrementAssignment( fields ) << " "
-			<< "__count++; } "
-			<< "END { if( __result != 0 ) { exit __result; }" << printCommand << " }'";
-
 	// short circuit if we're done
 	if( i_rInputStream.peek() == EOF )
 	{
 		*pResult << outputHeader << std::endl;
 		return pResult;
 	}
+
+	// get the string that will represent our key & the initial command that will order key-columns first
+	std::string keyFields;
+	std::string orderCommand;
+	std::string sortCommand;
+	ParseFieldOrder( keys, fields, headerFields, skipSort, tempDirectory, keyFields, orderCommand, sortCommand );
+	command << orderCommand;
+	// << sortCommand;
+
+	// form the awk command
+	// std::string printCommand = GetPrintCommand( fields );
+	// command << "awk -F, 'BEGIN { print \"" << outputHeader << "\"; " << GetInitAssignment( fields ) << " } { ";
+	// command << "__currentKey = " << keyFields << "; "
+	// 		<< "if( __count == 0 ) { __prevKey = __currentKey; } "
+	// 		<< "else if( __currentKey != __prevKey ) { " << printCommand << " "
+	// 		<< "__count = 1; __prevKey = __currentKey; "
+	// 		<< GetInitAssignment( fields ) << " "
+	// 		<< "}"
+	// 		<< GetIncrementAssignment( fields ) << " "
+	// 		<< "__count++; } "
+	// 		<< "END { if( __result != 0 ) { exit __result; }" << printCommand << " }'";
+
+	command << "awk -F, '{ __currentKey = " << keyFields << "; if (__currentKey in __foundKey) { " << GetIncrementAssignment( fields, "__currentKey" )
+			<< "; } else { " << " __foundKey[__currentKey] = _currentKey; " << GetInitAssignment( fields, "__currentKey" ) << "; "
+			<< GetIncrementAssignment( fields, "__currentKey" ) << "; } } " << "END { print \"" << outputHeader << "\"; for (var in __foundKey) "
+			<< GetPrintCommand( fields, "__foundKey", "var") << "; }'";
+
+	// command << sortCommand;
 
 	// execute!
 	std::stringstream standardError;
@@ -577,7 +643,7 @@ boost::shared_ptr< std::stringstream > AggregateFields( std::istream& i_rInputSt
 	int status = executor.Run( timeout, i_rInputStream, *pResult, standardError );
 	if( status != 0 )
 	{
-		MV_THROW( AggregateStreamTransformerException, "Aggregator returned non-zero status: " << status << ". Standard error: " << standardError.rdbuf() );
+		MV_THROW( GroupingAggregateStreamTransformerException, "Aggregator returned non-zero status: " << status << ". Standard error: " << standardError.rdbuf() );
 	}
 	if( !standardError.str().empty() )
 	{

@@ -85,7 +85,7 @@ PROFILEDIR	= prof.obj
 ALLTARGETDIRS = $(DEBUGDIR) $(OPTIMIZEDIR) $(OPTDEBUGDIR) $(PROFILEDIR)
 
 PRIVATEFILES=\
-	AggregateStreamTransformer.cpp \
+	GroupingAggregateStreamTransformer.cpp \
 
 TRANSFORMERSCOMMONFILES=\
 	AwkUtilities.cpp \
@@ -95,7 +95,7 @@ THPPFILES=\
 
 TESTFILES=\
 	main.cpp \
-	AggregateStreamTransformerTest.cpp \
+	GroupingAggregateStreamTransformerTest.cpp \
 
 # The following files need to be built in order to create an independent shared object library
 UTILITYFILES=\
@@ -124,8 +124,8 @@ OPTIMIZEOPTS	= -O3 -D MV_OPTIMIZE -Wall -Werror -fno-strict-aliasing -fPIC
 PROFILEOPTS		= -O3 -D MV_OPTIMIZE -pg -Wall -Werror -fno-strict-aliasing -fPIC
 
 # Executable targets
-PRIMARY_TARGET					= libAggregateStreamTransformer.so
-TEST_TARGET						= aggregator_tests
+PRIMARY_TARGET					= libGroupingAggregateStreamTransformer.so
+TEST_TARGET						= groupingaggregator_tests
 ALL_TARGETS = $(PRIMARY_TARGET) $(TEST_TARGET)
 
 # Defaults for target dir and options
@@ -239,5 +239,5 @@ localclean:
 	- rm -f $(ALL_TARGETS) \
 			$(THPP2HPPFILES) \
 			cppunit_Logger_log.txt \
-			aggregate_stream_transformer_tests_result
+			grouping_aggregate_stream_transformer_tests_result
 	- rm -rf $(ALLTARGETDIRS)
