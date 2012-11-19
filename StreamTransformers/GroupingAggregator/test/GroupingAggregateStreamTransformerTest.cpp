@@ -395,6 +395,36 @@ void GroupingAggregateStreamTransformerTest::testAggregateFieldsNoColumnManipula
 	CPPUNIT_ASSERT_UNORDERED_CONTENTS( expected.str(), pResult->str(), true );
 }
 
+void GroupingAggregateStreamTransformerTest::testOnlyHeaderNoDataLines() {
+	std::stringstream inputStream;
+	inputStream << "key,data" << std::endl;
+	
+	std::map<std::string, std::string> parameters;
+	parameters["timeout"] = "5";
+	parameters["key"] = "key";
+	parameters["fields"] = "data: op(%a+=%v),\n";
+	
+	std::stringstream expected;
+
+	// control: execute normally (with sorting)
+	expected << "key,data" << std::endl;
+	boost::shared_ptr< std::stringstream > pResult = AggregateFields( inputStream, parameters );
+	CPPUNIT_ASSERT( pResult != NULL );
+	CPPUNIT_ASSERT_EQUAL( expected.str(), pResult->str() );
+	
+	inputStream.clear();
+	inputStream.seekg( 0 );
+	expected.str("");	
+
+	// now do it without the sort
+	parameters["skipSort"] = "true"; 
+	expected << "key,data" << std::endl;
+	pResult = AggregateFields( inputStream, parameters );
+	CPPUNIT_ASSERT( pResult != NULL );
+	CPPUNIT_ASSERT_EQUAL( expected.str(), pResult->str() );
+
+}
+
 void GroupingAggregateStreamTransformerTest::testAggregateFieldsSortOptimization()
 {
 	std::stringstream inputStream;

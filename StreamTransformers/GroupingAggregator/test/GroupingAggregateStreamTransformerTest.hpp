@@ -34,6 +34,7 @@ private:
 	CPPUNIT_TEST( testAggregateFields );
 	CPPUNIT_TEST( testAggregateFieldsNoColumnManipulation );
 	CPPUNIT_TEST( testAggregateFieldsSortOptimization );
+	CPPUNIT_TEST( testOnlyHeaderNoDataLines );
 	CPPUNIT_TEST_SUITE_END();
 public:
 	GroupingAggregateStreamTransformerTest();
@@ -55,6 +56,7 @@ public:
 	void testAggregateFields();
 	void testAggregateFieldsNoColumnManipulation();
 	void testAggregateFieldsSortOptimization();
+	void testOnlyHeaderNoDataLines();
 };
 
 #endif //_GROUPING_AGGREGATE_STREAM_TRANSFORMER_TEST_HPP_
