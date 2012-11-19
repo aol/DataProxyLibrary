@@ -403,6 +403,7 @@ namespace
 			}
 			keyFields << fieldIter->GetValue< AwkIndex >();
 		}
+
 		o_rKeyFields = keyFields.str();
 	}
 
@@ -435,7 +436,7 @@ namespace
 		std::stringstream fields;
 		result << "printf(\"%s";
 		std::vector< Field >::const_iterator iter = i_rFields.begin();
-		fields << i_rIndexName;
+		//fields << i_rIndexName;
 		for( ; iter != i_rFields.end(); ++iter )
 		{
 			std::string outputColumn = iter->GetValue< Output >();
@@ -629,10 +630,22 @@ boost::shared_ptr< std::stringstream > AggregateFields( std::istream& i_rInputSt
 	// 		<< "__count++; } "
 	// 		<< "END { if( __result != 0 ) { exit __result; }" << printCommand << " }'";
 
-	command << "awk -F, '{ __currentKey = " << keyFields << "; if (__currentKey in __foundKey) { " << GetIncrementAssignment( fields, "__currentKey" )
-			<< "; } else { " << " __foundKey[__currentKey] = _currentKey; " << GetInitAssignment( fields, "__currentKey" ) << "; "
-			<< GetIncrementAssignment( fields, "__currentKey" ) << "; } } " << "END { print \"" << outputHeader << "\"; for (var in __foundKey) "
-			<< GetPrintCommand( fields, "__foundKey", "var") << "; }'";
+	if (!skipSort)
+	{
+		command << "awk -F, 'BEGIN {  print \"" << outputHeader << "\"; } { __currentKey = " << keyFields << "; if (__currentKey in __foundKey) { " << GetIncrementAssignment( fields, "__currentKey" )
+				<< "; } else { " << " __foundKey[__currentKey] = __currentKey; " << GetInitAssignment( fields, "__currentKey" ) << "; "
+				<< GetIncrementAssignment( fields, "__currentKey" ) << "; } } "
+				<< "END { for (var in __foundKey) " << GetPrintCommand( fields, "__foundKey", "var") << "; }'";
+	}
+	else 
+	{
+		command << "awk -F, '"
+				<< "BEGIN   { print \"" << outputHeader << "\"; } " 
+				<< "NR == 1 { __prevKey = " << keyFields << ";  __foundKey[1] = __prevKey; " << GetInitAssignment( fields, "1") << "; }"
+				<< "		{ __currentKey = " << keyFields << "; if (__prevKey != __currentKey) { " << GetPrintCommand( fields, "__foundKey", "1" ) << "; " << GetInitAssignment( fields, "1" ) << "; __prevKey = __currentKey; __foundKey[1] = __currentKey; } " << GetIncrementAssignment( fields, "1" ) << "; }" 
+				<< "END		{ " << GetPrintCommand( fields, "__foundKey", "1" ) << "; }"
+				<< "'";
+	}
 
 	// command << sortCommand;
 

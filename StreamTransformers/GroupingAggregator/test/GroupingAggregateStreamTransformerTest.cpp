@@ -432,11 +432,11 @@ void GroupingAggregateStreamTransformerTest::testAggregateFieldsSortOptimization
 	// now do it without the sort; we will get the groups that occur in order
 	parameters["skipSort"] = "true";
 	expected.str("");
-	expected << "key,data" << std::endl
-			 << "1," << 11+12+13+14 << ',' << (11+12+13+14)/4.0f << std::endl
-			 << "2," << 21+22+23 << ',' << (21+22+23)/3.0f << std::endl
+	expected << "key,data,avg_data" << std::endl
+			 << "1," << 11+12+13+14 << ',' << (11+12+13+14)/4 << std::endl
+			 << "2," << 21+22+23 << ',' << (21+22+23)/3 << std::endl
 			 << "1,15" << ',' << 15 << std::endl
-			 << "2," << 24+25 << ',' << (24+25)/2.0f << std::endl;
+			 << "2," << 24+25 << ',' << (24+25)/2 << std::endl;
 	pResult = AggregateFields( inputStream, parameters );
 	CPPUNIT_ASSERT( pResult != NULL );
 	CPPUNIT_ASSERT_EQUAL( expected.str(), pResult->str() );
