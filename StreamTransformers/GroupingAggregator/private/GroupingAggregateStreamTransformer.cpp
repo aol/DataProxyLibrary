@@ -615,34 +615,39 @@ boost::shared_ptr< std::stringstream > AggregateFields( std::istream& i_rInputSt
 	std::string sortCommand;
 	ParseFieldOrder( keys, fields, headerFields, skipSort, tempDirectory, keyFields, orderCommand, sortCommand );
 	command << orderCommand;
-	// << sortCommand;
 
 	// form the awk command
-	// std::string printCommand = GetPrintCommand( fields );
-	// command << "awk -F, 'BEGIN { print \"" << outputHeader << "\"; " << GetInitAssignment( fields ) << " } { ";
-	// command << "__currentKey = " << keyFields << "; "
-	// 		<< "if( __count == 0 ) { __prevKey = __currentKey; } "
-	// 		<< "else if( __currentKey != __prevKey ) { " << printCommand << " "
-	// 		<< "__count = 1; __prevKey = __currentKey; "
-	// 		<< GetInitAssignment( fields ) << " "
-	// 		<< "}"
-	// 		<< GetIncrementAssignment( fields ) << " "
-	// 		<< "__count++; } "
-	// 		<< "END { if( __result != 0 ) { exit __result; }" << printCommand << " }'";
+	// skipsort == false means full aggregation of data (memory-intensive)
+	// skipsort == true  means that we skip grouping to save awk memory
 
 	if (!skipSort)
 	{
-		command << "awk -F, 'BEGIN {  print \"" << outputHeader << "\"; } { __currentKey = " << keyFields << "; if (__currentKey in __foundKey) { " << GetIncrementAssignment( fields, "__currentKey" )
-				<< "; } else { " << " __foundKey[__currentKey] = __currentKey; " << GetInitAssignment( fields, "__currentKey" ) << "; "
-				<< GetIncrementAssignment( fields, "__currentKey" ) << "; } } "
-				<< "END { for (var in __foundKey) " << GetPrintCommand( fields, "__foundKey", "var") << "; }'";
+		command << "awk -F, '"
+				<< "BEGIN	{ 	print \"" << outputHeader << "\"; } "
+				<< "		{ 	__currentKey = " << keyFields << "; "
+				<< "			if (__currentKey in __foundKey) "
+				<< "			{ "
+				<<					GetIncrementAssignment( fields, "__currentKey" ) << "; " 
+				<< "			} "
+				<< "			else " 
+				<< "			{ " 
+				<< "				__foundKey[__currentKey] = __currentKey; " << GetInitAssignment( fields, "__currentKey" ) << "; " 
+				<< 					GetIncrementAssignment( fields, "__currentKey" ) << "; "
+				<< "			} " 
+				<< "		} "
+				<< "END 	{	for (var in __foundKey) " << GetPrintCommand( fields, "__foundKey", "var") << "; }'";
 	}
 	else 
 	{
 		command << "awk -F, '"
-				<< "BEGIN   { print \"" << outputHeader << "\"; } " 
-				<< "NR == 1 { __prevKey = " << keyFields << ";  __foundKey[1] = __prevKey; " << GetInitAssignment( fields, "1") << "; }"
-				<< "		{ __currentKey = " << keyFields << "; if (__prevKey != __currentKey) { " << GetPrintCommand( fields, "__foundKey", "1" ) << "; " << GetInitAssignment( fields, "1" ) << "; __prevKey = __currentKey; __foundKey[1] = __currentKey; } " << GetIncrementAssignment( fields, "1" ) << "; }" 
+				<< "BEGIN 	{	print \"" << outputHeader << "\"; } " 
+				<< "NR == 1	{	__prevKey = " << keyFields << ";  __foundKey[1] = __prevKey; " << GetInitAssignment( fields, "1") << "; }"
+				<< "		{	__currentKey = " << keyFields << "; " 
+				<< "			if (__prevKey != __currentKey) " 
+				<< "			{ "	
+				<< 					GetPrintCommand( fields, "__foundKey", "1" ) << "; " << GetInitAssignment( fields, "1" ) << "; "
+				<< "				__prevKey = __currentKey; __foundKey[1] = __currentKey; } " << GetIncrementAssignment( fields, "1" ) << "; "
+				<< "			} " 
 				<< "END		{ " << GetPrintCommand( fields, "__foundKey", "1" ) << "; }"
 				<< "'";
 	}
