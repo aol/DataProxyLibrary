@@ -460,7 +460,7 @@ void GroupingAggregateStreamTransformerTest::testAggregateFieldsSortOptimization
 	inputStream.seekg( 0 );
 
 	// now do it without the sort; we will get the groups that occur in order
-	parameters["skipSort"] = "true";
+	parameters["skipGroup"] = "true";
 	expected.str("");
 	expected << "key,data,avg_data" << std::endl
 			 << "1," << 11+12+13+14 << ',' << (11+12+13+14)/4 << std::endl
