@@ -61,7 +61,7 @@ namespace
 			dataField.SetValue< Name >( fieldIter->substr(0, nameEnd) );
 			dataField.SetValue< ColumnName >( dataField.GetValue< Name >() );
 			boost::trim( dataField.GetReference< ColumnName >() );
-			dataField.SetValue< AwkType >( "%i" );
+			dataField.SetValue< AwkType >( "%s" );
 			dataField.SetValue< Output >( "%v" );
 
 			// if there is additional configuration for this field, parse it
