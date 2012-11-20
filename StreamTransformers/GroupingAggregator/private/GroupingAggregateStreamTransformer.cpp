@@ -364,7 +364,6 @@ namespace
 		std::stringstream fields;
 		result << "printf(\"%s";
 		std::vector< Field >::const_iterator iter = i_rFields.begin();
-		//fields << i_rIndexName;
 		for( ; iter != i_rFields.end(); ++iter )
 		{
 			std::string outputColumn = iter->GetValue< Output >();
@@ -520,27 +519,35 @@ boost::shared_ptr< std::stringstream > AggregateFields( std::istream& i_rInputSt
 				<< "		{ 	__currentKey = " << keyFields << "; "
 				<< "			if (__currentKey in __foundKey) "
 				<< "			{ "
-				<<					GetIncrementAssignment( fields, "__currentKey" ) << "; " 
+				<<					GetIncrementAssignment( fields, "__currentKey" ) << "; "
 				<< "			} "
-				<< "			else " 
-				<< "			{ " 
-				<< "				__foundKey[__currentKey] = __currentKey; " << GetInitAssignment( fields, "__currentKey" ) << "; " 
+				<< "			else "
+				<< "			{ "
+				<< "				__foundKey[__currentKey] = __currentKey; " 
+				<< 					GetInitAssignment( fields, "__currentKey" ) << "; " 
 				<< 					GetIncrementAssignment( fields, "__currentKey" ) << "; "
-				<< "			} " 
+				<< "			} "
 				<< "		} "
 				<< "END 	{	for (__var in __foundKey) " << GetPrintCommand( fields, "__foundKey", "__var") << "; }'";
 	}
 	else 
 	{
 		command << "awk -F, '"
-				<< "BEGIN 	{	print \"" << outputHeader << "\"; } " 
-				<< "NR == 1	{	__prevKey = " << keyFields << ";  __foundKey[" << SKIP_GROUP_KEY << "] = __prevKey; " << GetInitAssignment( fields, SKIP_GROUP_KEY) << "; }"
+				<< "BEGIN 	{	print \"" << outputHeader << "\"; } "
+				<< "NR == 1	{	__prevKey = " << keyFields << ";  "
+				<< "			__foundKey[" << SKIP_GROUP_KEY << "] = __prevKey; "
+				<< 				GetInitAssignment( fields, SKIP_GROUP_KEY) << "; " 
+				<< "		}"
 				<< "		{	__currentKey = " << keyFields << "; " 
-				<< "			if (__prevKey != __currentKey) " 
+				<< "			if (__prevKey != __currentKey) "
 				<< "			{ "	
-				<< 					GetPrintCommand( fields, "__foundKey", SKIP_GROUP_KEY ) << "; " << GetInitAssignment( fields, SKIP_GROUP_KEY ) << "; "
-				<< "				__prevKey = __currentKey; __foundKey[" << SKIP_GROUP_KEY << "] = __currentKey; } " << GetIncrementAssignment( fields, SKIP_GROUP_KEY ) << "; "
+				<< 					GetPrintCommand( fields, "__foundKey", SKIP_GROUP_KEY ) << "; "
+				<< 					GetInitAssignment( fields, SKIP_GROUP_KEY ) << "; "
+				<< "				__prevKey = __currentKey; " 
+				<< "				__foundKey[" << SKIP_GROUP_KEY << "] = __currentKey; "
 				<< "			} " 
+				<< 				GetIncrementAssignment( fields, SKIP_GROUP_KEY ) << "; "
+				<< "		} "
 				<< "END		{ " << GetPrintCommand( fields, "__foundKey", SKIP_GROUP_KEY ) << "; }"
 				<< "'";
 	}
