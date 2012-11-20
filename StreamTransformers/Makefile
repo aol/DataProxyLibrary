@@ -3,6 +3,7 @@ TRANSFORMERS=\
 	Blackout \
 	ColumnAppender \
 	ColumnFormatter \
+	GroupingAggregator \
 	Seeder \
 	SelfDescribingStreamHeader \
 	Shell \
