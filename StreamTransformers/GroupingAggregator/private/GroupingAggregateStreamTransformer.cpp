@@ -47,6 +47,7 @@ namespace
 	const std::string SKIP_DEFAULT( "false" );
 	const std::string TEMP_DIRECTORY( "tempDir" );
 	const std::string TEMP_DEFAULT( "/tmp" );
+	const std::string SKIP_GROUP_KEY( "1" );
 
 	const std::string COMMA( "," );
 	const std::string COLON( ":" );
@@ -533,14 +534,14 @@ boost::shared_ptr< std::stringstream > AggregateFields( std::istream& i_rInputSt
 	{
 		command << "awk -F, '"
 				<< "BEGIN 	{	print \"" << outputHeader << "\"; } " 
-				<< "NR == 1	{	__prevKey = " << keyFields << ";  __foundKey[1] = __prevKey; " << GetInitAssignment( fields, "1") << "; }"
+				<< "NR == 1	{	__prevKey = " << keyFields << ";  __foundKey[" << SKIP_GROUP_KEY << "] = __prevKey; " << GetInitAssignment( fields, SKIP_GROUP_KEY) << "; }"
 				<< "		{	__currentKey = " << keyFields << "; " 
 				<< "			if (__prevKey != __currentKey) " 
 				<< "			{ "	
-				<< 					GetPrintCommand( fields, "__foundKey", "1" ) << "; " << GetInitAssignment( fields, "1" ) << "; "
-				<< "				__prevKey = __currentKey; __foundKey[1] = __currentKey; } " << GetIncrementAssignment( fields, "1" ) << "; "
+				<< 					GetPrintCommand( fields, "__foundKey", SKIP_GROUP_KEY ) << "; " << GetInitAssignment( fields, SKIP_GROUP_KEY ) << "; "
+				<< "				__prevKey = __currentKey; __foundKey[" << SKIP_GROUP_KEY << "] = __currentKey; } " << GetIncrementAssignment( fields, SKIP_GROUP_KEY ) << "; "
 				<< "			} " 
-				<< "END		{ " << GetPrintCommand( fields, "__foundKey", "1" ) << "; }"
+				<< "END		{ " << GetPrintCommand( fields, "__foundKey", SKIP_GROUP_KEY ) << "; }"
 				<< "'";
 	}
 
