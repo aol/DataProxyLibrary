@@ -27,6 +27,9 @@ namespace TransformerUtilities
 								 const std::map< std::string, std::string >& i_rParameters,
 								 Nullable< std::string > i_rDefaultValue = null );
 	
+	const Nullable< std::string > GetNullableValue( const std::string& i_rKey,
+											const std::map< std::string, std::string >& i_rParameters );
+	
 	bool GetValueAsBool( const std::string& i_rKey,
 						 const std::map< std::string, std::string >& i_rParameters,
 						 Nullable< std::string > i_rDefaultValue = null );

@@ -50,9 +50,6 @@ void GroupingAggregateStreamTransformerTest::testMissingParameters()
 		".*\\.cpp:\\d+: Attempted to fetch missing required parameter: 'timeout'" );
 
 	parameters["timeout"] = "5";
-	parameters.erase( "key" );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), TransformerUtilitiesException,
-		".*\\.cpp:\\d+: Attempted to fetch missing required parameter: 'key'" );
 
 	parameters["key"] = "key1";
 	parameters.erase( "fields" );
@@ -234,9 +231,6 @@ void GroupingAggregateStreamTransformerTest::testBadFields()
 	parameters["key"] = "";
 	parameters["fields"] = "data1: output(0)";
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), GroupingAggregateStreamTransformerException,
-		".*\\.cpp:\\d+: No keys have been specified" );
-
 	parameters["key"] = "key1";
 	parameters["fields"] = "";
 
@@ -395,7 +389,8 @@ void GroupingAggregateStreamTransformerTest::testAggregateFieldsNoColumnManipula
 	CPPUNIT_ASSERT_UNORDERED_CONTENTS( expected.str(), pResult->str(), true );
 }
 
-void GroupingAggregateStreamTransformerTest::testOnlyHeaderNoDataLines() {
+void GroupingAggregateStreamTransformerTest::testOnlyHeaderNoDataLines() 
+{
 	std::stringstream inputStream;
 	inputStream << "key,data" << std::endl;
 	
@@ -417,12 +412,43 @@ void GroupingAggregateStreamTransformerTest::testOnlyHeaderNoDataLines() {
 	expected.str("");	
 
 	// now do it without the sort
-	parameters["skipSort"] = "true"; 
+	parameters["skipGroup"] = "true"; 
 	expected << "key,data" << std::endl;
 	pResult = AggregateFields( inputStream, parameters );
 	CPPUNIT_ASSERT( pResult != NULL );
 	CPPUNIT_ASSERT_EQUAL( expected.str(), pResult->str() );
 
+}
+
+void GroupingAggregateStreamTransformerTest::testNoKeyData() 
+{
+	std::stringstream inputStream;
+	inputStream << "data,data2" << std::endl
+				<< "1,11" << std::endl
+				<< "1,12" << std::endl
+				<< "1,13" << std::endl
+				<< "1,14" << std::endl
+				<< "2,21" << std::endl
+				<< "2,22" << std::endl
+				<< "2,23" << std::endl
+				<< "1,15" << std::endl
+				<< "2,24" << std::endl
+				<< "2,25" << std::endl;
+	
+	std::map<std::string, std::string> parameters;
+	parameters["noKeys"] = "true";
+	parameters["timeout"] = "5";
+	parameters["fields"] = "data: op(%a+=%v) rename(sum_data),\n"
+							"data2: op(%a+=%v) output(),\n"
+							"NR: op(%a++) output(),\n"
+							"avg_data2: output(data2[%k]/_NR[%k])\n";
+
+	std::stringstream expected;
+	expected << "sum_data,avg_data2" << std::endl
+			<< 1+1+1+1+2+2+2+1+2+2 << "," << (11+12+13+14+15+21+22+23+24+25)/10.0f << std::endl;
+	boost::shared_ptr< std::stringstream > pResult = AggregateFields( inputStream, parameters );
+	CPPUNIT_ASSERT( pResult != NULL );
+	CPPUNIT_ASSERT_EQUAL( expected.str(), pResult->str() );
 }
 
 void GroupingAggregateStreamTransformerTest::testAggregateFieldsSortOptimization()

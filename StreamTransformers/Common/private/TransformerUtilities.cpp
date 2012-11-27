@@ -25,6 +25,16 @@ const std::string& TransformerUtilities::GetValue( const std::string& i_rKey, co
 	return findIter->second;
 }
 
+const Nullable< std::string > TransformerUtilities::GetNullableValue( const std::string& i_rKey, const std::map< std::string, std::string >& i_rParameters )
+{
+	std::map< std::string, std::string >::const_iterator findIter = i_rParameters.find( i_rKey );
+	if( findIter == i_rParameters.end() ) 
+	{
+		return null; 
+	}
+	return findIter->second; 
+}
+
 bool TransformerUtilities::GetValueAsBool( const std::string& i_rKey, const std::map< std::string, std::string >& i_rParameters, Nullable< std::string > i_rDefaultValue )
 {
 	std::string resultString = GetValue( i_rKey, i_rParameters, i_rDefaultValue );

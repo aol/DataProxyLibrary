@@ -24,5 +24,6 @@ extern "C"
 	boost::shared_ptr< std::stringstream > AggregateFields( std::istream& i_rInputStream, const std::map< std::string, std::string >& i_rParameters );
 }
 
+
 #endif //_GROUPING_AGGREGATE_STREAM_TRANSFORMER_HPP_
 
