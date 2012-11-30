@@ -93,13 +93,12 @@ THPPFILES=\
 TESTFILES=\
 	main.cpp \
 	TransformerUtilitiesTest.cpp \
+	AwkUtilitiesTest.cpp \
 
 # The following files need to be built in order to create an independent shared object library
 UTILITYFILES=\
 	MVException.cpp \
 	Nullable.cpp \
-	ShellExecutor.cpp \
-	Stopwatch.cpp \
 	StringUtilities.cpp \
 
 # Creating explicit paths to sets of source files

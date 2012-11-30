@@ -9,6 +9,7 @@
 // UPDATED BY:      $Author$
 
 #include "AwkUtilities.hpp"
+#include <stdexcept>
 #include <boost/regex.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/lexical_cast.hpp>
@@ -66,7 +67,7 @@ namespace AwkUtilities
 	{
 		bool insideParen = false;
 		int count = 0;
-		int startingIndex = 0;
+		size_t startingIndex = 0;
 		for( size_t i=0; i<i_rInput.size(); ++i )
 		{
 			// if we find an open paren, ensure insideParen is true & increment the count
@@ -106,9 +107,13 @@ namespace AwkUtilities
 	// takes the integer value and prefixes it with a dollar sign
 	std::string AwkIndexFormat( int i_AwkIndex )
 	{
+		if( i_AwkIndex < 0 )
+		{
+			MV_THROW( AwkUtilitiesException, "Field indices must be a positive value: " << i_AwkIndex );
+		}
 		return std::string("$") + boost::lexical_cast< std::string >( i_AwkIndex );
 	}
-
+	
 	// returns the awk-index (starts from 1, prefixed with '$') of the particular value, or undefined if missing
 	std::string IndexOf( const std::vector< std::string >& i_rVector, const std::string& i_rValue )
 	{
