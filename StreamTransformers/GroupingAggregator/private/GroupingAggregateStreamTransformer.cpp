@@ -48,7 +48,6 @@ namespace
 	const std::string TEMP_DIRECTORY( "tempDir" );
 	const std::string TEMP_DEFAULT( "/tmp" );
 	const std::string SKIP_GROUP_KEY( "1" );
-	const std::string NO_KEYS_FAKE_KEY( "1" ); 
 
 	const std::string COMMA( "," );
 	const std::string COLON( ":" );
@@ -64,29 +63,13 @@ namespace
 	const boost::regex MODIFY_REGEX( "modify\\((.+)\\)" );
 	const boost::regex OUTPUT_REGEX( "output\\((.*)\\)" );
 	
-	void ParseFields( const std::map< std::string, std::string >&, std::vector< Field >&, bool );
-	void ParseFields( const std::map< std::string, std::string >&, std::vector< Field >&, bool, bool& );
-	
-	// function responsible for parsing fields, and setting the configuration based on the input parameters. 
-	void ParseFields( const std::map< std::string, std::string >& i_rParameters, std::vector< Field >& o_rFields, bool i_IsKey )
-	{
-		if( i_IsKey )
-		{
-			MV_THROW( GroupingAggregateStreamTransformerException, "Parsing key fields requires using ParseFields( const std::map< std::string, std::string >&, std::vector< Field >&, bool, bool& )");  
-		}
-		else
-		{
-			bool temp;
-			ParseFields( i_rParameters, o_rFields, false, temp );
-		}
-	}
-	
 	// function responsible for parsing fields and keys, and setting the configuration based on the input parameters.
-	// sets o_rKeyExists to key existence  
-	void ParseFields( const std::map< std::string, std::string >& i_rParameters, std::vector< Field >& o_rFields, bool i_IsKey, bool& o_rKeyExists )
+	// returns null for non-key fields 
+	Nullable< bool > ParseFields( const std::map< std::string, std::string >& i_rParameters, std::vector< Field >& o_rFields, bool i_IsKey )
 	{
 		std::vector< std::string > fields;
 		std::string fieldString;
+		Nullable< bool > keyExists = null; 
 	
 		if( i_IsKey )
 		{
@@ -94,12 +77,11 @@ namespace
 			if( !keyValue.IsNull() ) 
 			{
 				fieldString = keyValue; 
-				o_rKeyExists = true;
+				keyExists = true;
 			}
 			else
 			{
-				o_rKeyExists = false;
-				return; 
+				return false; 
 			}
 		}
 		else
@@ -221,6 +203,8 @@ namespace
 			}
 			MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.GroupingAggregator.AggregateFields.FieldDetails", message.str() );
 		}
+		
+		return keyExists;
 	}
 	
 	// function to determine whether columns will have to be re-ordered.  This will return true if one of the following is true:
@@ -232,9 +216,6 @@ namespace
 
 		std::stringstream names;
 		std::stringstream indices;
-		
-		size_t minKeyIndex;
-		size_t maxKeyIndex;
 		
 		std::set< size_t > keyIndices;
 		std::vector< Field >::const_iterator fieldIter = i_rKeys.begin();
@@ -265,8 +246,8 @@ namespace
 		
 		if( i_rKeys.size() > 0 ) 
 		{
-			minKeyIndex = *keyIndices.begin();		
-			maxKeyIndex = *keyIndices.rbegin();
+			size_t minKeyIndex = *keyIndices.begin();		
+			size_t maxKeyIndex = *keyIndices.rbegin();
 			if( minKeyIndex + keyIndices.size()-1 != maxKeyIndex )
 			{
 				MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.GroupingAggregator.AggregateFields.NeedColumnManipulation.KeyOrdering",
@@ -391,10 +372,6 @@ namespace
 				keyFields << fieldIter->GetValue< AwkIndex >();
 			}
 		}
-		else 
-		{
-			keyFields << NO_KEYS_FAKE_KEY;
-		}
 
 		o_rKeyFields = keyFields.str();
 	}
@@ -424,7 +401,7 @@ namespace
 		return result.str();
 	}
 	
-	std::string GetPrintCommandNoKey( const std::vector< Field >& i_rFields, const std::string& i_rIndexName )
+	std::string GetPrintCommandNoKeys( const std::vector< Field >& i_rFields )
 	{
 		std::stringstream result;
 		std::stringstream fields;
@@ -437,8 +414,7 @@ namespace
 			{
 				continue;
 			}
-			boost::replace_all( outputColumn, AGGREGATE_VALUE_FORMATTER, iter->GetValue< VarName >() + "[" + i_rIndexName + "]" );
-			boost::replace_all( outputColumn, KEY_VALUE_FORMATTER, i_rIndexName );
+			boost::replace_all( outputColumn, AGGREGATE_VALUE_FORMATTER, iter->GetValue< VarName >() );
 			result << iter->GetValue< AwkType >();
 			if( std::distance(iter, i_rFields.end()) > 1 )
 			{
@@ -451,6 +427,19 @@ namespace
 		return result.str();
 	}
 	
+	// we will have to call the init assignment at the beginning of the function,
+	// as well as whenever we move onto the next key, so our aggregations start
+	// from the requested value every time
+	std::string GetInitAssignment( const std::vector< Field >& i_rFields )
+	{
+		std::stringstream result;
+		std::vector< Field >::const_iterator iter = i_rFields.begin();
+		for( ; iter != i_rFields.end(); ++iter )
+		{
+			result << iter->GetValue< VarName >() << " = " << iter->GetValue< InitValue >() << "; ";
+		}
+		return result.str();
+	}
 
 	// we will have to call the init assignment whenever we find a new key, so our aggregations start
 	// from the requested value every time
@@ -461,6 +450,26 @@ namespace
 		for( ; iter != i_rFields.end(); ++iter )
 		{
 			result << iter->GetValue< VarName >() << "[" << i_rIndexName << "] = " << iter->GetValue< InitValue >() << "; ";
+		}
+		return result.str();
+	}
+	
+	// every time we process a row, we have to perform operations on the
+	// appropriate aggregations.
+	std::string GetIncrementAssignment( const std::vector< Field >& i_rFields )
+	{
+		std::stringstream result;
+		std::vector< Field >::const_iterator iter = i_rFields.begin();
+		for( ; iter != i_rFields.end(); ++iter )
+		{
+			std::string operation = iter->GetValue< Operation >();
+			if( operation.empty() )
+			{
+				continue;
+			}
+			boost::replace_all( operation, NEW_VALUE_FORMATTER, iter->GetValue< AwkIndex >() );
+			boost::replace_all( operation, AGGREGATE_VALUE_FORMATTER, iter->GetValue< VarName >() );
+			result << operation << "; ";
 		}
 		return result.str();
 	}
@@ -535,12 +544,11 @@ boost::shared_ptr< std::stringstream > AggregateFields( std::istream& i_rInputSt
 	bool skipGroup = TransformerUtilities::GetValueAsBool( SKIP_GROUP, i_rParameters, SKIP_DEFAULT );
 	std::string tempDirectory = TransformerUtilities::GetValue( TEMP_DIRECTORY, i_rParameters, TEMP_DEFAULT );
 
-	// parse out required key columns
+	// parse out required key columns (and see if the key exists)
 	std::vector< Field > keys;
-	ParseFields( i_rParameters, keys, true, keysExist );
+	keysExist = ParseFields( i_rParameters, keys, true );
 	
 	// parse out fields & their operations
-	// noKeys set above! 
 	std::vector< Field > fields;
 	ParseFields( i_rParameters, fields, false );
 
@@ -586,7 +594,7 @@ boost::shared_ptr< std::stringstream > AggregateFields( std::istream& i_rInputSt
 	// skipGroup == false means full aggregation of data (memory-intensive)
 	// skipGroup == true  means that we skip grouping to save awk memory
 
-	if ( !skipGroup && keysExist )
+	if ( !skipGroup && keysExist ) // Normal case
 	{
 		command << "awk -F, '"
 				<< "BEGIN	{ 	print \"" << outputHeader << "\"; } "
@@ -604,6 +612,15 @@ boost::shared_ptr< std::stringstream > AggregateFields( std::istream& i_rInputSt
 				<< "		} "
 				<< "END 	{	for (__var in __foundKey) " << GetPrintCommand( fields, "__foundKey", "__var") << "; }'";
 	}
+	else if (!keysExist) 
+	{
+		command << "awk -F, '"
+				<< "BEGIN 	{	print \"" << outputHeader << "\"; } "
+				<< "NR == 1	{"	<< GetInitAssignment( fields ) << "; }"
+				<< "		{ "	<< GetIncrementAssignment( fields ) << "; }"
+				<< "END		{ " << GetPrintCommandNoKeys( fields ) << "; }"
+				<< "'";
+	}
 	else
 	{
 		command << "awk -F, '"
@@ -615,14 +632,14 @@ boost::shared_ptr< std::stringstream > AggregateFields( std::istream& i_rInputSt
 				<< "		{	__currentKey = " << keyFields << "; " 
 				<< "			if (__prevKey != __currentKey) "
 				<< "			{ "	
-				<< 					(keysExist ? GetPrintCommand( fields, "__foundKey", SKIP_GROUP_KEY ) : GetPrintCommandNoKey( fields, SKIP_GROUP_KEY )) << "; "
+				<< 					GetPrintCommand( fields, "__foundKey", SKIP_GROUP_KEY ) << "; "
 				<< 					GetInitAssignment( fields, SKIP_GROUP_KEY ) << "; "
 				<< "				__prevKey = __currentKey; " 
 				<< "				__foundKey[" << SKIP_GROUP_KEY << "] = __currentKey; "
 				<< "			} " 
 				<< 				GetIncrementAssignment( fields, SKIP_GROUP_KEY ) << "; "
 				<< "		} "
-				<< "END		{ " << (keysExist ? GetPrintCommand( fields, "__foundKey", SKIP_GROUP_KEY ) : GetPrintCommandNoKey( fields, SKIP_GROUP_KEY )) << "; }"
+				<< "END		{ " << GetPrintCommand( fields, "__foundKey", SKIP_GROUP_KEY ) << "; }"
 				<< "'";
 	}
 

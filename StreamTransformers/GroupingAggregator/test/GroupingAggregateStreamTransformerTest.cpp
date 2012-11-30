@@ -417,7 +417,6 @@ void GroupingAggregateStreamTransformerTest::testOnlyHeaderNoDataLines()
 	pResult = AggregateFields( inputStream, parameters );
 	CPPUNIT_ASSERT( pResult != NULL );
 	CPPUNIT_ASSERT_EQUAL( expected.str(), pResult->str() );
-
 }
 
 void GroupingAggregateStreamTransformerTest::testNoKeyData() 
@@ -436,16 +435,38 @@ void GroupingAggregateStreamTransformerTest::testNoKeyData()
 				<< "2,25" << std::endl;
 	
 	std::map<std::string, std::string> parameters;
-	parameters["noKeys"] = "true";
 	parameters["timeout"] = "5";
 	parameters["fields"] = "data: op(%a+=%v) rename(sum_data),\n"
 							"data2: op(%a+=%v) output(),\n"
 							"NR: op(%a++) output(),\n"
-							"avg_data2: output(data2[%k]/_NR[%k])\n";
+							"avg_data2: output(data2/_NR)\n";
 
 	std::stringstream expected;
 	expected << "sum_data,avg_data2" << std::endl
 			<< 1+1+1+1+2+2+2+1+2+2 << "," << (11+12+13+14+15+21+22+23+24+25)/10.0f << std::endl;
+	boost::shared_ptr< std::stringstream > pResult = AggregateFields( inputStream, parameters );
+	CPPUNIT_ASSERT( pResult != NULL );
+	CPPUNIT_ASSERT_EQUAL( expected.str(), pResult->str() );
+}
+
+void GroupingAggregateStreamTransformerTest::testNoKeyDataSingleColumn()
+{
+	std::stringstream inputStream;
+	inputStream << "data" << std::endl
+				<< "10" << std::endl
+				<< "11" << std::endl
+				<< "12" << std::endl
+				<< "13" << std::endl
+				<< "20" << std::endl;
+				
+	std::map<std::string, std::string> parameters;
+	parameters["timeout"] = "5";
+	parameters["fields"] = "data: op(%a+=%v) rename(sum_data),\n";
+	
+	std::stringstream expected;
+	expected << "sum_data" << std:: endl
+			<< 10+11+12+13+20 << std::endl;
+			
 	boost::shared_ptr< std::stringstream > pResult = AggregateFields( inputStream, parameters );
 	CPPUNIT_ASSERT( pResult != NULL );
 	CPPUNIT_ASSERT_EQUAL( expected.str(), pResult->str() );
