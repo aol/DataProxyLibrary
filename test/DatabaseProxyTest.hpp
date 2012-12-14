@@ -79,6 +79,9 @@ private:
 	CPPUNIT_TEST( testDeleteSameVarNameReplacedTwice );
 	CPPUNIT_TEST( testDeleteExceptionMissingVariableNameDefinition );
 	CPPUNIT_TEST( testDeleteExceptionEmptyVarName );
+	
+	CPPUNIT_TEST( testOracleStagingTableSpecifiedByParameter );
+	CPPUNIT_TEST( testMySqlStagingTableSpecifiedByParameter );
 
 	CPPUNIT_TEST_SUITE_END();
 
@@ -146,6 +149,9 @@ public:
 	void testOracleStoreNoStagingWithMaxColumnLength();
 	void testOracleStoreWithStagingWithMaxColumnLength();
 	void testMySQLStoreWithStagingWithMaxColumnLength();
+	
+	void testOracleStagingTableSpecifiedByParameter(); 
+	void testMySqlStagingTableSpecifiedByParameter(); 
 
 private:
 	boost::shared_ptr<TempDirectory> m_pTempDir;
