@@ -829,19 +829,18 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 	// if we're in per-row insert mode...
 	if( m_WriteStagingTable.empty() )
 	{
-		std::string table = m_WriteTable;
-		std::string mysqlMergeQuery = m_WriteMySqlMergeQuery;
-		std::string oracleMergeQuery = m_WriteOracleMergeQuery;
+		std::string mysqlMergeQuery = ProxyUtilities::GetVariableSubstitutedString( m_WriteMySqlMergeQuery, i_rParameters );
+		std::string oracleMergeQuery = ProxyUtilities::GetVariableSubstitutedString( m_WriteOracleMergeQuery, i_rParameters );
 		std::string databaseType;
+		std::string table;
 		if( m_WriteConnectionByTable )
 		{
-			mysqlMergeQuery = ProxyUtilities::GetVariableSubstitutedString( mysqlMergeQuery, i_rParameters );
-			oracleMergeQuery = ProxyUtilities::GetVariableSubstitutedString( oracleMergeQuery, i_rParameters );
 			table = ProxyUtilities::GetVariableSubstitutedString( m_WriteConnectionName, i_rParameters );
 			databaseType = m_rDatabaseConnectionManager.GetDatabaseTypeByTable( table );
 		}
 		else
 		{
+			table = ProxyUtilities::GetVariableSubstitutedString( m_WriteTable, i_rParameters );
 			databaseType = m_rDatabaseConnectionManager.GetDatabaseType( m_WriteConnectionName );
 		}
 		std::string sql( databaseType == ORACLE_DB_TYPE ? oracleMergeQuery : mysqlMergeQuery );
@@ -976,32 +975,27 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			// get the database connections needed
 			boost::scoped_ptr< ScopedTempTable > pTempTable;
 			Database& rDataDefinitionDatabase = GetDataDefinitionConnection( m_WriteConnectionName, m_WriteConnectionByTable, m_rDatabaseConnectionManager, i_rParameters );
-			std::string table = m_WriteTable;
-			std::string stagingTable = m_WriteStagingTable;
-			std::string mysqlMergeQuery = m_WriteMySqlMergeQuery;
-			std::string oracleMergeQuery = m_WriteOracleMergeQuery;
+			std::string stagingTable = ProxyUtilities::GetVariableSubstitutedString( m_WriteStagingTable, i_rParameters );
+			std::string mysqlMergeQuery = ProxyUtilities::GetVariableSubstitutedString( m_WriteMySqlMergeQuery, i_rParameters );
+			std::string oracleMergeQuery = ProxyUtilities::GetVariableSubstitutedString( m_WriteOracleMergeQuery, i_rParameters );
+			std::string table;
 			std::string databaseType;
 			
 			if( m_WriteConnectionByTable )
 			{
+				table = ProxyUtilities::GetVariableSubstitutedString( m_WriteConnectionName, i_rParameters );
 				databaseType = m_rDatabaseConnectionManager.GetDatabaseTypeByTable( table );
 			}
 			else
 			{
+				table = ProxyUtilities::GetVariableSubstitutedString( m_WriteTable, i_rParameters );
 				databaseType = m_rDatabaseConnectionManager.GetDatabaseType( m_WriteConnectionName );
 			}
-			
+						
 			// if we're dynamically creating a staging table, create one via a data-definition connection, and set the staging table name
 			if( m_WriteDynamicStagingTable )
 			{
 				pTempTable.reset( new ScopedTempTable( rDataDefinitionDatabase, databaseType, table, stagingTable ) );
-			}
-			else
-			{
-				stagingTable = ProxyUtilities::GetVariableSubstitutedString( stagingTable, i_rParameters );
-				mysqlMergeQuery = ProxyUtilities::GetVariableSubstitutedString( mysqlMergeQuery, i_rParameters );
-				oracleMergeQuery = ProxyUtilities::GetVariableSubstitutedString( oracleMergeQuery, i_rParameters );
-				table = ProxyUtilities::GetVariableSubstitutedString( m_WriteConnectionName, i_rParameters );
 			}
 
 			// obtain a write-lock for entire manipulation
