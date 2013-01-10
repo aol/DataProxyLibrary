@@ -175,6 +175,13 @@ void LocalFileProxy::LoadImpl( const std::map<std::string,std::string>& i_rParam
 		}
 	}
 
+	std::stringstream msg;
+	msg << "Reading data from: " << fileSpec;
+	if( FileUtilities::IsSymbolicLink( fileSpec ) )
+	{
+		msg << ", which is a symlink to: " << FileUtilities::GetActualPath( fileSpec );
+	}
+	MVLOGGER( "root.lib.DataProxy.LocalFileProxy.Load.ReadFile", "Reading data from file: " << fileSpec );
 	std::ifstream file( fileSpec.c_str() );
 	if( file.peek() != EOF )
 	{
@@ -185,6 +192,10 @@ void LocalFileProxy::LoadImpl( const std::map<std::string,std::string>& i_rParam
 
 void LocalFileProxy::StoreImpl( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData )
 {
+	// verify that the base directory is [still] there, and that we can write & execute it
+	FileUtilities::ValidateDirectory( m_BaseLocation, W_OK | X_OK );
+
+	// create the destination file spec
 	std::string destinationFileSpec( BuildFileSpec( m_BaseLocation, m_NameFormat, i_rParameters ) );
 	std::string pendingFileSpec;
 	
@@ -200,6 +211,8 @@ void LocalFileProxy::StoreImpl( const std::map<std::string,std::string>& i_rPara
 		MV_THROW( LocalFileProxyException, "Pre-commit file: " << pendingFileSpec << " could not be opened for writing. "
 			<< " eof(): " << file.eof() << ", fail(): " << file.fail() << ", bad(): " << file.bad() );
 	}
+
+	MVLOGGER( "root.lib.DataProxy.LocalFileProxy.Store.WritePendingFile", "Writing data to pre-commit file: " << pendingFileSpec );
 
 	// now write data that was given to us
 	if( i_rData.peek() != EOF )
@@ -298,12 +311,14 @@ void LocalFileProxy::Commit()
 				}
 				else
 				{
+					MVLOGGER( "root.lib.DataProxy.LocalFileProxy.Commit.Delete", "Removing file: " << destinationIter->first );
 					FileUtilities::Remove( destinationIter->first );
 				}
 			}
 			// otherwise, overwrite
 			else
 			{
+				MVLOGGER( "root.lib.DataProxy.LocalFileProxy.Commit.Store", "Moving pre-commit file: " << *destinationIter->second.begin() << " to final destination: " << destinationIter->first );
 				FileUtilities::Move( *destinationIter->second.begin(), destinationIter->first );
 			}
 		}
@@ -327,6 +342,7 @@ void LocalFileProxy::Commit()
 				}
 				else
 				{
+					MVLOGGER( "root.lib.DataProxy.LocalFileProxy.Commit.Delete", "Removing file: " << destinationIter->first );
 					FileUtilities::Remove( destinationIter->first );
 				}
 
@@ -353,6 +369,7 @@ void LocalFileProxy::Commit()
 			bool appending = false;
 			if( FileUtilities::DoesExist( destinationIter->first ) )
 			{
+				MVLOGGER( "root.lib.DataProxy.LocalFileProxy.Commit.Append", "Appending data from file: " << destinationIter->first << " to file: " << destinationCommitFileSpec );
 				std::ifstream input( destinationIter->first.c_str() );
 				if( !input.good() )
 				{
@@ -370,6 +387,7 @@ void LocalFileProxy::Commit()
 			// now go through every temp file and add that data
 			for( ; tempIter != destinationIter->second.end(); tempIter = destinationIter->second.erase( tempIter ) )
 			{
+				MVLOGGER( "root.lib.DataProxy.LocalFileProxy.Commit.Append", "Appending data from file: " << *tempIter << " to file: " << destinationCommitFileSpec );
 				std::ifstream input( tempIter->c_str() );
 				if( !input.good() )
 				{
@@ -395,6 +413,7 @@ void LocalFileProxy::Commit()
 	
 			// finally, move the commit file into the final file
 			destinationCommitFile.close();
+			MVLOGGER( "root.lib.DataProxy.LocalFileProxy.Commit.Store", "Moving pre-commit file: " << destinationCommitFileSpec << " to final destination: " << destinationIter->first );
 			FileUtilities::Move( destinationCommitFileSpec, destinationIter->first );
 	
 			// remove the lockfile and THEN release it
