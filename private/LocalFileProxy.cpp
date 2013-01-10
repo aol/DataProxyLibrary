@@ -181,7 +181,7 @@ void LocalFileProxy::LoadImpl( const std::map<std::string,std::string>& i_rParam
 	{
 		msg << ", which is a symlink to: " << FileUtilities::GetActualPath( fileSpec );
 	}
-	MVLOGGER( "root.lib.DataProxy.LocalFileProxy.Load.ReadFile", "Reading data from file: " << fileSpec );
+	MVLOGGER( "root.lib.DataProxy.LocalFileProxy.Load.ReadFile", msg.str() );
 	std::ifstream file( fileSpec.c_str() );
 	if( file.peek() != EOF )
 	{
