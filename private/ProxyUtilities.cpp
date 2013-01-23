@@ -43,6 +43,7 @@ namespace
 
 	const std::string TYPE_KEY_VALUE( "key" );
 	const std::string TYPE_DATA_VALUE( "data" );
+	const std::string NULLABLE_ATTRIBUTE( "nullable" );
 
 	const std::string DEFAULT_SEPARATOR( ", " );
 
@@ -149,6 +150,7 @@ namespace
 	}
 
 	std::string GetEqualityList( const std::vector< std::string > i_rColumns,
+								 const std::set< std::string > i_rNullableColumns,
 								 const std::string& i_rStagingTable,
 								 const std::string& i_rTable,
 								 const std::string& i_rSeparator = DEFAULT_SEPARATOR )
@@ -164,8 +166,13 @@ namespace
 			// if there is a direct equality...
 			result << "( " << GetPrefixedColumn( *iter, i_rTable ) << " = " << GetPrefixedColumn( *iter, i_rStagingTable, true );
 
-			// or if they're both null!
-			result << " OR " << GetPrefixedColumn( *iter, i_rTable ) << " IS NULL AND " << GetPrefixedColumn( *iter, i_rStagingTable, true ) << " IS NULL )";
+			// or if this is a nullable column & they're both null!
+			if( i_rNullableColumns.find( *iter ) != i_rNullableColumns.end() )
+			{
+				result << " OR ( " << GetPrefixedColumn( *iter, i_rTable ) << " IS NULL AND " << GetPrefixedColumn( *iter, i_rStagingTable, true ) << " IS NULL )";
+			}
+			
+			result << " )";
 		}
 
 		return result.str();
@@ -270,6 +277,28 @@ namespace
 			catch( ... ){}
 		}
 	}
+
+	bool GetBool( const xercesc::DOMNode& i_rNode, const std::string& i_rAttribute, bool i_rDefault )
+	{
+		xercesc::DOMAttr* pAttribute = XMLUtilities::GetAttribute( &i_rNode, i_rAttribute );
+		if( pAttribute == NULL )
+		{
+			return i_rDefault;
+		}
+		std::string value = XMLUtilities::XMLChToString( pAttribute->getValue() );
+		if( value == "true" )
+		{
+			return true;
+		}
+		else if( value == "false" )
+		{
+			return false;
+		}
+		else
+		{
+			MV_THROW( ProxyUtilitiesException, "Write attribute: " << i_rAttribute << " has invalid value: " << value << ". Valid values are 'true' and 'false'" );
+		}
+	}
 }
 
 /* A version of this method has been moved to Utilities/MapUtilites.cpp
@@ -363,6 +392,7 @@ std::string ProxyUtilities::GetMergeQuery( const std::string& i_rDatabaseType,
 	
 	std::vector< std::string > allColumns;
 	std::vector< std::string > keyColumns;
+	std::set< std::string > nullableKeyColumns;
 	std::vector< std::string > valueDataColumns;
 	std::vector< std::string > dataColumns;
 	std::vector< std::string > bindColumns;
@@ -380,6 +410,7 @@ std::string ProxyUtilities::GetMergeQuery( const std::string& i_rDatabaseType,
 	allowedAttributes.insert( NAME_ATTRIBUTE );
 	allowedAttributes.insert( SOURCE_NAME_ATTRIBUTE );
 	allowedAttributes.insert( TYPE_ATTRIBUTE );
+	allowedAttributes.insert( NULLABLE_ATTRIBUTE );
 	allowedAttributes.insert( IF_NEW_ATTRIBUTE );
 	allowedAttributes.insert( IF_MATCHED_ATTRIBUTE );
 	allowedAttributes.insert( LENGTH_ATTRIBUTE );
@@ -435,6 +466,11 @@ std::string ProxyUtilities::GetMergeQuery( const std::string& i_rDatabaseType,
 			if( XMLUtilities::GetAttribute( *iter, IF_NEW_ATTRIBUTE ) != NULL || XMLUtilities::GetAttribute( *iter, IF_MATCHED_ATTRIBUTE ) != NULL )
 			{
 				MV_THROW( ProxyUtilitiesException, "Column: " << name << " is a key and cannot have attributes '" << IF_NEW_ATTRIBUTE << "' or '" << IF_MATCHED_ATTRIBUTE << "'" );
+			}
+
+			if( GetBool( **iter, NULLABLE_ATTRIBUTE, false ) )
+			{
+				nullableKeyColumns.insert( name );
 			}
 			keyColumns.push_back( name );
 			o_rRequiredColumns[ sourceName ] = name;
@@ -533,7 +569,7 @@ std::string ProxyUtilities::GetMergeQuery( const std::string& i_rDatabaseType,
 		std::string resolvedStagingTable = ( i_rStagingTable.empty() ? DUMMY_STAGING : i_rStagingTable );
 		result << "MERGE INTO " << i_rTable
 			   << " USING " << GetDummyQueryIfNeeded( keyColumns, valueDataColumns, i_rStagingTable, &bindColumns ) << resolvedStagingTable
-			   << " ON ( " << GetEqualityList( keyColumns, resolvedStagingTable, i_rTable, " AND " ) << " )";
+			   << " ON ( " << GetEqualityList( keyColumns, nullableKeyColumns, resolvedStagingTable, i_rTable, " AND " ) << " )";
 		if( !ifNewColumns.empty() || ( ifNewColumns.empty() && ifMatchedColumns.empty() ) )
 		{
 			result << " WHEN NOT MATCHED THEN INSERT( "
@@ -579,7 +615,7 @@ std::string ProxyUtilities::GetMergeQuery( const std::string& i_rDatabaseType,
 		std::string resolvedStagingTable = ( i_rStagingTable.empty() ? DUMMY_STAGING : i_rStagingTable );
 		result << "UPDATE " << i_rTable << ", " << GetDummyQueryIfNeeded( keyColumns, valueDataColumns, i_rStagingTable, &bindColumns ) << resolvedStagingTable
 			   << " SET " << GetResolvedEqualityList( ifMatchedColumns, resolvedStagingTable, i_rTable )
-			   << " WHERE " << GetEqualityList( keyColumns, resolvedStagingTable, i_rTable, " AND " );
+			   << " WHERE " << GetEqualityList( keyColumns, nullableKeyColumns, resolvedStagingTable, i_rTable, " AND " );
 	}
 
 	SetOutgoingBindColumns( o_pBindColumns, bindColumns, o_rRequiredColumns );
