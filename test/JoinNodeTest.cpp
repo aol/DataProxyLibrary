@@ -305,24 +305,67 @@ void JoinNodeTest::testInvalidXml()
 
 void JoinNodeTest::testOperationNotSupported()
 {
-	std::stringstream xmlContents;
-	xmlContents << "<JoinNode >" << std::endl
-				<< "</JoinNode>" << std::endl;
-	std::vector<xercesc::DOMNode*> nodes;
-	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
-	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	// case 1: not configured
+	{
+		std::stringstream xmlContents;
+		xmlContents << "<JoinNode >" << std::endl
+					<< "</JoinNode>" << std::endl;
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	MockDataProxyClient client;
+		MockDataProxyClient client;
 
-	JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", client, *nodes[0] );
 
-	std::stringstream results;
-	std::map<std::string,std::string> parameters;
-	parameters["param1"] = "value1";
-	parameters["param2"] = "value2";
+		std::stringstream results;
+		std::map<std::string,std::string> parameters;
+		parameters["param1"] = "value1";
+		parameters["param2"] = "value2";
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.LoadImpl( parameters, results ), JoinNodeException,
-		".*:\\d+: JoinNode: name does not support read operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.LoadImpl( parameters, results ), JoinNodeException,
+			".*:\\d+: JoinNode: name does not support read operations" );
+	}
+
+	// case 2: data doesn't have the requested columns
+	{
+		std::stringstream xmlContents;
+		xmlContents << "<JoinNode >" << std::endl
+					<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <ForwardTo name=\"name1\" key=\"campaign_id\" columns=\"prop1,prop2,prop3,prop4,prop5\" />" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"CAMPAIGNID\" type=\"inner\" />" << std::endl
+					<< "  </Read>" << std::endl
+					<< "</JoinNode>" << std::endl;
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		std::stringstream stream1;
+		std::stringstream stream2;
+		std::stringstream stream3;
+
+		stream1 << "campaign_id,prop1,prop3,prop5,blah" << std::endl
+				<< "1,1a,1b,1c,X" << std::endl
+				<< "2,2a,2b,2c,X" << std::endl
+				<< "3,3a,3b,3c,X" << std::endl;
+		
+		stream2 << "CAMPAIGNID,blah" << std::endl
+				<< "1,Y" << std::endl
+				<< "2,Y" << std::endl
+				<< "3,Y" << std::endl;
+
+		MockDataProxyClient client;
+		client.SetDataToReturn( "name1", stream1.str() );
+		client.SetDataToReturn( "name2", stream2.str() );
+
+		JoinNode node( "name", client, *nodes[0] );
+
+		std::stringstream results;
+		std::map<std::string,std::string> parameters;
+
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.LoadImpl( parameters, results ), JoinNodeException,
+			".*:\\d+: name1 stream with header: campaign_id,prop1,prop3,prop5,blah does not have required columns: prop2,prop4" );
+	}
 }
 
 void JoinNodeTest::testLoad()
@@ -360,9 +403,9 @@ void JoinNodeTest::testLoadJoinInner()
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
 					<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <ForwardTo name=\"name1\" key=\"campaign_id\" />" << std::endl
-					<< "    <JoinTo name=\"name2\" key=\"CAMPAIGNID\" type=\"inner\" />" << std::endl
-					<< "    <JoinTo name=\"name3\" key=\"c\" type=\"inner\" />" << std::endl
+					<< "    <ForwardTo name=\"name1\" key=\"campaign_id\" columns=\"prop1,prop2\" />" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"CAMPAIGNID\" type=\"inner\" columns=\"prop3,prop4\" />" << std::endl
+					<< "    <JoinTo name=\"name3\" key=\"c\" type=\"inner\" columns=\"prop5,prop2\" />" << std::endl
 					<< "  </Read>" << std::endl
 					<< "</JoinNode>" << std::endl;
 		std::vector<xercesc::DOMNode*> nodes;
@@ -373,27 +416,27 @@ void JoinNodeTest::testLoadJoinInner()
 		std::stringstream stream2;
 		std::stringstream stream3;
 
-		stream1 << "prop1,campaign_id,prop2" << std::endl
-				<< "2prop1a,2,2prop2a" << std::endl
-				<< "3prop1a,3,3prop2a" << std::endl
-				<< "1prop1a,1,1prop2a" << std::endl
-				<< "2prop1b,2,2prop2b" << std::endl
-				<< "4prop1a,4,4prop2a" << std::endl;
+		stream1 << "prop1,campaign_id,prop2,ignore1" << std::endl
+				<< "2prop1a,2,2prop2a,X" << std::endl
+				<< "3prop1a,3,3prop2a,X" << std::endl
+				<< "1prop1a,1,1prop2a,X" << std::endl
+				<< "2prop1b,2,2prop2b,X" << std::endl
+				<< "4prop1a,4,4prop2a,X" << std::endl;
 		
-		stream2 << "CAMPAIGNID,prop3,prop4" << std::endl
-				<< "5,5prop3a,5prop4a" << std::endl
-				<< "2,2prop3a,2prop4a" << std::endl
-				<< "3,3prop3a,3prop4a" << std::endl
-				<< "4,4prop3a,4prop4a" << std::endl
-				<< "2,2prop3b,2prop4b" << std::endl;
+		stream2 << "CAMPAIGNID,prop3,prop4,ignore2" << std::endl
+				<< "5,5prop3a,5prop4a,Y" << std::endl
+				<< "2,2prop3a,2prop4a,Y" << std::endl
+				<< "3,3prop3a,3prop4a,Y" << std::endl
+				<< "4,4prop3a,4prop4a,Y" << std::endl
+				<< "2,2prop3b,2prop4b,Y" << std::endl;
 
-		stream3 << "prop5,prop2,c" << std::endl		//prop2 is a name collision!
-				<< "2prop5a,2prop6a,2" << std::endl
-				<< "2prop5b,2prop6b,2" << std::endl
-				<< "3prop5a,3prop6a,3" << std::endl
-				<< "5prop5a,5prop6a,5" << std::endl
-				<< "3prop5b,3prop6b,3" << std::endl
-				<< "6prop5a,6prop6a,6" << std::endl;
+		stream3 << "prop5,prop2,c,ignore3" << std::endl		//prop2 is a name collision!
+				<< "2prop5a,2prop6a,2,Z" << std::endl
+				<< "2prop5b,2prop6b,2,Z" << std::endl
+				<< "3prop5a,3prop6a,3,Z" << std::endl
+				<< "5prop5a,5prop6a,5,Z" << std::endl
+				<< "3prop5b,3prop6b,3,Z" << std::endl
+				<< "6prop5a,6prop6a,6,Z" << std::endl;
 
 		MockDataProxyClient client;
 		client.SetDataToReturn( "name1", stream1.str() );
@@ -439,7 +482,7 @@ void JoinNodeTest::testLoadJoinInner()
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
 					<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <ForwardTo name=\"name1\" key=\"campaign_id\" />" << std::endl
+					<< "    <ForwardTo name=\"name1\" key=\"campaign_id\" columns=\"\" />" << std::endl
 					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
 					<< "  </Read>" << std::endl
 					<< "</JoinNode>" << std::endl;
@@ -451,11 +494,11 @@ void JoinNodeTest::testLoadJoinInner()
 		std::stringstream stream2;
 		std::stringstream stream3;
 
-		stream1 << "campaign_id" << std::endl
-				<< "2" << std::endl
-				<< "3" << std::endl
-				<< "1" << std::endl
-				<< "4" << std::endl;
+		stream1 << "campaign_id,ignore" << std::endl
+				<< "2,X" << std::endl
+				<< "3,X" << std::endl
+				<< "1,X" << std::endl
+				<< "4,X" << std::endl;
 		
 		stream2 << "campaign_id,prop1,prop2" << std::endl
 				<< "5,5prop1a,5prop2a" << std::endl
@@ -497,7 +540,7 @@ void JoinNodeTest::testLoadJoinInner()
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
 					<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <ForwardTo name=\"name1\" key=\"campaign_id\" />" << std::endl
+					<< "    <ForwardTo name=\"name1\" key=\"campaign_id\" columns=\"prop1,prop2\" />" << std::endl
 					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
 					<< "  </Read>" << std::endl
 					<< "</JoinNode>" << std::endl;
@@ -509,12 +552,12 @@ void JoinNodeTest::testLoadJoinInner()
 		std::stringstream stream2;
 		std::stringstream stream3;
 
-		stream1 << "campaign_id,prop1,prop2" << std::endl
-				<< "5,5prop1a,5prop2a" << std::endl
-				<< "2,2prop1a,2prop2a" << std::endl
-				<< "3,3prop1a,3prop2a" << std::endl
-				<< "4,4prop1a,4prop2a" << std::endl
-				<< "2,2prop1b,2prop2b" << std::endl;
+		stream1 << "campaign_id,prop1,prop2,ignore" << std::endl
+				<< "5,5prop1a,5prop2a,X" << std::endl
+				<< "2,2prop1a,2prop2a,X" << std::endl
+				<< "3,3prop1a,3prop2a,X" << std::endl
+				<< "4,4prop1a,4prop2a,X" << std::endl
+				<< "2,2prop1b,2prop2b,X" << std::endl;
 
 		stream2 << "campaign_id" << std::endl
 				<< "2" << std::endl
@@ -555,7 +598,7 @@ void JoinNodeTest::testLoadJoinInner()
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
 					<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <ForwardTo name=\"name1\" key=\"campaign_id\" />" << std::endl
+					<< "    <ForwardTo name=\"name1\" key=\"campaign_id\" columns=\"\" />" << std::endl
 					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
 					<< "  </Read>" << std::endl
 					<< "</JoinNode>" << std::endl;
@@ -567,11 +610,11 @@ void JoinNodeTest::testLoadJoinInner()
 		std::stringstream stream2;
 		std::stringstream stream3;
 
-		stream1 << "campaign_id" << std::endl
-				<< "5" << std::endl
-				<< "2" << std::endl
-				<< "3" << std::endl
-				<< "4" << std::endl;
+		stream1 << "campaign_id,ignore" << std::endl
+				<< "5,X" << std::endl
+				<< "2,X" << std::endl
+				<< "3,X" << std::endl
+				<< "4,X" << std::endl;
 
 		stream2 << "campaign_id" << std::endl
 				<< "2" << std::endl
@@ -1417,9 +1460,9 @@ void JoinNodeTest::testStoreJoinInner()
 	{
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
-					<< "  <Write key=\"campaign_id\" behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <JoinTo name=\"name2\" key=\"CAMPAIGNID\" type=\"inner\" />" << std::endl
-					<< "    <JoinTo name=\"name3\" key=\"c\" type=\"inner\" />" << std::endl
+					<< "  <Write key=\"campaign_id\" columns=\"prop1,prop2\" behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"CAMPAIGNID\" type=\"inner\" columns=\"prop3,prop4\" />" << std::endl
+					<< "    <JoinTo name=\"name3\" key=\"c\" type=\"inner\" columns=\"prop5,prop2\" />" << std::endl
 					<< "    <ForwardTo name=\"out\" />" << std::endl
 					<< "  </Write>" << std::endl
 					<< "</JoinNode>" << std::endl;
@@ -1431,27 +1474,27 @@ void JoinNodeTest::testStoreJoinInner()
 		std::stringstream stream2;
 		std::stringstream stream3;
 
-		stream1 << "prop1,campaign_id,prop2" << std::endl
-				<< "2prop1a,2,2prop2a" << std::endl
-				<< "3prop1a,3,3prop2a" << std::endl
-				<< "1prop1a,1,1prop2a" << std::endl
-				<< "2prop1b,2,2prop2b" << std::endl
-				<< "4prop1a,4,4prop2a" << std::endl;
+		stream1 << "prop1,campaign_id,prop2,ignore1" << std::endl
+				<< "2prop1a,2,2prop2a,X" << std::endl
+				<< "3prop1a,3,3prop2a,X" << std::endl
+				<< "1prop1a,1,1prop2a,X" << std::endl
+				<< "2prop1b,2,2prop2b,X" << std::endl
+				<< "4prop1a,4,4prop2a,X" << std::endl;
 		
-		stream2 << "CAMPAIGNID,prop3,prop4" << std::endl
-				<< "5,5prop3a,5prop4a" << std::endl
-				<< "2,2prop3a,2prop4a" << std::endl
-				<< "3,3prop3a,3prop4a" << std::endl
-				<< "4,4prop3a,4prop4a" << std::endl
-				<< "2,2prop3b,2prop4b" << std::endl;
+		stream2 << "CAMPAIGNID,prop3,prop4,ignore2" << std::endl
+				<< "5,5prop3a,5prop4a,Y" << std::endl
+				<< "2,2prop3a,2prop4a,Y" << std::endl
+				<< "3,3prop3a,3prop4a,Y" << std::endl
+				<< "4,4prop3a,4prop4a,Y" << std::endl
+				<< "2,2prop3b,2prop4b,Y" << std::endl;
 
-		stream3 << "prop5,prop2,c" << std::endl		//prop2 is a name collision!
-				<< "2prop5a,2prop6a,2" << std::endl
-				<< "2prop5b,2prop6b,2" << std::endl
-				<< "3prop5a,3prop6a,3" << std::endl
-				<< "5prop5a,5prop6a,5" << std::endl
-				<< "3prop5b,3prop6b,3" << std::endl
-				<< "6prop5a,6prop6a,6" << std::endl;
+		stream3 << "prop5,prop2,c,ignore3" << std::endl		//prop2 is a name collision!
+				<< "2prop5a,2prop6a,2,Z" << std::endl
+				<< "2prop5b,2prop6b,2,Z" << std::endl
+				<< "3prop5a,3prop6a,3,Z" << std::endl
+				<< "5prop5a,5prop6a,5,Z" << std::endl
+				<< "3prop5b,3prop6b,3,Z" << std::endl
+				<< "6prop5a,6prop6a,6,Z" << std::endl;
 
 		MockDataProxyClient client;
 		client.SetDataToReturn( "name2", stream2.str() );
@@ -1494,7 +1537,7 @@ void JoinNodeTest::testStoreJoinInner()
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
 					<< "  <Write key=\"campaign_id\" behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" columns=\"prop1,prop2\" type=\"inner\" />" << std::endl
 					<< "    <ForwardTo name=\"out\" />" << std::endl
 					<< "  </Write>" << std::endl
 					<< "</JoinNode>" << std::endl;
@@ -1512,12 +1555,12 @@ void JoinNodeTest::testStoreJoinInner()
 				<< "1" << std::endl
 				<< "4" << std::endl;
 		
-		stream2 << "campaign_id,prop1,prop2" << std::endl
-				<< "5,5prop1a,5prop2a" << std::endl
-				<< "2,2prop1a,2prop2a" << std::endl
-				<< "3,3prop1a,3prop2a" << std::endl
-				<< "4,4prop1a,4prop2a" << std::endl
-				<< "2,2prop1b,2prop2b" << std::endl;
+		stream2 << "campaign_id,prop1,prop2,ignore" << std::endl
+				<< "5,5prop1a,5prop2a,X" << std::endl
+				<< "2,2prop1a,2prop2a,X" << std::endl
+				<< "3,3prop1a,3prop2a,X" << std::endl
+				<< "4,4prop1a,4prop2a,X" << std::endl
+				<< "2,2prop1b,2prop2b,X" << std::endl;
 
 		MockDataProxyClient client;
 		client.SetDataToReturn( "name2", stream2.str() );
@@ -1546,7 +1589,7 @@ void JoinNodeTest::testStoreJoinInner()
 	{
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
-					<< "  <Write key=\"campaign_id\" behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "  <Write key=\"campaign_id\" columns=\"prop1,prop2\" behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
 					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
 					<< "    <ForwardTo name=\"out\" />" << std::endl
 					<< "  </Write>" << std::endl
@@ -1559,12 +1602,12 @@ void JoinNodeTest::testStoreJoinInner()
 		std::stringstream stream2;
 		std::stringstream stream3;
 
-		stream1 << "campaign_id,prop1,prop2" << std::endl
-				<< "5,5prop1a,5prop2a" << std::endl
-				<< "2,2prop1a,2prop2a" << std::endl
-				<< "3,3prop1a,3prop2a" << std::endl
-				<< "4,4prop1a,4prop2a" << std::endl
-				<< "2,2prop1b,2prop2b" << std::endl;
+		stream1 << "campaign_id,prop1,prop2,ignore" << std::endl
+				<< "5,5prop1a,5prop2a,X" << std::endl
+				<< "2,2prop1a,2prop2a,X" << std::endl
+				<< "3,3prop1a,3prop2a,X" << std::endl
+				<< "4,4prop1a,4prop2a,X" << std::endl
+				<< "2,2prop1b,2prop2b,X" << std::endl;
 
 		stream2 << "campaign_id" << std::endl
 				<< "2" << std::endl
@@ -1600,7 +1643,7 @@ void JoinNodeTest::testStoreJoinInner()
 		std::stringstream xmlContents;
 		xmlContents << "<JoinNode >" << std::endl
 					<< "  <Write key=\"campaign_id\" behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
-					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" type=\"inner\" />" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"campaign_id\" columns=\"\" type=\"inner\" />" << std::endl
 					<< "    <ForwardTo name=\"out\" />" << std::endl
 					<< "  </Write>" << std::endl
 					<< "</JoinNode>" << std::endl;
@@ -1618,11 +1661,11 @@ void JoinNodeTest::testStoreJoinInner()
 				<< "3" << std::endl
 				<< "4" << std::endl;
 
-		stream2 << "campaign_id" << std::endl
-				<< "2" << std::endl
-				<< "3" << std::endl
-				<< "1" << std::endl
-				<< "4" << std::endl;
+		stream2 << "campaign_id,ignore" << std::endl
+				<< "2,X" << std::endl
+				<< "3,X" << std::endl
+				<< "1,X" << std::endl
+				<< "4,X" << std::endl;
 		
 		MockDataProxyClient client;
 		client.SetDataToReturn( "name2", stream2.str() );

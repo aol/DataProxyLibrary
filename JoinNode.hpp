@@ -62,15 +62,17 @@ private:
 
 	DATUMINFO( NodeName, std::string );
 	DATUMINFO( JoinKey, std::string );
+	DATUMINFO( Columns, Nullable< std::string > );
 	DATUMINFO( JoinType, JoinTypeEnum );
 	DATUMINFO( SkipLines, int );
 
 	typedef
 		GenericDatum< NodeName,
 		GenericDatum< JoinKey,
+		GenericDatum< Columns,
 		GenericDatum< JoinType,
 		GenericDatum< SkipLines,
-		RowEnd > > > >
+		RowEnd > > > > >
 	StreamConfig;
 
 	void SetConfig( const xercesc::DOMNode* i_pNode,
@@ -80,15 +82,18 @@ private:
 					std::vector< StreamConfig >& o_rConfig,
 					std::string& o_rEndpoint,
 					std::string& o_rKey,
+					Nullable< std::string >& o_rColumns,
 					bool i_IsRead );
 
 	void WriteHorizontalJoin( std::istream& i_rInput,
 							  std::ostream& o_rOutput, 
 							  std::string& i_rKey, 
+							  const Nullable< std::string >& i_rColumns,
 							  const std::map< std::string, std::string >& i_rParameters,
 							  std::vector< StreamConfig >& i_rJoins, 
 							  const std::string& i_rWorkingDir, 
-							  int i_Timeout );
+							  int i_Timeout,
+							  const std::string& i_rPrimaryStreamDescription );
 
 	std::string m_Name;
 	DataProxyClient& m_rParent;
@@ -97,6 +102,7 @@ private:
 	bool m_ReadEnabled;
 	std::string m_ReadEndpoint;
 	std::string m_ReadKey;
+	Nullable< std::string > m_ReadColumns;
 	std::vector< StreamConfig > m_ReadJoins;
 	Behavior m_ReadBehavior;
 	std::string m_ReadWorkingDir;
@@ -106,6 +112,7 @@ private:
 	bool m_WriteEnabled;
 	std::string m_WriteEndpoint;
 	std::string m_WriteKey;
+	Nullable< std::string > m_WriteColumns;
 	std::vector< StreamConfig > m_WriteJoins;
 	Behavior m_WriteBehavior;
 	std::string m_WriteWorkingDir;
