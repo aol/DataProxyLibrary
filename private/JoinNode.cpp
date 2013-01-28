@@ -515,7 +515,6 @@ void JoinNode::SetConfig( const xercesc::DOMNode* i_pNode,
 		if( pAttribute != NULL )
 		{
 			o_rColumns = XMLUtilities::XMLChToString(pAttribute->getValue());
-			hasForwardToKey = true;
 		}
 	}
 	else
