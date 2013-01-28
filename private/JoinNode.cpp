@@ -737,7 +737,7 @@ void JoinNode::WriteHorizontalJoin( std::istream& i_rInput,
 			if( *nextIter != iter->GetValue< JoinKey >() )
 			{
 				std::string colName = *nextIter;
-				if( std::find( mainIncludeColumns.begin(), mainIncludeColumns.end(), colName ) != mainIncludeColumns.end() )
+				if( std::find( outHeader.begin(), outHeader.end(), colName ) != outHeader.end() )
 				{
 					colName = iter->GetValue< NodeName >() + "." + colName;
 				}

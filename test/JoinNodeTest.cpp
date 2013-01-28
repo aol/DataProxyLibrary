@@ -405,7 +405,7 @@ void JoinNodeTest::testLoadJoinInner()
 					<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
 					<< "    <ForwardTo name=\"name1\" key=\"campaign_id\" columns=\"prop1,prop2\" />" << std::endl
 					<< "    <JoinTo name=\"name2\" key=\"CAMPAIGNID\" type=\"inner\" columns=\"prop3,prop4\" />" << std::endl
-					<< "    <JoinTo name=\"name3\" key=\"c\" type=\"inner\" columns=\"prop5,prop2\" />" << std::endl
+					<< "    <JoinTo name=\"name3\" key=\"c\" type=\"inner\" columns=\"prop3,prop2\" />" << std::endl
 					<< "  </Read>" << std::endl
 					<< "</JoinNode>" << std::endl;
 		std::vector<xercesc::DOMNode*> nodes;
@@ -430,13 +430,13 @@ void JoinNodeTest::testLoadJoinInner()
 				<< "4,4prop3a,4prop4a,Y" << std::endl
 				<< "2,2prop3b,2prop4b,Y" << std::endl;
 
-		stream3 << "prop5,prop2,c,ignore3" << std::endl		//prop2 is a name collision!
-				<< "2prop5a,2prop6a,2,Z" << std::endl
-				<< "2prop5b,2prop6b,2,Z" << std::endl
-				<< "3prop5a,3prop6a,3,Z" << std::endl
-				<< "5prop5a,5prop6a,5,Z" << std::endl
-				<< "3prop5b,3prop6b,3,Z" << std::endl
-				<< "6prop5a,6prop6a,6,Z" << std::endl;
+		stream3 << "prop3,prop2,c,ignore3" << std::endl		//prop3 & prop2 are name collisions!
+				<< "2prop3a,2prop6a,2,Z" << std::endl
+				<< "2prop3b,2prop6b,2,Z" << std::endl
+				<< "3prop3a,3prop6a,3,Z" << std::endl
+				<< "5prop3a,5prop6a,5,Z" << std::endl
+				<< "3prop3b,3prop6b,3,Z" << std::endl
+				<< "6prop3a,6prop6a,6,Z" << std::endl;
 
 		MockDataProxyClient client;
 		client.SetDataToReturn( "name1", stream1.str() );
@@ -459,17 +459,17 @@ void JoinNodeTest::testLoadJoinInner()
 		CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
 
 		expected.str("");
-		expected << "prop1,campaign_id,prop2,prop3,prop4,prop5,name3.prop2" << std::endl
-				 << "2prop1a,2,2prop2a,2prop3a,2prop4a,2prop5a,2prop6a" << std::endl
-				 << "2prop1a,2,2prop2a,2prop3a,2prop4a,2prop5b,2prop6b" << std::endl
-				 << "2prop1a,2,2prop2a,2prop3b,2prop4b,2prop5a,2prop6a" << std::endl
-				 << "2prop1a,2,2prop2a,2prop3b,2prop4b,2prop5b,2prop6b" << std::endl
-				 << "2prop1b,2,2prop2b,2prop3a,2prop4a,2prop5a,2prop6a" << std::endl
-				 << "2prop1b,2,2prop2b,2prop3a,2prop4a,2prop5b,2prop6b" << std::endl
-				 << "2prop1b,2,2prop2b,2prop3b,2prop4b,2prop5a,2prop6a" << std::endl
-				 << "2prop1b,2,2prop2b,2prop3b,2prop4b,2prop5b,2prop6b" << std::endl
-				 << "3prop1a,3,3prop2a,3prop3a,3prop4a,3prop5a,3prop6a" << std::endl
-				 << "3prop1a,3,3prop2a,3prop3a,3prop4a,3prop5b,3prop6b" << std::endl;
+		expected << "prop1,campaign_id,prop2,prop3,prop4,name3.prop3,name3.prop2" << std::endl
+				 << "2prop1a,2,2prop2a,2prop3a,2prop4a,2prop3a,2prop6a" << std::endl
+				 << "2prop1a,2,2prop2a,2prop3a,2prop4a,2prop3b,2prop6b" << std::endl
+				 << "2prop1a,2,2prop2a,2prop3b,2prop4b,2prop3a,2prop6a" << std::endl
+				 << "2prop1a,2,2prop2a,2prop3b,2prop4b,2prop3b,2prop6b" << std::endl
+				 << "2prop1b,2,2prop2b,2prop3a,2prop4a,2prop3a,2prop6a" << std::endl
+				 << "2prop1b,2,2prop2b,2prop3a,2prop4a,2prop3b,2prop6b" << std::endl
+				 << "2prop1b,2,2prop2b,2prop3b,2prop4b,2prop3a,2prop6a" << std::endl
+				 << "2prop1b,2,2prop2b,2prop3b,2prop4b,2prop3b,2prop6b" << std::endl
+				 << "3prop1a,3,3prop2a,3prop3a,3prop4a,3prop3a,3prop6a" << std::endl
+				 << "3prop1a,3,3prop2a,3prop3a,3prop4a,3prop3b,3prop6b" << std::endl;
 		CPPUNIT_ASSERT_EQUAL( expected.str(), results.str() );
 		
 		std::vector< std::string > dirContents;
