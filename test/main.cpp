@@ -45,7 +45,7 @@ int main(int argc, char** argv)
     {
 		// initialize a Logger since most of our code require this.
 		//
-		MVLogger::Init( LOGGER_FILENAME );
+		MVLogger::Init( LOGGER_FILENAME, "", "dpl-unit-tests" );
 	
 		// Create the event manager and test controller
 		CppUnit::TestResult controller;

@@ -15,6 +15,7 @@
 #include "WebServerCommon.hpp"
 #include "HTTPRequest.hpp"
 #include "HTTPResponse.hpp"
+#include "LogTracker.hpp"
 #include "DataProxyService.hpp"
 
 StoreHandler::StoreHandler( DataProxyClient& i_rDataProxyClient, const std::string& i_rDplConfig, bool i_EnableXForwardedFor )
@@ -28,7 +29,8 @@ StoreHandler::~StoreHandler()
 
 void StoreHandler::Handle( HTTPRequest& i_rRequest, HTTPResponse& o_rResponse )
 {
-	if( !AbstractHandler::CheckConfig( o_rResponse ) )
+	LogTracker logTracker( i_rRequest );
+	if( !AbstractHandler::CheckConfig( o_rResponse, logTracker ) )
 	{
 		return;
 	}
@@ -48,11 +50,13 @@ void StoreHandler::Handle( HTTPRequest& i_rRequest, HTTPResponse& o_rResponse )
 		MVLOGGER( "root.lib.DataProxy.Service.StoreHandler.ErrorStoring", msg.str() );
 		o_rResponse.SetHTTPStatusCode( HTTP_STATUS_INTERNAL_SERVER_ERROR );
 		o_rResponse.WriteHeader( SERVER, DATA_PROXY_SERVICE_VERSION );
+		logTracker.WriteTraceback( o_rResponse );
 		o_rResponse.WriteData( msg.str() + "\n" );
 		return;
 	}
 
 	o_rResponse.SetHTTPStatusCode( HTTP_STATUS_OK );
 	o_rResponse.WriteHeader( SERVER, DATA_PROXY_SERVICE_VERSION );
+	logTracker.WriteTraceback( o_rResponse );
 	o_rResponse.WriteData("");
 }

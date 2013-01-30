@@ -27,6 +27,7 @@ private:
 	CPPUNIT_TEST( testNoTranslate );
 	CPPUNIT_TEST( testTranslate );
 	CPPUNIT_TEST( testTranslateDerived );
+	CPPUNIT_TEST( testTranslateBuiltIn );
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -42,6 +43,7 @@ public:
 	void testNoTranslate();
 	void testTranslate();
 	void testTranslateDerived();
+	void testTranslateBuiltIn();
 
 private:
 	boost::scoped_ptr<TempDirectory> m_pTempDir;

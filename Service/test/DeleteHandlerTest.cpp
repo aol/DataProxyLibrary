@@ -19,6 +19,7 @@
 #include "MockHTTPResponse.hpp"
 #include "ProxyUtilities.hpp"
 #include "AssertFileContents.hpp"
+#include "AssertRegexMatch.hpp"
 #include "XMLUtilities.hpp"
 #include <boost/regex.hpp>
 #include <boost/algorithm/string/replace.hpp>
@@ -85,14 +86,16 @@ void DeleteHandlerTest::testDelete()
 	
 	request.SetQueryParams( params );
 	request.SetPath( "n1" );
+	request.SetHTTPHeader( "X-DPS-TrackingName", "test-tracking" );
 
 	// error condition #1: initialization fails because the file doesn't exist
 	CPPUNIT_ASSERT_NO_THROW( handler.Handle( request, response ) );
 	std::stringstream expected;
 	expected << "SetHTTPStatusCode called with Code: 500 Message: " << std::endl
 			 << "WriteHeader called with Name: Server Value: " << DATA_PROXY_SERVICE_VERSION << std::endl
+			 << "WriteHeader called with Name: " << X_DPS_TRACKING_NAME << " Value: test-tracking" << std::endl
 			 << "WriteData called with Data: Error initializing DPL with file: " << dplConfigFileSpec << ": private/DataProxyClient.cpp:\\d+: Cannot find config file.*";
-	CPPUNIT_ASSERT( boost::regex_match( response.GetLog(), boost::regex( expected.str() ) ) );
+	CPPUNIT_ASSERT_REGEX_MATCH( expected.str(), response.GetLog() );
 	response.ClearLog();
 	expected.str("");
 
@@ -108,6 +111,7 @@ void DeleteHandlerTest::testDelete()
 	CPPUNIT_ASSERT_NO_THROW( handler.Handle( request, response ) );
 	expected << "SetHTTPStatusCode called with Code: 200 Message: " << std::endl
 			 << "WriteHeader called with Name: Server Value: " << DATA_PROXY_SERVICE_VERSION << std::endl
+			 << "WriteHeader called with Name: " << X_DPS_TRACKING_NAME << " Value: test-tracking" << std::endl
 			 << "WriteData called with Data: " << std::endl;
 	CPPUNIT_ASSERT_EQUAL( expected.str(), response.GetLog() );
 	CPPUNIT_ASSERT( !FileUtilities::DoesFileExist( file1a ) );
@@ -119,8 +123,9 @@ void DeleteHandlerTest::testDelete()
 	CPPUNIT_ASSERT_NO_THROW( handler.Handle( request, response ) );
 	expected << "SetHTTPStatusCode called with Code: 500 Message: " << std::endl
 			 << "WriteHeader called with Name: Server Value: " << DATA_PROXY_SERVICE_VERSION << std::endl
+			 << "WriteHeader called with Name: " << X_DPS_TRACKING_NAME << " Value: test-tracking" << std::endl
 			 << "WriteData called with Data: Error deleting data to node: unknown: private/DataProxyClient.cpp:\\d+: Attempted to issue Delete request on unknown data node 'unknown'.*";
-	CPPUNIT_ASSERT( boost::regex_match( response.GetLog(), boost::regex( expected.str() ) ) );
+	CPPUNIT_ASSERT_REGEX_MATCH( expected.str(), response.GetLog() );
 
 	// successful delete
 	response.ClearLog();
@@ -129,6 +134,7 @@ void DeleteHandlerTest::testDelete()
 	CPPUNIT_ASSERT_NO_THROW( handler.Handle( request, response ) );
 	expected << "SetHTTPStatusCode called with Code: 200 Message: " << std::endl
 			 << "WriteHeader called with Name: Server Value: " << DATA_PROXY_SERVICE_VERSION << std::endl
+			 << "WriteHeader called with Name: " << X_DPS_TRACKING_NAME << " Value: test-tracking" << std::endl
 			 << "WriteData called with Data: " << std::endl;
 	CPPUNIT_ASSERT_EQUAL( expected.str(), response.GetLog() );
 	CPPUNIT_ASSERT( !FileUtilities::DoesFileExist( file2a ) );

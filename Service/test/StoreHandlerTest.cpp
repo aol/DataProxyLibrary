@@ -19,6 +19,7 @@
 #include "MockHTTPResponse.hpp"
 #include "ProxyUtilities.hpp"
 #include "AssertFileContents.hpp"
+#include "AssertRegexMatch.hpp"
 #include "XMLUtilities.hpp"
 #include <boost/regex.hpp>
 #include <fstream>
@@ -92,14 +93,16 @@ void StoreHandlerTest::testStore()
 	request.SetQueryParams( paramsA );
 	request.SetPath( "n1" );
 	request.SetPostData( data1a );
+	request.SetHTTPHeader( "X-DPS-TrackingName", "test-tracking" );
 
 	// error condition #1: initialization fails because the file doesn't exist
 	CPPUNIT_ASSERT_NO_THROW( handler.Handle( request, response ) );
 	std::stringstream expected;
 	expected << "SetHTTPStatusCode called with Code: 500 Message: " << std::endl
 			 << "WriteHeader called with Name: Server Value: " << DATA_PROXY_SERVICE_VERSION << std::endl
+			 << "WriteHeader called with Name: " << X_DPS_TRACKING_NAME << " Value: test-tracking" << std::endl
 			 << "WriteData called with Data: Error initializing DPL with file: " << dplConfigFileSpec << ": private/DataProxyClient.cpp:\\d+: Cannot find config file.*";
-	CPPUNIT_ASSERT( boost::regex_match( response.GetLog(), boost::regex( expected.str() ) ) );
+	CPPUNIT_ASSERT_REGEX_MATCH( expected.str(), response.GetLog() );
 	response.ClearLog();
 	expected.str("");
 
@@ -115,6 +118,7 @@ void StoreHandlerTest::testStore()
 	CPPUNIT_ASSERT_NO_THROW( handler.Handle( request, response ) );
 	expected << "SetHTTPStatusCode called with Code: 200 Message: " << std::endl
 			 << "WriteHeader called with Name: Server Value: " << DATA_PROXY_SERVICE_VERSION << std::endl
+			 << "WriteHeader called with Name: " << X_DPS_TRACKING_NAME << " Value: test-tracking" << std::endl
 			 << "WriteData called with Data: " << std::endl;
 	CPPUNIT_ASSERT_EQUAL( expected.str(), response.GetLog() );
 	CPPUNIT_ASSERT_FILE_CONTENTS( data1a, file1a );
@@ -125,6 +129,7 @@ void StoreHandlerTest::testStore()
 	CPPUNIT_ASSERT_NO_THROW( handler.Handle( request, response ) );
 	expected << "SetHTTPStatusCode called with Code: 200 Message: " << std::endl
 			 << "WriteHeader called with Name: Server Value: " << DATA_PROXY_SERVICE_VERSION << std::endl
+			 << "WriteHeader called with Name: " << X_DPS_TRACKING_NAME << " Value: test-tracking" << std::endl
 			 << "WriteData called with Data: " << std::endl;
 	CPPUNIT_ASSERT_EQUAL( expected.str(), response.GetLog() );
 	CPPUNIT_ASSERT_FILE_CONTENTS( data2a, file2a );
@@ -137,8 +142,9 @@ void StoreHandlerTest::testStore()
 	CPPUNIT_ASSERT_NO_THROW( handler.Handle( request, response ) );
 	expected << "SetHTTPStatusCode called with Code: 500 Message: " << std::endl
 			 << "WriteHeader called with Name: Server Value: " << DATA_PROXY_SERVICE_VERSION << std::endl
+			 << "WriteHeader called with Name: " << X_DPS_TRACKING_NAME << " Value: test-tracking" << std::endl
 			 << "WriteData called with Data: Error storing data to node: unknown: private/DataProxyClient.cpp:\\d+: Attempted to issue Store request on unknown data node 'unknown'.*";
-	CPPUNIT_ASSERT( boost::regex_match( response.GetLog(), boost::regex( expected.str() ) ) );
+	CPPUNIT_ASSERT_REGEX_MATCH( expected.str(), response.GetLog() );
 	response.ClearLog();
 	expected.str("");
 
@@ -148,6 +154,7 @@ void StoreHandlerTest::testStore()
 	CPPUNIT_ASSERT_NO_THROW( handler.Handle( request, response ) );
 	expected << "SetHTTPStatusCode called with Code: 200 Message: " << std::endl
 			 << "WriteHeader called with Name: Server Value: " << DATA_PROXY_SERVICE_VERSION << std::endl
+			 << "WriteHeader called with Name: " << X_DPS_TRACKING_NAME << " Value: test-tracking" << std::endl
 			 << "WriteData called with Data: " << std::endl;
 	CPPUNIT_ASSERT_EQUAL( expected.str(), response.GetLog() );
 	CPPUNIT_ASSERT_FILE_CONTENTS( data1b, file1b );

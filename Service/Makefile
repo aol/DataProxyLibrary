@@ -98,6 +98,7 @@ PRIVFILES=\
 	LoadHandler.cpp \
 	StoreHandler.cpp \
 	DeleteHandler.cpp \
+	LogTracker.cpp \
 
 TESTFILES=\
 	test-main.cpp \

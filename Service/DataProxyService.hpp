@@ -25,5 +25,6 @@
 
 const std::string SERVER( "Server" );
 const std::string X_FORWARDED_FOR( "X-Forwarded-For" );
+const std::string X_DPS_TRACKING_NAME( "X-DPS-TrackingName" );
 
 #endif //__DATA_PROXY_SERVICE_HPP__

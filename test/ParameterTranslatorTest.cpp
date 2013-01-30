@@ -14,8 +14,12 @@
 #include "ProxyUtilities.hpp"
 #include "ProxyTestHelpers.hpp"
 #include "AssertThrowWithMessage.hpp"
+#include "MVUtility.hpp"
+#include "UniqueIdGenerator.hpp"
+#include "DateTime.hpp"
 #include <fstream>
 #include <boost/regex.hpp>
+#include <boost/lexical_cast.hpp>
 
 CPPUNIT_TEST_SUITE_REGISTRATION( ParameterTranslatorTest );
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( ParameterTranslatorTest, "ParameterTranslatorTest" );
@@ -576,4 +580,62 @@ void ParameterTranslatorTest::testIllegalConfig()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ParameterTranslator translator( *nodes[0] ), ParameterTranslatorException,
 		"private/ParameterTranslator\\.cpp:\\d+: Cannot make values derive from other derived values. Violating parameters: param1 derives from param2, which derives from param1, param3" );
+}
+
+void ParameterTranslatorTest::testTranslateBuiltIn()
+{
+	std::stringstream xmlContents;
+	xmlContents << "<Whatever>"
+				<< " <TranslateParameters>"
+				<< "  <Parameter name=\"host\" valueDefault=\"[hostname]\" />"
+				<< "  <Parameter name=\"instance\" valueDefault=\"[instance]\" />"
+				<< "  <Parameter name=\"unixtime1\" valueDefault=\"[datetime:%s]\" />"
+				<< "  <Parameter name=\"unixtime2\" valueDefault=\"[datetime %s]\" />"
+				<< "  <Parameter name=\"dm-datetime1\" valueDefault=\"[datetime]\" />"
+				<< "  <Parameter name=\"dm-datetime2\" valueDefault=\"[datetime:%Y%m%dT%H%M%S]\" />"
+				<< "  <Parameter name=\"unknown-datetime\" valueDefault=\"[datetime blah]\" />"
+				<< "  <Parameter name=\"guid\" valueDefault=\"[guid]\" />"
+				<< "  <Parameter name=\"pid\" valueDefault=\"[pid]\" />"
+				<< "  <Parameter name=\"unkown1\" valueDefault=\"[cpu]\" />"
+				<< "  <Parameter name=\"unkown2\" valueDefault=\"[mem]\" />"
+				<< " </TranslateParameters>"
+				<< "</Whatever>";
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Whatever", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	ParameterTranslator translator( *nodes[0] );
+
+	std::map< std::string, std::string > inputParameters;
+	std::map< std::string, std::string > translatedParameters;
+
+	DateTime before;
+	CPPUNIT_ASSERT_NO_THROW( translator.Translate( inputParameters, translatedParameters ) );
+	DateTime after;
+	CPPUNIT_ASSERT_EQUAL( size_t( 11 ), translatedParameters.size() );
+	std::map< std::string, std::string >::const_iterator findIter;
+	CPPUNIT_ASSERT( ( findIter = translatedParameters.find( "host" ) ) != translatedParameters.end() );
+	CPPUNIT_ASSERT_EQUAL( MVUtility::GetHostName(), findIter->second );
+	CPPUNIT_ASSERT( ( findIter = translatedParameters.find( "instance" ) ) != translatedParameters.end() );
+	CPPUNIT_ASSERT( ( findIter = translatedParameters.find( "unixtime1" ) ) != translatedParameters.end() );
+	CPPUNIT_ASSERT( before.GetFormattedString( "%s" ) <= findIter->second );
+	CPPUNIT_ASSERT( after.GetFormattedString( "%s" ) >= findIter->second );
+	CPPUNIT_ASSERT( ( findIter = translatedParameters.find( "unixtime2" ) ) != translatedParameters.end() );
+	CPPUNIT_ASSERT( before.GetFormattedString( "%s" ) <= findIter->second );
+	CPPUNIT_ASSERT( after.GetFormattedString( "%s" ) >= findIter->second );
+	CPPUNIT_ASSERT( ( findIter = translatedParameters.find( "dm-datetime1" ) ) != translatedParameters.end() );
+	CPPUNIT_ASSERT( before.GetFormattedString( "%Y%m%dT%H%M%S" ) <= findIter->second );
+	CPPUNIT_ASSERT( after.GetFormattedString( "%Y%m%dT%H%M%S" ) >= findIter->second );
+	CPPUNIT_ASSERT( ( findIter = translatedParameters.find( "dm-datetime2" ) ) != translatedParameters.end() );
+	CPPUNIT_ASSERT( before.GetFormattedString( "%Y%m%dT%H%M%S" ) <= findIter->second );
+	CPPUNIT_ASSERT( after.GetFormattedString( "%Y%m%dT%H%M%S" ) >= findIter->second );
+	CPPUNIT_ASSERT( ( findIter = translatedParameters.find( "unknown-datetime" ) ) != translatedParameters.end() );
+	CPPUNIT_ASSERT_EQUAL( std::string( "blah" ), findIter->second );
+	CPPUNIT_ASSERT( ( findIter = translatedParameters.find( "guid" ) ) != translatedParameters.end() );
+	CPPUNIT_ASSERT_MESSAGE( findIter->second, UniqueIdGenerator::IsValidUniqueIdString( findIter->second ) );
+	CPPUNIT_ASSERT( ( findIter = translatedParameters.find( "pid" ) ) != translatedParameters.end() );
+	CPPUNIT_ASSERT_EQUAL( boost::lexical_cast< std::string >( ::getpid() ), findIter->second );
+	CPPUNIT_ASSERT( ( findIter = translatedParameters.find( "unkown1" ) ) != translatedParameters.end() );
+	CPPUNIT_ASSERT_EQUAL( std::string( "cpu-unknown" ), findIter->second );
+	CPPUNIT_ASSERT( ( findIter = translatedParameters.find( "unkown2" ) ) != translatedParameters.end() );
+	CPPUNIT_ASSERT_EQUAL( std::string( "mem-unknown" ), findIter->second );
 }

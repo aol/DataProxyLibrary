@@ -18,6 +18,7 @@
 #include "StringUtilities.hpp"
 #include "DateTime.hpp"
 #include "DataProxyService.hpp"
+#include "LogTracker.hpp"
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/copy.hpp>
 #include <boost/scoped_ptr.hpp>
@@ -53,7 +54,8 @@ LoadHandler::~LoadHandler()
 
 void LoadHandler::Handle( HTTPRequest& i_rRequest, HTTPResponse& o_rResponse )
 {
-	if( !AbstractHandler::CheckConfig( o_rResponse ) )
+	LogTracker logTracker( i_rRequest );
+	if( !AbstractHandler::CheckConfig( o_rResponse, logTracker ) )
 	{
 		return;
 	}
@@ -96,6 +98,7 @@ void LoadHandler::Handle( HTTPRequest& i_rRequest, HTTPResponse& o_rResponse )
 		MVLOGGER( "root.lib.DataProxy.Service.LoadHandler.ErrorLoading", msg.str() );
 		o_rResponse.SetHTTPStatusCode( HTTP_STATUS_INTERNAL_SERVER_ERROR );
 		o_rResponse.WriteHeader( SERVER, DATA_PROXY_SERVICE_VERSION );
+		logTracker.WriteTraceback( o_rResponse );
 		o_rResponse.WriteData( msg.str() + "\n" );
 		return;
 	}
@@ -105,6 +108,7 @@ void LoadHandler::Handle( HTTPRequest& i_rRequest, HTTPResponse& o_rResponse )
 
 	o_rResponse.SetHTTPStatusCode( HTTP_STATUS_OK );
 	o_rResponse.WriteHeader( SERVER, DATA_PROXY_SERVICE_VERSION );
+	logTracker.WriteTraceback( o_rResponse );
 	o_rResponse.WriteHeader( CONTENT_LENGTH, boost::lexical_cast< std::string >( results.tellp() ) );
 	
 	// if we set the encoding, write it to the response header

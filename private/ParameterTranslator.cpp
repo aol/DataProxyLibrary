@@ -13,8 +13,12 @@
 #include "XMLUtilities.hpp"
 #include "ProxyUtilities.hpp"
 #include "MVLogger.hpp"
+#include "Environment.hpp"
+#include "MVUtility.hpp"
 #include "ShellExecutor.hpp"
 #include "ContainerToString.hpp"
+#include "DateTime.hpp"
+#include "UniqueIdGenerator.hpp"
 #include <boost/regex.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/replace.hpp>
@@ -31,6 +35,15 @@ namespace
 	const int EVAL_TIMEOUT_DEFAULT( 10 );
 	boost::regex VARIABLE_NAME("\\$\\{.*?\\}");
 
+	const std::string HOSTNAME = "hostname";
+	const std::string INSTANCE = "instance";
+	const std::string LOGGER_INSTANCE_NAME = "app.instance.name";	// what logger's Environment calls the instance
+	const std::string DATE_TIME = "datetime";
+	const std::string GUID = "guid";
+	const std::string PID = "pid";
+	const std::string UNKNOWN = "unknown";
+	const std::string s_Hostname = MVUtility::GetHostName();
+
 	bool IsExpression( const std::string& i_rValue )
 	{
 		return ( i_rValue[0] == '`' && i_rValue[i_rValue.size()-1] == '`' );
@@ -41,7 +54,7 @@ namespace
 		return i_rValue.substr( 1, i_rValue.size() - 2 );
 	}
 
-	std::string Eval( const std::string& i_rCommand, int i_Timeout )
+	std::string EvalExpression( const std::string& i_rCommand, int i_Timeout )
 	{
 		std::stringstream standardOut;
 		std::stringstream standardErr;
@@ -60,6 +73,59 @@ namespace
 				"Command: " << i_rCommand << " generated output to standard error: " << standardErr.str() );
 		}
 		return standardOut.str();
+	}
+
+	bool IsBuiltIn( const std::string& i_rValue )
+	{
+		return ( i_rValue[0] == '[' && i_rValue[i_rValue.size()-1] == ']' );
+	}
+
+	std::string GetBuiltIn( const std::string& i_rValue )
+	{
+		return i_rValue.substr( 1, i_rValue.size() - 2 );
+	}
+
+	std::string EvalBuiltIn( const std::string& i_rValue )
+	{
+		if( i_rValue == HOSTNAME )
+		{
+			return s_Hostname;
+		}
+		else if( i_rValue == INSTANCE )
+		{
+			if( Environment::DoesExist( LOGGER_INSTANCE_NAME ) )
+			{
+				return Environment::Get( LOGGER_INSTANCE_NAME );
+			}
+			else
+			{
+				MVLOGGER( "root.lib.DataProxy.ParameterTranslator.BuiltIn.InstanceUnknown",
+					"Instance id requested, but is unknown to the environment" );
+				return i_rValue + "-" + UNKNOWN;
+			}
+		}
+		else if( i_rValue == GUID )
+		{
+			return UniqueIdGenerator().GetUniqueId();
+		}
+		else if( i_rValue == PID )
+		{
+			return boost::lexical_cast< std::string >( ::getpid() );
+		}
+		else if( i_rValue.substr( 0, DATE_TIME.length() ) == DATE_TIME )
+		{
+			std::string format = "%Y%m%dT%H%M%S";
+			if( i_rValue.length() > DATE_TIME.length() + 1 )
+			{
+				format = i_rValue.substr( DATE_TIME.length() + 1 );
+			}
+			return DateTime().GetFormattedString( format );
+		}
+
+		// we should have returned by now; if not, return unknown
+		MVLOGGER( "root.lib.DataProxy.ParameterTranslator.BuiltIn.Unknown",
+			"Unknown built-in requested: " << i_rValue << "; using unknown" );
+		return i_rValue + "-" + UNKNOWN;
 	}
 
 	void GetReferencedParameters( const std::string& i_rInput, std::set< std::string >& o_rParameters )
@@ -350,7 +416,13 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 			{
 				std::string cmd( GetExpression( valueTranslator ) );
 				boost::replace_all( cmd, VALUE_FORMATTER, value );
-				value = Eval( cmd, m_ShellTimeout );
+				value = EvalExpression( cmd, m_ShellTimeout );
+			}
+			else if( IsBuiltIn( valueTranslator ) )
+			{
+				std::string builtIn( GetBuiltIn( valueTranslator ) );
+				boost::replace_all( builtIn, VALUE_FORMATTER, value );
+				value = EvalBuiltIn( builtIn );
 			}
 			// otherwise use it as a literal
 			else
@@ -375,7 +447,11 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 			std::string valueDefault = inputIter->second;
 			if( IsExpression( valueDefault ) )
 			{
-				valueDefault = Eval( GetExpression( valueDefault ), m_ShellTimeout );
+				valueDefault = EvalExpression( GetExpression( valueDefault ), m_ShellTimeout );
+			}
+			else if( IsBuiltIn( valueDefault ) )
+			{
+				valueDefault = EvalBuiltIn( GetBuiltIn( valueDefault ) );
 			}
 			o_rTranslatedParameters[ inputIter->first ] = valueDefault;
 		}
@@ -408,7 +484,11 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 		// calculate the derived value from the source value
 		if( IsExpression( derivedValue ) )
 		{
-			derivedValue = Eval( GetExpression( derivedValue ), m_ShellTimeout );
+			derivedValue = EvalExpression( GetExpression( derivedValue ), m_ShellTimeout );
+		}
+		else if( IsBuiltIn( derivedValue ) )
+		{
+			derivedValue = EvalBuiltIn( GetBuiltIn( derivedValue ) );
 		}
 
 		// if it's an override or it's currently missing from the output parameters, add it
@@ -427,7 +507,11 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 			std::string valueDefault = inputIter->second;
 			if( IsExpression( valueDefault ) )
 			{
-				valueDefault = Eval( GetExpression( valueDefault ), m_ShellTimeout );
+				valueDefault = EvalExpression( GetExpression( valueDefault ), m_ShellTimeout );
+			}
+			else if( IsBuiltIn( valueDefault ) )
+			{
+				valueDefault = EvalBuiltIn( GetBuiltIn( valueDefault ) );
 			}
 			o_rTranslatedParameters[ inputIter->first ] = valueDefault;
 		}

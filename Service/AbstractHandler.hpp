@@ -20,6 +20,7 @@
 class HTTPRequest;
 class HTTPResponse;
 class DataProxyClient;
+class LogTracker;
 
 class AbstractHandler : public boost::noncopyable, public IWebService
 {
@@ -28,7 +29,7 @@ public:
 	virtual ~AbstractHandler();
 
 protected:
-	bool CheckConfig( HTTPResponse& o_rResponse );
+	bool CheckConfig( HTTPResponse& o_rResponse, const LogTracker& i_rLogTracker );
 	void GetParams( HTTPRequest& i_rRequest, std::string& o_rName, std::map< std::string, std::string >& o_rParams );
 	DataProxyClient& GetDataProxyClient(); 
 
