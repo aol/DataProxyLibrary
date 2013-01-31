@@ -16,7 +16,6 @@
 #include "HTTPRequest.hpp"
 #include "HTTPResponse.hpp"
 #include "DataProxyService.hpp"
-#include "LogTracker.hpp"
 
 AbstractHandler::AbstractHandler( DataProxyClient& i_rDataProxyClient, const std::string& i_rDplConfig, bool i_EnableXForwardedFor )
 :	m_rDataProxyClient( i_rDataProxyClient ),
@@ -34,7 +33,7 @@ DataProxyClient& AbstractHandler::GetDataProxyClient()
 	return m_rDataProxyClient;
 }
 
-bool AbstractHandler::CheckConfig( HTTPResponse& o_rResponse, const LogTracker& i_rLogTracker )
+bool AbstractHandler::CheckConfig( HTTPResponse& o_rResponse )
 {
 	try
 	{
@@ -48,7 +47,6 @@ bool AbstractHandler::CheckConfig( HTTPResponse& o_rResponse, const LogTracker& 
 		MVLOGGER( "root.lib.DataProxy.Service.AbstractHandler.CheckConfig.ErrorInitializing", msg.str() );
 		o_rResponse.SetHTTPStatusCode( HTTP_STATUS_INTERNAL_SERVER_ERROR );
 		o_rResponse.WriteHeader( SERVER, DATA_PROXY_SERVICE_VERSION );
-		i_rLogTracker.WriteTraceback( o_rResponse );
 		o_rResponse.WriteData( msg.str() + "\n" );
 		return false;
 	}

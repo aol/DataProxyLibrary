@@ -20,7 +20,6 @@
 #include "MockHTTPRequest.hpp"
 #include "MockHTTPResponse.hpp"
 #include "ProxyUtilities.hpp"
-#include "LogTracker.hpp"
 #include "AssertFileContents.hpp"
 #include "XMLUtilities.hpp"
 #include <boost/regex.hpp>
@@ -64,15 +63,13 @@ void AbstractHandlerTest::testCheckConfig()
 {
 	DataProxyClient client;
 	MockHTTPResponse response;
-	MockHTTPRequest request;
-	LogTracker logTracker( request );
 
 	std::string dplConfigFileSpec = m_pTempDir->GetDirectoryName() + "/dplConfig.xml";
 
 	TestableHandler handler( client, dplConfigFileSpec, false );
 	
 	// error condition #1: initialization fails because the file doesn't exist
-	CPPUNIT_ASSERT_NO_THROW( CPPUNIT_ASSERT( !handler.CallCheckConfig( response, logTracker ) ) );
+	CPPUNIT_ASSERT_NO_THROW( CPPUNIT_ASSERT( !handler.CallCheckConfig( response ) ) );
 	std::stringstream expected;
 	expected << "SetHTTPStatusCode called with Code: 500 Message: " << std::endl
 			 << "WriteHeader called with Name: Server Value: " << DATA_PROXY_SERVICE_VERSION << std::endl
@@ -89,7 +86,7 @@ void AbstractHandlerTest::testCheckConfig()
 	// successful config 
 	response.ClearLog();
 	expected.str("");
-	CPPUNIT_ASSERT_NO_THROW( CPPUNIT_ASSERT( handler.CallCheckConfig( response, logTracker ) ) );
+	CPPUNIT_ASSERT_NO_THROW( CPPUNIT_ASSERT( handler.CallCheckConfig( response ) ) );
 	CPPUNIT_ASSERT_EQUAL( expected.str(), response.GetLog() );
 }
 
