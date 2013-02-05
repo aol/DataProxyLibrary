@@ -23,6 +23,7 @@
 #include <cppunit/BriefTestProgressListener.h>
 #include <cppunit/XmlOutputter.h>
 #include <cppunit/TextOutputter.h>
+#include <string.h>
 
 #include "MVLogger.hpp"
 #include "MVException.hpp"

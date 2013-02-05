@@ -15,6 +15,8 @@
 #include <boost/scoped_ptr.hpp>
 
 class TempDirectory;
+class OracleUnitTestDatabase;
+class MySqlUnitTestDatabase;
 
 class ProxyUtilitiesTest : public CppUnit::TestFixture
 {
@@ -66,6 +68,8 @@ public:
 
 private:
 	boost::scoped_ptr< TempDirectory > m_pTempDir;
+	boost::scoped_ptr< OracleUnitTestDatabase > m_pOracleDB;
+	boost::scoped_ptr< MySqlUnitTestDatabase > m_pMySqlDB;
 };
 
 #endif //_PROXY_UTILITIES_TEST_HPP_
