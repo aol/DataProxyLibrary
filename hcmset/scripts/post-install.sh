@@ -5,7 +5,7 @@ set -e
 TOPDIR=/data/app/dpl
 LIBDIR=/data/lib
 
-VERSION=3.1.7
+VERSION=3.1.8
 MIN_VER=${VERSION:0:3}
 MAJ_VER=${VERSION:0:1}
 SHELL_EXE=dplShell
