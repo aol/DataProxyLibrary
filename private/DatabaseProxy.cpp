@@ -602,7 +602,7 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 		if( !m_WriteConnectionByTable )
 		{
 			std::string dbType = m_rDatabaseConnectionManager.GetDatabaseType( m_WriteConnectionName );
-			std::string query = ProxyUtilities::GetMergeQuery( m_rDatabaseConnectionManager.GetConnection( m_WriteConnectionName ),
+			std::string query = ProxyUtilities::GetMergeQuery( m_rDatabaseConnectionManager, m_WriteConnectionName,
 															   dbType, m_WriteTable, m_WriteStagingTable,
 															   *XMLUtilities::GetSingletonChildByName( pNode, COLUMNS_NODE ),
 															   insertOnly, m_WriteRequiredColumns, m_WriteNodeColumnLengths, &m_WriteBindColumns );
@@ -617,11 +617,11 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 		}
 		else
 		{
-			m_WriteMySqlMergeQuery = ProxyUtilities::GetMergeQuery( m_rDatabaseConnectionManager.GetConnection( m_WriteConnectionName ),
+			m_WriteMySqlMergeQuery = ProxyUtilities::GetMergeQuery( m_rDatabaseConnectionManager, m_WriteConnectionName,
 																	MYSQL_DB_TYPE, m_WriteTable, m_WriteStagingTable,
 																	*XMLUtilities::GetSingletonChildByName( pNode, COLUMNS_NODE ),
 																	insertOnly, m_WriteRequiredColumns, m_WriteNodeColumnLengths, &m_WriteBindColumns );
-			m_WriteOracleMergeQuery = ProxyUtilities::GetMergeQuery( m_rDatabaseConnectionManager.GetConnection( m_WriteConnectionName ),
+			m_WriteOracleMergeQuery = ProxyUtilities::GetMergeQuery( m_rDatabaseConnectionManager, m_WriteConnectionName,
 																	 ORACLE_DB_TYPE, m_WriteTable, m_WriteStagingTable,
 																	 *XMLUtilities::GetSingletonChildByName( pNode, COLUMNS_NODE ),
 																	 insertOnly, m_WriteRequiredColumns, m_WriteNodeColumnLengths );

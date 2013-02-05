@@ -22,7 +22,7 @@ MV_MAKEEXCEPTIONCLASS( IllegalCharacterException, ProxyUtilitiesException );
 namespace xercesc_2_7 { class DOMNode; }
 namespace xercesc = xercesc_2_7;
 
-class Database;
+class DatabaseConnectionManager;
 
 namespace ProxyUtilities
 {
@@ -33,7 +33,8 @@ namespace ProxyUtilities
 	void ValidateParameterSanity( const std::map< std::string, std::string >& i_rParameters );
 	bool VectorContains( const std::vector< std::string >& i_rVector, const std::string& i_rValue );
 
-	std::string GetMergeQuery( Database& i_rDatabase,
+	std::string GetMergeQuery( DatabaseConnectionManager& i_rDatabaseConnectionManager,
+							   const std::string& i_rConnectionName,
 							   const std::string& i_rDatabaseType,
 							   const std::string& i_rTable,
 							   const std::string& i_rStagingTable,

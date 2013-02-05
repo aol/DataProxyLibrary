@@ -29,7 +29,7 @@ public:
 	virtual std::string GetDatabaseType(const std::string& i_rConnectionName) const;
 	virtual void ClearConnections();
 
-	void InsertConnection(const std::string& i_rConnectionName, boost::shared_ptr<Database>& i_rConnection, const std::string& i_rType = "");
+	void InsertConnection(const std::string& i_rConnectionName, boost::shared_ptr<Database>& i_rConnection, const std::string& i_rType = "", bool i_InsertDDL = true );
 	std::string GetLog() const;
 
 private:

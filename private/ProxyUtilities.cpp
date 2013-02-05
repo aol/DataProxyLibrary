@@ -15,7 +15,9 @@
 #include "StringUtilities.hpp"
 #include "GenericDataObject.hpp"
 #include "Nullable.hpp"
+#include "MVLogger.hpp"
 #include "Database.hpp"
+#include "DatabaseConnectionManager.hpp"
 #include <boost/regex.hpp>
 #include <boost/algorithm/string/case_conv.hpp>
 #include <boost/algorithm/string/replace.hpp>
@@ -152,7 +154,7 @@ namespace
 	}
 
 	std::string GetEqualityList( const std::vector< std::string > i_rColumns,
-								 const std::set< std::string > i_rNullableColumns,
+								 const std::set< std::string > i_rNonNullableColumns,
 								 const std::string& i_rStagingTable,
 								 const std::string& i_rTable,
 								 const std::string& i_rSeparator = DEFAULT_SEPARATOR )
@@ -169,7 +171,7 @@ namespace
 			result << "( " << GetPrefixedColumn( *iter, i_rTable ) << " = " << GetPrefixedColumn( *iter, i_rStagingTable, true );
 
 			// or if this is a nullable column & they're both null!
-			if( i_rNullableColumns.find( boost::algorithm::to_lower_copy( *iter ) ) != i_rNullableColumns.end() )
+			if( i_rNonNullableColumns.find( boost::algorithm::to_lower_copy( *iter ) ) == i_rNonNullableColumns.end() )
 			{
 				result << " OR " << GetPrefixedColumn( *iter, i_rTable ) << " IS NULL AND " << GetPrefixedColumn( *iter, i_rStagingTable, true ) << " IS NULL";
 			}
@@ -302,48 +304,64 @@ namespace
 		}
 	}
 
-	void OracleGetNullable( Database& i_rDatabase, const std::string& i_rTable, std::set< std::string >& o_rNullableColumns )
+	void OracleGetNonNullable( DatabaseConnectionManager& i_rDatabaseConnectionManager, const std::string& i_rConnectionName, const std::string& i_rTable, std::set< std::string >& o_rNullableColumns )
 	{
-		std::stringstream sql;
-		sql << "SELECT LOWER( column_name ) FROM all_tab_cols WHERE"
-			<< " nullable = 'Y'"
-			<< " AND LOWER( OWNER ) = '" << boost::algorithm::to_lower_copy( i_rDatabase.GetSchema() ) << "'"
-			<< " AND LOWER( TABLE_NAME ) = '" << boost::algorithm::to_lower_copy( i_rTable ) << "'";
-		Database::Statement stmt( i_rDatabase, sql.str() );
-		std::string column;
-		stmt.BindCol( column, 32 );
-		stmt.CompleteBinding();
-		while( stmt.NextRow() )
+		try
 		{
-			o_rNullableColumns.insert( column );
+			Database& rDatabase( i_rDatabaseConnectionManager.GetConnection( i_rConnectionName ) );
+			std::stringstream sql;
+			sql << "SELECT LOWER( column_name ) FROM all_tab_cols WHERE"
+				<< " nullable = 'N'"
+				<< " AND LOWER( OWNER ) = '" << boost::algorithm::to_lower_copy( rDatabase.GetSchema() ) << "'"
+				<< " AND LOWER( TABLE_NAME ) = '" << boost::algorithm::to_lower_copy( i_rTable ) << "'";
+			Database::Statement stmt( rDatabase, sql.str() );
+			std::string column;
+			stmt.BindCol( column, 32 );
+			stmt.CompleteBinding();
+			while( stmt.NextRow() )
+			{
+				o_rNullableColumns.insert( column );
+			}
+		}
+		catch( const DBException& i_rException )
+		{
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.ResolveNullKeys", "Unable to determine any non-null keys due to exception: " << i_rException << "; assuming keys are nullable" );
 		}
 	}
 
-	void MySqlGetNullable( Database& i_rDatabase, const std::string& i_rTable, std::set< std::string >& o_rNullableColumns )
+	void MySqlGetNonNullable( DatabaseConnectionManager& i_rDatabaseConnectionManager, const std::string& i_rConnectionName, const std::string& i_rTable, std::set< std::string >& o_rNullableColumns )
 	{
-		std::stringstream sql;
-		sql << "SHOW COLUMNS FROM " << i_rTable;
-		Database::Statement stmt( i_rDatabase, sql.str() );
-		std::string column;
-		std::string type;
-		std::string nullable;
-		std::string key;
-		std::string def;
-		std::string extra;
-		stmt.BindCol( column, 128 );
-		stmt.BindCol( type, 32 );
-		stmt.BindCol( nullable, 8 );
-		stmt.BindCol( key, 32 );
-		stmt.BindCol( def, 32 );
-		stmt.BindCol( extra, 32 );
-		stmt.CompleteBinding();
-		while( stmt.NextRow() )
+		try
 		{
-			if( nullable == "YES" )
+			Database& rDatabase( i_rDatabaseConnectionManager.GetConnection( i_rConnectionName ) );
+			std::stringstream sql;
+			sql << "SHOW COLUMNS FROM " << i_rTable;
+			Database::Statement stmt( rDatabase, sql.str() );
+			std::string column;
+			std::string type;
+			std::string nullable;
+			std::string key;
+			std::string def;
+			std::string extra;
+			stmt.BindCol( column, 128 );
+			stmt.BindCol( type, 32 );
+			stmt.BindCol( nullable, 8 );
+			stmt.BindCol( key, 32 );
+			stmt.BindCol( def, 32 );
+			stmt.BindCol( extra, 32 );
+			stmt.CompleteBinding();
+			while( stmt.NextRow() )
 			{
-				boost::algorithm::to_lower( column );
-				o_rNullableColumns.insert( column );
+				if( nullable == "NO" )
+				{
+					boost::algorithm::to_lower( column );
+					o_rNullableColumns.insert( column );
+				}
 			}
+		}
+		catch( const DBException& i_rException )
+		{
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.ResolveNullKeys", "Unable to determine any non-null keys due to exception: " << i_rException << "; assuming keys are nullable" );
 		}
 	}
 }
@@ -419,7 +437,8 @@ bool ProxyUtilities::VectorContains( const std::vector< std::string >& i_rVector
 	return false;
 }
 
-std::string ProxyUtilities::GetMergeQuery( Database& i_rDatabase,
+std::string ProxyUtilities::GetMergeQuery( DatabaseConnectionManager& i_rDatabaseConnectionManager,
+										   const std::string& i_rConnectionName,
 										   const std::string& i_rDatabaseType,
 										   const std::string& i_rTable,
 										   const std::string& i_rStagingTable,
@@ -430,14 +449,14 @@ std::string ProxyUtilities::GetMergeQuery( Database& i_rDatabase,
 										   std::vector< std::string >* o_pBindColumns)
 
 {
-	std::set< std::string > nullableKeyColumns;
+	std::set< std::string > nonNullableKeyColumns;
 	if( i_rDatabaseType == ORACLE_DB_TYPE )
 	{
-		OracleGetNullable( i_rDatabase, i_rTable, nullableKeyColumns );
+		OracleGetNonNullable( i_rDatabaseConnectionManager, i_rConnectionName, i_rTable, nonNullableKeyColumns );
 	}
 	else if( i_rDatabaseType == MYSQL_DB_TYPE )
 	{
-		MySqlGetNullable( i_rDatabase, i_rTable, nullableKeyColumns );
+		MySqlGetNonNullable( i_rDatabaseConnectionManager, i_rConnectionName, i_rTable, nonNullableKeyColumns );
 	}
 	else
 	{
@@ -621,7 +640,7 @@ std::string ProxyUtilities::GetMergeQuery( Database& i_rDatabase,
 		std::string resolvedStagingTable = ( i_rStagingTable.empty() ? DUMMY_STAGING : i_rStagingTable );
 		result << "MERGE INTO " << i_rTable
 			   << " USING " << GetDummyQueryIfNeeded( keyColumns, valueDataColumns, i_rStagingTable, &bindColumns ) << resolvedStagingTable
-			   << " ON ( " << GetEqualityList( keyColumns, nullableKeyColumns, resolvedStagingTable, i_rTable, " AND " ) << " )";
+			   << " ON ( " << GetEqualityList( keyColumns, nonNullableKeyColumns, resolvedStagingTable, i_rTable, " AND " ) << " )";
 		if( !ifNewColumns.empty() || ( ifNewColumns.empty() && ifMatchedColumns.empty() ) )
 		{
 			result << " WHEN NOT MATCHED THEN INSERT( "
@@ -667,7 +686,7 @@ std::string ProxyUtilities::GetMergeQuery( Database& i_rDatabase,
 		std::string resolvedStagingTable = ( i_rStagingTable.empty() ? DUMMY_STAGING : i_rStagingTable );
 		result << "UPDATE " << i_rTable << ", " << GetDummyQueryIfNeeded( keyColumns, valueDataColumns, i_rStagingTable, &bindColumns ) << resolvedStagingTable
 			   << " SET " << GetResolvedEqualityList( ifMatchedColumns, resolvedStagingTable, i_rTable )
-			   << " WHERE " << GetEqualityList( keyColumns, nullableKeyColumns, resolvedStagingTable, i_rTable, " AND " );
+			   << " WHERE " << GetEqualityList( keyColumns, nonNullableKeyColumns, resolvedStagingTable, i_rTable, " AND " );
 	}
 
 	SetOutgoingBindColumns( o_pBindColumns, bindColumns, o_rRequiredColumns );

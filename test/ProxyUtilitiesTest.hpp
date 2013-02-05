@@ -13,10 +13,11 @@
 #include <cppunit/TestFixture.h>
 #include <cppunit/extensions/HelperMacros.h>
 #include <boost/scoped_ptr.hpp>
+#include <boost/shared_ptr.hpp>
 
 class TempDirectory;
-class OracleUnitTestDatabase;
-class MySqlUnitTestDatabase;
+class Database;
+class MockDatabaseConnectionManager;
 
 class ProxyUtilitiesTest : public CppUnit::TestFixture
 {
@@ -68,8 +69,9 @@ public:
 
 private:
 	boost::scoped_ptr< TempDirectory > m_pTempDir;
-	boost::scoped_ptr< OracleUnitTestDatabase > m_pOracleDB;
-	boost::scoped_ptr< MySqlUnitTestDatabase > m_pMySqlDB;
+	boost::shared_ptr< Database > m_pOracleDB;
+	boost::shared_ptr< Database > m_pMySqlDB;
+	boost::scoped_ptr< MockDatabaseConnectionManager > m_pDatabaseConnectionManager;
 };
 
 #endif //_PROXY_UTILITIES_TEST_HPP_

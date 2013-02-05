@@ -101,9 +101,13 @@ void MockDatabaseConnectionManager::ClearConnections()
 	m_Log << "MockDatabaseConnectionManager::ClearLogs" << std::endl;
 }
 
-void MockDatabaseConnectionManager::InsertConnection(const std::string& i_rConnectionName, boost::shared_ptr<Database>& i_rConnection, const std::string& i_rType)
+void MockDatabaseConnectionManager::InsertConnection(const std::string& i_rConnectionName, boost::shared_ptr<Database>& i_rConnection, const std::string& i_rType, bool i_InsertDDL )
 {
 	m_MockConnectionMap[i_rConnectionName] = i_rConnection;
+	if( !i_InsertDDL )
+	{
+		return;
+	}
 
 	Database* pDatabase = i_rConnection.get();
 	if( i_rType == "oracle" || dynamic_cast<OracleUnitTestDatabase*>( pDatabase ) != NULL )

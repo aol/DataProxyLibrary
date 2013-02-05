@@ -15,6 +15,7 @@
 #include "AssertThrowWithMessage.hpp"
 #include "OracleUnitTestDatabase.hpp"
 #include "MySqlUnitTestDatabase.hpp"
+#include "MockDatabaseConnectionManager.hpp"
 #include <fstream>
 #include <boost/regex.hpp>
 
@@ -24,7 +25,10 @@ CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( ProxyUtilitiesTest, "ProxyUtilitiesTest" 
 const std::string MATCH_FILE_AND_LINE_NUMBER( ".+?:[0-9]+?: " );
 
 ProxyUtilitiesTest::ProxyUtilitiesTest()
-:	m_pTempDir( NULL )
+:	m_pTempDir( NULL ),
+	m_pOracleDB(),
+	m_pMySqlDB(),
+	m_pDatabaseConnectionManager( NULL )
 {
 }
 
@@ -38,6 +42,9 @@ void ProxyUtilitiesTest::setUp()
 	m_pTempDir.reset( new TempDirectory() );
 	m_pOracleDB.reset( new OracleUnitTestDatabase() );
 	m_pMySqlDB.reset( new MySqlUnitTestDatabase() );
+	m_pDatabaseConnectionManager.reset( new MockDatabaseConnectionManager() );
+	m_pDatabaseConnectionManager->InsertConnection( "connect-oracle", m_pOracleDB, "", false );
+	m_pDatabaseConnectionManager->InsertConnection( "connect-mysql", m_pMySqlDB, "", false );
 
 	std::stringstream sql;
 	sql << "CREATE TABLE myTable ("
@@ -64,8 +71,9 @@ void ProxyUtilitiesTest::tearDown()
 {
 	//XMLPlatformUtils::Terminate();
 	m_pTempDir.reset( NULL );
-	m_pOracleDB.reset( NULL );
-	m_pMySqlDB.reset( NULL );
+	m_pOracleDB.reset();
+	m_pMySqlDB.reset();
+	m_pDatabaseConnectionManager.reset( NULL );
 }
 
 void ProxyUtilitiesTest::testToString()
@@ -150,7 +158,7 @@ void ProxyUtilitiesTest::testGetMergeQuery_IllegalXml()
 
 	std::map< std::string, std::string > columns;
 	std::map< std::string, size_t > columnLengths;
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ProxyUtilities::GetMergeQuery( *m_pOracleDB, "oracle", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-oracle", "oracle", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths ),
 									   ProxyUtilitiesException,
 									   MATCH_FILE_AND_LINE_NUMBER + "Column: key1 is a key and cannot have attributes 'ifNew' or 'ifMatched'" );
 
@@ -162,7 +170,7 @@ void ProxyUtilitiesTest::testGetMergeQuery_IllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Columns", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ProxyUtilities::GetMergeQuery( *m_pOracleDB, "oracle", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-oracle", "oracle", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths ),
 									   ProxyUtilitiesException,
 									   MATCH_FILE_AND_LINE_NUMBER + "Column: key1 is a key and cannot have attributes 'ifNew' or 'ifMatched'" );
 
@@ -174,7 +182,7 @@ void ProxyUtilitiesTest::testGetMergeQuery_IllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Columns", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ProxyUtilities::GetMergeQuery( *m_pOracleDB, "oracle", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-oracle", "oracle", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths ),
 									   XMLUtilitiesException,
 									   MATCH_FILE_AND_LINE_NUMBER + "Found invalid attribute: garbage in node: Column" );
 
@@ -185,7 +193,7 @@ void ProxyUtilitiesTest::testGetMergeQuery_IllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Columns", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ProxyUtilities::GetMergeQuery( *m_pOracleDB, "oracle", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-oracle", "oracle", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths ),
 									   ProxyUtilitiesException,
 									   MATCH_FILE_AND_LINE_NUMBER + "No Column elements defined" );
 
@@ -197,7 +205,7 @@ void ProxyUtilitiesTest::testGetMergeQuery_IllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Columns", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ProxyUtilities::GetMergeQuery( *m_pOracleDB, "garbage", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-oracle", "garbage", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths ),
 									   ProxyUtilitiesException,
 									   MATCH_FILE_AND_LINE_NUMBER + "Unknown database type: garbage" );
 
@@ -209,7 +217,7 @@ void ProxyUtilitiesTest::testGetMergeQuery_IllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Columns", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ProxyUtilities::GetMergeQuery( *m_pOracleDB, "oracle", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-oracle", "oracle", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths ),
 									   ProxyUtilitiesException,
 									   MATCH_FILE_AND_LINE_NUMBER + "Illegal value for type: garbage. Valid values are key and data" );
 
@@ -222,7 +230,7 @@ void ProxyUtilitiesTest::testGetMergeQuery_IllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Columns", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ProxyUtilities::GetMergeQuery( *m_pOracleDB, "oracle", "myTable", "stagingTable", *nodes[0], true, columns, columnLengths ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-oracle", "oracle", "myTable", "stagingTable", *nodes[0], true, columns, columnLengths ),
 									   ProxyUtilitiesException,
 									   MATCH_FILE_AND_LINE_NUMBER + "Write node is marked as insert-only, but there are columns with values for the ifMatched attribute" );
 
@@ -235,7 +243,7 @@ void ProxyUtilitiesTest::testGetMergeQuery_IllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Columns", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ProxyUtilities::GetMergeQuery( *m_pMySqlDB, "mysql", "myTable", "stagingTable", *nodes[0], true, columns, columnLengths ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-mysql", "mysql", "myTable", "stagingTable", *nodes[0], true, columns, columnLengths ),
 									   ProxyUtilitiesException,
 									   MATCH_FILE_AND_LINE_NUMBER + "Write node is marked as insert-only, but there are columns with values for the ifMatched attribute" );
 
@@ -247,7 +255,7 @@ void ProxyUtilitiesTest::testGetMergeQuery_IllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Columns", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ProxyUtilities::GetMergeQuery( *m_pMySqlDB, "mysql", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-mysql", "mysql", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths ),
 									   ProxyUtilitiesException,
 									   MATCH_FILE_AND_LINE_NUMBER + "Column: data2 is marked as data type, but has no attribute for ifNew or ifMatched" );
 
@@ -260,7 +268,7 @@ void ProxyUtilitiesTest::testGetMergeQuery_IllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Columns", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ProxyUtilities::GetMergeQuery( *m_pMySqlDB, "mysql", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-mysql", "mysql", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths ),
 									   ProxyUtilitiesException,
 									   MATCH_FILE_AND_LINE_NUMBER + "Column: data is defined more than once" );
 
@@ -273,7 +281,7 @@ void ProxyUtilitiesTest::testGetMergeQuery_IllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Columns", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ProxyUtilities::GetMergeQuery( *m_pMySqlDB, "mysql", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-mysql", "mysql", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths ),
 									   ProxyUtilitiesException,
 									   MATCH_FILE_AND_LINE_NUMBER + "Source name: DATA is used for multiple columns" );
 }
@@ -304,7 +312,7 @@ void ProxyUtilitiesTest::testGetMergeQuery_FullMerge_Oracle()
 
 	std::map< std::string, std::string > columns;
 	std::map< std::string, size_t > columnLengths;
-	std::string actual = ProxyUtilities::GetMergeQuery( *m_pOracleDB, "oracle", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths );
+	std::string actual = ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-oracle", "oracle", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths );
 
 	CPPUNIT_ASSERT_EQUAL( size_t(5), columns.size() );
 	CPPUNIT_ASSERT( columns.find("KEY1") != columns.end() );
@@ -344,7 +352,7 @@ void ProxyUtilitiesTest::testGetMergeQuery_FullMerge_MySql()
 
 	std::map< std::string, std::string > columns;
 	std::map< std::string, size_t > columnLengths;
-	std::string actual = ProxyUtilities::GetMergeQuery( *m_pMySqlDB, "mysql", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths );
+	std::string actual = ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-mysql", "mysql", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths );
 
 	CPPUNIT_ASSERT_EQUAL( size_t(5), columns.size() );
 	CPPUNIT_ASSERT( columns.find("KEY1") != columns.end() );
@@ -379,7 +387,7 @@ void ProxyUtilitiesTest::testGetMergeQuery_InsertOnly()
 	std::stringstream expected;
 	expected << "INSERT INTO myTable( key1, key2, data3, data4 ) SELECT stagingTable.key1, stagingTable.key2, NVL(stagingTable.data3,%t), 444 FROM stagingTable";
 
-	std::string actual = ProxyUtilities::GetMergeQuery( *m_pOracleDB, "oracle", "myTable", "stagingTable", *nodes[0], true, columns, columnLengths );
+	std::string actual = ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-oracle", "oracle", "myTable", "stagingTable", *nodes[0], true, columns, columnLengths );
 
 	CPPUNIT_ASSERT_EQUAL( size_t(3), columns.size() );
 	CPPUNIT_ASSERT( columns.find("key1") != columns.end() );
@@ -388,7 +396,7 @@ void ProxyUtilitiesTest::testGetMergeQuery_InsertOnly()
 	
 	CPPUNIT_ASSERT_EQUAL( expected.str(), actual );
 
-	actual = ProxyUtilities::GetMergeQuery( *m_pMySqlDB, "mysql", "myTable", "stagingTable", *nodes[0], true, columns, columnLengths );
+	actual = ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-mysql", "mysql", "myTable", "stagingTable", *nodes[0], true, columns, columnLengths );
 
 	CPPUNIT_ASSERT_EQUAL( size_t(3), columns.size() );
 	CPPUNIT_ASSERT( columns.find("key1") != columns.end() );
@@ -423,7 +431,7 @@ void ProxyUtilitiesTest::testGetMergeQuery_NotMatch_Oracle()
 
 	std::map< std::string, std::string > columns;
 	std::map< std::string, size_t > columnLengths;
-	std::string actual = ProxyUtilities::GetMergeQuery( *m_pOracleDB, "oracle", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths );
+	std::string actual = ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-oracle", "oracle", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths );
 
 	CPPUNIT_ASSERT_EQUAL( size_t(4), columns.size() );
 	CPPUNIT_ASSERT( columns.find("key1") != columns.end() );
@@ -453,7 +461,7 @@ void ProxyUtilitiesTest::testGetMergeQuery_NotMatch_Oracle()
 			 << " AND ( myTable.key2 = stagingTable.key2 OR myTable.key2 IS NULL AND stagingTable.key2 IS NULL ) )"
 			 << " WHEN NOT MATCHED THEN INSERT( key1, key2 ) VALUES ( stagingTable.key1, stagingTable.key2 )";
 
-	actual = ProxyUtilities::GetMergeQuery( *m_pOracleDB, "oracle", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths );
+	actual = ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-oracle", "oracle", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths );
 
 	CPPUNIT_ASSERT_EQUAL( size_t(2), columns.size() );
 	CPPUNIT_ASSERT( columns.find("key1") != columns.end() );
@@ -483,7 +491,7 @@ void ProxyUtilitiesTest::testGetMergeQuery_NotMatch_MySql()
 
 	std::map< std::string, std::string > columns;
 	std::map< std::string, size_t > columnLengths;
-	std::string actual = ProxyUtilities::GetMergeQuery( *m_pMySqlDB, "mysql", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths );
+	std::string actual = ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-mysql", "mysql", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths );
 
 	CPPUNIT_ASSERT_EQUAL( size_t(4), columns.size() );
 	CPPUNIT_ASSERT( columns.find("key1") != columns.end() );
@@ -510,7 +518,7 @@ void ProxyUtilitiesTest::testGetMergeQuery_NotMatch_MySql()
 	expected << "INSERT IGNORE INTO myTable( key1, key2 ) "
 			 << "SELECT stagingTable.key1, stagingTable.key2 FROM stagingTable";
 
-	actual = ProxyUtilities::GetMergeQuery( *m_pMySqlDB, "mysql", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths );
+	actual = ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-mysql", "mysql", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths );
 
 	CPPUNIT_ASSERT_EQUAL( size_t(2), columns.size() );
 	CPPUNIT_ASSERT( columns.find("key1") != columns.end() );
@@ -543,7 +551,7 @@ void ProxyUtilitiesTest::testGetMergeQuery_Match_Oracle()
 
 	std::map< std::string, std::string > columns;
 	std::map< std::string, size_t> columnLengths;
-	std::string actual = ProxyUtilities::GetMergeQuery( *m_pOracleDB, "oracle", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths);
+	std::string actual = ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-oracle", "oracle", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths);
 
 	CPPUNIT_ASSERT_EQUAL( size_t(4), columns.size() );
 	CPPUNIT_ASSERT( columns.find("key1") != columns.end() );
@@ -587,7 +595,7 @@ void ProxyUtilitiesTest::testGetMergeQuery_Match_MySql()
 
 	std::map< std::string, std::string > columns;
 	std::map< std::string, size_t > columnLengths;
-	std::string actual = ProxyUtilities::GetMergeQuery( *m_pMySqlDB, "mysql", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths );
+	std::string actual = ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-mysql", "mysql", "myTable", "stagingTable", *nodes[0], false, columns, columnLengths );
 
 	CPPUNIT_ASSERT_EQUAL( size_t(4), columns.size() );
 	CPPUNIT_ASSERT( columns.find("key1") != columns.end() );
@@ -631,7 +639,7 @@ void ProxyUtilitiesTest::testGetNoStageQuery_FullMerge_Oracle()
 	std::map< std::string, std::string > columns;
 	std::map< std::string, size_t > columnLengths;
 	std::vector< std::string > bindColumns;
-	std::string actual = ProxyUtilities::GetMergeQuery( *m_pOracleDB, "oracle", "myTable", "", *nodes[0], false, columns, columnLengths, &bindColumns );
+	std::string actual = ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-oracle", "oracle", "myTable", "", *nodes[0], false, columns, columnLengths, &bindColumns );
 	
 	CPPUNIT_ASSERT_EQUAL( expected.str(), actual );
 
@@ -686,7 +694,7 @@ void ProxyUtilitiesTest::testGetNoStageQuery_FullMerge_MySql()
 	std::map< std::string, std::string > columns;
 	std::map< std::string, size_t > columnLengths;
 	std::vector< std::string > bindColumns;
-	std::string actual = ProxyUtilities::GetMergeQuery( *m_pMySqlDB, "mysql", "myTable", "", *nodes[0], false, columns, columnLengths, &bindColumns );
+	std::string actual = ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-mysql", "mysql", "myTable", "", *nodes[0], false, columns, columnLengths, &bindColumns );
 	
 	CPPUNIT_ASSERT_EQUAL( expected.str(), actual );
 
@@ -735,7 +743,7 @@ void ProxyUtilitiesTest::testGetNoStageQuery_InsertOnly()
 	std::stringstream expected;
 	expected << "INSERT INTO myTable( key1, key2, data3, data4 ) VALUES( ?, ?, NVL(?,%t), 444 )";
 
-	std::string actual = ProxyUtilities::GetMergeQuery( *m_pOracleDB, "oracle", "myTable", "", *nodes[0], true, columns, columnLengths, &bindColumns );
+	std::string actual = ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-oracle", "oracle", "myTable", "", *nodes[0], true, columns, columnLengths, &bindColumns );
 
 	CPPUNIT_ASSERT_EQUAL( size_t(3), bindColumns.size() );
 	CPPUNIT_ASSERT( std::find( bindColumns.begin(), bindColumns.end(), std::string("key1") ) != bindColumns.end() );
@@ -751,7 +759,7 @@ void ProxyUtilitiesTest::testGetNoStageQuery_InsertOnly()
 	
 	CPPUNIT_ASSERT_EQUAL( expected.str(), actual );
 
-	actual = ProxyUtilities::GetMergeQuery( *m_pMySqlDB, "mysql", "myTable", "", *nodes[0], true, columns, columnLengths, &bindColumns );
+	actual = ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-mysql", "mysql", "myTable", "", *nodes[0], true, columns, columnLengths, &bindColumns );
 
 	CPPUNIT_ASSERT_EQUAL( size_t(3), columns.size() );
 	CPPUNIT_ASSERT( columns.find("key1") != columns.end() );
@@ -795,7 +803,7 @@ void ProxyUtilitiesTest::testGetNoStageQuery_NotMatch_Oracle()
 	std::map< std::string, std::string > columns;
 	std::map< std::string, size_t > columnLengths;
 	std::vector< std::string > bindColumns;
-	std::string actual = ProxyUtilities::GetMergeQuery( *m_pOracleDB, "oracle", "myTable", "", *nodes[0], false, columns, columnLengths, &bindColumns );
+	std::string actual = ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-oracle", "oracle", "myTable", "", *nodes[0], false, columns, columnLengths, &bindColumns );
 
 	CPPUNIT_ASSERT_EQUAL( size_t(4), columns.size() );
 	CPPUNIT_ASSERT( columns.find("key1") != columns.end() );
@@ -834,7 +842,7 @@ void ProxyUtilitiesTest::testGetNoStageQuery_NotMatch_Oracle()
 			 << " AND ( myTable.key2 = tmp.key2 OR myTable.key2 IS NULL AND tmp.key2 IS NULL ) )"
 			 << " WHEN NOT MATCHED THEN INSERT( key1, key2 ) VALUES ( tmp.key1, tmp.key2 )";
 
-	actual = ProxyUtilities::GetMergeQuery( *m_pOracleDB, "oracle", "myTable", "", *nodes[0], false, columns, columnLengths, &bindColumns );
+	actual = ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-oracle", "oracle", "myTable", "", *nodes[0], false, columns, columnLengths, &bindColumns );
 
 	CPPUNIT_ASSERT_EQUAL( size_t(2), columns.size() );
 	CPPUNIT_ASSERT( columns.find("key1") != columns.end() );
@@ -866,7 +874,7 @@ void ProxyUtilitiesTest::testGetNoStageQuery_NotMatch_MySql()
 	std::map< std::string, std::string > columns;
 	std::map< std::string, size_t > columnLengths;
 	std::vector< std::string > bindColumns;
-	std::string actual = ProxyUtilities::GetMergeQuery( *m_pMySqlDB, "mysql", "myTable", "", *nodes[0], false, columns, columnLengths, &bindColumns );
+	std::string actual = ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-mysql", "mysql", "myTable", "", *nodes[0], false, columns, columnLengths, &bindColumns );
 
 	CPPUNIT_ASSERT_EQUAL( size_t(4), columns.size() );
 	CPPUNIT_ASSERT( columns.find("key1") != columns.end() );
@@ -903,7 +911,7 @@ void ProxyUtilitiesTest::testGetNoStageQuery_NotMatch_MySql()
 	expected << "INSERT IGNORE INTO myTable( key1, key2 ) "
 			 << "SELECT ? AS key1, ? AS key2 FROM dual";
 
-	actual = ProxyUtilities::GetMergeQuery( *m_pMySqlDB, "mysql", "myTable", "", *nodes[0], false, columns, columnLengths, &bindColumns );
+	actual = ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-mysql", "mysql", "myTable", "", *nodes[0], false, columns, columnLengths, &bindColumns );
 
 	CPPUNIT_ASSERT_EQUAL( size_t(2), columns.size() );
 	CPPUNIT_ASSERT( columns.find("key1") != columns.end() );
@@ -914,6 +922,9 @@ void ProxyUtilitiesTest::testGetNoStageQuery_NotMatch_MySql()
 
 void ProxyUtilitiesTest::testGetNoStageQuery_Match_Oracle()
 {
+	// drop the table so we can't determine the non-null columns!
+	CPPUNIT_ASSERT_NO_THROW( Database::Statement( *m_pOracleDB, "DROP TABLE myTable" ).Execute() );
+
 	std::stringstream xmlContents;
 	xmlContents << "<Columns>"
 				<< " <Column name=\"key1\" type=\"key\" />"
@@ -929,7 +940,7 @@ void ProxyUtilitiesTest::testGetNoStageQuery_Match_Oracle()
 	std::stringstream expected;
 	expected << "MERGE INTO myTable"
 			 << " USING ( SELECT ? AS key1, ? AS key2, ? AS data3, ? AS data4 FROM dual ) tmp "
-			 << "ON ( ( myTable.key1 = tmp.key1 )"
+			 << "ON ( ( myTable.key1 = tmp.key1 OR myTable.key1 IS NULL AND tmp.key1 IS NULL )"
 			 << " AND ( myTable.key2 = tmp.key2 OR myTable.key2 IS NULL AND tmp.key2 IS NULL ) )"
 			 << " WHEN MATCHED THEN UPDATE SET "
 			 	<< "myTable.data3 = myTable.data3 + NVL(tmp.data3,0), "
@@ -939,7 +950,7 @@ void ProxyUtilitiesTest::testGetNoStageQuery_Match_Oracle()
 	std::map< std::string, std::string > columns;
 	std::map< std::string, size_t > columnLengths;
 	std::vector< std::string > bindColumns;
-	std::string actual = ProxyUtilities::GetMergeQuery( *m_pOracleDB, "oracle", "myTable", "", *nodes[0], false, columns, columnLengths, &bindColumns );
+	std::string actual = ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-oracle", "oracle", "myTable", "", *nodes[0], false, columns, columnLengths, &bindColumns );
 
 	CPPUNIT_ASSERT_EQUAL( size_t(4), columns.size() );
 	CPPUNIT_ASSERT( columns.find("key1") != columns.end() );
@@ -966,6 +977,9 @@ void ProxyUtilitiesTest::testGetNoStageQuery_Match_Oracle()
 
 void ProxyUtilitiesTest::testGetNoStageQuery_Match_MySql()
 {
+	// drop the table so we can't determine the non-null columns!
+	CPPUNIT_ASSERT_NO_THROW( Database::Statement( *m_pMySqlDB, "DROP TABLE myTable" ).Execute() );
+
 	std::stringstream xmlContents;
 	xmlContents << "<Columns>"
 				<< " <Column name=\"key1\" type=\"key\" />"
@@ -984,13 +998,13 @@ void ProxyUtilitiesTest::testGetNoStageQuery_Match_MySql()
 			 	<< "myTable.data3 = myTable.data3 + NVL(tmp.data3,0), "
 			 	<< "myTable.data4 = myTable.data4 + tmp.data4, "
 				<< "myTable.dummy = 20 "
-			 << "WHERE ( myTable.key1 = tmp.key1 )"
+			 << "WHERE ( myTable.key1 = tmp.key1 OR myTable.key1 IS NULL AND tmp.key1 IS NULL )"
 			 << " AND ( myTable.key2 = tmp.key2 OR myTable.key2 IS NULL AND tmp.key2 IS NULL )";
 
 	std::map< std::string, std::string > columns;
 	std::map< std::string, size_t > columnLengths;
 	std::vector< std::string > bindColumns;
-	std::string actual = ProxyUtilities::GetMergeQuery( *m_pMySqlDB, "mysql", "myTable", "", *nodes[0], false, columns, columnLengths, &bindColumns );
+	std::string actual = ProxyUtilities::GetMergeQuery( *m_pDatabaseConnectionManager, "connect-mysql", "mysql", "myTable", "", *nodes[0], false, columns, columnLengths, &bindColumns );
 	
 	CPPUNIT_ASSERT_EQUAL( expected.str(), actual );
 
