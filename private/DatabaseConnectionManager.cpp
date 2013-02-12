@@ -78,7 +78,7 @@ namespace
 			MVLOGGER( "root.lib.DataProxy.DatabaseConnectionManager.Reconnecting",
 				 "Connection named: " << i_rDatum.GetValue< ConnectionName >() << " has been active for: " << secondsElapsed << " seconds. "
 				 << "Reconnect timeout is set to: " << i_rDatum.GetValue< ConnectionReconnect >() << ". Reconnecting."  );
-			i_rDatum.GetReference< DatabaseConnection >()->Reconnect();
+			i_rDatum.GetReference< DatabaseConnection >().reset( new Database( *i_rDatum.GetReference< DatabaseConnection >() ) );
 			i_rDatum.GetReference< ConnectionTimer >()->Reset();
 		}
 	}
@@ -356,31 +356,31 @@ std::string DatabaseConnectionManager::PrivateGetConnectionNameByTable(const std
 	return iter->second;
 }
 
-Database& DatabaseConnectionManager::GetConnectionByTable( const std::string& i_rTableName )
+boost::shared_ptr< Database > DatabaseConnectionManager::GetConnectionByTable( const std::string& i_rTableName )
 {
 	std::string connectionName = PrivateGetConnectionNameByTable(i_rTableName);
 	return GetConnection(connectionName);
 }
 
-Database& DatabaseConnectionManager::GetDataDefinitionConnectionByTable( const std::string& i_rTableName )
+boost::shared_ptr< Database > DatabaseConnectionManager::GetDataDefinitionConnectionByTable( const std::string& i_rTableName )
 {
 	std::string connectionName = PrivateGetConnectionNameByTable(i_rTableName);
 	return GetConnection(DATA_DEFINITION_CONNECTION_PREFIX + connectionName);
 }
 
-Database& DatabaseConnectionManager::GetDataDefinitionConnection(const std::string& i_ConnectionName)
+boost::shared_ptr< Database > DatabaseConnectionManager::GetDataDefinitionConnection(const std::string& i_ConnectionName)
 {
 	return GetConnection(DATA_DEFINITION_CONNECTION_PREFIX + i_ConnectionName);
 }
 
-Database& DatabaseConnectionManager::GetConnection(const std::string& i_ConnectionName)
+boost::shared_ptr< Database > DatabaseConnectionManager::GetConnection(const std::string& i_ConnectionName)
 {
 	DatabaseConnectionDatum& rDatum = PrivateGetConnection(i_ConnectionName);
 	boost::shared_ptr<Database>& rDatabase = rDatum.GetReference<DatabaseConnection>();
 	if (rDatabase.get() != NULL)
 	{
 		ReconnectIfNecessary( rDatum, m_rDataProxyClient.InsideTransaction() );
-		return *rDatabase;
+		return rDatabase;
 	}
 	// obtain a unique lock and re-check
 	{
@@ -389,7 +389,7 @@ Database& DatabaseConnectionManager::GetConnection(const std::string& i_Connecti
 		if (rDatabase.get() != NULL)
 		{
 			ReconnectIfNecessary( rDatum, m_rDataProxyClient.InsideTransaction() );
-			return *rDatabase;
+			return rDatabase;
 		}
 
 		//the Connection hasn't been created yet, create it now and return it.
@@ -400,7 +400,6 @@ Database& DatabaseConnectionManager::GetConnection(const std::string& i_Connecti
 					 "Creating oracle database connection named " << rDatum.GetValue<ConnectionName>() << ".");
 			DatabaseConfigDatum datum = rDatum.GetValue<DatabaseConfig>();
 			Database *pDatabase = new Database( Database::DBCONN_OCI_THREADSAFE_ORACLE,
-//			Database *pDatabase = new Database( Database::DBCONN_OCI_ORACLE,
 												"",
 												datum.GetValue<DatabaseName>(),
 												datum.GetValue<DatabaseUserName>(),
@@ -411,7 +410,7 @@ Database& DatabaseConnectionManager::GetConnection(const std::string& i_Connecti
 			boost::shared_ptr<Database>& rDatabaseHandle = rDatum.GetReference<DatabaseConnection>();
 			rDatabaseHandle.reset(pDatabase);
 			rDatum.GetReference< ConnectionTimer >().reset( new Stopwatch() );
-			return *pDatabase;
+			return rDatabaseHandle;
 		}
 		else if (connectionType == MYSQL_DB_TYPE)
 		{
@@ -430,7 +429,7 @@ Database& DatabaseConnectionManager::GetConnection(const std::string& i_Connecti
 			boost::shared_ptr<Database>& rDatabaseHandle = rDatum.GetReference<DatabaseConnection>();
 			rDatabaseHandle.reset(pDatabase);
 			rDatum.GetReference< ConnectionTimer >().reset( new Stopwatch() );
-			return *pDatabase;
+			return rDatabaseHandle;
 		}
 		else
 		{

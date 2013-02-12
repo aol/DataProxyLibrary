@@ -111,8 +111,8 @@ void DatabaseConnectionManagerTest::testNormal()
 
 	expected << "ADLAPPD, , five0test, five0test, five0test, 0" << std::endl;
 	// ensure we can get two cloned copies of the database, but they are not the same object (connection)
-	pDatabase = &dbConnectionManager->GetConnection("name1");
-	pDataDefinitionDatabase = &dbConnectionManager->GetDataDefinitionConnection("name1");
+	pDatabase = dbConnectionManager->GetConnection("name1").get();
+	pDataDefinitionDatabase = dbConnectionManager->GetDataDefinitionConnection("name1").get();
 	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase)));
 	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDataDefinitionDatabase)));
 	CPPUNIT_ASSERT(pDataDefinitionDatabase != pDatabase);
@@ -120,8 +120,8 @@ void DatabaseConnectionManagerTest::testNormal()
 	expected.str("");
 	expected << ", localhost, adlearn, adlearn, Adv.commv, 0" << std::endl;
 	// ensure we can get two cloned copies of the database, but they are not the same object (connection)
-	pDatabase = &dbConnectionManager->GetConnection("name2");
-	pDataDefinitionDatabase = &dbConnectionManager->GetDataDefinitionConnection("name2");
+	pDatabase = dbConnectionManager->GetConnection("name2").get();
+	pDataDefinitionDatabase = dbConnectionManager->GetDataDefinitionConnection("name2").get();
 	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase)));
 	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDataDefinitionDatabase)));
 	CPPUNIT_ASSERT(pDataDefinitionDatabase != pDatabase);
@@ -180,8 +180,8 @@ void DatabaseConnectionManagerTest::testNormalReconnect()
 
 	expected << "ADLAPPD, , five0test, five0test, five0test, 0" << std::endl;
 	// ensure we can get two cloned copies of the database, but they are not the same object (connection)
-	pDatabase = &dbConnectionManager->GetConnection("name1");
-	pDataDefinitionDatabase = &dbConnectionManager->GetDataDefinitionConnection("name1");
+	pDatabase = dbConnectionManager->GetConnection("name1").get();
+	pDataDefinitionDatabase = dbConnectionManager->GetDataDefinitionConnection("name1").get();
 	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase)));
 	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDataDefinitionDatabase)));
 	CPPUNIT_ASSERT(pDataDefinitionDatabase != pDatabase);
@@ -189,8 +189,8 @@ void DatabaseConnectionManagerTest::testNormalReconnect()
 	expected.str("");
 	expected << ", localhost, adlearn, adlearn, Adv.commv, 0" << std::endl;
 	// ensure we can get two cloned copies of the database, but they are not the same object (connection)
-	pDatabase = &dbConnectionManager->GetConnection("name2");
-	pDataDefinitionDatabase = &dbConnectionManager->GetDataDefinitionConnection("name2");
+	pDatabase = dbConnectionManager->GetConnection("name2").get();
+	pDataDefinitionDatabase = dbConnectionManager->GetDataDefinitionConnection("name2").get();
 	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase)));
 	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDataDefinitionDatabase)));
 	CPPUNIT_ASSERT(pDataDefinitionDatabase != pDatabase);
@@ -481,12 +481,12 @@ void DatabaseConnectionManagerTest::testConnectionOnlyHappensOnGetConnection()
 	std::stringstream expected;
 	
 	Database* pDatabase;
-	CPPUNIT_ASSERT_NO_THROW(pDatabase = &dbConnectionManager->GetConnection("OracleConnectionTwo"));
+	CPPUNIT_ASSERT_NO_THROW(pDatabase = dbConnectionManager->GetConnection("OracleConnectionTwo").get());
 	expected << "ADLAPPD, , five0test, five0test, five0test, 0" << std::endl;
 	CPPUNIT_ASSERT_EQUAL(expected.str(), PrettyPrintDatabaseConnection(*pDatabase));
 
 	expected.str("");
-	CPPUNIT_ASSERT_NO_THROW(pDatabase = &dbConnectionManager->GetConnection("MySQLConnectionTwo"));
+	CPPUNIT_ASSERT_NO_THROW(pDatabase = dbConnectionManager->GetConnection("MySQLConnectionTwo").get());
 	expected << ", localhost, adlearn, adlearn, Adv.commv, 0" << std::endl;
 	CPPUNIT_ASSERT_EQUAL(expected.str(), PrettyPrintDatabaseConnection(*pDatabase));
 
@@ -571,15 +571,15 @@ void DatabaseConnectionManagerTest::testFetchShardNodes()
 
 	CPPUNIT_ASSERT_NO_THROW( manager.ParseConnectionsByTable( *nodes[0] ) );
 
-	CPPUNIT_ASSERT_EQUAL(std::string(", localhost, adlearn, adlearn, Adv.commv, 0\n"), PrettyPrintDatabaseConnection(manager.GetConnectionByTable("shard_12345")));
-	CPPUNIT_ASSERT_EQUAL(std::string(", localhost, adlearn, adlearn, Adv.commv, 0\n"), PrettyPrintDatabaseConnection(manager.GetConnectionByTable("shard_54321")));
-	CPPUNIT_ASSERT_EQUAL(std::string(", localhost, adlearn, adlearn, Adv.commv, 1\n"), PrettyPrintDatabaseConnection(manager.GetConnectionByTable("shard_22222")));
-	CPPUNIT_ASSERT_EQUAL(std::string("ADLAPPD, , five0test, five0test, five0test, 0\n"), PrettyPrintDatabaseConnection(manager.GetConnectionByTable("shard_33333")));
+	CPPUNIT_ASSERT_EQUAL(std::string(", localhost, adlearn, adlearn, Adv.commv, 0\n"), PrettyPrintDatabaseConnection(*manager.GetConnectionByTable("shard_12345")));
+	CPPUNIT_ASSERT_EQUAL(std::string(", localhost, adlearn, adlearn, Adv.commv, 0\n"), PrettyPrintDatabaseConnection(*manager.GetConnectionByTable("shard_54321")));
+	CPPUNIT_ASSERT_EQUAL(std::string(", localhost, adlearn, adlearn, Adv.commv, 1\n"), PrettyPrintDatabaseConnection(*manager.GetConnectionByTable("shard_22222")));
+	CPPUNIT_ASSERT_EQUAL(std::string("ADLAPPD, , five0test, five0test, five0test, 0\n"), PrettyPrintDatabaseConnection(*manager.GetConnectionByTable("shard_33333")));
 
-	CPPUNIT_ASSERT_EQUAL(std::string(", localhost, adlearn, adlearn, Adv.commv, 0\n"), PrettyPrintDatabaseConnection(manager.GetDataDefinitionConnectionByTable("shard_12345")));
-	CPPUNIT_ASSERT_EQUAL(std::string(", localhost, adlearn, adlearn, Adv.commv, 0\n"), PrettyPrintDatabaseConnection(manager.GetDataDefinitionConnectionByTable("shard_54321")));
-	CPPUNIT_ASSERT_EQUAL(std::string(", localhost, adlearn, adlearn, Adv.commv, 1\n"), PrettyPrintDatabaseConnection(manager.GetDataDefinitionConnectionByTable("shard_22222")));
-	CPPUNIT_ASSERT_EQUAL(std::string("ADLAPPD, , five0test, five0test, five0test, 0\n"), PrettyPrintDatabaseConnection(manager.GetDataDefinitionConnectionByTable("shard_33333")));
+	CPPUNIT_ASSERT_EQUAL(std::string(", localhost, adlearn, adlearn, Adv.commv, 0\n"), PrettyPrintDatabaseConnection(*manager.GetDataDefinitionConnectionByTable("shard_12345")));
+	CPPUNIT_ASSERT_EQUAL(std::string(", localhost, adlearn, adlearn, Adv.commv, 0\n"), PrettyPrintDatabaseConnection(*manager.GetDataDefinitionConnectionByTable("shard_54321")));
+	CPPUNIT_ASSERT_EQUAL(std::string(", localhost, adlearn, adlearn, Adv.commv, 1\n"), PrettyPrintDatabaseConnection(*manager.GetDataDefinitionConnectionByTable("shard_22222")));
+	CPPUNIT_ASSERT_EQUAL(std::string("ADLAPPD, , five0test, five0test, five0test, 0\n"), PrettyPrintDatabaseConnection(*manager.GetDataDefinitionConnectionByTable("shard_33333")));
 
 	CPPUNIT_ASSERT_EQUAL(std::string("mysql"), manager.GetDatabaseTypeByTable("shard_12345"));
 	CPPUNIT_ASSERT_EQUAL(std::string("mysql"), manager.GetDatabaseTypeByTable("shard_54321"));

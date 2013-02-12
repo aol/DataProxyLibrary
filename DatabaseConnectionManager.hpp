@@ -112,14 +112,14 @@ public:
 	MV_VIRTUAL void ValidateConnectionName(const std::string& i_rConnectionName ) const;
 	MV_VIRTUAL std::string GetDatabaseType(const std::string& i_rConnectionName) const;
 	MV_VIRTUAL std::string GetDatabaseTypeByTable(const std::string& i_rTableName) const;
-	MV_VIRTUAL Database& GetConnection(const std::string& i_rConnectionName);
-	MV_VIRTUAL Database& GetConnectionByTable( const std::string& i_rTableName );
+	MV_VIRTUAL boost::shared_ptr< Database > GetConnection(const std::string& i_rConnectionName);
+	MV_VIRTUAL boost::shared_ptr< Database > GetConnectionByTable( const std::string& i_rTableName );
 	MV_VIRTUAL void ClearConnections();
 
 	//For every mysql connection specified, we create a mysql accessory connection. This is used by DatabaseProxy to truncate staging tables. Without
 	//this mysql accessory connection, all pending commits would be forcefully committed on any truncate call.
-	MV_VIRTUAL Database& GetDataDefinitionConnection(const std::string& i_rConnectionName);
-	MV_VIRTUAL Database& GetDataDefinitionConnectionByTable(const std::string& i_rTableName);
+	MV_VIRTUAL boost::shared_ptr< Database > GetDataDefinitionConnection(const std::string& i_rConnectionName);
+	MV_VIRTUAL boost::shared_ptr< Database > GetDataDefinitionConnectionByTable(const std::string& i_rTableName);
 
 protected:
 	DatabaseConnectionContainer m_DatabaseConnectionContainer;

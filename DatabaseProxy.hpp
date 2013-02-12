@@ -89,7 +89,7 @@ private:
 
 	DatabaseConnectionManager& m_rDatabaseConnectionManager;
 
-	std::set< Database* > m_PendingCommits;
+	std::set< boost::shared_ptr< Database > > m_PendingCommits;
 
 	boost::shared_mutex m_TableMutex;
 	boost::shared_mutex m_PendingCommitsMutex;

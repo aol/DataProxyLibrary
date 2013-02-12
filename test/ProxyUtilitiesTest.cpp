@@ -43,8 +43,8 @@ void ProxyUtilitiesTest::setUp()
 	m_pOracleDB.reset( new OracleUnitTestDatabase() );
 	m_pMySqlDB.reset( new MySqlUnitTestDatabase() );
 	m_pDatabaseConnectionManager.reset( new MockDatabaseConnectionManager() );
-	m_pDatabaseConnectionManager->InsertConnection( "connect-oracle", m_pOracleDB, "", false );
-	m_pDatabaseConnectionManager->InsertConnection( "connect-mysql", m_pMySqlDB, "", false );
+	m_pDatabaseConnectionManager->InsertConnection( "connect-oracle", m_pOracleDB );
+	m_pDatabaseConnectionManager->InsertConnection( "connect-mysql", m_pMySqlDB );
 
 	std::stringstream sql;
 	sql << "CREATE TABLE myTable ("

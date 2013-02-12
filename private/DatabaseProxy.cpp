@@ -269,10 +269,10 @@ namespace
 		}
 	}
 
-	Database& GetConnection( const std::string& i_rConnection,
-							 bool i_IsConnectionByTable,
-							 DatabaseConnectionManager& i_rManager,
-							 const std::map< std::string, std::string >& i_rParameters )
+	boost::shared_ptr< Database > GetConnection( const std::string& i_rConnection,
+												 bool i_IsConnectionByTable,
+												 DatabaseConnectionManager& i_rManager,
+												 const std::map< std::string, std::string >& i_rParameters )
 	{
 		if( i_IsConnectionByTable )
 		{
@@ -281,10 +281,10 @@ namespace
 		return i_rManager.GetConnection( i_rConnection );
 	}
 
-	Database& GetDataDefinitionConnection( const std::string& i_rConnection,
-										   bool i_IsConnectionByTable,
-										   DatabaseConnectionManager& i_rManager,
-										   const std::map< std::string, std::string >& i_rParameters )
+	boost::shared_ptr< Database > GetDataDefinitionConnection( const std::string& i_rConnection,
+															   bool i_IsConnectionByTable,
+															   DatabaseConnectionManager& i_rManager,
+															   const std::map< std::string, std::string >& i_rParameters )
 	{
 		if( i_IsConnectionByTable )
 		{
@@ -676,11 +676,11 @@ void DatabaseProxy::LoadImpl( const std::map<std::string,std::string>& i_rParame
 	
 	std::string readQuery = ProxyUtilities::GetVariableSubstitutedString( m_ReadQuery, i_rParameters );
 	
-	Database& rSharedDatabase = GetConnection( m_ReadConnectionName, m_ReadConnectionByTable, m_rDatabaseConnectionManager, i_rParameters );
+	boost::shared_ptr< Database > pSharedDatabase = GetConnection( m_ReadConnectionName, m_ReadConnectionByTable, m_rDatabaseConnectionManager, i_rParameters );
 	
 	MVLOGGER("root.lib.DataProxy.DatabaseProxy.Load.ExecutingStmt.Started", 
 			  "Executing SQL statement: " << readQuery << ". Memory usage: - " << MVUtility::MemCheck());
-	Database::Statement stmt(rSharedDatabase, readQuery);
+	Database::Statement stmt(*pSharedDatabase, readQuery);
 
 	//determine how many columns to bind to
 	std::vector<std::string> headerTokens;
@@ -827,7 +827,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 	MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.UsingParameters", "Successfully parsed & using the following parameters: " << paramData );
 
 	// get a connection to use for all transactions
-	Database& rTransactionDatabase = GetConnection( m_WriteConnectionName, m_WriteConnectionByTable, m_rDatabaseConnectionManager, i_rParameters );
+	boost::shared_ptr< Database > pTransactionDatabase = GetConnection( m_WriteConnectionName, m_WriteConnectionByTable, m_rDatabaseConnectionManager, i_rParameters );
 
 	// if we're in per-row insert mode...
 	if( m_WriteStagingTable.empty() )
@@ -847,7 +847,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			databaseType = m_rDatabaseConnectionManager.GetDatabaseType( m_WriteConnectionName );
 		}
 		std::string sql( databaseType == ORACLE_DB_TYPE ? oracleMergeQuery : mysqlMergeQuery );
-		Database::Statement statement( rTransactionDatabase, sql );
+		Database::Statement statement( *pTransactionDatabase, sql );
 
 		// create a vector for all necessary pieces of data
 		std::vector< std::string > dataColumns( m_WriteBindColumns.size() );
@@ -887,7 +887,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			Stopwatch stopwatch;
 			std::string preStatement( ProxyUtilities::GetVariableSubstitutedString( m_PreStatement, i_rParameters ) );
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing configured pre-statement: " << preStatement );
-			Database::Statement( rTransactionDatabase, preStatement ).Execute();
+			Database::Statement( *pTransactionDatabase, preStatement ).Execute();
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Finished",
 				"Finished executing pre-statement: " << preStatement << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
 		}
@@ -921,7 +921,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			Stopwatch stopwatch;
 			std::string postStatement( ProxyUtilities::GetVariableSubstitutedString( m_PostStatement, i_rParameters ) );
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing configured post-statement: " << postStatement );
-			Database::Statement( rTransactionDatabase, postStatement ).Execute();
+			Database::Statement( *pTransactionDatabase, postStatement ).Execute();
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Finished",
 				"Finished executing post-statement: " << postStatement << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
 		}
@@ -951,7 +951,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 				stopwatch.Reset();
 				std::string preStatement( ProxyUtilities::GetVariableSubstitutedString( m_PreStatement, i_rParameters ) );
 				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing configured pre-statement: " << preStatement );
-				Database::Statement( rTransactionDatabase, preStatement ).Execute();
+				Database::Statement( *pTransactionDatabase, preStatement ).Execute();
 				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Finished",
 					"Finished executing pre-statement: " << preStatement << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
 			}
@@ -968,7 +968,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 				stopwatch.Reset();
 				std::string postStatement( ProxyUtilities::GetVariableSubstitutedString( m_PostStatement, i_rParameters ) );
 				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing configured post-statement: " << postStatement );
-				Database::Statement( rTransactionDatabase, postStatement ).Execute();
+				Database::Statement( *pTransactionDatabase, postStatement ).Execute();
 				MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Finished",
 					"Finished executing post-statement: " << postStatement << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
 			}
@@ -977,7 +977,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 		{
 			// get the database connections needed
 			boost::scoped_ptr< ScopedTempTable > pTempTable;
-			Database& rDataDefinitionDatabase = GetDataDefinitionConnection( m_WriteConnectionName, m_WriteConnectionByTable, m_rDatabaseConnectionManager, i_rParameters );
+			boost::shared_ptr< Database > pDataDefinitionDatabase = GetDataDefinitionConnection( m_WriteConnectionName, m_WriteConnectionByTable, m_rDatabaseConnectionManager, i_rParameters );
 			std::string stagingTable = ProxyUtilities::GetVariableSubstitutedString( m_WriteStagingTable, i_rParameters );
 			std::string mysqlMergeQuery = ProxyUtilities::GetVariableSubstitutedString( m_WriteMySqlMergeQuery, i_rParameters );
 			std::string oracleMergeQuery = ProxyUtilities::GetVariableSubstitutedString( m_WriteOracleMergeQuery, i_rParameters );
@@ -998,7 +998,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			// if we're dynamically creating a staging table, create one via a data-definition connection, and set the staging table name
 			if( m_WriteDynamicStagingTable )
 			{
-				pTempTable.reset( new ScopedTempTable( rDataDefinitionDatabase, databaseType, table, stagingTable ) );
+				pTempTable.reset( new ScopedTempTable( *pDataDefinitionDatabase, databaseType, table, stagingTable ) );
 			}
 
 			// obtain a write-lock for entire manipulation
@@ -1014,12 +1014,12 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 						std::stringstream sql;
 						sql << "CALL sp_truncate_table( '" << stagingTable << "' )";
 						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.TruncateStagingTable", "Truncating staging table: " << stagingTable << " using the ddl connection with statement: " << sql.str() );
-						Database::Statement( rDataDefinitionDatabase, sql.str() ).Execute();
+						Database::Statement( *pDataDefinitionDatabase, sql.str() ).Execute();
 					}
 
 					// write the control file & prepare SQLLoader
-					WriteControlFile( controlFileSpec, dataFileSpec, columns, PrefixTable( stagingTable, rTransactionDatabase.GetSchema() ), m_WriteNodeColumnLengths);
-					SQLLoader loader( rTransactionDatabase.GetDBName(), rTransactionDatabase.GetUserName(), rTransactionDatabase.GetPassword(), controlFileSpec, logFileSpec );
+					WriteControlFile( controlFileSpec, dataFileSpec, columns, PrefixTable( stagingTable, pTransactionDatabase->GetSchema() ), m_WriteNodeColumnLengths);
+					SQLLoader loader( pTransactionDatabase->GetDBName(), pTransactionDatabase->GetUserName(), pTransactionDatabase->GetPassword(), controlFileSpec, logFileSpec );
 
 					// upload!
 					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Begin", "Uploading " << count << " rows of data to staging table: " << stagingTable );
@@ -1036,7 +1036,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 						stopwatch.Reset();
 						std::string preStatement( ProxyUtilities::GetVariableSubstitutedString( m_PreStatement, i_rParameters ) );
 						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing configured pre-statement: " << preStatement );
-						Database::Statement( rTransactionDatabase, preStatement ).Execute();
+						Database::Statement( *pTransactionDatabase, preStatement ).Execute();
 						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Finished",
 							"Finished executing pre-statement: " << preStatement << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
 					}
@@ -1044,7 +1044,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 					// merge staging table data into primary table
 					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Begin", "Merging " << count << " rows of data from staging table with query: " << oracleMergeQuery );
 					stopwatch.Reset();
-					Database::Statement( rTransactionDatabase, oracleMergeQuery ).Execute();
+					Database::Statement( *pTransactionDatabase, oracleMergeQuery ).Execute();
 					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Finished", "Merge of " << count << " rows complete after " << stopwatch.GetElapsedSeconds() << " seconds" );
 
 					// issue the post-statement query if one exists
@@ -1053,7 +1053,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 						stopwatch.Reset();
 						std::string postStatement( ProxyUtilities::GetVariableSubstitutedString( m_PostStatement, i_rParameters ) );
 						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing configured post-statement: " << postStatement );
-						Database::Statement( rTransactionDatabase, postStatement ).Execute();
+						Database::Statement( *pTransactionDatabase, postStatement ).Execute();
 						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Finished",
 							"Finished executing post-statement: " << postStatement << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
 					}
@@ -1074,7 +1074,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 						std::stringstream sql;
 						sql << "TRUNCATE TABLE " << stagingTable;
 						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.TruncateStagingTable", "Truncating staging table: " << stagingTable << " using the ddl connection with statement: " << sql.str() );
-						Database::Statement( rDataDefinitionDatabase, sql.str() ).Execute();
+						Database::Statement( *pDataDefinitionDatabase, sql.str() ).Execute();
 					}
 
 					std::stringstream sql;
@@ -1087,7 +1087,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 						<< "( " << columns << " )" << std::endl;
 					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Begin", "Uploading " << count << " rows of data to staging table: " << stagingTable );
 					stopwatch.Reset();
-					Database::Statement( rTransactionDatabase, sql.str() ).Execute();
+					Database::Statement( *pTransactionDatabase, sql.str() ).Execute();
 					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Finished", "Done uploading " << count << " rows of data to staging table: " << stagingTable << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
 
 					// issue the pre-statement query if one exists
@@ -1096,7 +1096,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 						stopwatch.Reset();
 						std::string preStatement( ProxyUtilities::GetVariableSubstitutedString( m_PreStatement, i_rParameters ) );
 						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing configured pre-statement: " << preStatement );
-						Database::Statement( rTransactionDatabase, preStatement ).Execute();
+						Database::Statement( *pTransactionDatabase, preStatement ).Execute();
 						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Finished",
 							"Finished executing pre-statement: " << preStatement << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
 					}
@@ -1104,7 +1104,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 					// merge staging table data into primary table
 					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Begin", "Merging " << count << " rows of data from staging table with query: " << mysqlMergeQuery );
 					stopwatch.Reset();
-					Database::Statement( rTransactionDatabase, mysqlMergeQuery ).Execute();
+					Database::Statement( *pTransactionDatabase, mysqlMergeQuery ).Execute();
 					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Finished", "Merge of " << count << " rows complete after " << stopwatch.GetElapsedSeconds() << " seconds" );
 
 					// issue the post-statement query if one exists
@@ -1113,7 +1113,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 						stopwatch.Reset();
 						std::string postStatement( ProxyUtilities::GetVariableSubstitutedString( m_PostStatement, i_rParameters ) );
 						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing configured post-statement: " << postStatement );
-						Database::Statement( rTransactionDatabase, postStatement ).Execute();
+						Database::Statement( *pTransactionDatabase, postStatement ).Execute();
 						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Finished",
 							"Finished executing post-statement: " << postStatement << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
 					}
@@ -1134,7 +1134,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 
 	{
 		boost::unique_lock< boost::shared_mutex > lock( m_PendingCommitsMutex );
-		m_PendingCommits.insert( &rTransactionDatabase );
+		m_PendingCommits.insert( pTransactionDatabase );
 	}
 }
 
@@ -1147,15 +1147,15 @@ void DatabaseProxy::DeleteImpl( const std::map<std::string,std::string>& i_rPara
 	
 	std::string deleteQuery = ProxyUtilities::GetVariableSubstitutedString( m_DeleteQuery, i_rParameters );
 	
-	Database& rSharedDatabase = GetConnection( m_DeleteConnectionName, m_DeleteConnectionByTable, m_rDatabaseConnectionManager, i_rParameters );
+	boost::shared_ptr< Database > pSharedDatabase = GetConnection( m_DeleteConnectionName, m_DeleteConnectionByTable, m_rDatabaseConnectionManager, i_rParameters );
 	
 	MVLOGGER("root.lib.DataProxy.DatabaseProxy.Delete.ExecutingStmt.Started", 
 			  "Executing SQL statement: " << deleteQuery << ". Memory usage: - " << MVUtility::MemCheck());
-	Database::Statement( rSharedDatabase, deleteQuery ).Execute();
+	Database::Statement( *pSharedDatabase, deleteQuery ).Execute();
 
 	{
 		boost::unique_lock< boost::shared_mutex > lock( m_PendingCommitsMutex );
-		m_PendingCommits.insert( &rSharedDatabase );
+		m_PendingCommits.insert( pSharedDatabase );
 	}
 
 	MVLOGGER("root.lib.DataProxy.DatabaseProxy.Delete.ExecutingStmt.Finished", 
@@ -1171,7 +1171,7 @@ bool DatabaseProxy::SupportsTransactions() const
 void DatabaseProxy::Commit()
 {
 	boost::unique_lock< boost::shared_mutex > lock( m_PendingCommitsMutex );
-	std::set< Database* >::iterator iter = m_PendingCommits.begin();
+	std::set< boost::shared_ptr< Database > >::iterator iter = m_PendingCommits.begin();
 	for( ; iter != m_PendingCommits.end(); m_PendingCommits.erase( iter++ ))
 	{
 		(*iter)->Commit();
@@ -1182,7 +1182,7 @@ void DatabaseProxy::Commit()
 void DatabaseProxy::Rollback()
 {
 	boost::unique_lock< boost::shared_mutex > lock( m_PendingCommitsMutex );
-	std::set< Database* >::iterator iter = m_PendingCommits.begin();
+	std::set< boost::shared_ptr< Database > >::iterator iter = m_PendingCommits.begin();
 	for( ; iter != m_PendingCommits.end(); m_PendingCommits.erase( iter++ ) )
 	{
 		(*iter)->Rollback();

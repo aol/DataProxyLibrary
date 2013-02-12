@@ -30,6 +30,11 @@ MockDatabaseConnectionManager::MockDatabaseConnectionManager()
 
 MockDatabaseConnectionManager::~MockDatabaseConnectionManager()
 {
+	std::map<std::string, boost::shared_ptr<Database> >::iterator iter = m_MockConnectionMap.begin();
+	for( ; iter != m_MockConnectionMap.end(); ++iter )
+	{
+		iter->second.reset();
+	}
 	m_Log << "MockDatabaseConnectionManager::~MockDatabaseConnectionManager" << std::endl
 		   << std::endl;
 }
@@ -66,12 +71,12 @@ void MockDatabaseConnectionManager::ValidateConnectionName(const std::string& i_
 		  << std::endl;
 }
 
-Database& MockDatabaseConnectionManager::GetDataDefinitionConnection(const std::string& i_rConnectionName)
+boost::shared_ptr< Database > MockDatabaseConnectionManager::GetDataDefinitionConnection(const std::string& i_rConnectionName)
 {
 	return GetConnection(MOCK_DATA_DEFINITION_CONNECTION_PREFIX + i_rConnectionName);
 }
 
-Database& MockDatabaseConnectionManager::GetConnection(const std::string& i_rConnectionName)
+boost::shared_ptr< Database > MockDatabaseConnectionManager::GetConnection(const std::string& i_rConnectionName)
 {
 	m_Log << "MockDatabaseConnectionManager::GetConnection" << std::endl
 		  << "ConnectionName: " << i_rConnectionName << std::endl
@@ -80,7 +85,7 @@ Database& MockDatabaseConnectionManager::GetConnection(const std::string& i_rCon
 	std::map<std::string, boost::shared_ptr<Database> >::const_iterator iter = m_MockConnectionMap.find(i_rConnectionName);
 	if (iter != m_MockConnectionMap.end())
 	{
-		return *(iter->second);
+		return iter->second;
 	}
 	MV_THROW(MockDatabaseConnectionManagerException,
 			 "No Connection named: " << i_rConnectionName << std::endl);

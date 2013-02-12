@@ -308,13 +308,13 @@ namespace
 	{
 		try
 		{
-			Database& rDatabase( i_rDatabaseConnectionManager.GetConnection( i_rConnectionName ) );
+			boost::shared_ptr< Database > pDatabase( i_rDatabaseConnectionManager.GetConnection( i_rConnectionName ) );
 			std::stringstream sql;
 			sql << "SELECT LOWER( column_name ) FROM all_tab_cols WHERE"
 				<< " nullable = 'N'"
-				<< " AND LOWER( OWNER ) = '" << boost::algorithm::to_lower_copy( rDatabase.GetSchema() ) << "'"
+				<< " AND LOWER( OWNER ) = '" << boost::algorithm::to_lower_copy( pDatabase->GetSchema() ) << "'"
 				<< " AND LOWER( TABLE_NAME ) = '" << boost::algorithm::to_lower_copy( i_rTable ) << "'";
-			Database::Statement stmt( rDatabase, sql.str() );
+			Database::Statement stmt( *pDatabase, sql.str() );
 			std::string column;
 			stmt.BindCol( column, 32 );
 			stmt.CompleteBinding();
@@ -333,10 +333,10 @@ namespace
 	{
 		try
 		{
-			Database& rDatabase( i_rDatabaseConnectionManager.GetConnection( i_rConnectionName ) );
+			boost::shared_ptr< Database > pDatabase( i_rDatabaseConnectionManager.GetConnection( i_rConnectionName ) );
 			std::stringstream sql;
 			sql << "SHOW COLUMNS FROM " << i_rTable;
-			Database::Statement stmt( rDatabase, sql.str() );
+			Database::Statement stmt( *pDatabase, sql.str() );
 			std::string column;
 			std::string type;
 			std::string nullable;
