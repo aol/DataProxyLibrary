@@ -127,7 +127,7 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 				pDataProxyClient = NULL;
 			}
 
-			if( !pResult )
+			if( pResult != NULL )
 			{
 				mxDestroyArray( pResult );
 				pResult = NULL;
@@ -157,7 +157,7 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 	
 			pDataProxyClient->Load( dataSource, parameters, result );
 
-			if( !pResult )
+			if( pResult != NULL )
 			{
 				mxDestroyArray( pResult );
 				pResult = NULL;
