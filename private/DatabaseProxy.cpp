@@ -912,7 +912,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 				statement.Execute();
 				++i;
 			}
-			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Statement.Finished", "Statement: " << sql << " finished executing " << i << " times after" << stopwatch.GetElapsedSeconds() << " seconds" );
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Statement.Finished", "Statement: " << sql << " finished executing " << i << " times after " << stopwatch.GetElapsedSeconds() << " seconds" );
 		}
 
 		// issue the post-statement query if one exists
