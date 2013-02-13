@@ -79,7 +79,6 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 	try
 	{
 		static DataProxyClient* pDataProxyClient( NULL );
-		static mxArray* pResult( NULL );
 
 		char* pInputArg = mxArrayToString( prhs[0] );
 		std::string functionName( pInputArg );
@@ -126,12 +125,6 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 				delete pDataProxyClient;
 				pDataProxyClient = NULL;
 			}
-
-			if( pResult != NULL )
-			{
-				mxDestroyArray( pResult );
-				pResult = NULL;
-			}
 		}
 		else if( functionName == LOAD )
 		{
@@ -157,13 +150,7 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 	
 			pDataProxyClient->Load( dataSource, parameters, result );
 
-			if( pResult != NULL )
-			{
-				mxDestroyArray( pResult );
-				pResult = NULL;
-			}
-			pResult = mxCreateString( result.str().c_str() );
-			plhs[0] = pResult;
+			plhs[0] = mxCreateString( result.str().c_str() );
 		}
 		else if( functionName == LOAD_TO_FILE )
 		{
