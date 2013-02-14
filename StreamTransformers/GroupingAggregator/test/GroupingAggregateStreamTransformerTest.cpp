@@ -337,9 +337,9 @@ void GroupingAggregateStreamTransformerTest::testAggregateFields()
 
 	std::stringstream expected;
 	expected << "media id,WEBSITE ID,day,campaign id,impressions,CLICKS,count,actions,aggregatedLines_plus14,avg_imps,dummyString,dummyDate,dummyInt" << std::endl
-			 << "112,113,1,11.1," << 1101+1101+1201+1301 << ',' << 1102+1102+1202+1302 << ",4," << 1103+1103+1203+1303 << ".00,18," << int((1101+1101+1201+1301)/4) << ",my_constant,2009-04-16 05:45:24,17" << std::endl
-			 << "212,213,3,21.1," << 2101+2201 << ',' << 2102+2202 << ",2," << 2103+2203 << ".00,16," << int((2101+2201)/2) << ",my_constant,2009-04-16 05:45:24,17" << std::endl
-			 << "312,313,2,31.1,3101,3102,1,3103.00,15,3101,my_constant,2009-04-16 05:45:24,17" << std::endl;
+			 << "112,113,1,11," << 1101+1101+1201+1301 << ',' << 1102+1102+1202+1302 << ",4," << 1103+1103+1203+1303 << ".00,18," << int((1101+1101+1201+1301)/4) << ",my_constant,2009-04-16 05:45:24,17" << std::endl
+			 << "212,213,3,21," << 2101+2201 << ',' << 2102+2202 << ",2," << 2103+2203 << ".00,16," << int((2101+2201)/2) << ",my_constant,2009-04-16 05:45:24,17" << std::endl
+			 << "312,313,2,31,3101,3102,1,3103.00,15,3101,my_constant,2009-04-16 05:45:24,17" << std::endl;
 	
 	boost::shared_ptr< std::stringstream > pResult;
 	CPPUNIT_ASSERT_NO_THROW( pResult = AggregateFields( inputStream, parameters ) );
@@ -492,7 +492,7 @@ void GroupingAggregateStreamTransformerTest::testAggregateFieldsSortOptimization
 	parameters["key"] = "key";
 	parameters["fields"] = "data: op(%a+=%v),\n"
 						   "NR: op(%a++) output(),\n"
-						   "avg_data: output(data[%k]/_NR[%k])\n";
+						   "avg_data: type(%s) output(data[%k]/_NR[%k])\n";
 
 	// control: execute normally (with sorting)
 	std::stringstream expected;

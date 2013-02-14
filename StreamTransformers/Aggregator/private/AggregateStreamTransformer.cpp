@@ -127,7 +127,7 @@ namespace
 			boost::trim( dataField.GetReference< Name >() );
 			dataField.SetValue< VarName >( dataField.GetValue< Name >() );
 			dataField.SetValue< ColumnName >( dataField.GetValue< Name >() );
-			dataField.SetValue< AwkType >( "%s" );
+			dataField.SetValue< AwkType >( "%i" );
 			dataField.SetValue< IsKey >( i_IsKey );
 			if( !i_IsKey )
 			{
