@@ -21,15 +21,15 @@ MYSQLHOME	?= /usr/local/mysql
 ORACLE_HOME	?= /usr/oracle
 
 # Directories for including & linking
-INCLUDE_DIRS ?= /usr/local/include
-LIB_DIRS ?= /usr/local/lib
+INCLUDE_DIRS 	?= /usr/local/include
+LIB_DIRS 	?= /usr/local/lib
 
 # folders that contain files we need to manually compile
 # in order to build a self-contained dynamic library
 UTILITYDIR		= ${ROOTDIR}/lib/cpp/Utility
 SERVICEDIR		= ${ROOTDIR}/lib/cpp/Service
 DATABASEDIR		= ${ROOTDIR}/lib/cpp/Database
-TESTHELPERDIR	= ${ROOTDIR}/lib/cpp/TestHelpers
+TESTHELPERDIR		= ${ROOTDIR}/lib/cpp/TestHelpers
 
 # for auto-generating hpp files from thpp for GDP
 THPP2HPP        = $(ROOTDIR)/lib/cpp/GDP/scripts/thpp2hpp
@@ -51,7 +51,7 @@ TESTMODULES=\
 MATLABMODULES=\
 	lib/cpp/Matlab \
 
-MODULESPEC			= $(MODULES:%=$(ROOTDIR)/%)
+MODULESPEC		= $(MODULES:%=$(ROOTDIR)/%)
 TESTMODULESPEC		= $(TESTMODULES:%=$(ROOTDIR)/%)
 MATLABMODULESPEC	= $(MATLABMODULES:%=$(ROOTDIR)/%)
 
@@ -249,30 +249,30 @@ PRIVATEOBJSPEC			= $(PRIVATEFILES:%.cpp=$(TARGETDIR)/%.o) \
 						  $(UTILITYFILES:%.cpp=$(TARGETDIR)/%.o) \
 						  $(DATABASEFILES:%.cpp=$(TARGETDIR)/%.o)
 HELPEROBJSPEC			= $(TESTHELPERFILES:%.cpp=$(TARGETDIR)/%.o)
-TESTOBJSPEC				= $(TESTFILES:%.cpp=$(TARGETDIR)/%.o) 
+TESTOBJSPEC			= $(TESTFILES:%.cpp=$(TARGETDIR)/%.o) 
 THREADTESTOBJSPEC		= $(THREADTESTFILES:%.cpp=$(TARGETDIR)/%.o) 
 MATLABTESTOBJSPEC		= $(MATLABTESTFILES:%.cpp=$(TARGETDIR)/%.o)
-MOCKOBJSPEC				= $(MOCKFILES:%.cpp=$(TARGETDIR)/%.o)
+MOCKOBJSPEC			= $(MOCKFILES:%.cpp=$(TARGETDIR)/%.o)
 THPP2HPPFILES			= $(THPPFILES:%.thpp=%.hpp)
 
 # Per-target specification
 DEBUGOPTS		= -ggdb3 -Wall -Werror -fno-strict-aliasing -fPIC -D DPL_TEST -std=c++0x
-OPTIMIZEOPTS	= -O3 -D MV_OPTIMIZE -Wall -Werror -fno-strict-aliasing -fPIC -std=c++0x
+OPTIMIZEOPTS		= -O3 -D MV_OPTIMIZE -Wall -Werror -fno-strict-aliasing -fPIC -std=c++0x
 PROFILEOPTS		= -O3 -D MV_OPTIMIZE -pg -Wall -Werror -fno-strict-aliasing -fPIC -std=c++0x
-COVERAGEOPTS	= -fprofile-arcs -ftest-coverage -Wall -Werror -fno-strict-aliasing -fPIC -std=c++0x
+COVERAGEOPTS		= -fprofile-arcs -ftest-coverage -Wall -Werror -fno-strict-aliasing -fPIC -std=c++0x
 
 # Executable targets
-BASE_NAME						= DataProxy
-FRIENDLY_TARGET					= lib$(BASE_NAME).so
+BASE_NAME				= DataProxy
+FRIENDLY_TARGET				= lib$(BASE_NAME).so
 MAJOR_VERSION_TARGET			= $(FRIENDLY_TARGET).3
 MINOR_VERSION_TARGET			= $(MAJOR_VERSION_TARGET).1
-FULL_VERSION_TARGET				= $(MINOR_VERSION_TARGET).8
-PRIMARY_TARGET					= $(FULL_VERSION_TARGET)
-MOCK_TARGET						= libMockDataProxy.a
-MATLAB_TARGET					= DataProxy.mexa64
-TEST_TARGET						= data_proxy_tests
-THREADTEST_TARGET				= multithread_data_proxy_test
-MATLAB_TEST_TARGET				= matlab_wrapper_tests
+FULL_VERSION_TARGET			= $(MINOR_VERSION_TARGET).9
+PRIMARY_TARGET				= $(FULL_VERSION_TARGET)
+MOCK_TARGET				= libMockDataProxy.a
+MATLAB_TARGET				= DataProxy.mexa64
+TEST_TARGET				= data_proxy_tests
+THREADTEST_TARGET			= multithread_data_proxy_test
+MATLAB_TEST_TARGET			= matlab_wrapper_tests
 OTHER_TARGETS = $(MATLAB_TARGET) $(TEST_TARGET) $(THREADTEST_TARGET) $(MATLAB_TEST_TARGET) $(MOCK_TARGET)
 ALL_TARGETS = $(PRIMARY_TARGET) $(MAJOR_VERSION_TARGET) $(FRIENDLY_TARGET) $(OTHER_TARGETS)
 
