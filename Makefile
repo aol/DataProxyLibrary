@@ -257,8 +257,8 @@ THPP2HPPFILES			= $(THPPFILES:%.thpp=%.hpp)
 
 # Per-target specification
 DEBUGOPTS		= -ggdb3 -Wall -Werror -fno-strict-aliasing -fPIC -D DPL_TEST -std=c++0x
-OPTIMIZEOPTS		= -O3 -D MV_OPTIMIZE -Wall -Werror -fno-strict-aliasing -fPIC -std=c++0x
-PROFILEOPTS		= -O3 -D MV_OPTIMIZE -pg -Wall -Werror -fno-strict-aliasing -fPIC -std=c++0x
+OPTIMIZEOPTS	= -ggdb3 -O3 -D MV_OPTIMIZE -Wall -Werror -fno-strict-aliasing -fPIC -std=c++0x
+PROFILEOPTS		= -ggdb3 -O3 -D MV_OPTIMIZE -pg -Wall -Werror -fno-strict-aliasing -fPIC -std=c++0x
 COVERAGEOPTS		= -fprofile-arcs -ftest-coverage -Wall -Werror -fno-strict-aliasing -fPIC -std=c++0x
 
 # Executable targets

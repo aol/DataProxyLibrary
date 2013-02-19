@@ -117,8 +117,8 @@ THPP2HPPFILES			= $(THPPFILES:%.thpp=%.hpp)
 
 # Per-target specification
 DEBUGOPTS		= -ggdb3 -Wall -Werror -fno-strict-aliasing -fPIC -D DPL_TEST
-OPTIMIZEOPTS	= -O3 -D MV_OPTIMIZE -Wall -Werror -fno-strict-aliasing -fPIC
-PROFILEOPTS		= -O3 -D MV_OPTIMIZE -pg -Wall -Werror -fno-strict-aliasing -fPIC
+OPTIMIZEOPTS	= -ggdb3 -O3 -D MV_OPTIMIZE -Wall -Werror -fno-strict-aliasing -fPIC
+PROFILEOPTS		= -ggdb3 -O3 -D MV_OPTIMIZE -pg -Wall -Werror -fno-strict-aliasing -fPIC
 
 # Executable targets
 PRIMARY_TARGET					= libShellStreamTransformer.so
