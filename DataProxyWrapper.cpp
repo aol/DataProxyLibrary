@@ -8,6 +8,7 @@
 #include <map>
 #include <fstream>
 #include <boost/algorithm/string.hpp>
+#include <boost/scoped_ptr.hpp>
 
 MV_MAKEEXCEPTIONCLASS( DataProxyException, MVException );
 
@@ -22,6 +23,8 @@ namespace
 
 	const char* NAME = "name";
 	const char* VALUE = "value";
+
+	boost::scoped_ptr< DataProxyClient > s_pDataProxyClient;
 
 	std::string TranslateExceptionName( const std::string& i_rExceptionName )
 	{
@@ -78,8 +81,6 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 {
 	try
 	{
-		static DataProxyClient* pDataProxyClient( NULL );
-
 		char* pInputArg = mxArrayToString( prhs[0] );
 		std::string functionName( pInputArg );
 		mxFree( pInputArg );
@@ -92,9 +93,9 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 			}
 	
 			// create an object if we need to
-			if( pDataProxyClient == NULL )
+			if( s_pDataProxyClient == NULL )
 			{
-				pDataProxyClient = new DataProxyClient();
+				s_pDataProxyClient.reset( new DataProxyClient() );
 			}
 			
 			pInputArg = mxArrayToString( prhs[1] );
@@ -103,12 +104,11 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 	
 			try
 			{
-				pDataProxyClient->Initialize( configFileSpec );
+				s_pDataProxyClient->Initialize( configFileSpec );
 			}
 			catch( ... )
 			{
-				delete pDataProxyClient;
-				pDataProxyClient = NULL;
+				s_pDataProxyClient.reset( NULL );
 				throw;
 			}
 		}
@@ -119,16 +119,11 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 				MV_THROW( DataProxyException, TERMINATE << " does not take any parameters" );
 			}
 			
-			// only actually do anything if our pointer is non-null
-			if( pDataProxyClient != NULL )
-			{
-				delete pDataProxyClient;
-				pDataProxyClient = NULL;
-			}
+			s_pDataProxyClient.reset( NULL );
 		}
 		else if( functionName == LOAD )
 		{
-			if( pDataProxyClient == NULL )
+			if( s_pDataProxyClient == NULL )
 			{
 				MV_THROW( DataProxyException, "Attempted to issue Load request on uninitialized DataProxyClient" );
 			}
@@ -148,13 +143,13 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 			
 			std::ostringstream result;
 	
-			pDataProxyClient->Load( dataSource, parameters, result );
+			s_pDataProxyClient->Load( dataSource, parameters, result );
 
 			plhs[0] = mxCreateString( result.str().c_str() );
 		}
 		else if( functionName == LOAD_TO_FILE )
 		{
-			if( pDataProxyClient == NULL )
+			if( s_pDataProxyClient == NULL )
 			{
 				MV_THROW( DataProxyException, "Attempted to issue Load request on uninitialized DataProxyClient" );
 			}
@@ -173,7 +168,7 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 			mxFree( pInputArg );
 			std::stringstream output;
 	
-			pDataProxyClient->Load( dataSource, parameters, output );
+			s_pDataProxyClient->Load( dataSource, parameters, output );
 
 			pInputArg = mxArrayToString( prhs[3] );
 			std::ofstream result( pInputArg );
@@ -184,7 +179,7 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 		}
 		else if( functionName == STORE )
 		{
-			if( pDataProxyClient == NULL )
+			if( s_pDataProxyClient == NULL )
 			{
 				MV_THROW( DataProxyException, "Attempted to issue Store request on uninitialized DataProxyClient" );
 			}
@@ -209,11 +204,11 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 			data << pDataToStore;
 			mxFree( pDataToStore );
 
-			pDataProxyClient->Store( dataSource, parameters, data );
+			s_pDataProxyClient->Store( dataSource, parameters, data );
 		}
 		else if( functionName == STORE_FROM_FILE )
 		{
-			if( pDataProxyClient == NULL )
+			if( s_pDataProxyClient == NULL )
 			{
 				MV_THROW( DataProxyException, "Attempted to issue Store request on uninitialized DataProxyClient" );
 			}
@@ -234,7 +229,7 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 			std::ifstream data( pInputArg );
 			mxFree( pInputArg );
 	
-			pDataProxyClient->Store( dataSource, parameters, data );
+			s_pDataProxyClient->Store( dataSource, parameters, data );
 			data.close();
 		}
 		else
