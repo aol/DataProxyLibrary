@@ -334,7 +334,7 @@ opt_pic: $(OPTIMIZEDIR) extlibs
 	$(MAKE) TARGETDIR='$(OPTIMIZEDIR)' TARGETOPTS='$(OPTIMIZEOPTS)' \
 	SUBTARGET=$@ $(PRIMARY_TARGET)
 
-matlab_wrapper: $(OPTIMIZEDIR) extlibs matlablibs
+matlab_wrapper: $(OPTIMIZEDIR) extlibs
 	$(MAKE) TARGETDIR='$(OPTIMIZEDIR)' TARGETOPTS='$(OPTIMIZEOPTS)' \
 	SUBTARGET=opt_pic $(MATLAB_TARGET)
 

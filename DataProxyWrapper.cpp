@@ -26,6 +26,23 @@ namespace
 
 	boost::scoped_ptr< DataProxyClient > s_pDataProxyClient;
 
+	class MatlabString : public std::string
+	{
+	public:
+		MatlabString( char* i_pMatlabCharArray )
+		:	std::string( i_pMatlabCharArray == NULL ? "" : i_pMatlabCharArray ),
+			m_pMatlabCharArray( i_pMatlabCharArray )
+		{
+		}
+		virtual ~MatlabString()
+		{
+			mxFree( m_pMatlabCharArray );
+		}
+
+	private:
+		char*& m_pMatlabCharArray;
+	};
+
 	std::string TranslateExceptionName( const std::string& i_rExceptionName )
 	{
 		if( i_rExceptionName == "HttpNotFoundException"
@@ -64,13 +81,9 @@ namespace
 		{
 			mxArray* pField;
 			pField = mxGetField( prhs[2], index, NAME );
-			char* pKey = mxArrayToString( pField );
-			std::string key( pKey );
-			mxFree( pKey );
+			MatlabString key( mxArrayToString( pField ) );
 			pField = mxGetField( prhs[2], index, VALUE );
-			char* pValue = mxArrayToString( pField );
-			std::string value( pValue );
-			mxFree( pValue );
+			MatlabString value( mxArrayToString( pField ) );
 
 			o_rParameters[key] = value;
 		}
@@ -81,9 +94,7 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 {
 	try
 	{
-		char* pInputArg = mxArrayToString( prhs[0] );
-		std::string functionName( pInputArg );
-		mxFree( pInputArg );
+		MatlabString functionName( mxArrayToString( prhs[0] ) );
 		
 		if( functionName == INIT )
 		{
@@ -98,10 +109,7 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 				s_pDataProxyClient.reset( new DataProxyClient() );
 			}
 			
-			pInputArg = mxArrayToString( prhs[1] );
-			std::string configFileSpec( pInputArg );
-			mxFree( pInputArg ); 
-	
+			MatlabString configFileSpec( mxArrayToString( prhs[1] ) );
 			try
 			{
 				s_pDataProxyClient->Initialize( configFileSpec );
@@ -137,9 +145,7 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 	
 			ReadParameters( prhs, parameters );
 	
-			pInputArg = mxArrayToString( prhs[1] );
-			std::string dataSource( pInputArg );
-			mxFree( pInputArg );
+			MatlabString dataSource( mxArrayToString( prhs[1] ) );
 			
 			std::ostringstream result;
 	
@@ -163,16 +169,13 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 	
 			ReadParameters( prhs, parameters );
 	
-			pInputArg = mxArrayToString( prhs[1] );
-			std::string dataSource( pInputArg );
-			mxFree( pInputArg );
+			MatlabString dataSource( mxArrayToString( prhs[1] ) );
 			std::stringstream output;
 	
 			s_pDataProxyClient->Load( dataSource, parameters, output );
 
-			pInputArg = mxArrayToString( prhs[3] );
-			std::ofstream result( pInputArg );
-			mxFree( pInputArg );
+			MatlabString fileName( mxArrayToString( prhs[3] ) );
+			std::ofstream result( fileName.c_str() );
 			
 			result << output.rdbuf();
 			result.close();
@@ -193,16 +196,11 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 	
 			ReadParameters( prhs, parameters );
 	
-			pInputArg = mxArrayToString( prhs[1] );
-			std::string dataSource( pInputArg );
-			mxFree( pInputArg );
-			std::ostringstream result;
-	
-			char* pDataToStore = mxArrayToString(prhs[3]);
+			MatlabString dataSource( mxArrayToString( prhs[1] ) );
+			MatlabString dataToStore( mxArrayToString( prhs[3] ) );
 			
 			std::stringstream data;
-			data << pDataToStore;
-			mxFree( pDataToStore );
+			data << dataToStore;
 
 			s_pDataProxyClient->Store( dataSource, parameters, data );
 		}
@@ -222,12 +220,9 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 	
 			ReadParameters( prhs, parameters );
 	
-			pInputArg = mxArrayToString( prhs[1] );
-			std::string dataSource( pInputArg );
-			mxFree( pInputArg );
-			pInputArg = mxArrayToString( prhs[3] );
-			std::ifstream data( pInputArg );
-			mxFree( pInputArg );
+			MatlabString dataSource( mxArrayToString( prhs[1] ) );
+			MatlabString fileName( mxArrayToString( prhs[3] ) );
+			std::ifstream data( fileName.c_str() );
 	
 			s_pDataProxyClient->Store( dataSource, parameters, data );
 			data.close();
