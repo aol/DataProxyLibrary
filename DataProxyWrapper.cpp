@@ -30,20 +30,16 @@ namespace
 	{
 	public:
 		MatlabString( char* i_pMatlabCharArray )
-		:	std::string( i_pMatlabCharArray == NULL ? "" : i_pMatlabCharArray ),
-			m_pMatlabCharArray( i_pMatlabCharArray )
+		:	std::string( i_pMatlabCharArray == NULL ? "" : i_pMatlabCharArray )
 		{
+			if( i_pMatlabCharArray != NULL )
+			{
+				mxFree( i_pMatlabCharArray );
+			}
 		}
 		virtual ~MatlabString()
 		{
-			if( m_pMatlabCharArray != NULL )
-			{
-				mxFree( m_pMatlabCharArray );
-			}
 		}
-
-	private:
-		char*& m_pMatlabCharArray;
 	};
 
 	std::string TranslateExceptionName( const std::string& i_rExceptionName )
