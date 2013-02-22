@@ -39,6 +39,11 @@ MODULES=\
 	lib/cpp/Logger \
 	lib/cpp/GDP \
 
+INCMODULES=\
+	lib/cpp/Service \
+	lib/cpp/Utility \
+	lib/cpp/Database \
+
 TESTMODULES=\
 	lib/cpp/TestHelpers \
 	lib/cpp/Service \
@@ -49,6 +54,7 @@ MATLABMODULES=\
 	lib/cpp/Matlab \
 
 MODULESPEC		= $(MODULES:%=$(ROOTDIR)/%)
+INCMODULESPEC		= $(INCMODULES:%=$(ROOTDIR)/%)
 TESTMODULESPEC		= $(TESTMODULES:%=$(ROOTDIR)/%)
 MATLABMODULESPEC	= $(MATLABMODULES:%=$(ROOTDIR)/%)
 
@@ -56,6 +62,7 @@ MATLABMODULESPEC	= $(MATLABMODULES:%=$(ROOTDIR)/%)
 INCS=\
 	-I. \
 	$(MODULESPEC:%=-I%) \
+	$(INCMODULESPEC:%=-I%) \
 	-I${ROOTDIR}/lib/cpp/Database/private \
 	-I${MYSQLHOME}/include \
 	-I${ORACLE_HOME}/rdbms/demo \
