@@ -79,13 +79,11 @@ namespace
 
 		for( mwIndex index = 0; index < numOfElements; ++index )
 		{
-			mxArray* pField;
-			pField = mxGetField( pSource, index, NAME );
-			MatlabString key( mxArrayToString( pField ) );
-			mxDestroyArray( pField );
-			pField = mxGetField( pSource, index, VALUE );
-			MatlabString value( mxArrayToString( pField ) );
-			mxDestroyArray( pField );
+			mxArray* pKey = mxGetField( pSource, index, NAME );
+			MatlabString key( mxArrayToString( pKey ) );
+			
+			mxArray* pValue = mxGetField( pSource, index, VALUE );
+			MatlabString value( mxArrayToString( pValue ) );
 
 			o_rParameters[key] = value;
 		}
