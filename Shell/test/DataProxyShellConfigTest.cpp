@@ -482,15 +482,4 @@ void DataProxyShellConfigTest::testDeleteWithData()
 	
 	boost::scoped_ptr< DataProxyShellConfig > pConfig;
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pConfig.reset( new DataProxyShellConfig( argc, const_cast<char**>(argv) ) ), DataProxyShellConfigException, ".*:\\d+: Invalid argument: data cannot be supplied with a Delete request" );
-
-	char* pData = NULL;
-	char*& rpData = pData;
-	if( rpData == NULL )
-	{
-		std::cout << std::endl << "NULL" << std::endl;
-	}
-	else
-	{
-		std::cout << std::endl << "NOT NULL" << std::endl;
-	}
 }
