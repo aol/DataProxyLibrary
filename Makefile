@@ -37,10 +37,7 @@ THPP2HPP        = $(ROOTDIR)/lib/cpp/GDP/scripts/thpp2hpp
 #Modules
 MODULES=\
 	lib/cpp/Logger \
-	lib/cpp/Utility \
-	lib/cpp/Service \
 	lib/cpp/GDP \
-	lib/cpp/Database \
 
 TESTMODULES=\
 	lib/cpp/TestHelpers \
@@ -290,51 +287,51 @@ default: $(TARGETDIR)
 .PHONY: extlibs matlablibs default check-syntax debug prof opt opt_debug coverage tests test_coverage mock \
 	depend localdepend clean localclean nodepend $(ALL_TARGETS)
 
-debug: $(DEBUGDIR)
+debug: $(DEBUGDIR) extlibs
 	$(MAKE) TARGETDIR='$(DEBUGDIR)' TARGETOPTS='$(DEBUGOPTS)' \
 	SUBTARGET=$@ $(PRIMARY_TARGET)
 
-prof: $(PROFILEDIR)
+prof: $(PROFILEDIR) extlibs
 	$(MAKE) TARGETDIR='$(PROFILEDIR)' TARGETOPTS='$(PROFILEOPTS)' \
 	SUBTARGET=$@ $(PRIMARY_TARGET)
 
-opt: $(OPTIMIZEDIR)
+opt: $(OPTIMIZEDIR) extlibs
 	$(MAKE) TARGETDIR='$(OPTIMIZEDIR)' TARGETOPTS='$(OPTIMIZEOPTS)' \
 	SUBTARGET=$@ $(PRIMARY_TARGET)
 
-opt_debug: $(OPTDEBUGDIR)
+opt_debug: $(OPTDEBUGDIR) extlibs
 	$(MAKE) TARGETDIR='$(OPTDEBUGDIR)' TARGETOPTS='$(OPTIMIZEOPTS) $(DEBUGOPTS)' \
 	SUBTARGET=$@ $(PRIMARY_TARGET)
 
-coverage: $(COVERAGEDIR)
+coverage: $(COVERAGEDIR) extlibs
 	$(MAKE) TARGETDIR='$(COVERAGEDIR)' TARGETOPTS='$(COVERAGEOPTS)' \
 	SUBTARGET=$@ $(PRIMARY_TARGET)
 
-thread_test: $(TARGETDIR) extlibs
+thread_test: $(TARGETDIR) testextlibs
 	$(MAKE) SUBTARGET=debug $(THREADTEST_TARGET)
 	cd $(ROOTDIR)/lib/cpp/TestHelpers && $(MAKE) java-server
 
-tests: $(TARGETDIR) extlibs
+tests: $(TARGETDIR) testextlibs
 	$(MAKE) SUBTARGET=debug $(TEST_TARGET)
 	cd $(ROOTDIR)/lib/cpp/TestHelpers && $(MAKE) java-server
 
-matlab_tests: $(TARGETDIR) extlibs matlablibs
+matlab_tests: $(TARGETDIR) testextlibs matlablibs
 	$(MAKE) SUBTARGET=debug $(MATLAB_TEST_TARGET)
 	cd $(ROOTDIR)/lib/Logger && $(MAKE) matlab_log_wrapper
 	$(MAKE) matlab_wrapper
 
-test_coverage: $(COVERAGEDIR) extlibs
+test_coverage: $(COVERAGEDIR) testextlibs
 	$(MAKE) TARGETDIR='$(COVERAGEDIR)' TARGETOPTS='$(COVERAGEOPTS)' \
 	SUBTARGET=coverage $(TEST_TARGET) \
 
-mock: $(TARGETDIR) extlibs
+mock: $(TARGETDIR) testextlibs
 	$(MAKE) SUBTARGET=debug $(MOCK_TARGET) TARGETOPTS='${DEBUGOPTS}'\
 
-opt_pic: $(OPTIMIZEDIR)
+opt_pic: $(OPTIMIZEDIR) extlibs
 	$(MAKE) TARGETDIR='$(OPTIMIZEDIR)' TARGETOPTS='$(OPTIMIZEOPTS)' \
 	SUBTARGET=$@ $(PRIMARY_TARGET)
 
-matlab_wrapper: $(OPTIMIZEDIR)
+matlab_wrapper: $(OPTIMIZEDIR) extlibs
 	$(MAKE) TARGETDIR='$(OPTIMIZEDIR)' TARGETOPTS='$(OPTIMIZEOPTS)' \
 	SUBTARGET=opt_pic $(MATLAB_TARGET)
 
@@ -370,8 +367,10 @@ $(TARGETDIR)/$(MATLAB_TARGET): $(MATLABWRAPPERFILE) $(PRIMARY_TARGET)
 	$(MEXC) $(MATLABWRAPPERFILE) -DMV_OPTIMIZE $(INCS) $(LIBLOC) -L. -lDataProxy $(LIBS) -o $(TARGETDIR)/$(MATLAB_TARGET)
 
 # if necessary, build external libraries.
-extlibs: $(MODULESPEC) $(TESTMODULESPEC)
+extlibs: $(MODULESPEC)
 	$(MODULESPEC:%=(cd % && ${MAKE} $(SUBTARGET)) && ) true
+
+testextlibs: $(TESTMODULESPEC) extlibs
 	${TESTMODULESPEC:%=(cd % && ${MAKE} ${SUBTARGET}) &&} true
 	${TESTMODULESPEC:%=(cd % && ${MAKE} mock) &&} true
 
