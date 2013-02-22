@@ -75,6 +75,7 @@ TESTINCS=\
 	$(INCS) \
 	$(TESTMODULESPEC:%=-I%) \
 	$(MODULESPEC:%=-I%/mock) \
+	$(INCMODULESPEC:%=-I%/mock) \
 	$(MATLABMODULESPEC:%=-I%) \
 	-I$(MATLABDIR)/extern/include \
 	-I$(TESTDIR) \
