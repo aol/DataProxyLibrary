@@ -290,23 +290,23 @@ default: $(TARGETDIR)
 .PHONY: extlibs matlablibs default check-syntax debug prof opt opt_debug coverage tests test_coverage mock \
 	depend localdepend clean localclean nodepend $(ALL_TARGETS)
 
-debug: $(DEBUGDIR) extlibs
+debug: $(DEBUGDIR)
 	$(MAKE) TARGETDIR='$(DEBUGDIR)' TARGETOPTS='$(DEBUGOPTS)' \
 	SUBTARGET=$@ $(PRIMARY_TARGET)
 
-prof: $(PROFILEDIR) extlibs
+prof: $(PROFILEDIR)
 	$(MAKE) TARGETDIR='$(PROFILEDIR)' TARGETOPTS='$(PROFILEOPTS)' \
 	SUBTARGET=$@ $(PRIMARY_TARGET)
 
-opt: $(OPTIMIZEDIR) extlibs
+opt: $(OPTIMIZEDIR)
 	$(MAKE) TARGETDIR='$(OPTIMIZEDIR)' TARGETOPTS='$(OPTIMIZEOPTS)' \
 	SUBTARGET=$@ $(PRIMARY_TARGET)
 
-opt_debug: $(OPTDEBUGDIR) extlibs
+opt_debug: $(OPTDEBUGDIR)
 	$(MAKE) TARGETDIR='$(OPTDEBUGDIR)' TARGETOPTS='$(OPTIMIZEOPTS) $(DEBUGOPTS)' \
 	SUBTARGET=$@ $(PRIMARY_TARGET)
 
-coverage: $(COVERAGEDIR) extlibs
+coverage: $(COVERAGEDIR)
 	$(MAKE) TARGETDIR='$(COVERAGEDIR)' TARGETOPTS='$(COVERAGEOPTS)' \
 	SUBTARGET=$@ $(PRIMARY_TARGET)
 
@@ -330,11 +330,11 @@ test_coverage: $(COVERAGEDIR) extlibs
 mock: $(TARGETDIR) extlibs
 	$(MAKE) SUBTARGET=debug $(MOCK_TARGET) TARGETOPTS='${DEBUGOPTS}'\
 
-opt_pic: $(OPTIMIZEDIR) extlibs
+opt_pic: $(OPTIMIZEDIR)
 	$(MAKE) TARGETDIR='$(OPTIMIZEDIR)' TARGETOPTS='$(OPTIMIZEOPTS)' \
 	SUBTARGET=$@ $(PRIMARY_TARGET)
 
-matlab_wrapper: $(OPTIMIZEDIR) extlibs
+matlab_wrapper: $(OPTIMIZEDIR)
 	$(MAKE) TARGETDIR='$(OPTIMIZEDIR)' TARGETOPTS='$(OPTIMIZEOPTS)' \
 	SUBTARGET=opt_pic $(MATLAB_TARGET)
 
