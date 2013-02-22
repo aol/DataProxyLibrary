@@ -36,7 +36,10 @@ namespace
 		}
 		virtual ~MatlabString()
 		{
-			mxFree( m_pMatlabCharArray );
+			if( m_pMatlabCharArray != NULL )
+			{
+				mxFree( m_pMatlabCharArray );
+			}
 		}
 
 	private:

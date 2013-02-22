@@ -113,7 +113,7 @@ CXXL = $(CXX) $(TARGETOPTS) $(LIBLOC)						# linking executables
 CXXD = $(CXX) -MM $(TESTINCS) $(DEFINE_FLAGS)				# generating dependencies
 CXXS = $(CXX) -shared -Wl,-soname,$(MINOR_VERSION_TARGET)
 MEX ?= mex
-MEXC = $(MEX) -g -O CXXFLAGS='-std=c++0x -fPIC -fno-omit-frame-pointer -pthread'
+MEXC = $(MEX) CXXFLAGS='-std=c++0x -fPIC -fno-omit-frame-pointer -pthread'
 
 # Source Directories
 PRIVATEDIR		= private
