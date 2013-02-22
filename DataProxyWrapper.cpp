@@ -54,8 +54,9 @@ namespace
 
 	void ReadParameters( const mxArray* prhs[], std::map< std::string, std::string >& o_rParameters )
 	{
-		mwSize numOfFields = mxGetNumberOfFields(prhs[2]);
-		mwSize numOfElements = mxGetNumberOfElements(prhs[2]);
+		const mxArray* pSource = prhs[2];
+		mwSize numOfFields = mxGetNumberOfFields(pSource);
+		mwSize numOfElements = mxGetNumberOfElements(pSource);
 
 		if( numOfElements == 0 )
 		{
@@ -67,11 +68,11 @@ namespace
 			MV_THROW( DataProxyException, "Structures in array must contain two members: '" << NAME << "' and '" << VALUE << "'" );
 		}
 
-		if( strcmp(mxGetFieldNameByNumber(prhs[2],0), NAME) != 0 )
+		if( strcmp(mxGetFieldNameByNumber(pSource,0), NAME) != 0 )
 		{
 			MV_THROW( DataProxyException, "First field of structure must be '" << NAME << "'" );
 		}
-		if( strcmp(mxGetFieldNameByNumber(prhs[2],1), VALUE) != 0 )
+		if( strcmp(mxGetFieldNameByNumber(pSource,1), VALUE) != 0 )
 		{
 			MV_THROW( DataProxyException, "Second field of structure must be '" << VALUE << "'" );
 		}
@@ -79,10 +80,12 @@ namespace
 		for( mwIndex index = 0; index < numOfElements; ++index )
 		{
 			mxArray* pField;
-			pField = mxGetField( prhs[2], index, NAME );
+			pField = mxGetField( pSource, index, NAME );
 			MatlabString key( mxArrayToString( pField ) );
-			pField = mxGetField( prhs[2], index, VALUE );
+			mxDestroyArray( pField );
+			pField = mxGetField( pSource, index, VALUE );
 			MatlabString value( mxArrayToString( pField ) );
+			mxDestroyArray( pField );
 
 			o_rParameters[key] = value;
 		}
