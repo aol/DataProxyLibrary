@@ -467,6 +467,7 @@ FIND_LOG_IDS=grep -r 'MVLOGGER[^(]*([^"]*"' ./ | grep -v Binary | grep -v '/test
 logger-config:
 	@${FIND_LOG_IDS} > ${LOG_CONFIG_FILE}
 	@$(MODULESPEC:%=(cd % && ${FIND_LOG_IDS} >> ${LOG_CONFIG_FILE}) &&) true
+	@$(INCMODULESPEC:%=(cd % && ${FIND_LOG_IDS} >> ${LOG_CONFIG_FILE}) &&) true
 
 install: opt
 	@test "$(LIB_DIR)" || (echo LIB_DIR must be defined for $@ && false)
