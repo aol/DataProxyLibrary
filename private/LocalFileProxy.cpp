@@ -17,6 +17,7 @@
 #include "MVLogger.hpp"
 #include "MutexFileLock.hpp"
 #include <fstream>
+#include <boost/iostreams/copy.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <sstream>
@@ -184,10 +185,7 @@ void LocalFileProxy::LoadImpl( const std::map<std::string,std::string>& i_rParam
 	}
 	MVLOGGER( "root.lib.DataProxy.LocalFileProxy.Load.ReadFile", msg.str() );
 	std::ifstream file( fileSpec.c_str() );
-	if( file.peek() != EOF )
-	{
-		o_rData << file.rdbuf();
-	}
+	boost::iostreams::copy( file, o_rData );
 	file.close();
 }
 
@@ -210,15 +208,18 @@ void LocalFileProxy::StoreImpl( const std::map<std::string,std::string>& i_rPara
 	if( !file.good() )
 	{
 		MV_THROW( LocalFileProxyException, "Pre-commit file: " << pendingFileSpec << " could not be opened for writing. "
-			<< " eof(): " << file.eof() << ", fail(): " << file.fail() << ", bad(): " << file.bad() );
+			<< "eof(): " << file.eof() << ", fail(): " << file.fail() << ", bad(): " << file.bad() );
 	}
 
 	MVLOGGER( "root.lib.DataProxy.LocalFileProxy.Store.WritePendingFile", "Writing data to pre-commit file: " << pendingFileSpec );
 
 	// now write data that was given to us
-	if( i_rData.peek() != EOF )
+	boost::iostreams::copy( i_rData, file );
+	if( file.fail() )
 	{
-		file << i_rData.rdbuf();
+		MV_THROW( LocalFileProxyException, "Writing to pre-commit file: " << pendingFileSpec << " caused a stream failure, "
+			<< "most likely due to a disk issue (disk full, unmounted, etc.). "
+			<< "eof(): " << file.eof() << ", fail(): " << file.fail() << ", bad(): " << file.bad() );
 	}
 	file.close();
 
