@@ -263,6 +263,37 @@ void PartitionNodeTest::testInvalidXml()
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid attribute: garbage in node: ForwardTo" );
+	
+	xmlContents.str("");
+	xmlContents << "<PartitionNode >" << std::endl
+				<< "  <Read silent=\"true\">" << std::endl
+				<< "    <ForwardTo name=\"name1\" />" << std::endl
+				<< "  </Read>" << std::endl
+				<< "  <Write partitionBy=\"key\" sortTimeout=\"5.0\" >" << std::endl
+				<< "    <ForwardTo name=\"name1\" />" << std::endl
+				<< "  </Write>" << std::endl
+				<< "</PartitionNode>" << std::endl;
+				
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( "name", client, *nodes[0] ), NodeConfigException,
+		".*:\\d+: Found invalid attribute: silent in node: Read" );
+	
+	xmlContents.str("");
+	xmlContents << "<PartitionNode >" << std::endl
+				<< "  <Write partitionBy=\"key\" sortTimeout=\"10\" >" << std::endl
+				<< "    <ForwardTo name=\"name1\" />" << std::endl
+				<< "  </Write>" << std::endl
+				<< "  <Delete silent=\"true\">" << std::endl
+				<< "    <ForwardTo name=\"name1\" garbage=\"true\" />" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "</PartitionNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( "name", client, *nodes[0] ), NodeConfigException,
+		".*:\\d+: Found invalid attribute: silent in node: Delete" );
 }
 
 void PartitionNodeTest::testLoad()
@@ -537,6 +568,72 @@ void PartitionNodeTest::testStoreExceptions()
 	data2 << "col1,col2" << std::endl;
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.StoreImpl( parameters, data2 ), PartitionNodeException,
 		".*:\\d+: Unable to find partitionBy key: campaign_id in incoming header: col1,col2" );
+}
+
+void PartitionNodeTest::testStoreSilent()
+{
+	std::stringstream xmlContents;
+	xmlContents << "<PartitionNode >" << std::endl
+				<< "  <Write silent=\"true\" partitionBy=\"campaign_id\" sortTimeout=\"5.0\" sortTempDir=\"/tmp\" >" << std::endl
+				<< "    <ForwardTo name=\"name1\" />" << std::endl
+				<< "  </Write>" << std::endl
+				<< "</PartitionNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	PartitionNode node( "name", client, *nodes[0] );
+
+	std::stringstream data;
+	data << "media_id,campaign_id" << std::endl
+		 << "120,1" << std::endl
+		 << "121,1" << std::endl
+		 << "122,1" << std::endl
+		 << "123,2" << std::endl
+		 << "124,2" << std::endl
+		 << "125,3" << std::endl
+		 << "126,3" << std::endl
+		 << "127,2" << std::endl
+		 << "128,5" << std::endl;
+
+	std::stringstream dataCamp1;
+	std::stringstream dataCamp2;
+	std::stringstream dataCamp3;
+	std::stringstream dataCamp5;
+	dataCamp1 << "media_id,campaign_id" << std::endl
+		 	  << "120,1" << std::endl
+			  << "121,1" << std::endl
+			  << "122,1" << std::endl;
+	dataCamp2 << "media_id,campaign_id" << std::endl
+		 	  << "123,2" << std::endl
+			  << "124,2" << std::endl
+			  << "127,2" << std::endl;
+	dataCamp3 << "media_id,campaign_id" << std::endl
+		 	  << "125,3" << std::endl
+			  << "126,3" << std::endl;
+	dataCamp5 << "media_id,campaign_id" << std::endl
+			  << "128,5" << std::endl;
+
+	std::map<std::string,std::string> parameters;
+	parameters["param1"] = "value1";
+	parameters["param2"] = "value2";
+	
+	std::map<std::string,std::string> parametersCamp1( parameters );;
+	std::map<std::string,std::string> parametersCamp2( parameters );;
+	std::map<std::string,std::string> parametersCamp3( parameters );;
+	std::map<std::string,std::string> parametersCamp5( parameters );;
+	parametersCamp1[ "campaign_id" ] = "1";
+	parametersCamp2[ "campaign_id" ] = "2";
+	parametersCamp3[ "campaign_id" ] = "3";
+	parametersCamp5[ "campaign_id" ] = "5";
+
+	CPPUNIT_ASSERT_NO_THROW( node.Store( parameters, data ) );
+	CPPUNIT_ASSERT_NO_THROW( node.Commit() );
+	
+	std::stringstream expected;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
 }
 
 void PartitionNodeTest::testDelete()

@@ -27,6 +27,7 @@ private:
 	CPPUNIT_TEST( testStoreSkipSort );
 	CPPUNIT_TEST( testStoreNoData );
 	CPPUNIT_TEST( testStoreExceptions );
+	CPPUNIT_TEST( testStoreSilent ); 
 	CPPUNIT_TEST( testDelete );
 	CPPUNIT_TEST( testDeleteNotSupported );
 	CPPUNIT_TEST_SUITE_END();
@@ -45,6 +46,7 @@ public:
 	void testStoreSkipSort();
 	void testStoreNoData();
 	void testStoreExceptions();
+	void testStoreSilent();
 	void testDelete();
 	void testDeleteNotSupported();
 

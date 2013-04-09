@@ -28,6 +28,7 @@ private:
 	CPPUNIT_TEST( testStoreNotSupported );
 	CPPUNIT_TEST( testStoreNowhere );
 	CPPUNIT_TEST( testStoreExceptions );
+	CPPUNIT_TEST( testStoreSilent );
 	CPPUNIT_TEST( testDelete );
 	CPPUNIT_TEST( testDeleteNotSupported );
 	CPPUNIT_TEST( testDeleteNowhere );
@@ -49,6 +50,7 @@ public:
 	void testStoreNotSupported();
 	void testStoreNowhere();
 	void testStoreExceptions();
+	void testStoreSilent(); 
 	void testDelete();
 	void testDeleteNotSupported();
 	void testDeleteNowhere();

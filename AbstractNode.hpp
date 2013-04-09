@@ -51,7 +51,7 @@ public:
 	virtual bool SupportsTransactions() const = 0;
 	virtual void Commit() = 0;
 	virtual void Rollback() = 0;
-
+	
 protected:
 	// static helpers for validating xml
 	static void ValidateXmlElements( const xercesc::DOMNode& i_rNode,
@@ -108,6 +108,9 @@ private:
 	
 	protected:
 	std::string m_Name;
+	bool m_IsSilent; 
+	static const std::string SILENT_WRITE_ATTRIBUTE; 
+	
 	private:
 	DataProxyClient& m_rParent;
 	NodeConfigDatum m_ReadConfig;

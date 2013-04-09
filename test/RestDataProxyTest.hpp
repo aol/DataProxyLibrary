@@ -43,6 +43,7 @@ private:
 	CPPUNIT_TEST( testStoreBasic );
 	CPPUNIT_TEST( testStoreMethodOverride );
 	CPPUNIT_TEST( testStoreComplex );
+	CPPUNIT_TEST( testStoreSilent );
 	CPPUNIT_TEST( testDeleteTimeout );
 	CPPUNIT_TEST( testDeleteBasic );
 	CPPUNIT_TEST( testDeleteMethodOverride );
@@ -77,6 +78,7 @@ public:
 	void testStoreBasic();
 	void testStoreMethodOverride();
 	void testStoreComplex();
+	void testStoreSilent();
 	void testDeleteTimeout();
 	void testDeleteBasic();
 	void testDeleteMethodOverride();

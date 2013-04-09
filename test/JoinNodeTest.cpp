@@ -182,6 +182,17 @@ void JoinNodeTest::testInvalidXml()
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), InvalidDirectoryException,
 		".*:\\d+: /nonexistent does not exist or is not a valid directory." );
+	
+	xmlContents.str("");
+	xmlContents << "<JoinNode >" << std::endl
+				<< "  <Read silent=\"true\">" << std::endl
+				<< "  </Read>" << std::endl
+				<< "</JoinNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), NodeConfigException,
+		".*:\\d+: Found invalid attribute: silent in node: Read" );
 
 	// Store config
 	xmlContents.str("");
@@ -262,6 +273,17 @@ void JoinNodeTest::testInvalidXml()
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: garbage in node: Delete" );
+	
+	xmlContents.str("");
+	xmlContents << "<JoinNode >" << std::endl
+				<< "  <Delete silent=\"true\">" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "</JoinNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), NodeConfigException,
+		".*:\\d+: Found invalid attribute: silent in node: Delete" );
 
 	// StreamTransformers configuration should be disallowed in Delete nodes
 	xmlContents.str("");
@@ -2402,6 +2424,41 @@ void JoinNodeTest::testStoreAppend()
 			 << "72,73,74" << std::endl
 			 << "82,83,84" << std::endl;
 	CPPUNIT_ASSERT_EQUAL( expected.str() + "\n", client.GetLog() );
+}
+
+void JoinNodeTest::testStoreSilent()
+{
+	std::stringstream xmlContents;
+	xmlContents << "<JoinNode >" << std::endl
+				<< "  <Write silent=\"true\">" << std::endl
+				<< "    <ForwardTo name=\"out\" />" << std::endl
+				<< "  </Write>" << std::endl
+				<< "</JoinNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	std::stringstream stream1;
+
+	stream1 << "this is some data" << std::endl;
+
+	MockDataProxyClient client;
+
+	JoinNode node( "name", client, *nodes[0] );
+
+	std::map<std::string,std::string> parameters;
+	parameters["param1"] = "value1";
+	parameters["param2"] = "value2";
+
+	CPPUNIT_ASSERT_NO_THROW( node.Store( parameters, stream1 ) );
+	CPPUNIT_ASSERT_NO_THROW( node.Commit() ); 
+	
+	std::stringstream expected;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+	
+	std::vector< std::string > dirContents;
+	CPPUNIT_ASSERT_NO_THROW( FileUtilities::ListDirectory( m_pTempDir->GetDirectoryName(), dirContents ) );
+	CPPUNIT_ASSERT_EQUAL( size_t(0), dirContents.size() );
 }
 
 void JoinNodeTest::testDelete()

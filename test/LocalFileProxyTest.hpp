@@ -45,6 +45,7 @@ private:
 	CPPUNIT_TEST( testStoreRollbackOverwrite );
 	CPPUNIT_TEST( testStoreRollbackAppend );
 	CPPUNIT_TEST( testStoreEmpties );
+	CPPUNIT_TEST( testStoreSilent );
 	CPPUNIT_TEST( testDeleteNonexistent );
 	CPPUNIT_TEST( testDeleteUnremovable );
 	CPPUNIT_TEST( testDelete );
@@ -88,6 +89,7 @@ public:
 	void testStoreRollbackOverwrite();
 	void testStoreRollbackAppend();
 	void testStoreEmpties();
+	void testStoreSilent(); 
 	void testDeleteNonexistent();
 	void testDeleteUnremovable();
 	void testDelete();

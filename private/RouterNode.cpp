@@ -51,6 +51,7 @@ RouterNode::RouterNode(	const std::string& i_rName,
 	std::set< std::string > allowedWriteAttributes;
 	std::set< std::string > allowedDeleteAttributes;
 	allowedWriteAttributes.insert( ON_CRITICAL_ERROR_ATTRIBUTE );
+	allowedWriteAttributes.insert( SILENT_WRITE_ATTRIBUTE );
 	allowedDeleteAttributes.insert( ON_CRITICAL_ERROR_ATTRIBUTE );
 	AbstractNode::ValidateXmlAttributes( i_rNode, allowedReadAttributes, allowedWriteAttributes, allowedDeleteAttributes );
 

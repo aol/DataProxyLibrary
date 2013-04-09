@@ -56,6 +56,9 @@ private:
 	CPPUNIT_TEST( testStoreParameterOnlyNoStaging );
 	CPPUNIT_TEST( testStoreColumnParameterCollisionBehaviors );
 	CPPUNIT_TEST( testStoreColumnParameterCollisionBehaviorsNoStaging );
+	
+	CPPUNIT_TEST( testOracleStoreSilent );
+	CPPUNIT_TEST( testMySqlStoreSilent );
 
 	CPPUNIT_TEST( testOracleMultipleStore );
 	CPPUNIT_TEST( testMySqlMultipleStore );
@@ -111,10 +114,12 @@ public:
 	void testStoreException();
 
 	void testOracleStore();
+	void testOracleStoreSilent();
 	void testOracleStoreDifferentSchema();
 	void testOracleStoreNoStaging();
 	void testOracleMultipleStore();
 	void testMySqlStore();
+	void testMySqlStoreSilent();
 	void testMySqlStoreNoStaging();
 	void testMySqlMultipleStore();
 	void testMySqlStoreDynamicTables();

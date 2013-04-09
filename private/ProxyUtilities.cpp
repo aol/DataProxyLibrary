@@ -282,28 +282,6 @@ namespace
 		}
 	}
 
-	bool GetBool( const xercesc::DOMNode& i_rNode, const std::string& i_rAttribute, bool i_rDefault )
-	{
-		xercesc::DOMAttr* pAttribute = XMLUtilities::GetAttribute( &i_rNode, i_rAttribute );
-		if( pAttribute == NULL )
-		{
-			return i_rDefault;
-		}
-		std::string value = XMLUtilities::XMLChToString( pAttribute->getValue() );
-		if( value == "true" )
-		{
-			return true;
-		}
-		else if( value == "false" )
-		{
-			return false;
-		}
-		else
-		{
-			MV_THROW( ProxyUtilitiesException, "Write attribute: " << i_rAttribute << " has invalid value: " << value << ". Valid values are 'true' and 'false'" );
-		}
-	}
-
 	void OracleGetNonNullable( DatabaseConnectionManager& i_rDatabaseConnectionManager, const std::string& i_rConnectionName, const std::string& i_rTable, std::set< std::string >& o_rNullableColumns )
 	{
 		try
@@ -743,4 +721,26 @@ std::string ProxyUtilities::GetVariableSubstitutedString( const std::string& i_r
 	}
 
 	return result;
+}
+
+bool ProxyUtilities::GetBool( const xercesc::DOMNode& i_rNode, const std::string& i_rAttribute, const bool i_rDefault )
+{
+	xercesc::DOMAttr* pAttribute = XMLUtilities::GetAttribute( &i_rNode, i_rAttribute );
+	if( pAttribute == NULL )
+	{
+		return i_rDefault;
+	}
+	std::string value = XMLUtilities::XMLChToString( pAttribute->getValue() );
+	if( value == "true" )
+	{
+		return true;
+	}
+	else if( value == "false" )
+	{
+		return false;
+	}
+	else
+	{
+		MV_THROW( ProxyUtilitiesException, "Write attribute: " << i_rAttribute << " has invalid value: " << value << ". Valid values are 'true' and 'false'" );
+	}
 }

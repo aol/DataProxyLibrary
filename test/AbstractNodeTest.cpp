@@ -106,6 +106,17 @@ void AbstractNodeTest::testIllegalXml()
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( TestableNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid attribute: garbage in node: RequiredParameters" );
+	
+	xmlContents.str("");
+	xmlContents << "<DataNode>" << std::endl
+				<< "  <Read silent=\"true\">" << std::endl
+				<< "  </Read>" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( TestableNode node( "name", client, *nodes[0] ), NodeConfigException,
+		".*:\\d+: Found invalid attribute: silent in node: Read" );
 
 	xmlContents.str("");
 	xmlContents << "<DataNode>" << std::endl
@@ -338,6 +349,17 @@ void AbstractNodeTest::testIllegalXml()
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( TestableNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: garbage in node: Parameter" );
+	
+	xmlContents.str("");
+	xmlContents << "<DataNode>" << std::endl
+				<< "  <Delete silent=\"true\">" << std::endl
+				<< "  </Delete>" << std::endl
+				<< "</DataNode>" << std::endl;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( TestableNode node( "name", client, *nodes[0] ), NodeConfigException,
+		".*:\\d+: Found invalid attribute: silent in node: Delete" );
 }
 
 void AbstractNodeTest::testLoad()
@@ -1395,6 +1417,37 @@ void AbstractNodeTest::testStoreFailureForwarding_UseTransformedStream_True()
 	expected << "Store called with Name: failureName Parameters: " << ProxyUtilities::ToString( parameters ) << " Data: "
 			 << "st_param1 : st_value1" << std::endl << data.str() << std::endl;
 	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+}
+
+void AbstractNodeTest::testStoreSilent()
+{
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "  <Write silent=\"true\">" << std::endl
+				<< "  </Write>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+
+	std::map<std::string,std::string> parameters;
+	parameters["param1"] = "value1";
+	parameters["param2"] = "value2";
+	parameters["param3"] = "value3";
+	parameters["param4"] = "value4";
+
+	std::stringstream data;
+	data << "this is some data";
+
+	CPPUNIT_ASSERT_NO_THROW( CPPUNIT_ASSERT( node.Store( parameters, data ) ) );
+
+	std::stringstream expected;
+	expected << "";
+	CPPUNIT_ASSERT_EQUAL( expected.str(), node.GetLog() );
 }
 
 void AbstractNodeTest::testDelete()

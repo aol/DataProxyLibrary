@@ -32,6 +32,8 @@ namespace ProxyUtilities
 	void ValidateCharacterSanity( const std::string& i_rValue, const std::string& i_rType );
 	void ValidateParameterSanity( const std::map< std::string, std::string >& i_rParameters );
 	bool VectorContains( const std::vector< std::string >& i_rVector, const std::string& i_rValue );
+	
+	bool GetBool( const xercesc::DOMNode& i_rNode, const std::string& i_rAttribute, const bool i_rDefault );
 
 	std::string GetMergeQuery( DatabaseConnectionManager& i_rDatabaseConnectionManager,
 							   const std::string& i_rConnectionName,

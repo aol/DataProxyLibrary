@@ -110,6 +110,7 @@ LocalFileProxy::LocalFileProxy( const std::string& i_rName, DataProxyClient& i_r
 	allowedWriteAttributes.insert( ON_FILE_EXIST_ATTRIBUTE );
 	allowedWriteAttributes.insert( NEW_FILE_PARAM_ATTRIBUTE );
 	allowedWriteAttributes.insert( SKIP_LINES_ATTRIBUTE );
+	allowedWriteAttributes.insert( SILENT_WRITE_ATTRIBUTE );
 	std::set< std::string > allowedReadAttributes;
 	allowedReadAttributes.insert( FAIL_IF_OLDER_THAN_ATTRIBUTE );
 	AbstractNode::ValidateXmlAttributes( i_rNode, allowedReadAttributes, allowedWriteAttributes, std::set<std::string>() );

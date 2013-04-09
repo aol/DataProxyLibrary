@@ -52,6 +52,7 @@ private:
 	CPPUNIT_TEST( testStoreFailureForwarding_UseTranslatedParams_True );
 	CPPUNIT_TEST( testStoreFailureForwarding_UseTransformedStream_False );
 	CPPUNIT_TEST( testStoreFailureForwarding_UseTransformedStream_True );
+	CPPUNIT_TEST( testStoreSilent ); 
 
 	CPPUNIT_TEST( testDelete );
 	CPPUNIT_TEST( testDeleteTranslateParameters );
@@ -103,6 +104,7 @@ public:
 	void testStoreFailureForwarding_UseTranslatedParams_True();
 	void testStoreFailureForwarding_UseTransformedStream_False();
 	void testStoreFailureForwarding_UseTransformedStream_True();
+	void testStoreSilent(); 
 
 	void testDelete();
 	void testDeleteTranslateParameters();

@@ -22,7 +22,7 @@
 namespace
 {
 	const unsigned long MICROSECONDS_PER_SECOND( 1000000 );
-
+	
 	const std::map< std::string, std::string >& ChooseParameters( const std::map< std::string, std::string >& i_rOriginalParameters,
 																  const std::map< std::string, std::string >& i_rTranslatedParameters,
 																  bool i_ForwardTranslatedParameters )
@@ -66,8 +66,11 @@ namespace
 	}
 }
 
+const std::string AbstractNode::SILENT_WRITE_ATTRIBUTE = "silent"; 
+
 AbstractNode::AbstractNode( const std::string& i_rName, DataProxyClient& i_rParent, const xercesc::DOMNode& i_rNode )
 :	m_Name( i_rName ),
+	m_IsSilent( false ),
 	m_rParent( i_rParent ),
 	m_ReadConfig(),
 	m_WriteConfig(),
@@ -86,12 +89,20 @@ AbstractNode::AbstractNode( const std::string& i_rName, DataProxyClient& i_rPare
 	m_DeleteConfig.SetValue< LogCritical >( true );
 
 	// Validate 
+	xercesc::DOMAttr* pAttribute;
 	
 	// extract common read parameters
 	xercesc::DOMNode* pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, READ_NODE );
 	if( pNode != NULL )
 	{
 		SetConfig( *pNode, m_ReadConfig );
+		
+		// silent attribute is only permissible for write nodes
+		pAttribute = XMLUtilities::GetAttribute( pNode, SILENT_WRITE_ATTRIBUTE );
+		if( pAttribute != NULL )
+		{
+			MV_THROW( NodeConfigException,  "Found invalid attribute: " << SILENT_WRITE_ATTRIBUTE << " in node: " <<  READ_NODE ); 
+		}
 
 		// extract Tee configuration
 		pNode = XMLUtilities::TryGetSingletonChildByName( pNode, TEE_NODE );
@@ -105,7 +116,7 @@ AbstractNode::AbstractNode( const std::string& i_rName, DataProxyClient& i_rPare
 			XMLUtilities::ValidateNode( pNode, std::set< std::string >() );
 
 			m_TeeConfig.SetValue< ForwardNodeName >( XMLUtilities::GetAttributeValue( pNode, FORWARD_TO_ATTRIBUTE ) );
-			xercesc::DOMAttr* pAttribute = XMLUtilities::GetAttribute( pNode, FORWARD_TRANSLATED_PARAMETERS_ATTRIBUTE );
+			pAttribute = XMLUtilities::GetAttribute( pNode, FORWARD_TRANSLATED_PARAMETERS_ATTRIBUTE );
 			if( pAttribute != NULL && XMLUtilities::XMLChToString(pAttribute->getValue()) == "true" )
 			{
 				m_TeeConfig.SetValue< UseTranslatedParameters >( true );
@@ -123,6 +134,7 @@ AbstractNode::AbstractNode( const std::string& i_rName, DataProxyClient& i_rPare
 	if( pNode != NULL )
 	{
 		SetConfig( *pNode, m_WriteConfig );
+		m_IsSilent = ProxyUtilities::GetBool( *pNode, SILENT_WRITE_ATTRIBUTE, false );
 	}
 
 	// extract common delete parameters
@@ -134,6 +146,11 @@ AbstractNode::AbstractNode( const std::string& i_rName, DataProxyClient& i_rPare
 		{
 			MVLOGGER( "root.lib.DataProxy.DataProxyClient.Delete.ForwardTransform", "Attribute forwardTransformedStream in Delete node"
 				<< " has been set to \"true\" but Delete nodes do not accept stream transformers. This attribute will be ignored." );
+		}
+		pAttribute = XMLUtilities::GetAttribute( pNode, SILENT_WRITE_ATTRIBUTE );
+		if( pAttribute != NULL )
+		{
+			MV_THROW( NodeConfigException, "Found invalid attribute: " << SILENT_WRITE_ATTRIBUTE << " in node: " <<  DELETE_NODE ); 
 		}
 	}
 }
@@ -295,6 +312,12 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 
 	// and by default we stick to the incoming data
 	std::istream* pUseData = &i_rData;
+	
+	if( m_IsSilent ) 
+	{
+		MVLOGGER( "root.lib.DataProxy.DataProxyClient.Store", "Write node has is defined as silent, so ignoring the store." );
+		return true; 
+	}
 
 	try
 	{

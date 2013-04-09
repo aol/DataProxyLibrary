@@ -29,6 +29,7 @@ private:
 	CPPUNIT_TEST( testStoreError );
 	CPPUNIT_TEST( testStoreTimeout );
 	CPPUNIT_TEST( testStoreNotSupported );
+	CPPUNIT_TEST( testStoreSilent );
 	CPPUNIT_TEST( testDelete );
 	CPPUNIT_TEST( testDeleteError );
 	CPPUNIT_TEST( testDeleteTimeout );
@@ -51,6 +52,7 @@ public:
 	void testStoreError();
 	void testStoreTimeout();
 	void testStoreNotSupported();
+	void testStoreSilent();
 	void testDelete();
 	void testDeleteError();
 	void testDeleteTimeout();

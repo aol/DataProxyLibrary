@@ -293,28 +293,6 @@ namespace
 		return i_rManager.GetDataDefinitionConnection( i_rConnection );
 	}
 
-	bool GetBool( const xercesc::DOMNode& i_rNode, const std::string& i_rAttribute, bool i_rDefault )
-	{
-		xercesc::DOMAttr* pAttribute = XMLUtilities::GetAttribute( &i_rNode, i_rAttribute );
-		if( pAttribute == NULL )
-		{
-			return i_rDefault;
-		}
-		std::string value = XMLUtilities::XMLChToString( pAttribute->getValue() );
-		if( value == "true" )
-		{
-			return true;
-		}
-		else if( value == "false" )
-		{
-			return false;
-		}
-		else
-		{
-			MV_THROW( DatabaseProxyException, "Write attribute: " << i_rAttribute << " has invalid value: " << value << ". Valid values are 'true' and 'false'" );
-		}
-	}
-
 	std::string GetDynamicStagingTable( const std::string& i_rTablePrefix )
 	{
 		std::stringstream tableName;
@@ -456,6 +434,7 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 	allowedWriteAttributes.insert( ON_COLUMN_PARAMETER_COLLISION_ATTRIBUTE );
 	allowedWriteAttributes.insert( PRE_STATEMENT_ATTRIBUTE );
 	allowedWriteAttributes.insert( POST_STATEMENT_ATTRIBUTE );
+	allowedWriteAttributes.insert( SILENT_WRITE_ATTRIBUTE );
 	allowedDeleteAttributes.insert(CONNECTION_BY_TABLE_ATTRIBUTE);
 	allowedDeleteAttributes.insert(CONNECTION_ATTRIBUTE);
 	allowedDeleteAttributes.insert(QUERY_ATTRIBUTE);
@@ -545,11 +524,11 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 			m_WriteTable = m_WriteConnectionName;
 			m_WriteConnectionByTable = true;
 		}
-		m_WriteDirectLoad = GetBool( *pNode, DIRECT_LOAD_ATTRIBUTE, true );
-		m_WriteDynamicStagingTable = GetBool( *pNode, DYNAMIC_STAGING_TABLE_ATTRIBUTE, false );
-		bool insertOnly = GetBool( *pNode, INSERT_ONLY_ATTRIBUTE, false );
-		m_WriteLocalDataFile = GetBool( *pNode, LOCAL_DATA_ATTRIBUTE, true );
-		m_WriteNoCleanUp = GetBool( *pNode, NO_CLEAN_UP_ATTRIBUTE, false );
+		m_WriteDirectLoad = ProxyUtilities::GetBool( *pNode, DIRECT_LOAD_ATTRIBUTE, true );
+		m_WriteDynamicStagingTable = ProxyUtilities::GetBool( *pNode, DYNAMIC_STAGING_TABLE_ATTRIBUTE, false );
+		bool insertOnly = ProxyUtilities::GetBool( *pNode, INSERT_ONLY_ATTRIBUTE, false );
+		m_WriteLocalDataFile = ProxyUtilities::GetBool( *pNode, LOCAL_DATA_ATTRIBUTE, true );
+		m_WriteNoCleanUp = ProxyUtilities::GetBool( *pNode, NO_CLEAN_UP_ATTRIBUTE, false );
 
 		pAttribute = XMLUtilities::GetAttribute( pNode, MAX_TABLE_NAME_LENGTH_ATTRIBUTE );
 		if( pAttribute != NULL )
