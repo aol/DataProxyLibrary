@@ -387,7 +387,6 @@ RestDataProxy::RestDataProxy( const std::string& i_rName, DataProxyClient& i_rPa
 	allowedWriteAttributes.insert( TIMEOUT_ATTRIBUTE );
 	allowedWriteAttributes.insert( URI_SUFFIX_ATTRIBUTE );
 	allowedWriteAttributes.insert( MAX_REDIRECTS_ATTRIBUTE );
-	allowedWriteAttributes.insert( SILENT_WRITE_ATTRIBUTE );
 	std::set< std::string > allowedDeleteAttributes;
 	allowedDeleteAttributes.insert( METHOD_OVERRIDE_ATTRIBUTE );
 	allowedDeleteAttributes.insert( TIMEOUT_ATTRIBUTE );

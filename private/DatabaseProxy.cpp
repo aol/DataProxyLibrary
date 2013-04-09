@@ -434,7 +434,6 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 	allowedWriteAttributes.insert( ON_COLUMN_PARAMETER_COLLISION_ATTRIBUTE );
 	allowedWriteAttributes.insert( PRE_STATEMENT_ATTRIBUTE );
 	allowedWriteAttributes.insert( POST_STATEMENT_ATTRIBUTE );
-	allowedWriteAttributes.insert( SILENT_WRITE_ATTRIBUTE );
 	allowedDeleteAttributes.insert(CONNECTION_BY_TABLE_ATTRIBUTE);
 	allowedDeleteAttributes.insert(CONNECTION_ATTRIBUTE);
 	allowedDeleteAttributes.insert(QUERY_ATTRIBUTE);

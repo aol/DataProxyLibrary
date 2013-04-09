@@ -78,7 +78,6 @@ PartitionNode::PartitionNode( const std::string& i_rName,
 	allowedWriteAttributes.insert( SKIP_SORT_ATTRIBUTE );
 	allowedWriteAttributes.insert( SORT_TIMEOUT_ATTRIBUTE );
 	allowedWriteAttributes.insert( SORT_TEMPDIR_ATTRIBUTE );
-	allowedWriteAttributes.insert( SILENT_WRITE_ATTRIBUTE );
 	AbstractNode::ValidateXmlAttributes( i_rNode, allowedReadAttributes, allowedWriteAttributes, allowedDeleteAttributes );
 
 	std::set< std::string > allowedAttributes;

@@ -23,6 +23,8 @@ namespace
 {
 	const unsigned long MICROSECONDS_PER_SECOND( 1000000 );
 	
+	const std::string SILENT_WRITE_ATTRIBUTE( "silent" ); 
+
 	const std::map< std::string, std::string >& ChooseParameters( const std::map< std::string, std::string >& i_rOriginalParameters,
 																  const std::map< std::string, std::string >& i_rTranslatedParameters,
 																  bool i_ForwardTranslatedParameters )
@@ -65,8 +67,6 @@ namespace
 		}
 	}
 }
-
-const std::string AbstractNode::SILENT_WRITE_ATTRIBUTE = "silent"; 
 
 AbstractNode::AbstractNode( const std::string& i_rName, DataProxyClient& i_rParent, const xercesc::DOMNode& i_rNode )
 :	m_Name( i_rName ),
@@ -713,6 +713,9 @@ void AbstractNode::ValidateXmlAttributes( const xercesc::DOMNode& i_rNode,
 	std::set< std::string > allowedReadAttributes;
 	std::set< std::string > allowedWriteAttributes;
 	std::set< std::string > allowedDeleteAttributes;
+	
+	// all write nodes may have the following parameter
+	allowedWriteAttributes.insert( SILENT_WRITE_ATTRIBUTE ); 
 
 	// add in the additional attributes allowed
 	allowedReadAttributes.insert( i_rAdditionalReadAttributes.begin(), i_rAdditionalReadAttributes.end() );

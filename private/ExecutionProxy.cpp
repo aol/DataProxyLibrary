@@ -41,9 +41,7 @@ ExecutionProxy::ExecutionProxy( const std::string& i_rName, DataProxyClient& i_r
 	std::set< std::string > allowedAttributes;
 	allowedAttributes.insert( COMMAND_ATTRIBUTE );
 	allowedAttributes.insert( TIMEOUT_ATTRIBUTE );
-	std::set< std::string > allowedWriteAttributes( allowedAttributes ); 
-	allowedWriteAttributes.insert( SILENT_WRITE_ATTRIBUTE ); 
-	AbstractNode::ValidateXmlAttributes( i_rNode, allowedAttributes, allowedWriteAttributes, allowedAttributes );
+	AbstractNode::ValidateXmlAttributes( i_rNode, allowedAttributes, allowedAttributes, allowedAttributes );
 
 	// extract read parameters
 	xercesc::DOMNode* pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, READ_NODE );

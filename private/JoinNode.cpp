@@ -262,7 +262,6 @@ JoinNode::JoinNode(	const std::string& i_rName,
 	allowedWriteAttributes.insert( TIMEOUT_ATTRIBUTE );
 	allowedWriteAttributes.insert( KEY_ATTRIBUTE );
 	allowedWriteAttributes.insert( COLUMNS_ATTRIBUTE );
-	allowedWriteAttributes.insert( SILENT_WRITE_ATTRIBUTE );
 	AbstractNode::ValidateXmlAttributes( i_rNode, allowedReadAttributes, allowedWriteAttributes, allowedDeleteAttributes );
 
 	// extract read parameters

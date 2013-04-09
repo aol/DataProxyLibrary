@@ -109,7 +109,6 @@ private:
 	protected:
 	std::string m_Name;
 	bool m_IsSilent; 
-	static const std::string SILENT_WRITE_ATTRIBUTE; 
 	
 	private:
 	DataProxyClient& m_rParent;
