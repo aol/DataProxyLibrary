@@ -24,7 +24,8 @@ namespace
 	const unsigned long MICROSECONDS_PER_SECOND( 1000000 );
 	
 	const std::string OPERATION_ATTRIBUTE( "operation" ); 
-	const std::string DEFAULT_OPERATION_VALUE( "process" ); 
+	const std::string OPERATION_PROCESS( "process" );
+	const std::string OPERATION_IGNORE( "ignore" );
 
 	const std::map< std::string, std::string >& ChooseParameters( const std::map< std::string, std::string >& i_rOriginalParameters,
 																  const std::map< std::string, std::string >& i_rTranslatedParameters,
@@ -147,7 +148,7 @@ AbstractNode::~AbstractNode()
 
 void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData )
 {
-	if( !m_ReadConfig.GetValue< Operation >().IsNull() && m_ReadConfig.GetValue< Operation >() == std::string( "ignore" ) )
+	if( m_ReadConfig.GetValue< Operation >() == OPERATION_IGNORE )
 	{
 		MVLOGGER( "root.lib.DataProxy.DataProxyClient.Load", "Read node operation mode set to ignore, so ignoring." );
 		return;
@@ -291,7 +292,7 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 
 bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData )
 {
-	if( !m_WriteConfig.GetValue< Operation >().IsNull() && m_WriteConfig.GetValue< Operation >() == std::string( "ignore" ) )
+	if( m_WriteConfig.GetValue< Operation >() == OPERATION_IGNORE )
 	{
 		MVLOGGER( "root.lib.DataProxy.DataProxyClient.Store", "Write node operation mode set to ignore, so ignoring." );
 		return true;
@@ -422,7 +423,7 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 
 bool AbstractNode::Delete( const std::map<std::string,std::string>& i_rParameters )
 {
-	if( !m_DeleteConfig.GetValue< Operation >().IsNull() && m_DeleteConfig.GetValue< Operation >() == std::string( "ignore" ) )
+	if( m_DeleteConfig.GetValue< Operation >() == OPERATION_IGNORE )
 	{
 		MVLOGGER( "root.lib.DataProxy.DataProxyClient.Delete", "Delete node operation mode set to ignore, so ignoring." );
 		return true;
@@ -645,22 +646,14 @@ void AbstractNode::SetConfig( const xercesc::DOMNode& i_rNode, NodeConfigDatum& 
 		}
 	}
 	
-	std::string nodeName = XMLUtilities::XMLChToString( i_rNode.getNodeName() );
-	if( nodeName == READ_NODE || nodeName == WRITE_NODE || nodeName == DELETE_NODE )
+	pAttribute = XMLUtilities::GetAttribute( &i_rNode, OPERATION_ATTRIBUTE );
+	if( pAttribute != NULL && ( XMLUtilities::XMLChToString(pAttribute->getValue()) == OPERATION_IGNORE || XMLUtilities::XMLChToString(pAttribute->getValue()) == OPERATION_PROCESS ) )
 	{
-		pAttribute = XMLUtilities::GetAttribute( &i_rNode, OPERATION_ATTRIBUTE );
-		if( pAttribute != NULL && ( XMLUtilities::XMLChToString(pAttribute->getValue()) == "ignore" || XMLUtilities::XMLChToString(pAttribute->getValue()) == "process" ) )
-		{
-			o_rConfig.SetValue< Operation >( XMLUtilities::XMLChToString( pAttribute->getValue() ) );
-		}
-		else if( pAttribute != NULL )
-		{
-			MV_THROW( NodeConfigException, "Attribute \"" << OPERATION_ATTRIBUTE << "\" may only have values \"ignore\" or \"process\"." ); 
-		}
-		else
-		{
-			o_rConfig.SetValue< Operation >( DEFAULT_OPERATION_VALUE ); 
-		}
+		o_rConfig.SetValue< Operation >( XMLUtilities::XMLChToString( pAttribute->getValue() ) );
+	}
+	else if( pAttribute != NULL )
+	{
+		MV_THROW( NodeConfigException, "Attribute \"" << OPERATION_ATTRIBUTE << "\" may only have values \"ignore\" or \"process\"." ); 
 	}
 }
 
