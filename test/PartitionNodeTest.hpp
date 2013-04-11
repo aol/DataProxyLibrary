@@ -21,13 +21,13 @@ class PartitionNodeTest : public CppUnit::TestFixture
 private:
 	CPPUNIT_TEST_SUITE( PartitionNodeTest );
 	CPPUNIT_TEST( testInvalidXml );
+	CPPUNIT_TEST( testOperationAttributeParsing ); 
 	CPPUNIT_TEST( testLoad );
 	CPPUNIT_TEST( testLoadNotSupported );
 	CPPUNIT_TEST( testStore );
 	CPPUNIT_TEST( testStoreSkipSort );
 	CPPUNIT_TEST( testStoreNoData );
 	CPPUNIT_TEST( testStoreExceptions );
-	CPPUNIT_TEST( testStoreSilent ); 
 	CPPUNIT_TEST( testDelete );
 	CPPUNIT_TEST( testDeleteNotSupported );
 	CPPUNIT_TEST_SUITE_END();
@@ -40,13 +40,13 @@ public:
 	void tearDown();
 
 	void testInvalidXml();
+	void testOperationAttributeParsing(); 
 	void testLoad();
 	void testLoadNotSupported();
 	void testStore();
 	void testStoreSkipSort();
 	void testStoreNoData();
 	void testStoreExceptions();
-	void testStoreSilent();
 	void testDelete();
 	void testDeleteNotSupported();
 

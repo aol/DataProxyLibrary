@@ -21,6 +21,7 @@ class RouterNodeTest : public CppUnit::TestFixture
 private:
 	CPPUNIT_TEST_SUITE( RouterNodeTest );
 	CPPUNIT_TEST( testInvalidXml );
+	CPPUNIT_TEST( testOperationAttributeParsing ); 
 	CPPUNIT_TEST( testLoad );
 	CPPUNIT_TEST( testLoadEmpty );
 	CPPUNIT_TEST( testLoadNotSupported );
@@ -28,7 +29,6 @@ private:
 	CPPUNIT_TEST( testStoreNotSupported );
 	CPPUNIT_TEST( testStoreNowhere );
 	CPPUNIT_TEST( testStoreExceptions );
-	CPPUNIT_TEST( testStoreSilent );
 	CPPUNIT_TEST( testDelete );
 	CPPUNIT_TEST( testDeleteNotSupported );
 	CPPUNIT_TEST( testDeleteNowhere );
@@ -43,6 +43,7 @@ public:
 	void tearDown();
 
 	void testInvalidXml();
+	void testOperationAttributeParsing();
 	void testLoad();
 	void testLoadEmpty();
 	void testLoadNotSupported();
@@ -50,7 +51,6 @@ public:
 	void testStoreNotSupported();
 	void testStoreNowhere();
 	void testStoreExceptions();
-	void testStoreSilent(); 
 	void testDelete();
 	void testDeleteNotSupported();
 	void testDeleteNowhere();

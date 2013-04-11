@@ -21,6 +21,7 @@ class ExecutionProxyTest : public CppUnit::TestFixture
 private:
 	CPPUNIT_TEST_SUITE( ExecutionProxyTest );
 	CPPUNIT_TEST( testInvalidXml );
+	CPPUNIT_TEST( testOperationAttributeParsing ); 
 	CPPUNIT_TEST( testLoad );
 	CPPUNIT_TEST( testLoadError );
 	CPPUNIT_TEST( testLoadTimeout );
@@ -29,7 +30,6 @@ private:
 	CPPUNIT_TEST( testStoreError );
 	CPPUNIT_TEST( testStoreTimeout );
 	CPPUNIT_TEST( testStoreNotSupported );
-	CPPUNIT_TEST( testStoreSilent );
 	CPPUNIT_TEST( testDelete );
 	CPPUNIT_TEST( testDeleteError );
 	CPPUNIT_TEST( testDeleteTimeout );
@@ -44,6 +44,7 @@ public:
 	void tearDown();
 
 	void testInvalidXml();
+	void testOperationAttributeParsing(); 
 	void testLoad();
 	void testLoadError();
 	void testLoadTimeout();
@@ -52,7 +53,6 @@ public:
 	void testStoreError();
 	void testStoreTimeout();
 	void testStoreNotSupported();
-	void testStoreSilent();
 	void testDelete();
 	void testDeleteError();
 	void testDeleteTimeout();

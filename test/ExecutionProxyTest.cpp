@@ -207,17 +207,6 @@ void ExecutionProxyTest::testInvalidXml()
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ExecutionProxy proxy( std::string("name"), client, *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Unable to find attribute: 'command' in node: Read" );
-	
-	xmlContents.str("");
-	xmlContents << "<DataNode>" << std::endl
-				<< "  <Read silent=\"true\" command=\"echo -n hello, ${name}!!!\" timeout=\"2\" >" << std::endl
-				<< "  </Read>" << std::endl
-				<< "</DataNode>" << std::endl;
-	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
-	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ExecutionProxy proxy( std::string("name"), client, *nodes[0] ), NodeConfigException,
-		".*:\\d+: Found invalid attribute: silent in node: Read" );
 
 	xmlContents.str("");
 	xmlContents << "<DataNode>" << std::endl
@@ -270,17 +259,22 @@ void ExecutionProxyTest::testInvalidXml()
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ExecutionProxy proxy( std::string("name"), client, *nodes[0] ), ExecutionProxyException,
 		".*:\\d+: Execution proxy: 'name' does not have a read, write or delete side configuration" );
-	
-	xmlContents.str("");
+}
+
+void ExecutionProxyTest::testOperationAttributeParsing()
+{
+	MockDataProxyClient client;
+	std::stringstream xmlContents;
 	xmlContents << "<DataNode>" << std::endl
-				<< "  <Delete silent=\"true\" command=\"echo -n hello, ${name}!!!\" timeout=\"2\" >" << std::endl
-				<< "  </Delete>" << std::endl
+				<< "  <Read operation=\"ignore\" command=\"\" timeout=\"2\" />" << std::endl
+				<< "  <Write operation=\"ignore\" command=\"\" timeout=\"2\" />" << std::endl
+				<< "  <Delete operation=\"ignore\" command=\"\" timeout=\"2\" />" << std::endl
 				<< "</DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ExecutionProxy proxy( std::string("name"), client, *nodes[0] ), NodeConfigException,
-		".*:\\d+: Found invalid attribute: silent in node: Delete" );
+
+	CPPUNIT_ASSERT_NO_THROW( ExecutionProxy proxy( "name", client, *nodes[0] ) ); 
 }
 
 void ExecutionProxyTest::testLoad()
@@ -504,39 +498,6 @@ void ExecutionProxyTest::testStoreNotSupported()
 	ExecutionProxy proxy( std::string("name"), client, *nodes[0] );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Store( parameters, data ), ExecutionProxyException, 
 		".*:\\d+: Execution proxy: name does not have a write-side configuration" );
-}
-
-void ExecutionProxyTest::testStoreSilent()
-{
-	std::stringstream xmlContents;
-	MockDataProxyClient client;
-	std::vector<xercesc::DOMNode*> nodes;
-
-	std::string scriptSpec = WriteScript( m_pTempDir->GetDirectoryName(), true );
-	std::string outFileSpec = m_pTempDir->GetDirectoryName() + "/out";
-	std::string errFileSpec = m_pTempDir->GetDirectoryName() + "/err";
-
-	xmlContents.str("");
-	xmlContents << "<DataNode>" << std::endl
-				<< "  <Write silent=\"true\" command=\"" << scriptSpec << " 0 > " << outFileSpec << " 2>" << errFileSpec << "\" timeout=\"2\" >" << std::endl
-				<< "  </Write>" << std::endl
-				<< "</DataNode>" << std::endl;
-	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
-	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-
-	std::map< std::string, std::string > parameters;
-
-	std::stringstream data;
-	data << "some data 1" << std::endl
-		 << "some data 2" << std::endl
-		 << "some data 3" << std::endl
-		 << "some data 4" << std::endl;
-
-	ExecutionProxy proxy( std::string("name"), client, *nodes[0] );
-	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data ) );
-	
-	CPPUNIT_ASSERT( !boost::filesystem::exists( outFileSpec ) );
-	CPPUNIT_ASSERT( !boost::filesystem::exists( errFileSpec ) );
 }
 
 void ExecutionProxyTest::testDelete()

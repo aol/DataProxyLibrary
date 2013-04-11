@@ -218,15 +218,6 @@ void RestDataProxyTest::testMalformedReadNode()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	CPPUNIT_ASSERT_NO_THROW( RestDataProxy proxy( "name", client, *nodes[0] ) );
-	
-	xmlContents.str("");
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
-				<< "  <Read silent=\"true\" />" << std::endl
-				<< "</DataNode>" << std::endl;
-	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
-	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), NodeConfigException,
-		".*:\\d+: Found invalid attribute: silent in node: Read" );
 }
 
 void RestDataProxyTest::testMalformedWriteNode()
@@ -297,15 +288,22 @@ void RestDataProxyTest::testMalformedDeleteNode()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: compression in node: Delete" );
-	
-	xmlContents.str("");
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
-				<< "  <Delete silent=\"true\" />" << std::endl
+}
+
+void RestDataProxyTest::testOperationAttributeParsing()
+{
+	MockDataProxyClient client;
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode location=\"someLocation\">" << std::endl
+				<< "  <Read operation=\"ignore\" />" << std::endl
+				<< "  <Write operation=\"ignore\" />" << std::endl
+				<< "  <Delete operation=\"ignore\" />" << std::endl
 				<< "</DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), NodeConfigException,
-		".*:\\d+: Found invalid attribute: silent in node: Delete" );
+
+	CPPUNIT_ASSERT_NO_THROW( RestDataProxy proxy( "name", client, *nodes[0] ) ); 
 }
 
 void RestDataProxyTest::testMalformedUriQueryParametersNode()
@@ -936,34 +934,6 @@ void RestDataProxyTest::testStoreComplex()
 													 "&group3=default1"
 													 "&query1=queryOne"
 													 "&query2=queryTwo", data.str(), expectedHeaders );
-}
-
-void RestDataProxyTest::testStoreSilent()
-{
-	MockDataProxyClient client;
-	std::stringstream data;
-	data << "This data should be posted";
-	std::string path = "/some/path/to/nowhere/";
-
-	std::map< std::string, std::string > parameters;
-	parameters[ "ignoredParam" ] = "ignoredValue";
-
-	std::stringstream xmlContents;
-	xmlContents << "<DataNode location=\"" << m_pService->GetEndpoint() + path << "\">"
-				<< "  <Write silent=\"true\" />"
-				<< "</DataNode>";
-	std::vector<xercesc::DOMNode*> nodes;
-	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
-	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	RestDataProxy proxy( "name", client, *nodes[0] );
-	CPPUNIT_ASSERT( !proxy.SupportsTransactions() );
-
-	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data ) );
-	
-	std::stringstream expected;
-	expected << "Service started" << std::endl;
-	
-	CPPUNIT_ASSERT_EQUAL( m_pService->GetStandardOutput(), expected.str() ); 
 }
 
 void RestDataProxyTest::testDeleteBasic()

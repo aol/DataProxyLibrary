@@ -22,6 +22,7 @@ class RestDataProxyTest : public CppUnit::TestFixture
 {
 private:
 	CPPUNIT_TEST_SUITE( RestDataProxyTest );
+	CPPUNIT_TEST( testOperationAttributeParsing ); 
 	CPPUNIT_TEST( testMissingLocation );
 	CPPUNIT_TEST( testMoreThanOneUriQueryParametersNode );
 	CPPUNIT_TEST( testMoreThanOneHttpHeaderParametersNode );
@@ -43,7 +44,6 @@ private:
 	CPPUNIT_TEST( testStoreBasic );
 	CPPUNIT_TEST( testStoreMethodOverride );
 	CPPUNIT_TEST( testStoreComplex );
-	CPPUNIT_TEST( testStoreSilent );
 	CPPUNIT_TEST( testDeleteTimeout );
 	CPPUNIT_TEST( testDeleteBasic );
 	CPPUNIT_TEST( testDeleteMethodOverride );
@@ -57,6 +57,7 @@ public:
 	void setUp();
 	void tearDown();
 
+	void testOperationAttributeParsing();
 	void testMissingLocation();
 	void testMoreThanOneUriQueryParametersNode();
 	void testMoreThanOneHttpHeaderParametersNode();
@@ -78,7 +79,6 @@ public:
 	void testStoreBasic();
 	void testStoreMethodOverride();
 	void testStoreComplex();
-	void testStoreSilent();
 	void testDeleteTimeout();
 	void testDeleteBasic();
 	void testDeleteMethodOverride();

@@ -62,17 +62,6 @@ void RouterNodeTest::testInvalidXml()
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: garbage in node: Read" );
-	
-	xmlContents.str("");
-	xmlContents << "<RouterNode >" << std::endl
-				<< "  <Read silent=\"true\">" << std::endl
-				<< "  </Read>" << std::endl
-				<< "</RouterNode>" << std::endl;
-	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
-	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", client, *nodes[0] ), NodeConfigException,
-		".*:\\d+: Found invalid attribute: silent in node: Read" );
 
 	xmlContents.str("");
 	xmlContents << "<RouterNode >" << std::endl
@@ -152,17 +141,6 @@ void RouterNodeTest::testInvalidXml()
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: garbage in node: Delete" );
 	
-	xmlContents.str("");
-	xmlContents << "<RouterNode >" << std::endl
-				<< "  <Delete silent=\"true\">" << std::endl
-				<< "  </Delete>" << std::endl
-				<< "</RouterNode>" << std::endl;
-	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
-	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", client, *nodes[0] ), NodeConfigException,
-		".*:\\d+: Found invalid attribute: silent in node: Delete" );
-
 	// StreamTransformers configuration should be disallowed in Delete nodes
 	xmlContents.str("");
 	xmlContents << "<RouterNode >" << std::endl
@@ -201,6 +179,22 @@ void RouterNodeTest::testInvalidXml()
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid attribute: garbage in node: ForwardTo" );
+}
+
+void RouterNodeTest::testOperationAttributeParsing()
+{
+	MockDataProxyClient client;
+	std::stringstream xmlContents;
+	xmlContents << "<RouterNode>" << std::endl
+				<< "  <Read operation=\"ignore\" />" << std::endl
+				<< "  <Write operation=\"ignore\" />" << std::endl
+				<< "  <Delete operation=\"ignore\" />" << std::endl
+				<< "</RouterNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_NO_THROW( RouterNode node( "name", client, *nodes[0] ) ); 
 }
 
 void RouterNodeTest::testLoad()
@@ -568,38 +562,6 @@ void RouterNodeTest::testStoreExceptions()
 	expected << "Store called with Name: name1 Parameters: " << ProxyUtilities::ToString( parameters ) << " Data: " << data.str() << std::endl;
 	expected << "Store called with Name: name2 Parameters: " << ProxyUtilities::ToString( parameters ) << " Data: " << data.str() << std::endl;
 	expected << "Store called with Name: name3 Parameters: " << ProxyUtilities::ToString( parameters ) << " Data: " << data.str() << std::endl;
-	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
-}
-
-void RouterNodeTest::testStoreSilent()
-{
-	std::stringstream xmlContents;
-	xmlContents << "<RouterNode>" << std::endl
-				<< "  <Write silent=\"true\">" << std::endl
-				<< "    <ForwardTo name=\"name1\" />" << std::endl
-				<< "    <ForwardTo name=\"name2\" />" << std::endl
-				<< "    <ForwardTo name=\"name3\" />" << std::endl
-				<< "    <ForwardTo name=\"name4\" />" << std::endl
-				<< "  </Write>" << std::endl
-				<< "</RouterNode>" << std::endl;
-	std::vector<xercesc::DOMNode*> nodes;
-	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
-	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-
-	MockDataProxyClient client;
-
-	RouterNode node( "name", client, *nodes[0] );
-
-	std::stringstream data;
-	data << "data to store";
-	std::map<std::string,std::string> parameters;
-	parameters["param1"] = "value1";
-	parameters["param2"] = "value2";
-
-	CPPUNIT_ASSERT_NO_THROW( node.Store( parameters, data ) );
-	CPPUNIT_ASSERT_NO_THROW( node.Commit() );
-	
-	std::stringstream expected;
 	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
 }
 

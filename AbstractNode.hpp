@@ -82,6 +82,7 @@ private:
 	DATUMINFO( UseTranslatedParameters, bool );
 	DATUMINFO( UseTransformedStream, bool );
 	DATUMINFO( LogCritical, bool );
+	DATUMINFO( Operation, Nullable<std::string> ); 
 
 	typedef
 		GenericDatum< Translator,					// parameter translator
@@ -92,9 +93,10 @@ private:
 		GenericDatum< ForwardNodeName,				// failure forwarding: name
 		GenericDatum< IncludeNodeNameAsParameter,	// failure forwarding: include node name as parameters
 		GenericDatum< UseTranslatedParameters,		// failure forwarding: use translated params (or original)
-		GenericDatum< UseTransformedStream,			// failure forwarding: use transformed stream (or original)
+		GenericDatum< UseTransformedStream,		// failure forwarding: use transformed stream (or original)
 		GenericDatum< LogCritical,					// failure forwarding: log an error (vs. warning)
-		RowEnd > > > > > > > > > >
+		GenericDatum< Operation,					// operation mode for read, write and delete nodes 
+		RowEnd > > > > > > > > > > >
 	NodeConfigDatum;
 
 	typedef
@@ -108,7 +110,6 @@ private:
 	
 	protected:
 	std::string m_Name;
-	bool m_IsSilent; 
 	
 	private:
 	DataProxyClient& m_rParent;

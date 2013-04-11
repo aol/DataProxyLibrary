@@ -116,15 +116,6 @@ void LocalFileProxyTest::testGarbageChildren()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: Write" );
-	
-	xmlContents.str("");
-	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl;
-	xmlContents << "<Read silent=\"true\">" << std::endl;
-	xmlContents << "</Read>" << std::endl;
-	xmlContents << "</DataNode>" << std::endl;
-	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
-	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator ), NodeConfigException, ".*:\\d+: Found invalid attribute: silent in node: Read" );
 
 	xmlContents.str("");
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl;
@@ -138,15 +129,6 @@ void LocalFileProxyTest::testGarbageChildren()
 
 	xmlContents.str("");
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl;
-	xmlContents << "<Delete silent=\"true\">" << std::endl;
-	xmlContents << "</Delete>" << std::endl;
-	xmlContents << "</DataNode>" << std::endl;
-	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
-	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator ), NodeConfigException, ".*:\\d+: Found invalid attribute: silent in node: Delete" );
-
-	xmlContents.str("");
-	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl;
 	xmlContents << "<Delete>" << std::endl;
 	xmlContents << "<StreamTransformers/>" << std::endl;
 	xmlContents << "</Delete>" << std::endl;
@@ -154,6 +136,23 @@ void LocalFileProxyTest::testGarbageChildren()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Found invalid child: StreamTransformers in node: Delete" );
+}
+
+void LocalFileProxyTest::testOperationAttributeParsing()
+{
+	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\">" << std::endl
+				<< "  <Read operation=\"ignore\" />" << std::endl
+				<< "  <Write operation=\"ignore\" />" << std::endl
+				<< "  <Delete operation=\"ignore\" />" << std::endl
+				<< "</DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_NO_THROW( LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator ) ); 
 }
 
 void LocalFileProxyTest::testLoadNonexistent()
@@ -1019,45 +1018,6 @@ void LocalFileProxyTest::testDeleteUnremovable()
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Delete( parameters ), InvalidDirectoryException,
 		".*/FileUtilities\\.cpp:\\d+: The directory " << m_pTempDir->GetDirectoryName() << " does not have the requested file access permissions." );
-}
-
-void LocalFileProxyTest::testStoreSilent()
-{
-	MockDataProxyClient client;
-	MockUniqueIdGenerator uniqueIdGenerator;
-	std::stringstream xmlContents;
-	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >"
-				<< "  <Write silent=\"true\" onFileExist=\"overwrite\" />"
-				<< "</DataNode>";	std::vector<xercesc::DOMNode*> nodes;
-	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
-	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
-	CPPUNIT_ASSERT( proxy.SupportsTransactions() );
-
-	std::map< std::string, std::string > parameters;
-	parameters["key1"] = "value1";
-	parameters["key2"] = "value2";
-	parameters["key3"] = "value3";
-
-	std::stringstream dataInFile;
-	dataInFile << "this is some data" << std::endl
-			   << "that will be OVERWRITTEN" << std::endl;
-	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/" + ProxyUtilities::ToString( parameters ) );
-	std::ofstream file( fileSpec.c_str() );
-	file << dataInFile.str();
-	file.close();
-
-	std::stringstream newData;
-	newData << "and here is completely new data" << std::endl
-			<< "which will overwrite anything in the previous file" << std::endl;
-
-	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, newData ) );
-	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
-
-	CPPUNIT_ASSERT( FileUtilities::DoesExist( fileSpec ) );
-	std::stringstream actual;
-	actual << std::ifstream( fileSpec.c_str() ).rdbuf();
-	CPPUNIT_ASSERT_EQUAL( dataInFile.str(), actual.str() );
 }
 
 void LocalFileProxyTest::testDelete()

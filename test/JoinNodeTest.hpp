@@ -21,6 +21,7 @@ class JoinNodeTest : public CppUnit::TestFixture
 private:
 	CPPUNIT_TEST_SUITE( JoinNodeTest );
 	CPPUNIT_TEST( testInvalidXml );
+	CPPUNIT_TEST( testOperationAttributeParsing ); 
 	CPPUNIT_TEST( testLoad );
 	CPPUNIT_TEST( testLoadJoinInner );
 	CPPUNIT_TEST( testLoadJoinLeft );
@@ -41,7 +42,6 @@ private:
 	CPPUNIT_TEST( testStoreJoinRuntimeErrors );
 	CPPUNIT_TEST( testStoreJoinMulti );
 	CPPUNIT_TEST( testStoreAppend );
-	CPPUNIT_TEST( testStoreSilent );
 	CPPUNIT_TEST( testDelete );
 	CPPUNIT_TEST( testOperationNotSupported );
 	CPPUNIT_TEST_SUITE_END();
@@ -54,6 +54,7 @@ public:
 	void tearDown();
 
 	void testInvalidXml();
+	void testOperationAttributeParsing(); 
 	void testLoad();
 	void testLoadJoinInner();
 	void testLoadJoinLeft();
@@ -74,7 +75,6 @@ public:
 	void testStoreJoinRuntimeErrors();
 	void testStoreJoinMulti();
 	void testStoreAppend();
-	void testStoreSilent();
 	void testDelete();
 	void testOperationNotSupported();
 

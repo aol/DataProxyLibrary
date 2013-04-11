@@ -21,6 +21,7 @@ class LocalFileProxyTest : public CppUnit::TestFixture
 {
 private:
 	CPPUNIT_TEST_SUITE( LocalFileProxyTest );
+	CPPUNIT_TEST( testOperationAttributeParsing ); 
 	CPPUNIT_TEST( testNoLocation );
 	CPPUNIT_TEST( testBadBaseLocation );
 	CPPUNIT_TEST( testGarbageChildren );
@@ -45,7 +46,6 @@ private:
 	CPPUNIT_TEST( testStoreRollbackOverwrite );
 	CPPUNIT_TEST( testStoreRollbackAppend );
 	CPPUNIT_TEST( testStoreEmpties );
-	CPPUNIT_TEST( testStoreSilent );
 	CPPUNIT_TEST( testDeleteNonexistent );
 	CPPUNIT_TEST( testDeleteUnremovable );
 	CPPUNIT_TEST( testDelete );
@@ -65,6 +65,7 @@ public:
 	void setUp();
 	void tearDown();
 
+	void testOperationAttributeParsing(); 
 	void testNoLocation();
 	void testBadBaseLocation();
 	void testGarbageChildren();
@@ -89,7 +90,6 @@ public:
 	void testStoreRollbackOverwrite();
 	void testStoreRollbackAppend();
 	void testStoreEmpties();
-	void testStoreSilent(); 
 	void testDeleteNonexistent();
 	void testDeleteUnremovable();
 	void testDelete();

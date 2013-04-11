@@ -30,6 +30,8 @@ private:
 	CPPUNIT_TEST( testConstructorExceptionWithNoReadOrWriteOrDeleteNode );
 	CPPUNIT_TEST( testConstructorExceptionIllegalXml );
 	CPPUNIT_TEST( testOperationNotSupported );
+	
+	CPPUNIT_TEST( testOperationAttributeParsing );
 
 	CPPUNIT_TEST( testOracleLoad );
 	CPPUNIT_TEST( testMySQLLoad );
@@ -57,9 +59,6 @@ private:
 	CPPUNIT_TEST( testStoreColumnParameterCollisionBehaviors );
 	CPPUNIT_TEST( testStoreColumnParameterCollisionBehaviorsNoStaging );
 	
-	CPPUNIT_TEST( testOracleStoreSilent );
-	CPPUNIT_TEST( testMySqlStoreSilent );
-
 	CPPUNIT_TEST( testOracleMultipleStore );
 	CPPUNIT_TEST( testMySqlMultipleStore );
 	CPPUNIT_TEST( testOracleStoreWithPreStatement );
@@ -98,6 +97,7 @@ public:
 	void testConstructorExceptionIllegalXml();
 	void testConstructorExceptionWithNoReadOrWriteOrDeleteNode();
 	void testOperationNotSupported();
+	void testOperationAttributeParsing();
 
 	void testOracleLoad();
 	void testMySQLLoad();
@@ -114,12 +114,10 @@ public:
 	void testStoreException();
 
 	void testOracleStore();
-	void testOracleStoreSilent();
 	void testOracleStoreDifferentSchema();
 	void testOracleStoreNoStaging();
 	void testOracleMultipleStore();
 	void testMySqlStore();
-	void testMySqlStoreSilent();
 	void testMySqlStoreNoStaging();
 	void testMySqlMultipleStore();
 	void testMySqlStoreDynamicTables();

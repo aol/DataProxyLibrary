@@ -38,6 +38,7 @@ private:
 	CPPUNIT_TEST( testLoadTee_UseTranslatedParams_True );
 	CPPUNIT_TEST( testLoadTee_UseTransformedStream_False );
 	CPPUNIT_TEST( testLoadTee_UseTransformedStream_True );
+	CPPUNIT_TEST( testLoadOperationIgnore );
 
 	CPPUNIT_TEST( testStore );
 	CPPUNIT_TEST( testStoreTranslateParameters );
@@ -52,7 +53,7 @@ private:
 	CPPUNIT_TEST( testStoreFailureForwarding_UseTranslatedParams_True );
 	CPPUNIT_TEST( testStoreFailureForwarding_UseTransformedStream_False );
 	CPPUNIT_TEST( testStoreFailureForwarding_UseTransformedStream_True );
-	CPPUNIT_TEST( testStoreSilent ); 
+	CPPUNIT_TEST( testStoreOperationIgnore ); 
 
 	CPPUNIT_TEST( testDelete );
 	CPPUNIT_TEST( testDeleteTranslateParameters );
@@ -63,6 +64,7 @@ private:
 	CPPUNIT_TEST( testDeleteFailureForwarding_ParameterValidationFail );
 	CPPUNIT_TEST( testDeleteFailureForwarding_UseTranslatedParams_False );
 	CPPUNIT_TEST( testDeleteFailureForwarding_UseTranslatedParams_True );
+	CPPUNIT_TEST( testDeleteOperationIgnore );
 
 	CPPUNIT_TEST_SUITE_END();
 
@@ -90,6 +92,7 @@ public:
 	void testLoadTee_UseTranslatedParams_True();
 	void testLoadTee_UseTransformedStream_False();
 	void testLoadTee_UseTransformedStream_True();
+	void testLoadOperationIgnore();
 
 	void testStore();
 	void testStoreTranslateParameters();
@@ -104,7 +107,7 @@ public:
 	void testStoreFailureForwarding_UseTranslatedParams_True();
 	void testStoreFailureForwarding_UseTransformedStream_False();
 	void testStoreFailureForwarding_UseTransformedStream_True();
-	void testStoreSilent(); 
+	void testStoreOperationIgnore(); 
 
 	void testDelete();
 	void testDeleteTranslateParameters();
@@ -115,6 +118,7 @@ public:
 	void testDeleteFailureForwarding_ParameterValidationFail();
 	void testDeleteFailureForwarding_UseTranslatedParams_False();
 	void testDeleteFailureForwarding_UseTranslatedParams_True();
+	void testDeleteOperationIgnore();
 
 private:
 	boost::scoped_ptr< TempDirectory > m_pTempDir;

@@ -23,7 +23,8 @@ namespace
 {
 	const unsigned long MICROSECONDS_PER_SECOND( 1000000 );
 	
-	const std::string SILENT_WRITE_ATTRIBUTE( "silent" ); 
+	const std::string OPERATION_ATTRIBUTE( "operation" ); 
+	const std::string DEFAULT_OPERATION_VALUE( "process" ); 
 
 	const std::map< std::string, std::string >& ChooseParameters( const std::map< std::string, std::string >& i_rOriginalParameters,
 																  const std::map< std::string, std::string >& i_rTranslatedParameters,
@@ -70,7 +71,6 @@ namespace
 
 AbstractNode::AbstractNode( const std::string& i_rName, DataProxyClient& i_rParent, const xercesc::DOMNode& i_rNode )
 :	m_Name( i_rName ),
-	m_IsSilent( false ),
 	m_rParent( i_rParent ),
 	m_ReadConfig(),
 	m_WriteConfig(),
@@ -96,13 +96,6 @@ AbstractNode::AbstractNode( const std::string& i_rName, DataProxyClient& i_rPare
 	if( pNode != NULL )
 	{
 		SetConfig( *pNode, m_ReadConfig );
-		
-		// silent attribute is only permissible for write nodes
-		pAttribute = XMLUtilities::GetAttribute( pNode, SILENT_WRITE_ATTRIBUTE );
-		if( pAttribute != NULL )
-		{
-			MV_THROW( NodeConfigException,  "Found invalid attribute: " << SILENT_WRITE_ATTRIBUTE << " in node: " <<  READ_NODE ); 
-		}
 
 		// extract Tee configuration
 		pNode = XMLUtilities::TryGetSingletonChildByName( pNode, TEE_NODE );
@@ -128,13 +121,11 @@ AbstractNode::AbstractNode( const std::string& i_rName, DataProxyClient& i_rPare
 			}
 		}
 	}
-
-	// extract common write parameters
+	
 	pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, WRITE_NODE );
 	if( pNode != NULL )
 	{
 		SetConfig( *pNode, m_WriteConfig );
-		m_IsSilent = ProxyUtilities::GetBool( *pNode, SILENT_WRITE_ATTRIBUTE, false );
 	}
 
 	// extract common delete parameters
@@ -147,11 +138,6 @@ AbstractNode::AbstractNode( const std::string& i_rName, DataProxyClient& i_rPare
 			MVLOGGER( "root.lib.DataProxy.DataProxyClient.Delete.ForwardTransform", "Attribute forwardTransformedStream in Delete node"
 				<< " has been set to \"true\" but Delete nodes do not accept stream transformers. This attribute will be ignored." );
 		}
-		pAttribute = XMLUtilities::GetAttribute( pNode, SILENT_WRITE_ATTRIBUTE );
-		if( pAttribute != NULL )
-		{
-			MV_THROW( NodeConfigException, "Found invalid attribute: " << SILENT_WRITE_ATTRIBUTE << " in node: " <<  DELETE_NODE ); 
-		}
 	}
 }
 
@@ -161,6 +147,12 @@ AbstractNode::~AbstractNode()
 
 void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData )
 {
+	if( !m_ReadConfig.GetValue< Operation >().IsNull() && m_ReadConfig.GetValue< Operation >() == std::string( "ignore" ) )
+	{
+		MVLOGGER( "root.lib.DataProxy.DataProxyClient.Load", "Read node operation mode set to ignore, so ignoring." );
+		return;
+	}
+	
 	// by default we will just use the params passed in
 	const std::map< std::string, std::string >* pUseParameters = &i_rParameters;
 	std::map< std::string, std::string > translatedParameters;
@@ -299,6 +291,12 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 
 bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData )
 {
+	if( !m_WriteConfig.GetValue< Operation >().IsNull() && m_WriteConfig.GetValue< Operation >() == std::string( "ignore" ) )
+	{
+		MVLOGGER( "root.lib.DataProxy.DataProxyClient.Store", "Write node operation mode set to ignore, so ignoring." );
+		return true;
+	}
+	
 	// by default we will just use the params passed in
 	const std::map< std::string, std::string >* pUseParameters = &i_rParameters;
 	std::map< std::string, std::string > translatedParameters;
@@ -312,12 +310,6 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 
 	// and by default we stick to the incoming data
 	std::istream* pUseData = &i_rData;
-	
-	if( m_IsSilent ) 
-	{
-		MVLOGGER( "root.lib.DataProxy.DataProxyClient.Store", "Write node has is defined as silent, so ignoring the store." );
-		return true; 
-	}
 
 	try
 	{
@@ -430,6 +422,12 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 
 bool AbstractNode::Delete( const std::map<std::string,std::string>& i_rParameters )
 {
+	if( !m_DeleteConfig.GetValue< Operation >().IsNull() && m_DeleteConfig.GetValue< Operation >() == std::string( "ignore" ) )
+	{
+		MVLOGGER( "root.lib.DataProxy.DataProxyClient.Delete", "Delete node operation mode set to ignore, so ignoring." );
+		return true;
+	}
+	
 	// by default we will just use the params passed in
 	const std::map< std::string, std::string >* pUseParameters = &i_rParameters;
 	std::map< std::string, std::string > translatedParameters;
@@ -551,6 +549,8 @@ void AbstractNode::SetConfig( const xercesc::DOMNode& i_rNode, NodeConfigDatum& 
 
 	std::set< std::string > allowedAttributes;
 	std::set< std::string > allowedElements;
+	
+	xercesc::DOMAttr* pAttribute;
 
 	allowedElements.insert( PARAMETER_NODE );
 	xercesc::DOMNode* pNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, REQUIRED_PARAMETERS_NODE );
@@ -591,7 +591,7 @@ void AbstractNode::SetConfig( const xercesc::DOMNode& i_rNode, NodeConfigDatum& 
 		XMLUtilities::ValidateNode( pNode, allowedElements );
 
 		// check for retry-count
-		xercesc::DOMAttr* pAttribute = XMLUtilities::GetAttribute( pNode, RETRY_COUNT_ATTRIBUTE );
+		pAttribute = XMLUtilities::GetAttribute( pNode, RETRY_COUNT_ATTRIBUTE );
 		if( pAttribute != NULL )
 		{
 			o_rConfig.SetValue< RetryCount >( boost::lexical_cast< uint >( XMLUtilities::XMLChToString(pAttribute->getValue()) ) );
@@ -642,6 +642,24 @@ void AbstractNode::SetConfig( const xercesc::DOMNode& i_rNode, NodeConfigDatum& 
 		if( pAttribute != NULL && XMLUtilities::XMLChToString(pAttribute->getValue()) == "false" )
 		{
 			o_rConfig.SetValue< LogCritical >( false );
+		}
+	}
+	
+	std::string nodeName = XMLUtilities::XMLChToString( i_rNode.getNodeName() );
+	if( nodeName == READ_NODE || nodeName == WRITE_NODE || nodeName == DELETE_NODE )
+	{
+		pAttribute = XMLUtilities::GetAttribute( &i_rNode, OPERATION_ATTRIBUTE );
+		if( pAttribute != NULL && ( XMLUtilities::XMLChToString(pAttribute->getValue()) == "ignore" || XMLUtilities::XMLChToString(pAttribute->getValue()) == "process" ) )
+		{
+			o_rConfig.SetValue< Operation >( XMLUtilities::XMLChToString( pAttribute->getValue() ) );
+		}
+		else if( pAttribute != NULL )
+		{
+			MV_THROW( NodeConfigException, "Attribute \"" << OPERATION_ATTRIBUTE << "\" may only have values \"ignore\" or \"process\"." ); 
+		}
+		else
+		{
+			o_rConfig.SetValue< Operation >( DEFAULT_OPERATION_VALUE ); 
 		}
 	}
 }
@@ -715,7 +733,9 @@ void AbstractNode::ValidateXmlAttributes( const xercesc::DOMNode& i_rNode,
 	std::set< std::string > allowedDeleteAttributes;
 	
 	// all write nodes may have the following parameter
-	allowedWriteAttributes.insert( SILENT_WRITE_ATTRIBUTE ); 
+	allowedReadAttributes.insert( OPERATION_ATTRIBUTE );
+	allowedWriteAttributes.insert( OPERATION_ATTRIBUTE ); 
+	allowedDeleteAttributes.insert( OPERATION_ATTRIBUTE ); 
 
 	// add in the additional attributes allowed
 	allowedReadAttributes.insert( i_rAdditionalReadAttributes.begin(), i_rAdditionalReadAttributes.end() );
