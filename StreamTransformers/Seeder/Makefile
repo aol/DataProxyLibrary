@@ -77,7 +77,7 @@ LIBLOC=\
 	-L/data/lib \
 
 # Libraries
-LIBS	    = -lDataProxy -lDatabase -lLogger -lmyodbc3 -lxerces-c -lpthread -lboost_regex -lboost_filesystem -llog4cxx -lboost_thread -lcurl -lDatabase -lclntsh -lmyodbc3
+LIBS	    = -lDataProxy -lLogger -lmyodbc3 -lxerces-c -lpthread -lboost_regex -lboost_filesystem -llog4cxx -lboost_thread -lcurl -lclntsh -lmyodbc3
 TESTLIBS    = -lcppunit -lTestHelpers -lDatabase -lclntsh -lmyodbc3 -lMockDataProxy
 
 # This is required on the 32 bit platform to prevent recursive
@@ -171,26 +171,26 @@ default: $(TARGETDIR)
 .PHONY: extlibs default debug prof opt opt_debug tests \
 	depend localdepend clean localclean nodepend $(ALL_TARGETS)
 
-debug: $(DEBUGDIR)
+debug: $(DEBUGDIR) extlibs
 	$(MAKE) TARGETDIR='$(DEBUGDIR)' TARGETOPTS='$(DEBUGOPTS)' \
 	SUBTARGET=$@ $(PRIMARY_TARGET)
 
-prof: $(PROFILEDIR)
+prof: $(PROFILEDIR) extlibs
 	$(MAKE) TARGETDIR='$(PROFILEDIR)' TARGETOPTS='$(PROFILEOPTS)' \
 	SUBTARGET=$@ $(PRIMARY_TARGET)
 
-opt: $(OPTIMIZEDIR)
+opt: $(OPTIMIZEDIR) extlibs
 	$(MAKE) TARGETDIR='$(OPTIMIZEDIR)' TARGETOPTS='$(OPTIMIZEOPTS)' \
 	SUBTARGET=$@ $(PRIMARY_TARGET)
 
-opt_debug: $(OPTDEBUGDIR)
+opt_debug: $(OPTDEBUGDIR) extlibs
 	$(MAKE) TARGETDIR='$(OPTDEBUGDIR)' TARGETOPTS='$(OPTIMIZEOPTS) $(DEBUGOPTS)' \
 	SUBTARGET=$@ $(PRIMARY_TARGET)
 
-tests: $(TARGETDIR) extlibs
+tests: $(TARGETDIR) testextlibs
 	$(MAKE) SUBTARGET=debug $(TEST_TARGET)
 
-opt_pic: $(OPTIMIZEDIR)
+opt_pic: $(OPTIMIZEDIR) extlibs
 	$(MAKE) TARGETDIR='$(OPTIMIZEDIR)' TARGETOPTS='$(OPTIMIZEOPTS)' \
 	SUBTARGET=$@ $(PRIMARY_TARGET)
 
@@ -207,8 +207,10 @@ $(TARGETDIR)/$(PRIMARY_TARGET): $(PRIVATEOBJSPEC)
 	$(CXXS) -o $@ $^
 
 # if necessary, build external libraries.
-extlibs: $(MODULESPEC) $(TESTMODULESPEC)
+extlibs: $(MODULESPEC)
 	$(MODULESPEC:%=(cd % && ${MAKE} $(SUBTARGET)) && ) true
+
+testextlibs: $(TESTMODULESPEC) $(MOCKMODULESPEC)
 	${TESTMODULESPEC:%=(cd % && ${MAKE} ${SUBTARGET}) &&} true
 	${MOCKMODULESPEC:%=(cd % && ${MAKE} mock) &&} true
 
