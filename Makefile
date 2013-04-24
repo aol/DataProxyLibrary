@@ -288,10 +288,6 @@ TARGETOPTS	?= $(DEBUGOPTS)
 # Command for linking
 LN = ln -sf
 
-# Default build
-default: $(TARGETDIR)
-	$(MAKE) $(PRIMARY_TARGET)
-
 .PHONY: extlibs matlablibs default check-syntax debug prof opt opt_debug coverage tests test_coverage mock \
 	depend localdepend clean localclean nodepend $(ALL_TARGETS)
 
