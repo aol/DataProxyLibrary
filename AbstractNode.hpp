@@ -13,7 +13,6 @@
 
 #include "GenericDataContainer.hpp"
 #include "GenericDataObject.hpp"
-#include "GenericDataDefaultingContainer.hpp"
 #include "MVCommon.hpp"
 #include "MVException.hpp"
 #include <boost/noncopyable.hpp>
@@ -83,7 +82,7 @@ private:
 	DATUMINFO( UseTranslatedParameters, bool );
 	DATUMINFO( UseTransformedStream, bool );
 	DATUMINFO( LogCritical, bool );
-	DEFAULTINGDATUMINFO( Operation, std::string, std::string( "process" ) ); 
+	DATUMINFO( Operation, Nullable<std::string> ); 
 
 	typedef
 		GenericDatum< Translator,					// parameter translator

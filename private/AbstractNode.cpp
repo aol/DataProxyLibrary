@@ -24,7 +24,7 @@ namespace
 	const unsigned long MICROSECONDS_PER_SECOND( 1000000 );
 	
 	const std::string OPERATION_ATTRIBUTE( "operation" ); 
-	const std::string OPERATION_PROCESS( "process" );
+	const std::string OPERATION_PROCESS( "process" ); // also the default! 
 	const std::string OPERATION_IGNORE( "ignore" );
 
 	const std::map< std::string, std::string >& ChooseParameters( const std::map< std::string, std::string >& i_rOriginalParameters,
@@ -647,6 +647,10 @@ void AbstractNode::SetConfig( const xercesc::DOMNode& i_rNode, NodeConfigDatum& 
 	}
 	
 	pAttribute = XMLUtilities::GetAttribute( &i_rNode, OPERATION_ATTRIBUTE );
+	if( pAttribute == NULL ) 
+	{
+		o_rConfig.SetValue< Operation >( OPERATION_PROCESS );
+	}
 	if( pAttribute != NULL && ( XMLUtilities::XMLChToString(pAttribute->getValue()) == OPERATION_IGNORE || XMLUtilities::XMLChToString(pAttribute->getValue()) == OPERATION_PROCESS ) )
 	{
 		o_rConfig.SetValue< Operation >( XMLUtilities::XMLChToString( pAttribute->getValue() ) );
