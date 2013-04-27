@@ -39,6 +39,8 @@ private:
 	CPPUNIT_TEST( testLoadTee_UseTransformedStream_False );
 	CPPUNIT_TEST( testLoadTee_UseTransformedStream_True );
 	CPPUNIT_TEST( testLoadOperationIgnore );
+	CPPUNIT_TEST( testLoadSuccessMonitoring );
+	CPPUNIT_TEST( testLoadFailedMonitoring );
 
 	CPPUNIT_TEST( testStore );
 	CPPUNIT_TEST( testStoreTranslateParameters );
@@ -54,6 +56,8 @@ private:
 	CPPUNIT_TEST( testStoreFailureForwarding_UseTransformedStream_False );
 	CPPUNIT_TEST( testStoreFailureForwarding_UseTransformedStream_True );
 	CPPUNIT_TEST( testStoreOperationIgnore ); 
+	CPPUNIT_TEST( testStoreSuccessMonitoring );
+	CPPUNIT_TEST( testStoreFailedMonitoring );
 
 	CPPUNIT_TEST( testDelete );
 	CPPUNIT_TEST( testDeleteTranslateParameters );
@@ -65,6 +69,8 @@ private:
 	CPPUNIT_TEST( testDeleteFailureForwarding_UseTranslatedParams_False );
 	CPPUNIT_TEST( testDeleteFailureForwarding_UseTranslatedParams_True );
 	CPPUNIT_TEST( testDeleteOperationIgnore );
+	CPPUNIT_TEST( testDeleteSuccessMonitoring );
+	CPPUNIT_TEST( testDeleteFailedMonitoring );
 
 	CPPUNIT_TEST_SUITE_END();
 
@@ -93,6 +99,8 @@ public:
 	void testLoadTee_UseTransformedStream_False();
 	void testLoadTee_UseTransformedStream_True();
 	void testLoadOperationIgnore();
+	void testLoadSuccessMonitoring();
+	void testLoadFailedMonitoring();
 
 	void testStore();
 	void testStoreTranslateParameters();
@@ -108,6 +116,8 @@ public:
 	void testStoreFailureForwarding_UseTransformedStream_False();
 	void testStoreFailureForwarding_UseTransformedStream_True();
 	void testStoreOperationIgnore(); 
+	void testStoreSuccessMonitoring();
+	void testStoreFailedMonitoring();
 
 	void testDelete();
 	void testDeleteTranslateParameters();
@@ -119,6 +129,8 @@ public:
 	void testDeleteFailureForwarding_UseTranslatedParams_False();
 	void testDeleteFailureForwarding_UseTranslatedParams_True();
 	void testDeleteOperationIgnore();
+	void testDeleteSuccessMonitoring();
+	void testDeleteFailedMonitoring();
 
 private:
 	boost::scoped_ptr< TempDirectory > m_pTempDir;

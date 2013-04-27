@@ -22,13 +22,14 @@ ORACLE_HOME	?= /usr/oracle
 
 # Directories for including & linking
 INCLUDE_DIRS 	?= /usr/local/include
-LIB_DIRS 	?= /usr/local/lib
+LIB_DIRS 	?= /usr/local/lib 
 
 # folders that contain files we need to manually compile
 # in order to build a self-contained dynamic library
 UTILITYDIR		= ${ROOTDIR}/lib/cpp/Utility
 SERVICEDIR		= ${ROOTDIR}/lib/cpp/Service
 DATABASEDIR		= ${ROOTDIR}/lib/cpp/Database
+MONITORINGDIR		= ${ROOTDIR}/lib/cpp/Monitoring
 TESTHELPERDIR		= ${ROOTDIR}/lib/cpp/TestHelpers
 
 # for auto-generating hpp files from thpp for GDP
@@ -43,12 +44,14 @@ INCMODULES=\
 	lib/cpp/Service \
 	lib/cpp/Utility \
 	lib/cpp/Database \
+	lib/cpp/Monitoring \
 
 TESTMODULES=\
 	lib/cpp/TestHelpers \
 	lib/cpp/Service \
 	lib/cpp/Utility \
 	lib/cpp/Database \
+	lib/cpp/Monitoring \
 
 MATLABMODULES=\
 	lib/cpp/Matlab \
@@ -90,8 +93,8 @@ LIBLOC=\
 	$(LIB_DIRS:%=-L%) \
 
 # Libraries
-LIBS		= -lLogger -lclntsh -lmyodbc3 -lxerces-c -lpthread -lboost_regex -lboost_filesystem -llog4cxx -lboost_thread -lcurl -lssl -luuid -lnnz10 -lcrypto -ldl -lboost_system
-TESTLIBS	= -lcppunit -lTestHelpers -lMockDatabase -lMockService -lMockUtility $(LIBS)
+LIBS		=  -lLogger -lclntsh -lmyodbc3 -lxerces-c -lpthread -lboost_iostreams -lboost_regex -lboost_filesystem -lboost_program_options -llog4cxx -lboost_thread -lcurl -lssl -luuid -lnnz10 -lcrypto -ldl -lboost_system -lagent++ -lsnmp++ -lmemcached
+TESTLIBS	= -lcppunit -lTestHelpers -lMockDatabase -lMockService -lMockUtility -lMockMonitoring $(LIBS)
 MATLABLIBS	= -lMatlab -leng -lmx -lut -lmat
 
 ifeq ($(ARCH), x86_64)
@@ -199,24 +202,44 @@ MOCKFILES=\
 
 # The following files need to be built in order to create an independent shared object library
 SERVICEFILES=\
+	HttpException.cpp \
+	HTTPRequest.cpp \
+	mongoose.cpp \
+	MongooseHTTPRequest.cpp \
+	MongooseHTTPResponse.cpp \
 	RESTParameters.cpp \
 	RESTClient.cpp \
-	HttpException.cpp \
+	WebServerCommon.cpp \
+	WebServerConfig.cpp \
+	WebServer.cpp \
 
 UTILITYFILES=\
-	DateTime.cpp \
-	MVException.cpp \
-	Nullable.cpp \
-	FileUtilities.cpp \
-	StringUtilities.cpp \
-	XMLUtilities.cpp \
-	ShellExecutor.cpp \
-	MVUtility.cpp \
+	AlgorithmConfig.cpp \
+	BitSet.cpp \
+	CliOptions.cpp \
 	CSVReader.cpp \
-	Stopwatch.cpp \
-	UniqueIdGenerator.cpp \
+	DaemonLock.cpp \
+	DateTime.cpp \
+	FileUtilities.cpp \
+	MapUtilities.cpp \
+	MemcacheWrapper.cpp \
+	MemTimeMarker.cpp \
 	MutexFileLock.cpp \
+	MVException.cpp \
+	MVUtility.cpp \
+	NetworkUtilities.cpp \
+	Nullable.cpp \
+	ParametersBase.cpp \
+	ShellExecutor.cpp \
+	SignalBlocker.cpp \
+	StandaloneExecutor.cpp \
+	Stopwatch.cpp \
+	StringUtilities.cpp \
+	TimeTracker.cpp \
+	UniqueIdGenerator.cpp \
+	UTCTimeProvider.cpp \
 	XercesString.cpp \
+	XMLUtilities.cpp \
 
 DATABASEFILES=\
 	Database.cpp \
@@ -236,11 +259,26 @@ DATABASEFILES=\
 	LargeScaleSelectStatement.cpp \
 	Statement.cpp \
 
+MONITORINGFILES=\
+	ApplicationMonitor.cpp \
+	BucketAggregator.cpp \
+	LastNAggregator.cpp \
+	MonitoringAggregator.cpp \
+	MonitoringCollector.cpp \
+	MonitoringFactory.cpp \
+	MonitoringHttpHandler.cpp \
+	MonitoringInstance.cpp \
+	MonitoringMetric.cpp \
+	MonitoringTracker.cpp \
+	PercentileAggregator.cpp \
+	StatsAggregator.cpp \
+
 # Creating explicit paths to sets of source files
 PRIVATEFILESPEC			= $(PRIVATEFILES:%=$(PRIVATEDIR)/%)
 UTILITYFILESPEC			= $(UTILITYFILES:%=$(UTILITYDIR)/$(PRIVATEDIR)/%)
 SERVICEFILESPEC			= $(SERVICEFILES:%=$(SERVICEDIR)/$(PRIVATEDIR)/%)
 DATABASEFILESPEC		= $(DATABASEFILES:%=$(DATABASEDIR)/$(PRIVATEDIR)/%)
+MONITORINGFILESPEC		= $(MONITORINGFILES:%=$(MONITORINGDIR)/$(PRIVATEDIR)/%)
 TESTFILESPEC			= $(TESTFILES:%=$(TESTDIR)/%)
 THREADTESTFILESPEC		= $(TESTFILES:%=$(TESTDIR)/%)
 MATLABTESTFILESPEC		= $(MATLABTESTFILES:%=$(TESTDIR)/%)
@@ -252,7 +290,9 @@ MATLABOBJSPEC			= $(MATLABWRAPPERFILE:%.cpp=%.mexa64)
 PRIVATEOBJSPEC			= $(PRIVATEFILES:%.cpp=$(TARGETDIR)/%.o) \
 						  $(SERVICEFILES:%.cpp=$(TARGETDIR)/%.o) \
 						  $(UTILITYFILES:%.cpp=$(TARGETDIR)/%.o) \
-						  $(DATABASEFILES:%.cpp=$(TARGETDIR)/%.o)
+						  $(DATABASEFILES:%.cpp=$(TARGETDIR)/%.o) \
+						  $(MONITORINGFILES:%.cpp=$(TARGETDIR)/%.o) \
+
 HELPEROBJSPEC			= $(TESTHELPERFILES:%.cpp=$(TARGETDIR)/%.o)
 TESTOBJSPEC			= $(TESTFILES:%.cpp=$(TARGETDIR)/%.o) 
 THREADTESTOBJSPEC		= $(THREADTESTFILES:%.cpp=$(TARGETDIR)/%.o) 
@@ -271,7 +311,7 @@ BASE_NAME				= DataProxy
 FRIENDLY_TARGET				= lib$(BASE_NAME).so
 MAJOR_VERSION_TARGET			= $(FRIENDLY_TARGET).3
 MINOR_VERSION_TARGET			= $(MAJOR_VERSION_TARGET).1
-FULL_VERSION_TARGET			= $(MINOR_VERSION_TARGET).10
+FULL_VERSION_TARGET			= $(MINOR_VERSION_TARGET).11
 PRIMARY_TARGET				= $(FULL_VERSION_TARGET)
 MOCK_TARGET				= libMockDataProxy.a
 MATLAB_TARGET				= DataProxy.mexa64
@@ -400,6 +440,9 @@ $(TARGETDIR)/%.o:$(UTILITYDIR)/private/%.cpp
 $(TARGETDIR)/%.o:$(DATABASEDIR)/private/%.cpp
 	$(CXXC) $< -o $@
 
+$(TARGETDIR)/%.o:$(MONITORINGDIR)/private/%.cpp
+	$(CXXC) $< -o $@
+
 $(TARGETDIR)/%.o:$(TESTHELPERDIR)/private/%.cpp
 	$(CXXT) $< -o $@
 
@@ -424,6 +467,7 @@ DEPENDFILES = $(PRIVATEFILESPEC) \
 			  $(SERVICEFILESPEC) \
 			  $(UTILITYFILESPEC) \
 			  $(DATABASEFILESPEC) \
+			  $(MONITORINGFILESPEC) \
 			  $(MATLABWRAPPERFILE) \
 			  $(TESTFILESPEC) \
 			  $(THREADTESTFILESPEC) \

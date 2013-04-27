@@ -25,6 +25,12 @@
 #include <fstream>
 #include <boost/regex.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include "MonitoringTracker.hpp"
+#include "MockMonitoringInstance.hpp"
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/scoped_ptr.hpp>
+#include <boost/ref.hpp>
+#include <boost/iostreams/filter/counter.hpp>
 
 CPPUNIT_TEST_SUITE_REGISTRATION( AbstractNodeTest );
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( AbstractNodeTest, "AbstractNodeTest" );
@@ -494,6 +500,10 @@ void AbstractNodeTest::testLoadTransformStream()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
+	MockMonitoringInstance* pMonitoringInstance = new MockMonitoringInstance();
+	boost::scoped_ptr< MonitoringInstance > pTemp( pMonitoringInstance );
+	ApplicationMonitor::Swap( pTemp );
+
 	MockDataProxyClient client;
 
 	TestableNode node( "name", client, *nodes[0] );
@@ -506,7 +516,14 @@ void AbstractNodeTest::testLoadTransformStream()
 	parameters["param4"] = "value4";
 
 	std::stringstream results;
-	CPPUNIT_ASSERT_NO_THROW( node.Load( parameters, results ) );
+
+	boost::scoped_ptr< boost::iostreams::filtering_ostream > output( new boost::iostreams::filtering_ostream() );
+	boost::iostreams::counter cnt;
+	output->push( boost::ref( cnt ) );
+	output->push( results );
+
+	CPPUNIT_ASSERT_NO_THROW( node.Load( parameters, *output ) );
+	output.reset( NULL );
 
 	std::stringstream expected;
 	expected << "ST2_name1 : ST2_value1" << std::endl
@@ -516,6 +533,18 @@ void AbstractNodeTest::testLoadTransformStream()
 			 << "ST1_name2 : ST1_value2" << std::endl
 			 << "original node data";
 	CPPUNIT_ASSERT_EQUAL( expected.str(), results.str() );
+
+	const std::vector< std::pair< std::string, MonitoringMetric > >& rReports = pMonitoringInstance->GetReports();
+	CPPUNIT_ASSERT_EQUAL( size_t(8), rReports.size() );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.load"), rReports[0].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.load.status.success"), rReports[1].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.loadTime"), rReports[2].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.loadTime.status.success"), rReports[3].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.loadPayload"), rReports[4].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.loadPayload.status.success"), rReports[5].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.time"), rReports[6].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.time.status.success"), rReports[7].first );
+	CPPUNIT_ASSERT_DOUBLES_EQUAL( double( expected.str().size() ), rReports[4].second.GetDouble(), 1e-9 );
 }
 
 void AbstractNodeTest::testLoadFailureForwarding()
@@ -967,6 +996,72 @@ void AbstractNodeTest::testLoadOperationIgnore()
 
 	std::stringstream expected;
 	CPPUNIT_ASSERT_EQUAL( expected.str(), node.GetLog() );
+}
+
+void AbstractNodeTest::testLoadSuccessMonitoring()
+{
+	MockMonitoringInstance* pMonitoringInstance = new MockMonitoringInstance();
+	boost::scoped_ptr< MonitoringInstance > pTemp( pMonitoringInstance );
+	ApplicationMonitor::Swap( pTemp );
+
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+	std::stringstream results;
+	std::string str( "original node data" );
+	node.SetDataToReturn( str );
+	CPPUNIT_ASSERT_NO_THROW( node.Load( std::map< std::string, std::string >(), results ) );
+
+	const std::vector< std::pair< std::string, MonitoringMetric > >& rReports = pMonitoringInstance->GetReports();
+	CPPUNIT_ASSERT_EQUAL( size_t(8), rReports.size() );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.load"), rReports[0].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.load.status.success"), rReports[1].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.loadTime"), rReports[2].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.loadTime.status.success"), rReports[3].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.loadPayload"), rReports[4].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.loadPayload.status.success"), rReports[5].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.time"), rReports[6].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.time.status.success"), rReports[7].first );
+	CPPUNIT_ASSERT_DOUBLES_EQUAL( double( str.size() ), rReports[4].second.GetDouble(), 1e-9 );
+}
+
+void AbstractNodeTest::testLoadFailedMonitoring()
+{
+	MockMonitoringInstance* pMonitoringInstance = new MockMonitoringInstance();
+	boost::scoped_ptr< MonitoringInstance > pTemp( pMonitoringInstance );
+	ApplicationMonitor::Swap( pTemp );
+
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+	std::stringstream results;
+	node.SetLoadException( true );
+	CPPUNIT_ASSERT_THROW( node.Load( std::map< std::string, std::string >(), results ), std::exception );
+	std::string str( "original node data" );
+	node.SetDataToReturn( str );
+
+	const std::vector< std::pair< std::string, MonitoringMetric > >& rReports = pMonitoringInstance->GetReports();
+	CPPUNIT_ASSERT_EQUAL( size_t(6), rReports.size() );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.load"), rReports[0].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.load.status.failed"), rReports[1].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.loadTime"), rReports[2].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.loadTime.status.failed"), rReports[3].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.time"), rReports[4].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.time.status.failed"), rReports[5].first );
 }
 
 void AbstractNodeTest::testStore()
@@ -1489,6 +1584,69 @@ void AbstractNodeTest::testStoreOperationIgnore()
 	CPPUNIT_ASSERT_EQUAL( expected.str(), node.GetLog() );
 }
 
+void AbstractNodeTest::testStoreSuccessMonitoring()
+{
+	MockMonitoringInstance* pMonitoringInstance = new MockMonitoringInstance();
+	boost::scoped_ptr< MonitoringInstance > pTemp( pMonitoringInstance );
+	ApplicationMonitor::Swap( pTemp );
+
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+	std::stringstream data;
+	data << "this is some data";
+	CPPUNIT_ASSERT_NO_THROW( node.Store( std::map< std::string, std::string >(), data ) );
+
+	const std::vector< std::pair< std::string, MonitoringMetric > >& rReports = pMonitoringInstance->GetReports();
+	CPPUNIT_ASSERT_EQUAL( size_t(8), rReports.size() );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.store"), rReports[0].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.store.status.success"), rReports[1].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.storeTime"), rReports[2].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.storeTime.status.success"), rReports[3].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.storePayload"), rReports[4].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.storePayload.status.success"), rReports[5].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.time"), rReports[6].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.time.status.success"), rReports[7].first );
+}
+
+void AbstractNodeTest::testStoreFailedMonitoring()
+{
+	MockMonitoringInstance* pMonitoringInstance = new MockMonitoringInstance();
+	boost::scoped_ptr< MonitoringInstance > pTemp( pMonitoringInstance );
+	ApplicationMonitor::Swap( pTemp );
+
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+	std::stringstream data;
+	data << "this is some data";
+	node.SetStoreException( true );
+	CPPUNIT_ASSERT_THROW( node.Store( std::map< std::string, std::string >(), data ), std::exception );
+
+	const std::vector< std::pair< std::string, MonitoringMetric > >& rReports = pMonitoringInstance->GetReports();
+	CPPUNIT_ASSERT_EQUAL( size_t(6), rReports.size() );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.store"), rReports[0].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.store.status.failed"), rReports[1].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.storeTime"), rReports[2].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.storeTime.status.failed"), rReports[3].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.time"), rReports[4].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.time.status.failed"), rReports[5].first );
+}
+
 void AbstractNodeTest::testDelete()
 {
 	std::stringstream xmlContents;
@@ -1813,3 +1971,61 @@ void AbstractNodeTest::testDeleteOperationIgnore()
 	std::stringstream expected;
 	CPPUNIT_ASSERT_EQUAL( expected.str(), node.GetLog() );
 }
+
+void AbstractNodeTest::testDeleteSuccessMonitoring()
+{
+	MockMonitoringInstance* pMonitoringInstance = new MockMonitoringInstance();
+	boost::scoped_ptr< MonitoringInstance > pTemp( pMonitoringInstance );
+	ApplicationMonitor::Swap( pTemp );
+
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+	CPPUNIT_ASSERT_NO_THROW( node.Delete( std::map< std::string, std::string >() ) );
+
+	const std::vector< std::pair< std::string, MonitoringMetric > >& rReports = pMonitoringInstance->GetReports();
+	CPPUNIT_ASSERT_EQUAL( size_t(6), rReports.size() );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.delete"), rReports[0].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.delete.status.success"), rReports[1].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.deleteTime"), rReports[2].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.deleteTime.status.success"), rReports[3].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.time"), rReports[4].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.time.status.success"), rReports[5].first );
+}
+
+void AbstractNodeTest::testDeleteFailedMonitoring()
+{
+	MockMonitoringInstance* pMonitoringInstance = new MockMonitoringInstance();
+	boost::scoped_ptr< MonitoringInstance > pTemp( pMonitoringInstance );
+	ApplicationMonitor::Swap( pTemp );
+
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+	node.SetDeleteException( true );
+	CPPUNIT_ASSERT_THROW( node.Delete( std::map< std::string, std::string >() ) , std::exception );
+
+	const std::vector< std::pair< std::string, MonitoringMetric > >& rReports = pMonitoringInstance->GetReports();
+	CPPUNIT_ASSERT_EQUAL( size_t(6), rReports.size() );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.delete"), rReports[0].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.delete.status.failed"), rReports[1].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.deleteTime"), rReports[2].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.deleteTime.status.failed"), rReports[3].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.time"), rReports[4].first );
+	CPPUNIT_ASSERT_EQUAL( std::string("dpl.live.time.status.failed"), rReports[5].first );
+}
+

@@ -27,6 +27,7 @@ MODULES=\
 	lib/cpp/Service \
 	lib/cpp/Database \
 	lib/cpp/DataProxy \
+	lib/cpp/Monitoring \
 
 TESTMODULES=\
 	lib/cpp/Service \
@@ -61,6 +62,7 @@ LIBLOC=\
 
 # Libraries
 LIBS =	-lService -lUtility -lLogger -llog4cxx -lcurl -lDataProxy \
+		-lagent++ -lsnmp++ -lMonitoring \
 		-lboost_system -lboost_filesystem -lboost_program_options -lboost_regex \
 		-lclntsh -lmyodbc3 -lxerces-c -lboost_thread -lboost_iostreams -lcrypto -lpthread -ldl
 TESTLIBS = -lTestHelpers -lMockService -lcppunit

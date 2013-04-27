@@ -29,6 +29,7 @@ namespace
 	const char* STATS_RETENTION_HOURS( "stats_retention_hours" );
 	const char* STATS_RETENTION_SIZE( "stats_retention_size" );
 	const char* STATS_PER_HOUR_ESTIMATE( "stats_per_hour_estimate" );
+	const char* MONITOR_CONFIG( "monitoring_config" );
 }
 
 DataProxyServiceConfig::DataProxyServiceConfig( int argc, char** argv )
@@ -48,7 +49,8 @@ DataProxyServiceConfig::DataProxyServiceConfig( int argc, char** argv )
 		( DELETE_WHITELIST_FILE, boost::program_options::value<std::string>()->default_value(""), "ip whitelist file for delete (DELETE) operations.\nsame semantics as load whitelist" )
 		( STATS_RETENTION_HOURS, boost::program_options::value<unsigned int>()->default_value(24), "number of hours to keep stats information. 0 = off." )
 		( STATS_RETENTION_SIZE, boost::program_options::value<long>()->default_value(-1), "maximum number of stats logs to keep. -1 = no limit. 0 = off." )
-		( STATS_PER_HOUR_ESTIMATE, boost::program_options::value<size_t>()->default_value(5000), "estimated number of requests per hour. a good estimate optimizes insertion of stats information." );
+		( STATS_PER_HOUR_ESTIMATE, boost::program_options::value<size_t>()->default_value(5000), "estimated number of requests per hour. a good estimate optimizes insertion of stats information." )
+		( MONITOR_CONFIG, boost::program_options::value<std::string>()->default_value(""), "Monitoring configuration file" );
 
 	m_Options.ParseOptions(argc, argv);
 
@@ -131,4 +133,9 @@ long DataProxyServiceConfig::GetStatsRetentionSize() const
 size_t DataProxyServiceConfig::GetStatsPerHourEstimate() const
 {
 	return m_Options[STATS_PER_HOUR_ESTIMATE].as< size_t >();
+}
+
+const std::string& DataProxyServiceConfig::GetMonitorConfig() const
+{
+	return m_Options[MONITOR_CONFIG].as< std::string >();
 }

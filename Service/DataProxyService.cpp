@@ -17,6 +17,7 @@
 #include "LoadHandler.hpp"
 #include "StoreHandler.hpp"
 #include "DeleteHandler.hpp"
+#include "ApplicationMonitor.hpp"
 
 namespace
 {
@@ -48,6 +49,12 @@ int main( int argc, char** argv )
 		parameters[ STATS_PER_HOUR_ESTIMATE ] = boost::lexical_cast< std::string >( config.GetStatsPerHourEstimate() );
 		WebServer::CreateInstance( parameters );
 		WebServer& rWebServer = WebServer::GetInstance();
+
+		// create the ApplicationMonitor if the "monitor_config" is not empty
+		if ( config.GetMonitorConfig().size() > 0 )
+		{
+			ApplicationMonitor::Init( config.GetMonitorConfig() );
+		}
 
 		// create handlers
 		DataProxyClient client( true );

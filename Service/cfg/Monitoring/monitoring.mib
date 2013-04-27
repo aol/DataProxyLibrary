@@ -1,0 +1,111 @@
+SPIKE-MIB DEFINITIONS ::= BEGIN
+
+IMPORTS
+	MODULE-IDENTITY, OBJECT-TYPE, Integer32, NOTIFICATION-TYPE, Counter64
+	FROM SNMPv2-SMI
+;
+
+monitoring OBJECT IDENTIFIER ::= {1 3 6 1 4 100}
+
+loadStatusSuccessStats OBJECT IDENTIFIER ::= {monitoring 1}
+loadStatusFailedStats OBJECT IDENTIFIER ::= {monitoring 2}
+loadPayloadStats OBJECT IDENTIFIER ::= {monitoring 3}
+loadPayloadBuckets OBJECT IDENTIFIER ::= {monitoring 4}
+loadPayloadLastN OBJECT IDENTIFIER ::= {monitoring 5}
+loadPayloadPct OBJECT IDENTIFIER ::= {monitoring 6}
+loadTimeSuccessStats OBJECT IDENTIFIER ::= {monitoring 7}
+loadTimeFailedStats OBJECT IDENTIFIER ::= {monitoring 8}
+
+storeStatusSuccessStats OBJECT IDENTIFIER ::= {monitoring 9}
+storeStatusFailedStats OBJECT IDENTIFIER ::= {monitoring 10}
+storePayloadStats OBJECT IDENTIFIER ::= {monitoring 11}
+storePayloadBuckets OBJECT IDENTIFIER ::= {monitoring 12}
+storePayloadLastN OBJECT IDENTIFIER ::= {monitoring 13}
+storePayloadPct OBJECT IDENTIFIER ::= {monitoring 14}
+storeTimeSuccessStats OBJECT IDENTIFIER ::= {monitoring 15}
+storeTimeFailedStats OBJECT IDENTIFIER ::= {monitoring 16}
+
+deleteStatusSuccessStats OBJECT IDENTIFIER ::= {monitoring 17}
+deleteStatusFailedStats OBJECT IDENTIFIER ::= {monitoring 18}
+deleteTimeSuccessStats OBJECT IDENTIFIER ::= {monitoring 19}
+deleteTimeFailedStats OBJECT IDENTIFIER ::= {monitoring 20}
+
+loadSuccessCount OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {loadStatusSuccessStats 0}
+loadFailedCount OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {loadStatusFailedStats 0}
+loadPayloadCount OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {loadPayloadStats 0}
+loadPayloadMin OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {loadPayloadStats 1}
+loadPayloadMax OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {loadPayloadStats 2}
+loadPayloadSum OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {loadPayloadStats 3}
+loadPayloadAvg OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {loadPayloadStats 4}
+loadPayloadVar OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {loadPayloadStats 5}
+
+
+loadPayloadBucket-NegInf-100 OBJECT-TYPE SYNTAX Integer32 ACCESS read-only STATUS mandatory ::= {loadPayloadBuckets 0}
+loadPayloadBucket-100-1000 OBJECT-TYPE SYNTAX Integer32 ACCESS read-only STATUS mandatory ::= {loadPayloadBuckets 1}
+loadPayloadBucket-1000-10000 OBJECT-TYPE SYNTAX Integer32 ACCESS read-only STATUS mandatory ::= {loadPayloadBuckets 2}
+loadPayloadBucket-10000-100000 OBJECT-TYPE SYNTAX Integer32 ACCESS read-only STATUS mandatory ::= {loadPayloadBuckets 3}
+loadPayloadBucket-100000-Inf OBJECT-TYPE SYNTAX Integer32 ACCESS read-only STATUS mandatory ::= {loadPayloadBuckets 4}
+
+loadTimeSuccessCount OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {loadTimeSuccessStats 0}
+loadTimeSuccessMinUnitMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {loadTimeSuccessStats 1}
+loadTimeSuccessMaxUintMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {loadTimeSuccessStats 2}
+loadTimeSuccessSumUintMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {loadTimeSuccessStats 3}
+loadTimeSuccessAvgUintMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {loadTimeSuccessStats 4}
+loadTimeSuccessVarUintMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {loadTimeSuccessStats 5}
+
+
+loadTimeFailedCount OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {loadTimeFailedStats 0}
+loadTimeFailedMinUnitMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {loadTimeFailedStats 1}
+loadTimeFailedMaxUintMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {loadTimeFailedStats 2}
+loadTimeFailedSumUintMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {loadTimeFailedStats 3}
+loadTimeFailedAvgUintMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {loadTimeFailedStats 4}
+loadTimeFailedVarUintMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {loadTimeFailedStats 5}
+
+storeSuccessCount OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {storeStatusSuccessStats 0}
+storeFailedCount OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {storeStatusFailedStats 0}
+
+storePayloadCount OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {storePayloadStats 0}
+storePayloadMin OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {storePayloadStats 1}
+storePayloadMax OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {storePayloadStats 2}
+storePayloadSum OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {storePayloadStats 3}
+storePayloadAvg OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {storePayloadStats 4}
+storePayloadVar OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {storePayloadStats 5}
+
+storePayloadBucket-NegInf-100 OBJECT-TYPE SYNTAX Integer32 ACCESS read-only STATUS mandatory ::= {storePayloadBuckets 0}
+storePayloadBucket-100-1000 OBJECT-TYPE SYNTAX Integer32 ACCESS read-only STATUS mandatory ::= {storePayloadBuckets 1}
+storePayloadBucket-1000-10000 OBJECT-TYPE SYNTAX Integer32 ACCESS read-only STATUS mandatory ::= {storePayloadBuckets 2}
+storePayloadBucket-10000-100000 OBJECT-TYPE SYNTAX Integer32 ACCESS read-only STATUS mandatory ::= {storePayloadBuckets 3}
+storePayloadBucket-100000-Inf OBJECT-TYPE SYNTAX Integer32 ACCESS read-only STATUS mandatory ::= {storePayloadBuckets 4}
+
+storeTimeSuccessCount OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {storeTimeSuccessStats 0}
+storeTimeSuccessMinUnitMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {storeTimeSuccessStats 1}
+storeTimeSuccessMaxUintMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {storeTimeSuccessStats 2}
+storeTimeSuccessSumUintMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {storeTimeSuccessStats 3}
+storeTimeSuccessAvgUintMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {storeTimeSuccessStats 4}
+storeTimeSuccessVarUintMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {storeTimeSuccessStats 5}
+
+storeTimeFailedCount OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {storeTimeFailedStats 0}
+storeTimeFailedMinUnitMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {storeTimeFailedStats 1}
+storeTimeFailedMaxUintMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {storeTimeFailedStats 2}
+storeTimeFailedSumUintMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {storeTimeFailedStats 3}
+storeTimeFailedAvgUintMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {storeTimeFailedStats 4}
+storeTimeFailedVarUintMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {storeTimeFailedStats 5}
+
+deleteSuccessCount OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {deleteStatusSuccessStats 0}
+deleteFailedCount OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {deleteStatusFailedStats 0}
+
+deleteTimeSuccessCount OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {deleteTimeSuccessStats 0}
+deleteTimeSuccessMinUnitMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {deleteTimeSuccessStats 1}
+deleteTimeSuccessMaxUintMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {deleteTimeSuccessStats 2}
+deleteTimeSuccessSumUintMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {deleteTimeSuccessStats 3}
+deleteTimeSuccessAvgUintMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {deleteTimeSuccessStats 4}
+deleteTimeSuccessVarUintMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {deleteTimeSuccessStats 5}
+
+deleteTimeFailedCount OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {deleteTimeFailedStats 0}
+deleteTimeFailedMinUnitMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {deleteTimeFailedStats 1}
+deleteTimeFailedMaxUintMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {deleteTimeFailedStats 2}
+deleteTimeFailedSumUintMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {deleteTimeFailedStats 3}
+deleteTimeFailedAvgUintMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {deleteTimeFailedStats 4}
+deleteTimeFailedVarUintMS OBJECT-TYPE SYNTAX INTEGER ACCESS read-only STATUS mandatory ::= {deleteTimeFailedStats 5}
+
+END

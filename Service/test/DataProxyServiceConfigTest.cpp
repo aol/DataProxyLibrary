@@ -54,7 +54,8 @@ void DataProxyServiceConfigTest::testParameters()
 		"--stats_retention_hours", "17",
 		"--stats_retention_size", "123",
 		"--stats_per_hour_estimate", "468",
-		"--enable_x-forwarded-for", "1"
+		"--enable_x-forwarded-for", "1",
+		"--monitoring_config", "my_monitoring_config"
 	};
 	int argc = sizeof(argv)/sizeof(char*);
 
@@ -75,6 +76,7 @@ void DataProxyServiceConfigTest::testParameters()
 	CPPUNIT_ASSERT_EQUAL( long(123), config.GetStatsRetentionSize() );
 	CPPUNIT_ASSERT_EQUAL( size_t(468), config.GetStatsPerHourEstimate() );
 	CPPUNIT_ASSERT( config.GetEnableXForwardedFor() );
+	CPPUNIT_ASSERT_EQUAL( std::string("my_monitoring_config"), config.GetMonitorConfig() );
 }
 
 void DataProxyServiceConfigTest::testOptionalParameters()
@@ -106,6 +108,7 @@ void DataProxyServiceConfigTest::testOptionalParameters()
 	CPPUNIT_ASSERT_EQUAL( uint(24), config.GetStatsRetentionHours() );
 	CPPUNIT_ASSERT_EQUAL( long(-1), config.GetStatsRetentionSize() );
 	CPPUNIT_ASSERT_EQUAL( size_t(5000), config.GetStatsPerHourEstimate() );
+	CPPUNIT_ASSERT_EQUAL( std::string(""), config.GetMonitorConfig() );
 }
 
 void DataProxyServiceConfigTest::testIllegalParameters()

@@ -42,6 +42,8 @@ public:
 	MV_VIRTUAL long GetStatsRetentionSize() const;
 	MV_VIRTUAL size_t GetStatsPerHourEstimate() const;
 
+	MV_VIRTUAL const std::string& GetMonitorConfig() const;
+
 private:
 	CliOptions m_Options;
 };

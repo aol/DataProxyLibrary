@@ -1,0 +1,207 @@
+{
+	"root":
+	{	
+		"monitoring":
+		{
+			"application":"Monitoring Data Proxy Service",
+			"maxQueueLength":"10000",
+			"queueFullErrorLogPeriod":"10",
+			"multiplexRules":
+			[
+				{ "scopeId":"dpl.live", "childIds":"status" }
+			]
+		},
+		"collectors":
+		[
+			{ "name":"loadStatusSuccessCollector", "sourceId":"dpl.live.load.status.success", "maxSize":"10000", "maxTime":"3600" },
+			{ "name":"loadStatusFailedCollector", "sourceId":"dpl.live.load.status.failed", "maxSize":"10000", "maxTime":"3600" },
+			{ "name":"loadPayloadCollector", "sourceId":"dpl.live.loadPayload", "maxSize":"10000", "maxTime":"3600" },
+			{ "name":"loadTimeSuccessCollector", "sourceId":"dpl.live.loadTime.status.success", "maxSize":"10000", "maxTime":"3600" },
+			{ "name":"loadTimeFailedCollector", "sourceId":"dpl.live.loadTime.status.falied", "maxSize":"10000", "maxTime":"3600" },
+
+			{ "name":"storeStatusSuccessCollector", "sourceId":"dpl.live.store.status.success", "maxSize":"10000", "maxTime":"3600" },
+			{ "name":"storeStatusFailedCollector", "sourceId":"dpl.live.store.status.failed", "maxSize":"10000", "maxTime":"3600" },
+			{ "name":"storePayloadCollector", "sourceId":"dpl.live.storePayload", "maxSize":"10000", "maxTime":"3600" },
+			{ "name":"storeTimeSuccessCollector", "sourceId":"dpl.live.storeTime.status.success", "maxSize":"10000", "maxTime":"3600" },
+			{ "name":"storeTimeFailedCollector", "sourceId":"dpl.live.storeTime.status.failed", "maxSize":"10000", "maxTime":"3600" },
+
+			{ "name":"deleteStatusSuccessCollector", "sourceId":"dpl.live.delete.status.success", "maxSize":"10000", "maxTime":"3600" },
+			{ "name":"deleteStatusFailedCollector", "sourceId":"dpl.live.delete.status.failed", "maxSize":"10000", "maxTime":"3600" },
+			{ "name":"deleteTimeSuccessCollector", "sourceId":"dpl.live.deleteTime.status.success", "maxSize":"10000", "maxTime":"3600" },
+			{ "name":"deleteTimeFailedCollector", "sourceId":"dpl.live.deleteTime.status.failed", "maxSize":"10000", "maxTime":"3600" }
+
+		],
+		"aggregators":
+		[
+			{ "name":"loadStatusSuccessStats", "sourceCollector":"loadStatusSuccessCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" },
+			{ "name":"loadStatusFailedStats", "sourceCollector":"loadStatusFailedCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" },
+
+			{ "name":"loadPayloadStats", "sourceCollector":"loadPayloadCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" },
+			{ "name":"loadPayloadBuckets", "sourceCollector":"loadPayloadCollector", "type":"bucket", "recalculateAge":"1", "buckets":"100,1000,10000,100000" },
+			{ "name":"loadPayloadLastN", "sourceCollector":"loadPayloadCollector", "type":"lastN", "recalculateAge":"1", "n":"10" },
+			{ "name":"loadPayloadPct", "sourceCollector":"loadPayloadCollector", "type":"percentile", "recalculateAge":"1", "percentiles":"25,50,75,90,95,99,99.9" },
+
+			{ "name":"loadTimeSuccessStats", "sourceCollector":"loadTimeSuccessCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" },
+			{ "name":"loadTimeSuccessBuckets", "sourceCollector":"loadTimeSuccessCollector", "type":"bucket", "recalculateAge":"1", "buckets":"100,1000,5000,10000,60000" },
+			{ "name":"loadTimeSuccessLastN", "sourceCollector":"loadTimeSuccessCollector", "type":"lastN", "recalculateAge":"1", "n":"10" },
+			{ "name":"loadTimeSuccessPct", "sourceCollector":"loadTimeSuccessCollector", "type":"percentile", "recalculateAge":"1", "percentiles":"25,50,75,90,95,99,99.9" },
+
+			{ "name":"loadTimeFailedStats", "sourceCollector":"loadTimeFailedCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" },
+			{ "name":"loadTimeFailedBuckets", "sourceCollector":"loadTimeFailedCollector", "type":"bucket", "recalculateAge":"1", "buckets":"100,1000,5000,10000,60000" },
+			{ "name":"loadTimeFailedLastN", "sourceCollector":"loadTimeFailedCollector", "type":"lastN", "recalculateAge":"1", "n":"10" },
+			{ "name":"loadTimeFailedPct", "sourceCollector":"loadTimeFailedCollector", "type":"percentile", "recalculateAge":"1", "percentiles":"25,50,75,90,95,99,99.9" },
+
+			{ "name":"storeStatusSuccessStats", "sourceCollector":"storeStatusSuccessCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" },
+			{ "name":"storeStatusFailedStats", "sourceCollector":"storeStatusFailedCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" },
+
+			{ "name":"storePayloadStats", "sourceCollector":"storePayloadCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" },
+			{ "name":"storePayloadBuckets", "sourceCollector":"storePayloadCollector", "type":"bucket", "recalculateAge":"1", "buckets":"100,1000,10000,100000" },
+			{ "name":"storePayloadLastN", "sourceCollector":"storePayloadCollector", "type":"lastN", "recalculateAge":"1", "n":"10" },
+			{ "name":"storePayloadPct", "sourceCollector":"storePayloadCollector", "type":"percentile", "recalculateAge":"1", "percentiles":"25,50,75,90,95,99,99.9" },
+
+			{ "name":"storeTimeSuccessStats", "sourceCollector":"storeTimeSuccessCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" },
+			{ "name":"storeTimeSuccessBuckets", "sourceCollector":"storeTimeSuccessCollector", "type":"bucket", "recalculateAge":"1", "buckets":"100,1000,5000,10000,60000" },
+			{ "name":"storeTimeSuccessLastN", "sourceCollector":"storeTimeSuccessCollector", "type":"lastN", "recalculateAge":"1", "n":"10" },
+			{ "name":"storeTimeSuccessPct", "sourceCollector":"storeTimeSuccessCollector", "type":"percentile", "recalculateAge":"1", "percentiles":"25,50,75,90,95,99,99.9" },
+
+			{ "name":"storeTimeFailedStats", "sourceCollector":"storeTimeFailedCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" },
+			{ "name":"storeTimeFailedBuckets", "sourceCollector":"storeTimeFailedCollector", "type":"bucket", "recalculateAge":"1", "buckets":"100,1000,5000,10000,60000" },
+			{ "name":"storeTimeFailedLastN", "sourceCollector":"storeTimeFailedCollector", "type":"lastN", "recalculateAge":"1", "n":"10" },
+			{ "name":"storeTimeFailedPct", "sourceCollector":"storeTimeFailedCollector", "type":"percentile", "recalculateAge":"1", "percentiles":"25,50,75,90,95,99,99.9" },
+
+			{ "name":"deleteStatusSuccessStats", "sourceCollector":"deleteStatusSuccessCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" },
+			{ "name":"deleteStatusFailedStats", "sourceCollector":"deleteStatusFailedCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" },
+
+			{ "name":"deleteTimeSuccessStats", "sourceCollector":"deleteTimeSuccessCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" },
+			{ "name":"deleteTimeSuccessBuckets", "sourceCollector":"deleteTimeSuccessCollector", "type":"bucket", "recalculateAge":"1", "buckets":"100,1000,5000,10000,60000" },
+			{ "name":"deleteTimeSuccessLastN", "sourceCollector":"deleteTimeSuccessCollector", "type":"lastN", "recalculateAge":"1", "n":"10" },
+			{ "name":"deleteTimeSuccessPct", "sourceCollector":"deleteTimeSuccessCollector", "type":"percentile", "recalculateAge":"1", "percentiles":"25,50,75,90,95,99,99.9" },
+
+			{ "name":"deleteTimeFailedStats", "sourceCollector":"deleteTimeFailedCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" },
+			{ "name":"deleteTimeFailedBuckets", "sourceCollector":"deleteTimeFailedCollector", "type":"bucket", "recalculateAge":"1", "buckets":"100,1000,5000,10000,60000" },
+			{ "name":"deleteTimeFailedLastN", "sourceCollector":"deleteTimeFailedCollector", "type":"lastN", "recalculateAge":"1", "n":"10" },
+			{ "name":"deleteTimeFailedPct", "sourceCollector":"deleteTimeFailedCollector", "type":"percentile", "recalculateAge":"1", "percentiles":"25,50,75,90,95,99,99.9" }
+
+		],
+		"interfaces":
+		{
+			"http":
+			{
+				"enabled":"1",
+				"port":"20161",
+				"numThreads":"16"
+			},
+			"snmp":
+			{
+				"enabled":"1",
+				"port":"10161",
+				"objects":
+				[
+					{ "objectId":"1.3.6.1.4.100.1.0", "sourceAggregator":"loadStatusSuccessStats", "field":"count", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.2.0", "sourceAggregator":"loadStatusFailedStats", "field":"count", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.3.0", "sourceAggregator":"loadPayloadStats", "field":"count", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.3.1", "sourceAggregator":"loadPayloadStats", "field":"min", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.3.2", "sourceAggregator":"loadPayloadStats", "field":"max", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.3.3", "sourceAggregator":"loadPayloadStats", "field":"sum", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.3.4", "sourceAggregator":"loadPayloadStats", "field":"avg", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.3.5", "sourceAggregator":"loadPayloadStats", "field":"var", "type":"int32" },
+
+					{ "objectId":"1.3.6.1.4.100.4.0", "sourceAggregator":"loadPayloadBuckets", "field":"bucket[-inf,100)", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.4.1", "sourceAggregator":"loadPayloadBuckets", "field":"bucket[100,1000)", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.4.2", "sourceAggregator":"loadPayloadBuckets", "field":"bucket[1000,10000)", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.4.3", "sourceAggregator":"loadPayloadBuckets", "field":"bucket[10000,100000)", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.4.4", "sourceAggregator":"loadPayloadBuckets", "field":"bucket[100000,inf]", "type":"int32" },
+
+					{ "objectId":"1.3.6.1.4.100.5.0.0", "sourceAggregator":"loadPayloadLastN", "field":"item[0].time", "type":"uint64" },
+					{ "objectId":"1.3.6.1.4.100.5.0.1", "sourceAggregator":"loadPayloadLastN", "field":"item[0].number", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.5.1.0", "sourceAggregator":"loadPayloadLastN", "field":"item[1].time", "type":"uint64" },
+					{ "objectId":"1.3.6.1.4.100.5.1.1", "sourceAggregator":"loadPayloadLastN", "field":"item[1].number", "type":"uint32" },
+
+					{ "objectId":"1.3.6.1.4.100.6.25", "sourceAggregator":"loadPayloadPct", "field":"pct25", "type":"uint64" },
+					{ "objectId":"1.3.6.1.4.100.6.50", "sourceAggregator":"loadPayloadPct", "field":"pct50", "type":"uint64" },
+					{ "objectId":"1.3.6.1.4.100.6.75", "sourceAggregator":"loadPayloadPct", "field":"pct75", "type":"uint64" },
+					{ "objectId":"1.3.6.1.4.100.6.90", "sourceAggregator":"loadPayloadPct", "field":"pct90", "type":"uint64" },
+					{ "objectId":"1.3.6.1.4.100.6.95", "sourceAggregator":"loadPayloadPct", "field":"pct95", "type":"uint64" },
+					{ "objectId":"1.3.6.1.4.100.6.99", "sourceAggregator":"loadPayloadPct", "field":"pct99", "type":"uint64" },
+					{ "objectId":"1.3.6.1.4.100.6.999", "sourceAggregator":"loadPayloadPct", "field":"pct99.9", "type":"uint64" },
+
+					{ "objectId":"1.3.6.1.4.100.7.0", "sourceAggregator":"loadTimeSuccessStats", "field":"count", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.7.1", "sourceAggregator":"loadTimeSuccessStats", "field":"min", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.7.2", "sourceAggregator":"loadTimeSuccessStats", "field":"max", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.7.3", "sourceAggregator":"loadTimeSuccessStats", "field":"sum", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.7.4", "sourceAggregator":"loadTimeSuccessStats", "field":"avg", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.7.5", "sourceAggregator":"loadTimeSuccessStats", "field":"var", "type":"int32" },
+
+					{ "objectId":"1.3.6.1.4.100.8.0", "sourceAggregator":"loadTimeFailedStats", "field":"count", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.8.1", "sourceAggregator":"loadTimeFailedStats", "field":"min", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.8.2", "sourceAggregator":"loadTimeFailedStats", "field":"max", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.8.3", "sourceAggregator":"loadTimeFailedStats", "field":"sum", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.8.4", "sourceAggregator":"loadTimeFailedStats", "field":"avg", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.8.5", "sourceAggregator":"loadTimeFailedStats", "field":"var", "type":"int32" },
+
+					{ "objectId":"1.3.6.1.4.100.9.0", "sourceAggregator":"storeStatusSuccessStats", "field":"count", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.10.0", "sourceAggregator":"storeStatusFailedStats", "field":"count", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.11.0", "sourceAggregator":"storePayloadStats", "field":"count", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.11.1", "sourceAggregator":"storePayloadStats", "field":"min", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.11.2", "sourceAggregator":"storePayloadStats", "field":"max", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.11.3", "sourceAggregator":"storePayloadStats", "field":"sum", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.11.4", "sourceAggregator":"storePayloadStats", "field":"avg", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.11.5", "sourceAggregator":"storePayloadStats", "field":"var", "type":"int32" }, 
+
+					{ "objectId":"1.3.6.1.4.100.12.0", "sourceAggregator":"storePayloadBuckets", "field":"bucket[-inf,100)", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.12.1", "sourceAggregator":"storePayloadBuckets", "field":"bucket[100,1000)", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.12.2", "sourceAggregator":"storePayloadBuckets", "field":"bucket[1000,10000)", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.12.3", "sourceAggregator":"storePayloadBuckets", "field":"bucket[10000,100000)", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.12.4", "sourceAggregator":"storePayloadBuckets", "field":"bucket[100000,inf]", "type":"int32" },
+
+					{ "objectId":"1.3.6.1.4.100.13.0.0", "sourceAggregator":"storePayloadLastN", "field":"item[0].time", "type":"uint64" },
+					{ "objectId":"1.3.6.1.4.100.13.0.1", "sourceAggregator":"storePayloadLastN", "field":"item[0].number", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.13.1.0", "sourceAggregator":"storePayloadLastN", "field":"item[1].time", "type":"uint64" },
+					{ "objectId":"1.3.6.1.4.100.13.1.1", "sourceAggregator":"storePayloadLastN", "field":"item[1].number", "type":"uint32" },
+
+					{ "objectId":"1.3.6.1.4.100.14.25", "sourceAggregator":"storePayloadPct", "field":"pct25", "type":"uint64" },
+					{ "objectId":"1.3.6.1.4.100.14.50", "sourceAggregator":"storePayloadPct", "field":"pct50", "type":"uint64" },
+					{ "objectId":"1.3.6.1.4.100.14.75", "sourceAggregator":"storePayloadPct", "field":"pct75", "type":"uint64" },
+					{ "objectId":"1.3.6.1.4.100.14.90", "sourceAggregator":"storePayloadPct", "field":"pct90", "type":"uint64" },
+					{ "objectId":"1.3.6.1.4.100.14.95", "sourceAggregator":"storePayloadPct", "field":"pct95", "type":"uint64" },
+					{ "objectId":"1.3.6.1.4.100.14.99", "sourceAggregator":"storePayloadPct", "field":"pct99", "type":"uint64" },
+					{ "objectId":"1.3.6.1.4.100.14.999", "sourceAggregator":"storePayloadPct", "field":"pct99.9", "type":"uint64" }, 
+
+					{ "objectId":"1.3.6.1.4.100.15.0", "sourceAggregator":"storeTimeSuccessStats", "field":"count", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.15.1", "sourceAggregator":"storeTimeSuccessStats", "field":"min", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.15.2", "sourceAggregator":"storeTimeSuccessStats", "field":"max", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.15.3", "sourceAggregator":"storeTimeSuccessStats", "field":"sum", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.15.4", "sourceAggregator":"storeTimeSuccessStats", "field":"avg", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.15.5", "sourceAggregator":"storeTimeSuccessStats", "field":"var", "type":"int32" },
+
+					{ "objectId":"1.3.6.1.4.100.16.0", "sourceAggregator":"storeTimeFailedStats", "field":"count", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.16.1", "sourceAggregator":"storeTimeFailedStats", "field":"min", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.16.2", "sourceAggregator":"storeTimeFailedStats", "field":"max", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.16.3", "sourceAggregator":"storeTimeFailedStats", "field":"sum", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.16.4", "sourceAggregator":"storeTimeFailedStats", "field":"avg", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.16.5", "sourceAggregator":"storeTimeFailedStats", "field":"var", "type":"int32" },
+
+					{ "objectId":"1.3.6.1.4.100.17.0", "sourceAggregator":"deleteStatusSuccessStats", "field":"count", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.18.0", "sourceAggregator":"deleteStatusFailedStats", "field":"count", "type":"int32" },
+
+					{ "objectId":"1.3.6.1.4.100.19.0", "sourceAggregator":"deleteTimeSuccessStats", "field":"count", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.19.1", "sourceAggregator":"deleteTimeSuccessStats", "field":"min", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.19.2", "sourceAggregator":"deleteTimeSuccessStats", "field":"max", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.19.3", "sourceAggregator":"deleteTimeSuccessStats", "field":"sum", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.19.4", "sourceAggregator":"deleteTimeSuccessStats", "field":"avg", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.19.5", "sourceAggregator":"deleteTimeSuccessStats", "field":"var", "type":"int32" },
+
+					{ "objectId":"1.3.6.1.4.100.20.0", "sourceAggregator":"deleteTimeFailedStats", "field":"count", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.20.1", "sourceAggregator":"deleteTimeFailedStats", "field":"min", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.20.2", "sourceAggregator":"deleteTimeFailedStats", "field":"max", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.20.3", "sourceAggregator":"deleteTimeFailedStats", "field":"sum", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.20.4", "sourceAggregator":"deleteTimeFailedStats", "field":"avg", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.20.5", "sourceAggregator":"deleteTimeFailedStats", "field":"var", "type":"int32" }
+
+
+
+				]
+			}
+		}
+	}
+}
