@@ -214,25 +214,16 @@ SERVICEFILES=\
 	WebServer.cpp \
 
 UTILITYFILES=\
-	AlgorithmConfig.cpp \
-	BitSet.cpp \
 	CliOptions.cpp \
 	CSVReader.cpp \
-	DaemonLock.cpp \
 	DateTime.cpp \
 	FileUtilities.cpp \
-	MapUtilities.cpp \
-	MemcacheWrapper.cpp \
-	MemTimeMarker.cpp \
 	MutexFileLock.cpp \
 	MVException.cpp \
 	MVUtility.cpp \
 	NetworkUtilities.cpp \
 	Nullable.cpp \
-	ParametersBase.cpp \
 	ShellExecutor.cpp \
-	SignalBlocker.cpp \
-	StandaloneExecutor.cpp \
 	Stopwatch.cpp \
 	StringUtilities.cpp \
 	TimeTracker.cpp \
