@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE doc[
+]>
+
+<DplConfig>
+	<DatabaseConnections>
+		<Database type="mysql"
+			connection="mysql_connection"
+			name="test"
+			user=""
+			password=""
+			server="localhost"
+			disableCache="true" />
+	</DatabaseConnections>
+
+	<DataNode name="/tt" type="db">
+		<Read connection="mysql_connection"
+			maxBindSize="4000"
+			header="name,age"
+			query="select name,age from tt" >
+		</Read>
+		<Write connection="mysql_connection"
+			table="tt">
+			<Columns>
+				<Column name="name" type="key" />
+				<Column name="age" type="data" ifNew="%v" ifMatched="%v" />
+			</Columns>
+		</Write>
+		<Delete connection="mysql_connection" query="truncate table tt" >
+		</Delete>
+	</DataNode>
+
+</DplConfig>
