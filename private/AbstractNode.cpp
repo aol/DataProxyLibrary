@@ -19,7 +19,6 @@
 #include <fstream>
 #include <boost/lexical_cast.hpp>
 #include "MonitoringTracker.hpp"
-#include "Stopwatch.hpp"
 #include <boost/iostreams/filter/counter.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/ref.hpp>
@@ -32,18 +31,18 @@ namespace
 	const std::string OPERATION_PROCESS( "process" ); // also the default! 
 	const std::string OPERATION_IGNORE( "ignore" );
 
-	const std::string SCOPE_ID( "dpl.live" );
-	const std::string METRIC_LOAD( "load" );
-	const std::string METRIC_STORE( "store" );
-	const std::string METRIC_DELETE( "delete" );
-	const std::string METRIC_LOADPAYLOAD( "loadPayload" );
-	const std::string METRIC_STOREPAYLOAD( "storePayload" );
-	const std::string METRIC_LOADTIME( "loadTime" );
-	const std::string METRIC_STORETIME( "storeTime" );
-	const std::string METRIC_DELETETIME( "deleteTime" );
-	const std::string CHILD_STATUS( "status" );
+	const std::string LOAD_SCOPE_ID( "dpl.load" );
+	const std::string STORE_SCOPE_ID( "dpl.store" );
+	const std::string DELETE_SCOPE_ID( "dpl.delete" );
+
+	const std::string METRIC_PAYLOAD_BYTES( "payloadBytes" );
+	const std::string METRIC_PAYLOAD_LINES( "payloadLines" );
 	const std::string CHILD_STATUS_SUCCESS( "success" );
 	const std::string CHILD_STATUS_FAILED( "failed" );
+
+	const std::string CHILD_STATUS( "status" );
+
+	const std::string METRIC_PAYLOAD( "payload" );
 
 	const std::map< std::string, std::string >& ChooseParameters( const std::map< std::string, std::string >& i_rOriginalParameters,
 																  const std::map< std::string, std::string >& i_rTranslatedParameters,
@@ -172,10 +171,8 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 		return;
 	}
 
-	MonitoringTracker tracker( SCOPE_ID );
+	MonitoringTracker tracker( LOAD_SCOPE_ID );
 
-	Stopwatch stopwatch;
-	
 	// by default we will just use the params passed in
 	const std::map< std::string, std::string >* pUseParameters = &i_rParameters;
 	std::map< std::string, std::string > translatedParameters;
@@ -209,14 +206,9 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 			pUseData = &tempIOStream;
 		}
 
-	/*	boost::iostreams::filtering_ostream output;
-		boost::iostreams::counter cnt;
-		output.push( boost::ref( cnt ) );
-		output.push( *pUseData );
-*/
 		boost::scoped_ptr< boost::iostreams::filtering_ostream > output( new boost::iostreams::filtering_ostream() );
 		boost::iostreams::counter cnt;
-		output->push( boost::ref( cnt ) );
+		output->push( boost::ref( cnt) );
 		output->push( *pUseData );
 
 		// try the maximum # of retries to issue a load request
@@ -252,16 +244,14 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 				}
 			}
 		}
-		long transformedBytes = 0;
 		// finally, if we need to transform, then we know we used the tempIOStream; transform it
 		boost::shared_ptr< std::stringstream > pTransformedStream;
+
 		if ( needToTransform )
 		{
 			pTransformedStream = m_ReadConfig.GetValue< Transformers >()->TransformStream( *pUseParameters, tempIOStream );
 			pUseData = pTransformedStream.get();
 
-			transformedBytes = pTransformedStream->tellp();
-			
 			// rewind the temp in case we need to tee
 			tempIOStream.clear();
 			tempIOStream.seekg( 0L );
@@ -278,10 +268,16 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 		}
 
 		// at this point, if we didn't write directly to the output stream, push it out from the temp
+		boost::scoped_ptr< boost::iostreams::filtering_ostream > tfStreamOutput( new boost::iostreams::filtering_ostream() );
+		boost::iostreams::counter cntWithTransform;
+		tfStreamOutput->push( boost::ref( cntWithTransform ) );
+		tfStreamOutput->push( o_rData );
+
 		if( pUseData != &o_rData )
 		{
-			o_rData << pUseData->rdbuf();
+			*tfStreamOutput << pUseData->rdbuf();
 		}
+		tfStreamOutput.reset( NULL );
 		
 		if( !o_rData.good() )
 		{
@@ -289,31 +285,27 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 				"Error detected in output stream. bad(): " << o_rData.bad() << " fail(): " << o_rData.fail() << " eof(): " << o_rData.eof() );
 
 			tracker.AddChild( CHILD_STATUS, CHILD_STATUS_FAILED );
-	        stopwatch.Stop();
-	        tracker.Report( METRIC_LOAD, 1 );
-	        tracker.Report( METRIC_LOADTIME, stopwatch.GetElapsedSeconds() * 1000 );
 			return;
 		}
 
+		output.reset( NULL );
+
 		// Monitoring report
 		tracker.AddChild( CHILD_STATUS, CHILD_STATUS_SUCCESS );
-		stopwatch.Stop();
-		tracker.Report( METRIC_LOAD, 1 );
-		tracker.Report( METRIC_LOADTIME, stopwatch.GetElapsedSeconds() * 1000 );
 		if( needToTransform )
 		{
-			tracker.Report( METRIC_LOADPAYLOAD, transformedBytes );
+			tracker.Report( METRIC_PAYLOAD_BYTES, cntWithTransform.characters() );
+			tracker.Report( METRIC_PAYLOAD_LINES, cntWithTransform.lines() );
 		}
 		else
 		{
-			tracker.Report( METRIC_LOADPAYLOAD, cnt.characters() );
+			tracker.Report( METRIC_PAYLOAD_BYTES, cnt.characters() );
+			tracker.Report( METRIC_PAYLOAD_LINES, cnt.lines() );
 		}
 	}
 	catch( const BadStreamException& e )
 	{
 		tracker.AddChild( CHILD_STATUS, CHILD_STATUS_FAILED );
-		tracker.Report( METRIC_LOAD, 1 );
-		tracker.Report( METRIC_LOADTIME, stopwatch.GetElapsedSeconds() * 1000 );
 
 		throw;
 	}
@@ -333,8 +325,6 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 		if( forwardName.IsNull() )
 		{
 			tracker.AddChild( CHILD_STATUS, CHILD_STATUS_FAILED );
-			tracker.Report( METRIC_LOAD, 1 );
-			tracker.Report( METRIC_LOADTIME, stopwatch.GetElapsedSeconds() * 1000 );
 
 			throw;
 		}
@@ -361,8 +351,7 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 		return true;
 	}
 
-	MonitoringTracker tracker( SCOPE_ID );
-	Stopwatch stopwatch;
+	MonitoringTracker tracker( STORE_SCOPE_ID );
 	
 	// by default we will just use the params passed in
 	const std::map< std::string, std::string >* pUseParameters = &i_rParameters;
@@ -412,15 +401,20 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 		{
 			try
 			{
-				pUseData->seekg( 0, std::ios::end );
-				long payload = pUseData->tellg();
+				std::ostringstream tmp;
+				boost::iostreams::filtering_ostream output;
+				boost::iostreams::counter cnt;
+				output.push( boost::ref( cnt ) );
+				output.push( tmp );
+				output << pUseData->rdbuf();
+
 				pUseData->seekg( retryPos );
 				StoreImpl( *pUseParameters, *pUseData );
+
 				tracker.AddChild( CHILD_STATUS, CHILD_STATUS_SUCCESS );
-				tracker.Report( METRIC_STORE, 1 );
-				stopwatch.Stop();
-				tracker.Report( METRIC_STORETIME, stopwatch.GetElapsedSeconds() * 1000 );
-				tracker.Report( METRIC_STOREPAYLOAD, payload );
+				tracker.Report( METRIC_PAYLOAD_BYTES, cnt.characters() );
+				tracker.Report( METRIC_PAYLOAD_LINES, cnt.lines() );
+
 				return true;
 			}
 			catch( const std::exception& ex )
@@ -463,9 +457,6 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 		if( forwardName.IsNull() )
 		{
 			tracker.AddChild( CHILD_STATUS, CHILD_STATUS_FAILED );
-			tracker.Report( METRIC_STORE, 1 );
-			stopwatch.Stop();
-			tracker.Report( METRIC_STORETIME, stopwatch.GetElapsedSeconds() * 1000 );
 
 			throw;
 		}
@@ -508,8 +499,7 @@ bool AbstractNode::Delete( const std::map<std::string,std::string>& i_rParameter
 		return true;
 	}
 
-	MonitoringTracker tracker( SCOPE_ID );
-	Stopwatch stopwatch;
+	MonitoringTracker tracker( DELETE_SCOPE_ID );
 	
 	// by default we will just use the params passed in
 	const std::map< std::string, std::string >* pUseParameters = &i_rParameters;
@@ -539,10 +529,7 @@ bool AbstractNode::Delete( const std::map<std::string,std::string>& i_rParameter
 			try
 			{
 				DeleteImpl( *pUseParameters );
-				stopwatch.Stop();
 				tracker.AddChild( CHILD_STATUS, CHILD_STATUS_SUCCESS );
-				tracker.Report( METRIC_DELETE, 1 );
-				tracker.Report( METRIC_DELETETIME, stopwatch.GetElapsedSeconds() * 1000 );
 				return true;
 			}
 			catch( const std::exception& ex )
@@ -581,10 +568,7 @@ bool AbstractNode::Delete( const std::map<std::string,std::string>& i_rParameter
 		Nullable< std::string > forwardName = m_DeleteConfig.GetValue< ForwardNodeName >();
 		if( forwardName.IsNull() )
 		{
-			stopwatch.Stop();
 			tracker.AddChild( CHILD_STATUS, CHILD_STATUS_FAILED );
-			tracker.Report( METRIC_DELETE, 1 );
-			tracker.Report( METRIC_DELETETIME, stopwatch.GetElapsedSeconds() * 1000 );
 			throw;
 		}
 
