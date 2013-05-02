@@ -21,7 +21,9 @@
 #include "MonitoringTracker.hpp"
 #include <boost/iostreams/filter/counter.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/copy.hpp>
 #include <boost/ref.hpp>
+#include <boost/iostreams/filtering_streambuf.hpp>
 
 namespace
 {
@@ -37,12 +39,12 @@ namespace
 
 	const std::string METRIC_PAYLOAD_BYTES( "payloadBytes" );
 	const std::string METRIC_PAYLOAD_LINES( "payloadLines" );
-	const std::string CHILD_STATUS_SUCCESS( "success" );
-	const std::string CHILD_STATUS_FAILED( "failed" );
+	const std::string METRIC_PAYLOAD_BYTES_BEFORE_TRANSFORM( "payloadBytesPreTransform" );
+	const std::string METRIC_PAYLOAD_LINES_BEFORE_TRANSFORM( "payloadLinesPreTransform" );
 
 	const std::string CHILD_STATUS( "status" );
-
-	const std::string METRIC_PAYLOAD( "payload" );
+	const std::string CHILD_STATUS_SUCCESS( "success" );
+	const std::string CHILD_STATUS_FAILED( "failed" );
 
 	const std::map< std::string, std::string >& ChooseParameters( const std::map< std::string, std::string >& i_rOriginalParameters,
 																  const std::map< std::string, std::string >& i_rTranslatedParameters,
@@ -275,7 +277,7 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 
 		if( pUseData != &o_rData )
 		{
-			*tfStreamOutput << pUseData->rdbuf();
+			boost::iostreams::copy( *pUseData->rdbuf(), *tfStreamOutput );
 		}
 		tfStreamOutput.reset( NULL );
 		
@@ -283,9 +285,6 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 		{
 			MVLOGGER( "root.lib.DataProxy.DataProxyClient.Load.OutputStreamError",
 				"Error detected in output stream. bad(): " << o_rData.bad() << " fail(): " << o_rData.fail() << " eof(): " << o_rData.eof() );
-
-			tracker.AddChild( CHILD_STATUS, CHILD_STATUS_FAILED );
-			return;
 		}
 
 		output.reset( NULL );
@@ -294,6 +293,8 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 		tracker.AddChild( CHILD_STATUS, CHILD_STATUS_SUCCESS );
 		if( needToTransform )
 		{
+			tracker.Report( METRIC_PAYLOAD_BYTES_BEFORE_TRANSFORM, cnt.characters() );
+			tracker.Report( METRIC_PAYLOAD_LINES_BEFORE_TRANSFORM, cnt.lines() );
 			tracker.Report( METRIC_PAYLOAD_BYTES, cntWithTransform.characters() );
 			tracker.Report( METRIC_PAYLOAD_LINES, cntWithTransform.lines() );
 		}
@@ -401,15 +402,13 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 		{
 			try
 			{
-				std::ostringstream tmp;
-				boost::iostreams::filtering_ostream output;
+				boost::iostreams::filtering_istream input;
 				boost::iostreams::counter cnt;
-				output.push( boost::ref( cnt ) );
-				output.push( tmp );
-				output << pUseData->rdbuf();
+				input.push( boost::ref( cnt ) );
+				input.push( *pUseData );
 
 				pUseData->seekg( retryPos );
-				StoreImpl( *pUseParameters, *pUseData );
+				StoreImpl( *pUseParameters, input );
 
 				tracker.AddChild( CHILD_STATUS, CHILD_STATUS_SUCCESS );
 				tracker.Report( METRIC_PAYLOAD_BYTES, cnt.characters() );

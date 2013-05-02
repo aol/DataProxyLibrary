@@ -507,7 +507,7 @@ void AbstractNodeTest::testLoadTransformStream()
 	MockDataProxyClient client;
 
 	TestableNode node( "name", client, *nodes[0] );
-	node.SetDataToReturn( "original node data" );
+	node.SetDataToReturn( "original node data\n" );
 
 	std::map<std::string,std::string> parameters;
 	parameters["param1"] = "value1";
@@ -531,19 +531,14 @@ void AbstractNodeTest::testLoadTransformStream()
 			 << "ST2_name3 : override3" << std::endl
 			 << "ST1_name1 : ST1_value1" << std::endl
 			 << "ST1_name2 : ST1_value2" << std::endl
-			 << "original node data";
+			 << "original node data\n";
 	CPPUNIT_ASSERT_EQUAL( expected.str(), results.str() );
 
 	const std::vector< std::pair< std::string, MonitoringMetric > >& rReports = pMonitoringInstance->GetReports();
-	CPPUNIT_ASSERT_EQUAL( size_t(6), rReports.size() );
-	CPPUNIT_ASSERT_EQUAL( std::string("dpl.load.payloadBytes"), rReports[0].first );
-	CPPUNIT_ASSERT_EQUAL( std::string("dpl.load.payloadBytes.status.success"), rReports[1].first );
-	CPPUNIT_ASSERT_EQUAL( std::string("dpl.load.payloadLines"), rReports[2].first );
-	CPPUNIT_ASSERT_EQUAL( std::string("dpl.load.payloadLines.status.success"), rReports[3].first );
-	CPPUNIT_ASSERT_EQUAL( std::string("dpl.load.time"), rReports[4].first );
-	CPPUNIT_ASSERT_EQUAL( std::string("dpl.load.time.status.success"), rReports[5].first );
-	CPPUNIT_ASSERT_DOUBLES_EQUAL( double( expected.str().size() ), rReports[0].second.GetDouble(), 1e-9 );
-	CPPUNIT_ASSERT_DOUBLES_EQUAL( double( 5 ), rReports[2].second.GetDouble(), 1e-9 );
+	CPPUNIT_ASSERT_EQUAL( size_t(10), rReports.size() );
+
+	CPPUNIT_ASSERT_DOUBLES_EQUAL( double( cnt.characters() ), rReports[4].second.GetDouble(), 1e-9 );
+	CPPUNIT_ASSERT_DOUBLES_EQUAL( double( cnt.lines() ), rReports[6].second.GetDouble(), 1e-9 );
 
 }
 
@@ -1015,20 +1010,20 @@ void AbstractNodeTest::testLoadSuccessMonitoring()
 
 	TestableNode node( "name", client, *nodes[0] );
 	std::stringstream results;
-	std::string str( "original node data" );
+	std::string str( "original node data\n" );
 	node.SetDataToReturn( str );
-	CPPUNIT_ASSERT_NO_THROW( node.Load( std::map< std::string, std::string >(), results ) );
+
+	boost::scoped_ptr< boost::iostreams::filtering_ostream > output( new boost::iostreams::filtering_ostream() );
+	boost::iostreams::counter cnt;
+	output->push( boost::ref( cnt ) );
+	output->push( results );
+
+	CPPUNIT_ASSERT_NO_THROW( node.Load( std::map< std::string, std::string >(), *output ) );
 
 	const std::vector< std::pair< std::string, MonitoringMetric > >& rReports = pMonitoringInstance->GetReports();
 	CPPUNIT_ASSERT_EQUAL( size_t(6), rReports.size() );
-	CPPUNIT_ASSERT_EQUAL( std::string("dpl.load.payloadBytes"), rReports[0].first );
-	CPPUNIT_ASSERT_EQUAL( std::string("dpl.load.payloadBytes.status.success"), rReports[1].first );
-	CPPUNIT_ASSERT_EQUAL( std::string("dpl.load.payloadLines"), rReports[2].first );
-	CPPUNIT_ASSERT_EQUAL( std::string("dpl.load.payloadLines.status.success"), rReports[3].first );
-	CPPUNIT_ASSERT_EQUAL( std::string("dpl.load.time"), rReports[4].first );
-	CPPUNIT_ASSERT_EQUAL( std::string("dpl.load.time.status.success"), rReports[5].first );
-	CPPUNIT_ASSERT_DOUBLES_EQUAL( double( str.size() ), rReports[0].second.GetDouble(), 1e-9 );
-	CPPUNIT_ASSERT_DOUBLES_EQUAL( double( 0 ), rReports[2].second.GetDouble(), 1e-9 );
+	CPPUNIT_ASSERT_DOUBLES_EQUAL( double( cnt.characters() ), rReports[0].second.GetDouble(), 1e-9 );
+	CPPUNIT_ASSERT_DOUBLES_EQUAL( double( cnt.lines() ), rReports[2].second.GetDouble(), 1e-9 );
 }
 
 void AbstractNodeTest::testLoadFailedMonitoring()
@@ -1596,20 +1591,18 @@ void AbstractNodeTest::testStoreSuccessMonitoring()
 
 	TestableNode node( "name", client, *nodes[0] );
 	std::stringstream data;
-	data << "this is some data";
-	int storeBytes = data.str().size();
-	CPPUNIT_ASSERT_NO_THROW( node.Store( std::map< std::string, std::string >(), data ) );
+	data << "this is some data\nthat is more data";
+
+	boost::scoped_ptr< boost::iostreams::filtering_istream > input( new boost::iostreams::filtering_istream() );
+	boost::iostreams::counter cnt;
+	input->push( boost::ref( cnt ) );
+	input->push( data );
+	CPPUNIT_ASSERT_NO_THROW( node.Store( std::map< std::string, std::string >(), *input ) );
 
 	const std::vector< std::pair< std::string, MonitoringMetric > >& rReports = pMonitoringInstance->GetReports();
 	CPPUNIT_ASSERT_EQUAL( size_t(6), rReports.size() );
-	CPPUNIT_ASSERT_EQUAL( std::string("dpl.store.payloadBytes"), rReports[0].first );
-	CPPUNIT_ASSERT_EQUAL( std::string("dpl.store.payloadBytes.status.success"), rReports[1].first );
-	CPPUNIT_ASSERT_EQUAL( std::string("dpl.store.payloadLines"), rReports[2].first );
-	CPPUNIT_ASSERT_EQUAL( std::string("dpl.store.payloadLines.status.success"), rReports[3].first );
-	CPPUNIT_ASSERT_EQUAL( std::string("dpl.store.time"), rReports[4].first );
-	CPPUNIT_ASSERT_EQUAL( std::string("dpl.store.time.status.success"), rReports[5].first );
-	CPPUNIT_ASSERT_DOUBLES_EQUAL( storeBytes, rReports[0].second.GetDouble(), 1e-9 );	
-	CPPUNIT_ASSERT_DOUBLES_EQUAL( double(0), rReports[2].second.GetDouble(), 1e-9 );	
+	CPPUNIT_ASSERT_DOUBLES_EQUAL( cnt.characters(), rReports[0].second.GetDouble(), 1e-9 );	
+	CPPUNIT_ASSERT_DOUBLES_EQUAL( cnt.lines(), rReports[2].second.GetDouble(), 1e-9 );	
 }
 
 void AbstractNodeTest::testStoreFailedMonitoring()
