@@ -535,11 +535,10 @@ void AbstractNodeTest::testLoadTransformStream()
 	CPPUNIT_ASSERT_EQUAL( expected.str(), results.str() );
 
 	const std::vector< std::pair< std::string, MonitoringMetric > >& rReports = pMonitoringInstance->GetReports();
-	CPPUNIT_ASSERT_EQUAL( size_t(10), rReports.size() );
+	CPPUNIT_ASSERT_EQUAL( size_t(15), rReports.size() );
 
-	CPPUNIT_ASSERT_DOUBLES_EQUAL( double( cnt.characters() ), rReports[4].second.GetDouble(), 1e-9 );
-	CPPUNIT_ASSERT_DOUBLES_EQUAL( double( cnt.lines() ), rReports[6].second.GetDouble(), 1e-9 );
-
+	CPPUNIT_ASSERT_DOUBLES_EQUAL( double( cnt.characters() ), rReports[6].second.GetDouble(), 1e-9 );
+	CPPUNIT_ASSERT_DOUBLES_EQUAL( double( cnt.lines() ), rReports[9].second.GetDouble(), 1e-9 );
 }
 
 void AbstractNodeTest::testLoadFailureForwarding()
@@ -1021,9 +1020,9 @@ void AbstractNodeTest::testLoadSuccessMonitoring()
 	CPPUNIT_ASSERT_NO_THROW( node.Load( std::map< std::string, std::string >(), *output ) );
 
 	const std::vector< std::pair< std::string, MonitoringMetric > >& rReports = pMonitoringInstance->GetReports();
-	CPPUNIT_ASSERT_EQUAL( size_t(6), rReports.size() );
+	CPPUNIT_ASSERT_EQUAL( size_t(9), rReports.size() );
 	CPPUNIT_ASSERT_DOUBLES_EQUAL( double( cnt.characters() ), rReports[0].second.GetDouble(), 1e-9 );
-	CPPUNIT_ASSERT_DOUBLES_EQUAL( double( cnt.lines() ), rReports[2].second.GetDouble(), 1e-9 );
+	CPPUNIT_ASSERT_DOUBLES_EQUAL( double( cnt.lines() ), rReports[3].second.GetDouble(), 1e-9 );
 }
 
 void AbstractNodeTest::testLoadFailedMonitoring()
@@ -1049,9 +1048,7 @@ void AbstractNodeTest::testLoadFailedMonitoring()
 	node.SetDataToReturn( str );
 
 	const std::vector< std::pair< std::string, MonitoringMetric > >& rReports = pMonitoringInstance->GetReports();
-	CPPUNIT_ASSERT_EQUAL( size_t(2), rReports.size() );
-	CPPUNIT_ASSERT_EQUAL( std::string("dpl.load.time"), rReports[0].first );
-	CPPUNIT_ASSERT_EQUAL( std::string("dpl.load.time.status.failed"), rReports[1].first );
+	CPPUNIT_ASSERT_EQUAL( size_t(3), rReports.size() );
 }
 
 void AbstractNodeTest::testStore()
@@ -1178,6 +1175,10 @@ void AbstractNodeTest::testStoreTransformStream()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
+	MockMonitoringInstance* pMonitoringInstance = new MockMonitoringInstance();
+	boost::scoped_ptr< MonitoringInstance > pTemp( pMonitoringInstance );
+	ApplicationMonitor::Swap( pTemp );
+
 	MockDataProxyClient client;
 
 	TestableNode node( "name", client, *nodes[0] );
@@ -1193,7 +1194,13 @@ void AbstractNodeTest::testStoreTransformStream()
 
 	std::stringstream data;
 	data << "this is some data";
-	CPPUNIT_ASSERT_NO_THROW( CPPUNIT_ASSERT( node.Store( parameters, data ) ) );
+	boost::iostreams::filtering_istream input;
+	boost::iostreams::counter cnt;
+	input.push( boost::ref( cnt ) );
+	input.push( data );
+
+	//CPPUNIT_ASSERT_NO_THROW( CPPUNIT_ASSERT( node.Store( parameters, data ) ) );
+	CPPUNIT_ASSERT_NO_THROW( CPPUNIT_ASSERT( node.Store( parameters, input ) ) );
 
 	std::stringstream expected;
 	expected << "StoreImpl called with parameters: " << ProxyUtilities::ToString( expectedParameters ) << " with data: "
@@ -1204,6 +1211,9 @@ void AbstractNodeTest::testStoreTransformStream()
 			 << "ST1_name2 : ST1_value2" << std::endl
 			 << "this is some data" << std::endl;
 	CPPUNIT_ASSERT_EQUAL( expected.str(), node.GetLog() );
+
+	const std::vector< std::pair< std::string, MonitoringMetric > >& rReports = pMonitoringInstance->GetReports();	
+	CPPUNIT_ASSERT_EQUAL( size_t(15), rReports.size() );
 }
 
 void AbstractNodeTest::testStoreRetryCount()
@@ -1600,9 +1610,9 @@ void AbstractNodeTest::testStoreSuccessMonitoring()
 	CPPUNIT_ASSERT_NO_THROW( node.Store( std::map< std::string, std::string >(), *input ) );
 
 	const std::vector< std::pair< std::string, MonitoringMetric > >& rReports = pMonitoringInstance->GetReports();
-	CPPUNIT_ASSERT_EQUAL( size_t(6), rReports.size() );
+	CPPUNIT_ASSERT_EQUAL( size_t(9), rReports.size() );
 	CPPUNIT_ASSERT_DOUBLES_EQUAL( cnt.characters(), rReports[0].second.GetDouble(), 1e-9 );	
-	CPPUNIT_ASSERT_DOUBLES_EQUAL( cnt.lines(), rReports[2].second.GetDouble(), 1e-9 );	
+	CPPUNIT_ASSERT_DOUBLES_EQUAL( cnt.lines(), rReports[3].second.GetDouble(), 1e-9 );	
 }
 
 void AbstractNodeTest::testStoreFailedMonitoring()
@@ -1627,9 +1637,7 @@ void AbstractNodeTest::testStoreFailedMonitoring()
 	CPPUNIT_ASSERT_THROW( node.Store( std::map< std::string, std::string >(), data ), std::exception );
 
 	const std::vector< std::pair< std::string, MonitoringMetric > >& rReports = pMonitoringInstance->GetReports();
-	CPPUNIT_ASSERT_EQUAL( size_t(2), rReports.size() );
-	CPPUNIT_ASSERT_EQUAL( std::string("dpl.store.time"), rReports[0].first );
-	CPPUNIT_ASSERT_EQUAL( std::string("dpl.store.time.status.failed"), rReports[1].first );
+	CPPUNIT_ASSERT_EQUAL( size_t(3), rReports.size() );
 }
 
 void AbstractNodeTest::testDelete()
@@ -1976,9 +1984,7 @@ void AbstractNodeTest::testDeleteSuccessMonitoring()
 	CPPUNIT_ASSERT_NO_THROW( node.Delete( std::map< std::string, std::string >() ) );
 
 	const std::vector< std::pair< std::string, MonitoringMetric > >& rReports = pMonitoringInstance->GetReports();
-	CPPUNIT_ASSERT_EQUAL( size_t(2), rReports.size() );
-	CPPUNIT_ASSERT_EQUAL( std::string("dpl.delete.time"), rReports[0].first );
-	CPPUNIT_ASSERT_EQUAL( std::string("dpl.delete.time.status.success"), rReports[1].first );
+	CPPUNIT_ASSERT_EQUAL( size_t(3), rReports.size() );
 }
 
 void AbstractNodeTest::testDeleteFailedMonitoring()
@@ -2001,8 +2007,6 @@ void AbstractNodeTest::testDeleteFailedMonitoring()
 	CPPUNIT_ASSERT_THROW( node.Delete( std::map< std::string, std::string >() ) , std::exception );
 
 	const std::vector< std::pair< std::string, MonitoringMetric > >& rReports = pMonitoringInstance->GetReports();
-	CPPUNIT_ASSERT_EQUAL( size_t(2), rReports.size() );
-	CPPUNIT_ASSERT_EQUAL( std::string("dpl.delete.time"), rReports[0].first );
-	CPPUNIT_ASSERT_EQUAL( std::string("dpl.delete.time.status.failed"), rReports[1].first );
+	CPPUNIT_ASSERT_EQUAL( size_t(3), rReports.size() );
 }
 

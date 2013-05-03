@@ -39,12 +39,13 @@ namespace
 
 	const std::string METRIC_PAYLOAD_BYTES( "payloadBytes" );
 	const std::string METRIC_PAYLOAD_LINES( "payloadLines" );
-	const std::string METRIC_PAYLOAD_BYTES_BEFORE_TRANSFORM( "payloadBytesPreTransform" );
-	const std::string METRIC_PAYLOAD_LINES_BEFORE_TRANSFORM( "payloadLinesPreTransform" );
+	const std::string METRIC_PAYLOAD_BYTES_PRE_TRANSFORM( "payloadBytesPreTransform" );
+	const std::string METRIC_PAYLOAD_LINES_PRE_TRANSFORM( "payloadLinesPreTransform" );
 
 	const std::string CHILD_STATUS( "status" );
 	const std::string CHILD_STATUS_SUCCESS( "success" );
 	const std::string CHILD_STATUS_FAILED( "failed" );
+	const std::string CHILD_NODENAME( "nodename" );
 
 	const std::map< std::string, std::string >& ChooseParameters( const std::map< std::string, std::string >& i_rOriginalParameters,
 																  const std::map< std::string, std::string >& i_rTranslatedParameters,
@@ -290,11 +291,12 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 		output.reset( NULL );
 
 		// Monitoring report
-		tracker.AddChild( CHILD_STATUS, CHILD_STATUS_SUCCESS );
+		tracker.AddChild( CHILD_STATUS, CHILD_STATUS_SUCCESS ).AddChild( CHILD_NODENAME, m_Name );
+
 		if( needToTransform )
 		{
-			tracker.Report( METRIC_PAYLOAD_BYTES_BEFORE_TRANSFORM, cnt.characters() );
-			tracker.Report( METRIC_PAYLOAD_LINES_BEFORE_TRANSFORM, cnt.lines() );
+			tracker.Report( METRIC_PAYLOAD_BYTES_PRE_TRANSFORM, cnt.characters() );
+			tracker.Report( METRIC_PAYLOAD_LINES_PRE_TRANSFORM, cnt.lines() );
 			tracker.Report( METRIC_PAYLOAD_BYTES, cntWithTransform.characters() );
 			tracker.Report( METRIC_PAYLOAD_LINES, cntWithTransform.lines() );
 		}
@@ -306,7 +308,7 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 	}
 	catch( const BadStreamException& e )
 	{
-		tracker.AddChild( CHILD_STATUS, CHILD_STATUS_FAILED );
+		tracker.AddChild( CHILD_STATUS, CHILD_STATUS_FAILED ).AddChild( CHILD_NODENAME, m_Name );
 
 		throw;
 	}
@@ -325,7 +327,7 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 		Nullable< std::string > forwardName = m_ReadConfig.GetValue< ForwardNodeName >();
 		if( forwardName.IsNull() )
 		{
-			tracker.AddChild( CHILD_STATUS, CHILD_STATUS_FAILED );
+			tracker.AddChild( CHILD_STATUS, CHILD_STATUS_FAILED ).AddChild( CHILD_NODENAME, m_Name );
 
 			throw;
 		}
@@ -391,9 +393,16 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 		i_rData.seekg( inputPos );
 		std::streampos retryPos = inputPos;
 
-		if ( m_WriteConfig.GetValue< Transformers >() != NULL && m_WriteConfig.GetValue< Transformers >()->HasStreamTransformers() )
+		bool needTransform = m_WriteConfig.GetValue< Transformers >() != NULL && m_WriteConfig.GetValue< Transformers >()->HasStreamTransformers();
+
+		boost::iostreams::filtering_istream preTransformInput;
+		boost::iostreams::counter cntPreTransform;
+		preTransformInput.push( boost::ref( cntPreTransform ) );
+		preTransformInput.push( i_rData );
+
+		if ( needTransform )
 		{
-			pTransformedStream = m_WriteConfig.GetValue< Transformers >()->TransformStream( *pUseParameters, i_rData );
+			pTransformedStream = m_WriteConfig.GetValue< Transformers >()->TransformStream( *pUseParameters, preTransformInput );
 			pUseData = pTransformedStream.get();
 			transformedInputPos = pTransformedStream->tellg();
 			retryPos = transformedInputPos;
@@ -410,9 +419,19 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 				pUseData->seekg( retryPos );
 				StoreImpl( *pUseParameters, input );
 
-				tracker.AddChild( CHILD_STATUS, CHILD_STATUS_SUCCESS );
-				tracker.Report( METRIC_PAYLOAD_BYTES, cnt.characters() );
-				tracker.Report( METRIC_PAYLOAD_LINES, cnt.lines() );
+				tracker.AddChild( CHILD_STATUS, CHILD_STATUS_SUCCESS ).AddChild( CHILD_NODENAME, m_Name );
+				if( needTransform )
+				{
+					tracker.Report( METRIC_PAYLOAD_BYTES_PRE_TRANSFORM, cntPreTransform.characters() );
+		            tracker.Report( METRIC_PAYLOAD_LINES_PRE_TRANSFORM, cntPreTransform.lines() );
+		            tracker.Report( METRIC_PAYLOAD_BYTES, cnt.characters() );
+		            tracker.Report( METRIC_PAYLOAD_LINES, cnt.lines() );
+				}
+				else
+				{
+					tracker.Report( METRIC_PAYLOAD_BYTES, cnt.characters() );
+					tracker.Report( METRIC_PAYLOAD_LINES, cnt.lines() );
+				}
 
 				return true;
 			}
@@ -455,7 +474,7 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 		Nullable< std::string > forwardName = m_WriteConfig.GetValue< ForwardNodeName >();
 		if( forwardName.IsNull() )
 		{
-			tracker.AddChild( CHILD_STATUS, CHILD_STATUS_FAILED );
+			tracker.AddChild( CHILD_STATUS, CHILD_STATUS_FAILED ).AddChild( CHILD_NODENAME, m_Name );
 
 			throw;
 		}
@@ -528,7 +547,7 @@ bool AbstractNode::Delete( const std::map<std::string,std::string>& i_rParameter
 			try
 			{
 				DeleteImpl( *pUseParameters );
-				tracker.AddChild( CHILD_STATUS, CHILD_STATUS_SUCCESS );
+				tracker.AddChild( CHILD_STATUS, CHILD_STATUS_SUCCESS ).AddChild( CHILD_NODENAME, m_Name );
 				return true;
 			}
 			catch( const std::exception& ex )
@@ -567,7 +586,7 @@ bool AbstractNode::Delete( const std::map<std::string,std::string>& i_rParameter
 		Nullable< std::string > forwardName = m_DeleteConfig.GetValue< ForwardNodeName >();
 		if( forwardName.IsNull() )
 		{
-			tracker.AddChild( CHILD_STATUS, CHILD_STATUS_FAILED );
+			tracker.AddChild( CHILD_STATUS, CHILD_STATUS_FAILED ).AddChild( CHILD_NODENAME, m_Name );
 			throw;
 		}
 
