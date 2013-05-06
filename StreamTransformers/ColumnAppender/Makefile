@@ -66,7 +66,7 @@ LIBLOC=\
 	${LIB_DIRS:%=-L%} \
 
 # Libraries
-LIBS = -lDataProxy -lclntsh -lmyodbc3 -lxerces-c -lLogger -lboost_regex -lboost_filesystem -llog4cxx -lboost_thread -lcurl
+LIBS = -lDataProxy -lclntsh -odbc -lxerces-c -lLogger -lboost_regex -lboost_filesystem -llog4cxx -lboost_thread -lcurl
 TESTLIBS = -lcppunit -lTestHelpers -lMockDataProxy $(LIBS)
 
 # This is required on the 32 bit platform to prevent recursive

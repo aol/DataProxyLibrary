@@ -64,7 +64,7 @@ LIBLOC=\
 LIBS =	-lService -lUtility -lLogger -llog4cxx -lcurl -lDataProxy \
 		-lagent++ -lsnmp++ -lMonitoring \
 		-lboost_system -lboost_filesystem -lboost_program_options -lboost_regex \
-		-lclntsh -lmyodbc3 -lxerces-c -lboost_thread -lboost_iostreams -lcrypto -lpthread -ldl
+		-lclntsh -lodbc -lxerces-c -lboost_thread -lboost_iostreams -lcrypto -lpthread -ldl
 TESTLIBS = -lTestHelpers -lMockService -lcppunit
 
 ifndef DEFINE_FLAGS

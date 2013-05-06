@@ -71,6 +71,8 @@ namespace
 	const std::string DAT_EXTENSION( ".dat" );
 	const std::string CONTROL_EXTENSION( ".ctrl" );
 	const std::string LOG_EXTENSION( ".log" );
+	const std::string EXCEPTION_EXTENSION( ".exception" );
+	const std::string REJECTED_EXTENSION( ".rejected" );
 	const uint MAX_FILES( 1024 );
 
 	const int DEFAULT_MAX_BIND_SIZE ( 256 );
@@ -236,7 +238,9 @@ namespace
 							 const std::string& i_rName,
 							 std::string& o_rDataFileSpec,
 							 std::string& o_rControlFileSpec,
-							 std::string& o_rLogFileSpec )
+							 std::string& o_rLogFileSpec,
+							 std::string& o_rExceptionFileSpec,
+							 std::string& o_rRejectedFileSpec )
 	{
 		std::stringstream baseFileSpec;
 		std::stringstream uniqueString;
@@ -248,11 +252,15 @@ namespace
 		o_rDataFileSpec = baseFileSpec.str() + DAT_EXTENSION;
 		o_rControlFileSpec = baseFileSpec.str() + CONTROL_EXTENSION;
 		o_rLogFileSpec = baseFileSpec.str() + LOG_EXTENSION;
+		o_rExceptionFileSpec = baseFileSpec.str() + EXCEPTION_EXTENSION;
+		o_rRejectedFileSpec = baseFileSpec.str() + REJECTED_EXTENSION;
 
 		for( uint uniqueId = 2;
 			 FileUtilities::DoesExist( o_rDataFileSpec )
 		  || FileUtilities::DoesExist( o_rControlFileSpec )
-		  || FileUtilities::DoesExist( o_rLogFileSpec );
+		  || FileUtilities::DoesExist( o_rLogFileSpec )
+		  || FileUtilities::DoesExist( o_rExceptionFileSpec )
+		  || FileUtilities::DoesExist( o_rRejectedFileSpec );
 		  ++uniqueId )
 		{
 			if( uniqueId > MAX_FILES )
@@ -266,6 +274,8 @@ namespace
 			o_rDataFileSpec = baseFileSpec.str() + uniqueString.str() + DAT_EXTENSION;
 			o_rControlFileSpec = baseFileSpec.str() + uniqueString.str() + CONTROL_EXTENSION;
 			o_rLogFileSpec = baseFileSpec.str() + uniqueString.str() + LOG_EXTENSION;
+			o_rExceptionFileSpec = baseFileSpec.str() + uniqueString.str() + EXCEPTION_EXTENSION;
+			o_rRejectedFileSpec = baseFileSpec.str() + uniqueString.str() + REJECTED_EXTENSION;
 		}
 	}
 
@@ -328,7 +338,7 @@ namespace
 			m_TempTableName( i_rStagingTable )
 		{
 			std::stringstream sql;
-			sql << "CREATE TABLE " << m_TempTableName << ( i_rDatabaseType == ORACLE_DB_TYPE ? " AS " : "" ) << "( SELECT * FROM " << i_rTable << " WHERE 1 = 0 )";
+			sql << "CREATE TABLE " << m_TempTableName << ( i_rDatabaseType == MYSQL_DB_TYPE ? " " : " AS " ) << "( SELECT * FROM " << i_rTable << " WHERE 1 = 0 )";
 			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.CreatingStagingTable", "Creating staging table: " << m_TempTableName << " with statement: " << sql.str() );
 			Database::Statement( m_rDatabase, sql.str() ).Execute();
 		}
@@ -363,6 +373,22 @@ namespace
 	{
 		return i_rTable.find( '.' ) != std::string::npos ? i_rTable : i_rSchema + "." + i_rTable;
 	}
+
+	std::string ReadFile( const std::string& i_rPath )
+	{
+		std::ifstream file( i_rPath.c_str() );
+		std::stringstream results;
+		std::string line;
+		while( std::getline( file, line ) )
+		{
+			if( results.tellp() > 0L )
+			{
+				results << ' ';
+			}
+			results << line;
+		}
+		return results.str();
+	}
 }
 
 DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rParent, const xercesc::DOMNode& i_rNode, DatabaseConnectionManager& i_rDatabaseConnectionManager )
@@ -382,6 +408,7 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 	m_WriteWorkingDir(),
 	m_WriteMySqlMergeQuery(),
 	m_WriteOracleMergeQuery(),
+	m_WriteVerticaMergeQuery(),
 	m_WriteBindColumns(),
 	m_WriteOnColumnParameterCollision( FAIL ),
 	m_PreStatement(),
@@ -588,9 +615,13 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 			{
 				m_WriteMySqlMergeQuery = query;
 			}
-			else
+			else if( dbType == ORACLE_DB_TYPE )
 			{
 				m_WriteOracleMergeQuery = query;
+			}
+			else
+			{
+				m_WriteVerticaMergeQuery = query;
 			}
 		}
 		else
@@ -603,6 +634,10 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 																	 ORACLE_DB_TYPE, m_WriteTable, m_WriteStagingTable,
 																	 *XMLUtilities::GetSingletonChildByName( pNode, COLUMNS_NODE ),
 																	 insertOnly, m_WriteRequiredColumns, m_WriteNodeColumnLengths );
+			m_WriteVerticaMergeQuery = ProxyUtilities::GetMergeQuery( m_rDatabaseConnectionManager, m_WriteConnectionName,
+																	  VERTICA_DB_TYPE, m_WriteTable, m_WriteStagingTable,
+																	  *XMLUtilities::GetSingletonChildByName( pNode, COLUMNS_NODE ),
+																	  insertOnly, m_WriteRequiredColumns, m_WriteNodeColumnLengths );
 		}
 	}
 
@@ -812,6 +847,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 	{
 		std::string mysqlMergeQuery = ProxyUtilities::GetVariableSubstitutedString( m_WriteMySqlMergeQuery, i_rParameters );
 		std::string oracleMergeQuery = ProxyUtilities::GetVariableSubstitutedString( m_WriteOracleMergeQuery, i_rParameters );
+		std::string verticaMergeQuery = ProxyUtilities::GetVariableSubstitutedString( m_WriteVerticaMergeQuery, i_rParameters );
 		std::string databaseType;
 		std::string table;
 		if( m_WriteConnectionByTable )
@@ -824,7 +860,12 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			table = ProxyUtilities::GetVariableSubstitutedString( m_WriteTable, i_rParameters );
 			databaseType = m_rDatabaseConnectionManager.GetDatabaseType( m_WriteConnectionName );
 		}
-		std::string sql( databaseType == ORACLE_DB_TYPE ? oracleMergeQuery : mysqlMergeQuery );
+		if( databaseType == VERTICA_DB_TYPE )
+		{
+			MV_THROW( DatabaseProxyException, "Writing to vertica without a staging table is currently unsupported" );
+		}
+		std::string sql( databaseType == ORACLE_DB_TYPE ? oracleMergeQuery : 
+					   ( databaseType == MYSQL_DB_TYPE ? mysqlMergeQuery : verticaMergeQuery ) );
 		Database::Statement statement( *pTransactionDatabase, sql );
 
 		// create a vector for all necessary pieces of data
@@ -910,7 +951,9 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 		std::string dataFileSpec;
 		std::string controlFileSpec;
 		std::string logFileSpec;
-		GetUniqueFileSpecs( m_WriteWorkingDir, m_Name, dataFileSpec, controlFileSpec, logFileSpec );
+		std::string exceptionFileSpec;
+		std::string rejectedFileSpec;
+		GetUniqueFileSpecs( m_WriteWorkingDir, m_Name, dataFileSpec, controlFileSpec, logFileSpec, exceptionFileSpec, rejectedFileSpec );
 
 		// write the data file
 		MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.WritingDataFile.Begin", "Writing data to file: " << dataFileSpec );
@@ -959,6 +1002,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			std::string stagingTable = ProxyUtilities::GetVariableSubstitutedString( m_WriteStagingTable, i_rParameters );
 			std::string mysqlMergeQuery = ProxyUtilities::GetVariableSubstitutedString( m_WriteMySqlMergeQuery, i_rParameters );
 			std::string oracleMergeQuery = ProxyUtilities::GetVariableSubstitutedString( m_WriteOracleMergeQuery, i_rParameters );
+			std::string verticaMergeQuery = ProxyUtilities::GetVariableSubstitutedString( m_WriteVerticaMergeQuery, i_rParameters );
 			std::string table;
 			std::string databaseType;
 			
@@ -1100,6 +1144,79 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 					if( !m_WriteNoCleanUp )
 					{
 						FileUtilities::Remove( dataFileSpec );
+					}
+				}
+				else if( databaseType == VERTICA_DB_TYPE )
+				{
+					// if this isn't a dynamic staging table, we need to truncate it
+					if( !m_WriteDynamicStagingTable )
+					{
+						std::stringstream sql;
+						sql << "TRUNCATE TABLE " << stagingTable;
+						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.TruncateStagingTable", "Truncating staging table: " << stagingTable << " using the ddl connection with statement: " << sql.str() );
+						Database::Statement( *pDataDefinitionDatabase, sql.str() ).Execute();
+					}
+
+					std::stringstream sql;
+					// load the data into the table
+					sql.str("");
+					sql << "COPY " << stagingTable << "( " << columns << " )"
+						<< " FROM LOCAL '" << dataFileSpec << "'"
+						<< " EXCEPTIONS '" << exceptionFileSpec << "'"
+						<< " REJECTED DATA '" << rejectedFileSpec << "'"
+						<< " DELIMITER ','"
+						<< " NULL ''"
+						<< " ESCAPE '\\'"
+						<< " SKIP 1"
+						<< ( m_WriteDirectLoad ? " DIRECT" : "" )
+						<< " TRAILING NULLCOLS";
+					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Begin", "Uploading " << count << " rows of data to staging table: " << stagingTable );
+					stopwatch.Reset();
+					Database::Statement( *pTransactionDatabase, sql.str() ).Execute();
+					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Finished", "Done uploading " << count << " rows of data to staging table: " << stagingTable << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
+					if( FileUtilities::GetSize( exceptionFileSpec ) > 0L )
+					{
+						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Upload.Exceptions", "Encountered exceptions while uploading: " << ReadFile( exceptionFileSpec ) );
+					}
+				
+
+					// issue the pre-statement query if one exists
+					if (!m_PreStatement.IsNull())
+					{
+						stopwatch.Reset();
+						std::string preStatement( ProxyUtilities::GetVariableSubstitutedString( m_PreStatement, i_rParameters ) );
+						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Begin", "Executing configured pre-statement: " << preStatement );
+						Database::Statement( *pTransactionDatabase, preStatement ).Execute();
+						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PreStatement.Finished",
+							"Finished executing pre-statement: " << preStatement << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
+					}
+
+					// merge staging table data into primary table
+					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Begin", "Merging " << count << " rows of data from staging table with query: " << verticaMergeQuery );
+					stopwatch.Reset();
+					Database::Statement( *pTransactionDatabase, verticaMergeQuery ).Execute();
+					MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.Merge.Finished", "Merge of " << count << " rows complete after " << stopwatch.GetElapsedSeconds() << " seconds" );
+
+					// issue the post-statement query if one exists
+					if (!m_PostStatement.IsNull())
+					{
+						stopwatch.Reset();
+						std::string postStatement( ProxyUtilities::GetVariableSubstitutedString( m_PostStatement, i_rParameters ) );
+						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Begin", "Executing configured post-statement: " << postStatement );
+						Database::Statement( *pTransactionDatabase, postStatement ).Execute();
+						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.PostStatement.Finished",
+							"Finished executing post-statement: " << postStatement << " after " << stopwatch.GetElapsedSeconds() << " seconds" );
+					}
+
+					// if cleaning up, remove files
+					if( !m_WriteNoCleanUp )
+					{
+						FileUtilities::Remove( dataFileSpec );
+						FileUtilities::Remove( exceptionFileSpec );
+						if( FileUtilities::GetSize( rejectedFileSpec ) == 0L )
+						{
+							FileUtilities::Remove( rejectedFileSpec );
+						}
 					}
 				}
 				else

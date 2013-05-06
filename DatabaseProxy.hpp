@@ -64,6 +64,7 @@ private:
 	std::string m_WriteWorkingDir;
 	std::string m_WriteMySqlMergeQuery;
 	std::string m_WriteOracleMergeQuery;
+	std::string m_WriteVerticaMergeQuery;
 	std::vector< std::string > m_WriteBindColumns;
 	std::string m_WriteOnColumnParameterCollision;
 	Nullable<std::string> m_PreStatement;

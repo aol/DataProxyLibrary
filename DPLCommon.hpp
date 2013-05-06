@@ -51,6 +51,7 @@ const std::string MULTI_VALUE_SOURCE( "*" );
 
 const std::string ORACLE_DB_TYPE("oracle");
 const std::string MYSQL_DB_TYPE("mysql");
+const std::string VERTICA_DB_TYPE("vertica");
 
 enum ParameterTypeIndicator
 {

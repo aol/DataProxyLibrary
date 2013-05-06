@@ -93,7 +93,7 @@ LIBLOC=\
 	$(LIB_DIRS:%=-L%) \
 
 # Libraries
-LIBS		=  -lLogger -lclntsh -lmyodbc3 -lxerces-c -lpthread -lboost_iostreams -lboost_regex -lboost_filesystem -lboost_program_options -llog4cxx -lboost_thread -lcurl -lssl -luuid -lnnz10 -lcrypto -ldl -lboost_system -lagent++ -lsnmp++ -lmemcached
+LIBS		=  -lLogger -lclntsh -lodbc -lxerces-c -lpthread -lboost_iostreams -lboost_regex -lboost_filesystem -lboost_program_options -llog4cxx -lboost_thread -lcurl -lssl -luuid -lnnz10 -lcrypto -ldl -lboost_system -lagent++ -lsnmp++ -lmemcached
 TESTLIBS	= -lcppunit -lTestHelpers -lMockDatabase -lMockService -lMockUtility -lMockMonitoring $(LIBS)
 MATLABLIBS	= -lMatlab -leng -lmx -lut -lmat
 

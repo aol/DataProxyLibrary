@@ -143,13 +143,11 @@ void DatabaseConnectionManager::Parse( const xercesc::DOMNode& i_rDatabaseConnec
 		DatabaseConnectionDatum datum;
 
 		std::string type = XMLUtilities::GetAttributeValue(*iter, TYPE_ATTRIBUTE);
-		std::string databaseName = XMLUtilities::GetAttributeValue( *iter, DATABASE_NAME_ATTRIBUTE );
 		std::string databaseUserName = XMLUtilities::GetAttributeValue( *iter, DATABASE_USERNAME_ATTRIBUTE );
 		std::string databasePassword = XMLUtilities::GetAttributeValue( *iter, DATABASE_PASSWORD_ATTRIBUTE );
 		std::string connectionName = XMLUtilities::GetAttributeValue( *iter, CONNECTION_NAME_ATTRIBUTE );
 		double reconnectTimeout = GetTimeout( *iter, 3600 );	// by default, reconnect every hour
 
-		databaseConfig.SetValue<DatabaseName>(databaseName);
 		databaseConfig.SetValue<DatabaseUserName>(databaseUserName);
 		databaseConfig.SetValue<DatabasePassword>(databasePassword);
 
@@ -158,11 +156,14 @@ void DatabaseConnectionManager::Parse( const xercesc::DOMNode& i_rDatabaseConnec
 
 		if (type == ORACLE_DB_TYPE)
 		{
+			std::string databaseName = XMLUtilities::GetAttributeValue( *iter, DATABASE_NAME_ATTRIBUTE );
 			std::string databaseSchema = XMLUtilities::GetAttributeValue( *iter, DATABASE_SCHEMA_ATTRIBUTE );
 			databaseConfig.SetValue<DatabaseSchema>(databaseSchema);
+			databaseConfig.SetValue<DatabaseName>(databaseName);
 		}
 		else if (type == MYSQL_DB_TYPE)
 		{
+			std::string databaseName = XMLUtilities::GetAttributeValue( *iter, DATABASE_NAME_ATTRIBUTE );
 			std::string databaseServer = XMLUtilities::GetAttributeValue( *iter, DATABASE_SERVER_ATTRIBUTE );
 			std::string disableCache = XMLUtilities::GetAttributeValue( *iter, DISABLE_CACHE_ATTRIBUTE );
 			bool bDisableCache = false;
@@ -181,8 +182,19 @@ void DatabaseConnectionManager::Parse( const xercesc::DOMNode& i_rDatabaseConnec
 						 "MySQL db connection has invalid value for disableCache attribute: " << disableCache << ". Valid values are 'true' and 'false'");
 			}
 
+			databaseConfig.SetValue<DatabaseName>(databaseName);
 			databaseConfig.SetValue<DatabaseServer>(databaseServer);
 			databaseConfig.SetValue<DisableCache>(bDisableCache);
+		}
+		else if (type == VERTICA_DB_TYPE)
+		{
+			// vertica does not actually support multiple databases, so db name is not needed.
+			// however, it does use schemas, but in order to fit our current ODBCdb class, we will actually parse
+			// the schema attribute and set it as the database NAME, so that we switch over to the right schema
+			std::string databaseSchema = XMLUtilities::GetAttributeValue( *iter, DATABASE_SCHEMA_ATTRIBUTE );
+			std::string databaseServer = XMLUtilities::GetAttributeValue( *iter, DATABASE_SERVER_ATTRIBUTE );
+			databaseConfig.SetValue<DatabaseName>(databaseSchema);
+			databaseConfig.SetValue<DatabaseServer>(databaseServer);
 		}
 		else
 		{
@@ -229,7 +241,7 @@ void DatabaseConnectionManager::FetchConnectionsByTable( const std::string& i_rN
 	
 	while( pReader->NextRow() )
 	{
-		if( type != MYSQL_DB_TYPE && type != ORACLE_DB_TYPE )
+		if( type != MYSQL_DB_TYPE && type != ORACLE_DB_TYPE && type != VERTICA_DB_TYPE )
 		{
 			MV_THROW( DatabaseConnectionManagerException, "Unrecognized database type parsed from shard connections: " << type );
 		}
@@ -424,6 +436,25 @@ boost::shared_ptr< Database > DatabaseConnectionManager::GetConnection(const std
 												datum.GetValue<DatabaseUserName>(),
 												datum.GetValue<DatabasePassword>(),
 												datum.GetValue<DisableCache>(),
+												datum.GetValue<DatabaseName>());
+			
+			boost::shared_ptr<Database>& rDatabaseHandle = rDatum.GetReference<DatabaseConnection>();
+			rDatabaseHandle.reset(pDatabase);
+			rDatum.GetReference< ConnectionTimer >().reset( new Stopwatch() );
+			return rDatabaseHandle;
+		}
+		else if (connectionType == VERTICA_DB_TYPE)
+		{
+			MVLOGGER("root.lib.DataProxy.DatabaseConnectionManager.Connect.CreatingVerticaDatabaseConnection",
+					 "Creating vertica database connection named " << rDatum.GetValue<ConnectionName>() << ".");
+			
+			DatabaseConfigDatum datum = rDatum.GetValue<DatabaseConfig>();
+			Database *pDatabase = new Database( Database::DBCONN_ODBC_VERTICA,
+												datum.GetValue<DatabaseServer>(),
+												"",
+												datum.GetValue<DatabaseUserName>(),
+												datum.GetValue<DatabasePassword>(),
+												false,
 												datum.GetValue<DatabaseName>());
 			
 			boost::shared_ptr<Database>& rDatabaseHandle = rDatum.GetReference<DatabaseConnection>();

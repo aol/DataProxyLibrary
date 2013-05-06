@@ -71,8 +71,8 @@ LIBLOC=\
 	-L/data/lib \
 
 # Libraries
-LIBS		= -lDataProxy -lLogger -lclntsh -lmyodbc3 -lxerces-c -lpthread -lboost_regex -lboost_filesystem -llog4cxx -lboost_thread -lcurl
-TESTLIBS    = -lcppunit -lTestHelpers -lDatabase -lclntsh -lmyodbc3 
+LIBS		= -lDataProxy -lLogger -lclntsh -odbc -lxerces-c -lpthread -lboost_regex -lboost_filesystem -llog4cxx -lboost_thread -lcurl
+TESTLIBS    = -lcppunit -lTestHelpers -lDatabase -lclntsh -odbc 
 
 # This is required on the 32 bit platform to prevent recursive
 # variable definition errors for DEFINE_FLAGS

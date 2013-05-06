@@ -282,7 +282,7 @@ namespace
 		}
 	}
 
-	void OracleGetNonNullable( DatabaseConnectionManager& i_rDatabaseConnectionManager, const std::string& i_rConnectionName, const std::string& i_rTable, std::set< std::string >& o_rNullableColumns )
+	void OracleGetNonNullable( DatabaseConnectionManager& i_rDatabaseConnectionManager, const std::string& i_rConnectionName, const std::string& i_rTable, std::set< std::string >& o_rNonNullableColumns )
 	{
 		try
 		{
@@ -298,7 +298,7 @@ namespace
 			stmt.CompleteBinding();
 			while( stmt.NextRow() )
 			{
-				o_rNullableColumns.insert( column );
+				o_rNonNullableColumns.insert( column );
 			}
 		}
 		catch( const DBException& i_rException )
@@ -307,7 +307,7 @@ namespace
 		}
 	}
 
-	void MySqlGetNonNullable( DatabaseConnectionManager& i_rDatabaseConnectionManager, const std::string& i_rConnectionName, const std::string& i_rTable, std::set< std::string >& o_rNullableColumns )
+	void MySqlGetNonNullable( DatabaseConnectionManager& i_rDatabaseConnectionManager, const std::string& i_rConnectionName, const std::string& i_rTable, std::set< std::string >& o_rNonNullableColumns )
 	{
 		try
 		{
@@ -333,8 +333,30 @@ namespace
 				if( nullable == "NO" )
 				{
 					boost::algorithm::to_lower( column );
-					o_rNullableColumns.insert( column );
+					o_rNonNullableColumns.insert( column );
 				}
+			}
+		}
+		catch( const DBException& i_rException )
+		{
+			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.ResolveNullKeys", "Unable to determine any non-null keys due to exception: " << i_rException << "; assuming keys are nullable" );
+		}
+	}
+
+	void VerticaGetNonNullable( DatabaseConnectionManager& i_rDatabaseConnectionManager, const std::string& i_rConnectionName, const std::string& i_rTable, std::set< std::string >& o_rNonNullableColumns )
+	{
+		try
+		{
+			boost::shared_ptr< Database > pDatabase( i_rDatabaseConnectionManager.GetConnection( i_rConnectionName ) );
+			std::stringstream sql;
+			sql << "SELECT LOWER( column_name ) FROM columns WHERE table_name = '" << i_rTable << "' AND is_nullable = 'f'";
+			Database::Statement stmt( *pDatabase, sql.str() );
+			std::string column;
+			stmt.BindCol( column, 128 );
+			stmt.CompleteBinding();
+			while( stmt.NextRow() )
+			{
+				o_rNonNullableColumns.insert( column );
 			}
 		}
 		catch( const DBException& i_rException )
@@ -435,6 +457,10 @@ std::string ProxyUtilities::GetMergeQuery( DatabaseConnectionManager& i_rDatabas
 	else if( i_rDatabaseType == MYSQL_DB_TYPE )
 	{
 		MySqlGetNonNullable( i_rDatabaseConnectionManager, i_rConnectionName, i_rTable, nonNullableKeyColumns );
+	}
+	else if( i_rDatabaseType == VERTICA_DB_TYPE )
+	{
+		VerticaGetNonNullable( i_rDatabaseConnectionManager, i_rConnectionName, i_rTable, nonNullableKeyColumns );
 	}
 	else
 	{
@@ -582,8 +608,8 @@ std::string ProxyUtilities::GetMergeQuery( DatabaseConnectionManager& i_rDatabas
 	}
 
 	std::stringstream result;
-	// case 1: raw insert-only (choke on duplicates). INSERT INTO syntax is the same for oracle and mysql
-	if( i_InsertOnly )
+	// case 1: raw insert-only (choke on duplicates or there are no keys). INSERT INTO syntax is the same for oracle, mysql, vertica
+	if( i_InsertOnly || keyColumns.empty() )
 	{
 		// check to be sure that there are no "ifMatched" columns
 		if( !ifMatchedColumns.empty() )
@@ -612,8 +638,8 @@ std::string ProxyUtilities::GetMergeQuery( DatabaseConnectionManager& i_rDatabas
 		return result.str();
 	}
 
-	// from here we have to discern between oracle and mysql
-	if( i_rDatabaseType == ORACLE_DB_TYPE )
+	// from here we have to discern between oracle, mysql, vertica
+	if( i_rDatabaseType == ORACLE_DB_TYPE || i_rDatabaseType == VERTICA_DB_TYPE )
 	{
 		std::string resolvedStagingTable = ( i_rStagingTable.empty() ? DUMMY_STAGING : i_rStagingTable );
 		result << "MERGE INTO " << i_rTable
