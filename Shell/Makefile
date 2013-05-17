@@ -14,31 +14,32 @@
 ROOTDIR		= ../../../..
 
 # Directories for common components
-INCLUDE_DIRS ?= /usr/local/include
-LIB_DIRS ?= /usr/local/lib
 THPP2HPP = $(ROOTDIR)/lib/cpp/GDP/scripts/thpp2hpp
 
 # Ad.com Modules used by the project, directory path should be fully specified from
 # Optimization/ directory -- does not include CPPUNIT
 MODULES=\
-	lib/cpp/Utility \
 	lib/cpp/Logger \
+	lib/cpp/DataProxy \
+
+INCMODULES=\
+	lib/cpp/Utility \
 	lib/cpp/GDP \
 	lib/cpp/Service \
 	lib/cpp/Database \
-	lib/cpp/DataProxy \
 
 TESTMODULES=\
 	lib/cpp/TestHelpers \
 
 MODULESPEC = $(MODULES:%=$(ROOTDIR)/%)
+INCMODULESPEC		= $(INCMODULES:%=$(ROOTDIR)/%)
 TESTMODULESPEC = $(TESTMODULES:%=$(ROOTDIR)/%)
 
 # Include directories
 INCS=\
 	-I. \
 	$(MODULESPEC:%=-I%) \
-	$(INCLUDE_DIRS:%=-I%) \
+	$(INCMODULESPEC:%=-I%) \
 
 TESTINCS=\
 	$(INCS) \
@@ -51,10 +52,9 @@ LIBLOC=\
 	-L${ORACLE_HOME}/lib \
 	$(MODULES:%=-L$(ROOTDIR)/%) \
 	$(TESTMODULES:%=-L$(ROOTDIR)/%) \
-	$(LIB_DIRS:%=-L%) \
 
 # Libraries
-LIBS =	-lUtility -lLogger -llog4cxx -lService -lcurl -lDataProxy\
+LIBS =	-lLogger -llog4cxx -lcurl -lDataProxy\
 		-lboost_system -lboost_filesystem -lboost_program_options -lboost_regex -lclntsh -lodbc -lxerces-c -lboost_thread -lcrypto
 TESTLIBS = -lTestHelpers -lcppunit
 
@@ -172,6 +172,8 @@ test_coverage: $(COVERAGEDIR)
 # if necessary, build libraries.
 extlibs:
 	$(MODULES:%=cd $(ROOTDIR)/%;make ${SUBTARGET};cd -;)
+
+testextlibs: extlibs
 	$(TESTMODULES:%=cd $(ROOTDIR)/%;make ${SUBTARGET};cd -;)
 
 # Create links to the target dir
@@ -188,13 +190,13 @@ $(SYSTEST_TARGET): % : $(TARGETDIR)/% $(TARGETDIR)
 $(TARGETDIR)/$(PRIMARY_TARGET): extlibs ${MAINOBJSPEC} ${PRIVOBJSPEC}
 	${CXXL} ${LIBLOC} -o $@ ${MAINOBJSPEC} ${PRIVOBJSPEC} ${LIBS}
 
-$(TEST_TARGET:%=$(TARGETDIR)/%): extlibs $(PRIVOBJSPEC)
+$(TEST_TARGET:%=$(TARGETDIR)/%): testextlibs $(PRIVOBJSPEC)
 $(TEST_TARGET:%=$(TARGETDIR)/%): $(TESTOBJSPEC)
 	$(CXXL) ${LIBLOC} -o $@ $(PRIVOBJSPEC) $(TESTOBJSPEC) \
 	${TESTLIBS} ${LIBS}
 
 $(SYSTEST_TARGET:%=$(TARGETDIR)/%): $(PRIMARY_TARGET)
-$(SYSTEST_TARGET:%=$(TARGETDIR)/%): extlibs $(PRIVOBJSPEC)
+$(SYSTEST_TARGET:%=$(TARGETDIR)/%): testextlibs $(PRIVOBJSPEC)
 $(SYSTEST_TARGET:%=$(TARGETDIR)/%): $(SYSTESTOBJSPEC)
 	$(CXXL) ${LIBLOC} -o $@ $(PRIVOBJSPEC) $(SYSTESTOBJSPEC) \
 	${TESTLIBS} ${LIBS}
@@ -250,14 +252,16 @@ nodepend:
 	rm -f Makefile.depend
 
 clean: localclean
-	- $(MODULES:%=(cd $(ROOTDIR)/% && make clean)&&) true
-	- rm -rf $(ALLTARGETDIRS)
+	$(MODULES:%=(cd $(ROOTDIR)/% && make clean)&&) true
+	${TESTMODULESPEC:%=(cd % && ${MAKE} localclean) && } true
+	rm -rf $(ALLTARGETDIRS)
 
 localclean:
 	- rm -f $(PRIMARY_TARGET) \
 		$(TEST_TARGET) \
 		$(SYSTEST_TARGET) \
 		$(THPP2HPPFILES) \
+		Makefile.depend \
 		cppunit_Logger_log.xml \
 		data_proxy_service_system_test_results \
 		data_proxy_service_test_results
@@ -269,3 +273,4 @@ FIND_LOG_IDS=grep -r 'MVLOGGER[^(]*([^"]*"' ./ | grep -v Binary | sed 's/.*MVLOG
 logger-config:
 	@${FIND_LOG_IDS} > ${LOG_CONFIG_FILE}
 	@$(MODULES:%=(cd $(ROOTDIR)/% && ${FIND_LOG_IDS} >> ${LOG_CONFIG_FILE}) &&) true
+	@$(INCMODULESPEC:%=(cd % && ${FIND_LOG_IDS} >> ${LOG_CONFIG_FILE}) &&) true

@@ -20,10 +20,6 @@ MATLABDIR	?= /data/app/matlab
 MYSQLHOME	?= /usr/local/mysql
 ORACLE_HOME	?= /usr/oracle
 
-# Directories for including & linking
-INCLUDE_DIRS 	?= /usr/local/include
-LIB_DIRS 	?= /usr/local/lib 
-
 # folders that contain files we need to manually compile
 # in order to build a self-contained dynamic library
 UTILITYDIR		= ${ROOTDIR}/lib/cpp/Utility
@@ -38,9 +34,9 @@ THPP2HPP        = $(ROOTDIR)/lib/cpp/GDP/scripts/thpp2hpp
 #Modules
 MODULES=\
 	lib/cpp/Logger \
-	lib/cpp/GDP \
 
 INCMODULES=\
+	lib/cpp/GDP \
 	lib/cpp/Service \
 	lib/cpp/Utility \
 	lib/cpp/Database \
@@ -71,7 +67,6 @@ INCS=\
 	-I${ORACLE_HOME}/rdbms/demo \
 	-I${ORACLE_HOME}/network/public \
 	-I${ORACLE_HOME}/rdbms/public \
-	$(INCLUDE_DIRS:%=-I%) \
 	-I$(MATLABDIR)/extern/include \
 
 TESTINCS=\
@@ -90,7 +85,6 @@ LIBLOC=\
 	$(MODULESPEC:%=-L%) \
 	${TESTMODULESPEC:%=-L%} \
 	${MATLABMODULESPEC:%=-L%} \
-	$(LIB_DIRS:%=-L%) \
 
 # Libraries
 LIBS		=  -lLogger -lclntsh -lodbc -lxerces-c -lpthread -lboost_iostreams -lboost_regex -lboost_filesystem -lboost_program_options -llog4cxx -lboost_thread -lcurl -lssl -luuid -lnnz10 -lcrypto -ldl -lboost_system -lagent++ -lsnmp++ -lmemcached
@@ -490,6 +484,7 @@ clean: localclean
 localclean:
 	- rm -f $(ALL_TARGETS) \
 			$(THPP2HPPFILES) \
+			Makefile.depend \
 			cppunit_Logger_log.txt \
 			data_proxy_tests_result
 	- rm -rf $(ALLTARGETDIRS)
