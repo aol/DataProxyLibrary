@@ -231,6 +231,7 @@ UTILITYFILES=\
 	UTCTimeProvider.cpp \
 	XercesString.cpp \
 	XMLUtilities.cpp \
+	FilesystemWatcher.cpp \
 
 DATABASEFILES=\
 	Database.cpp \
@@ -252,6 +253,7 @@ DATABASEFILES=\
 
 MONITORINGFILES=\
 	ApplicationMonitor.cpp \
+	MonitoringConfigFileWatcher.cpp \
 	BucketAggregator.cpp \
 	LastNAggregator.cpp \
 	MonitoringAggregator.cpp \
