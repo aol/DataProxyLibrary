@@ -87,7 +87,9 @@ LIBLOC=\
 	${MATLABMODULESPEC:%=-L%} \
 
 # Libraries
-LIBS		=  -lLogger -lclntsh -lodbc -lxerces-c -lpthread -lboost_iostreams -lboost_regex -lboost_filesystem -lboost_program_options -llog4cxx -lboost_thread -lcurl -lssl -luuid -lnnz10 -lcrypto -ldl -lboost_system -lagent++ -lsnmp++ -lmemcached
+LIBS		=  -lLogger \
+			   -lboost_iostreams -lboost_regex -lboost_filesystem -lboost_program_options -lboost_thread -lboost_system \
+			   -lclntsh -lodbc -lxerces-c -lpthread -llog4cxx -lcurl -lssl -luuid -lnnz10 -lcrypto -ldl -lagent++ -lsnmp++
 TESTLIBS	= -lcppunit -lTestHelpers -lMockDatabase -lMockService -lMockUtility -lMockMonitoring $(LIBS)
 MATLABLIBS	= -lMatlab -leng -lmx -lut -lmat
 
