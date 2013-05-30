@@ -25,7 +25,6 @@ ORACLE_HOME	?= /usr/oracle
 UTILITYDIR		= ${ROOTDIR}/lib/cpp/Utility
 SERVICEDIR		= ${ROOTDIR}/lib/cpp/Service
 DATABASEDIR		= ${ROOTDIR}/lib/cpp/Database
-MONITORINGDIR		= ${ROOTDIR}/lib/cpp/Monitoring
 TESTHELPERDIR		= ${ROOTDIR}/lib/cpp/TestHelpers
 
 # for auto-generating hpp files from thpp for GDP
@@ -34,13 +33,13 @@ THPP2HPP        = $(ROOTDIR)/lib/cpp/GDP/scripts/thpp2hpp
 #Modules
 MODULES=\
 	lib/cpp/Logger \
+	lib/cpp/Monitoring \
 
 INCMODULES=\
 	lib/cpp/GDP \
 	lib/cpp/Service \
 	lib/cpp/Utility \
 	lib/cpp/Database \
-	lib/cpp/Monitoring \
 
 TESTMODULES=\
 	lib/cpp/TestHelpers \
@@ -87,7 +86,7 @@ LIBLOC=\
 	${MATLABMODULESPEC:%=-L%} \
 
 # Libraries
-LIBS		=  -lLogger \
+LIBS		=  -lLogger -lMonitoring \
 			   -lboost_iostreams -lboost_regex -lboost_filesystem -lboost_program_options -lboost_thread -lboost_system \
 			   -lclntsh -lodbc -lxerces-c -lpthread -llog4cxx -lcurl -lssl -luuid -lnnz10 -lcrypto -ldl -lagent++ -lsnmp++
 TESTLIBS	= -lcppunit -lTestHelpers -lMockDatabase -lMockService -lMockUtility -lMockMonitoring $(LIBS)
@@ -247,27 +246,11 @@ DATABASEFILES=\
 	LargeScaleSelectStatement.cpp \
 	Statement.cpp \
 
-MONITORINGFILES=\
-	ApplicationMonitor.cpp \
-	MonitoringConfigFileWatcher.cpp \
-	BucketAggregator.cpp \
-	LastNAggregator.cpp \
-	MonitoringAggregator.cpp \
-	MonitoringCollector.cpp \
-	MonitoringFactory.cpp \
-	MonitoringHttpHandler.cpp \
-	MonitoringInstance.cpp \
-	MonitoringMetric.cpp \
-	MonitoringTracker.cpp \
-	PercentileAggregator.cpp \
-	StatsAggregator.cpp \
-
 # Creating explicit paths to sets of source files
 PRIVATEFILESPEC			= $(PRIVATEFILES:%=$(PRIVATEDIR)/%)
 UTILITYFILESPEC			= $(UTILITYFILES:%=$(UTILITYDIR)/$(PRIVATEDIR)/%)
 SERVICEFILESPEC			= $(SERVICEFILES:%=$(SERVICEDIR)/$(PRIVATEDIR)/%)
 DATABASEFILESPEC		= $(DATABASEFILES:%=$(DATABASEDIR)/$(PRIVATEDIR)/%)
-MONITORINGFILESPEC		= $(MONITORINGFILES:%=$(MONITORINGDIR)/$(PRIVATEDIR)/%)
 TESTFILESPEC			= $(TESTFILES:%=$(TESTDIR)/%)
 THREADTESTFILESPEC		= $(TESTFILES:%=$(TESTDIR)/%)
 MATLABTESTFILESPEC		= $(MATLABTESTFILES:%=$(TESTDIR)/%)
@@ -280,7 +263,6 @@ PRIVATEOBJSPEC			= $(PRIVATEFILES:%.cpp=$(TARGETDIR)/%.o) \
 						  $(SERVICEFILES:%.cpp=$(TARGETDIR)/%.o) \
 						  $(UTILITYFILES:%.cpp=$(TARGETDIR)/%.o) \
 						  $(DATABASEFILES:%.cpp=$(TARGETDIR)/%.o) \
-						  $(MONITORINGFILES:%.cpp=$(TARGETDIR)/%.o) \
 
 HELPEROBJSPEC			= $(TESTHELPERFILES:%.cpp=$(TARGETDIR)/%.o)
 TESTOBJSPEC			= $(TESTFILES:%.cpp=$(TARGETDIR)/%.o) 
@@ -429,9 +411,6 @@ $(TARGETDIR)/%.o:$(UTILITYDIR)/private/%.cpp
 $(TARGETDIR)/%.o:$(DATABASEDIR)/private/%.cpp
 	$(CXXC) $< -o $@
 
-$(TARGETDIR)/%.o:$(MONITORINGDIR)/private/%.cpp
-	$(CXXC) $< -o $@
-
 $(TARGETDIR)/%.o:$(TESTHELPERDIR)/private/%.cpp
 	$(CXXT) $< -o $@
 
@@ -456,7 +435,6 @@ DEPENDFILES = $(PRIVATEFILESPEC) \
 			  $(SERVICEFILESPEC) \
 			  $(UTILITYFILESPEC) \
 			  $(DATABASEFILESPEC) \
-			  $(MONITORINGFILESPEC) \
 			  $(MATLABWRAPPERFILE) \
 			  $(TESTFILESPEC) \
 			  $(THREADTESTFILESPEC) \

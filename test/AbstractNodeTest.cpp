@@ -535,10 +535,10 @@ void AbstractNodeTest::testLoadTransformStream()
 	CPPUNIT_ASSERT_EQUAL( expected.str(), results.str() );
 
 	const std::vector< std::pair< std::string, MonitoringMetric > >& rReports = pMonitoringInstance->GetReports();
-	CPPUNIT_ASSERT_EQUAL( size_t(15), rReports.size() );
+	CPPUNIT_ASSERT_EQUAL( size_t(35), rReports.size() );
 
-	CPPUNIT_ASSERT_DOUBLES_EQUAL( double( cnt.characters() ), rReports[6].second.GetDouble(), 1e-9 );
-	CPPUNIT_ASSERT_DOUBLES_EQUAL( double( cnt.lines() ), rReports[9].second.GetDouble(), 1e-9 );
+	CPPUNIT_ASSERT_DOUBLES_EQUAL( double( cnt.characters() ), rReports[14].second.GetDouble(), 1e-9 );
+	CPPUNIT_ASSERT_DOUBLES_EQUAL( double( cnt.lines() ), rReports[21].second.GetDouble(), 1e-9 );
 }
 
 void AbstractNodeTest::testLoadFailureForwarding()
@@ -1213,7 +1213,7 @@ void AbstractNodeTest::testStoreTransformStream()
 	CPPUNIT_ASSERT_EQUAL( expected.str(), node.GetLog() );
 
 	const std::vector< std::pair< std::string, MonitoringMetric > >& rReports = pMonitoringInstance->GetReports();	
-	CPPUNIT_ASSERT_EQUAL( size_t(15), rReports.size() );
+	CPPUNIT_ASSERT_EQUAL( size_t(35), rReports.size() );
 }
 
 void AbstractNodeTest::testStoreRetryCount()

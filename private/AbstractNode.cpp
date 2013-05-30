@@ -42,10 +42,10 @@ namespace
 	const std::string METRIC_PAYLOAD_BYTES_PRE_TRANSFORM( "payloadBytesPreTransform" );
 	const std::string METRIC_PAYLOAD_LINES_PRE_TRANSFORM( "payloadLinesPreTransform" );
 
-	const std::string CHILD_STATUS( "status" );
-	const std::string CHILD_STATUS_SUCCESS( "success" );
-	const std::string CHILD_STATUS_FAILED( "failed" );
-	const std::string CHILD_NODENAME( "nodename" );
+	const std::string CHILD_RESULT( "result" );
+	const std::string CHILD_RESULT_SUCCESS( "success" );
+	const std::string CHILD_RESULT_FAILED( "fail" );
+	const std::string CHILD_NODE( "node" );
 
 	const std::map< std::string, std::string >& ChooseParameters( const std::map< std::string, std::string >& i_rOriginalParameters,
 																  const std::map< std::string, std::string >& i_rTranslatedParameters,
@@ -86,6 +86,15 @@ namespace
 		if( missingParameters.str().size() > 0 )
 		{
 			MV_THROW( ParameterValidationException, "Incoming request is missing the following parameters: " << missingParameters.str() );
+		}
+	}
+
+	void AddChildren( MonitoringTracker& o_rMonitoringTracker, const std::string& i_rNode, const std::map< std::string, std::string >& i_rParameters )
+	{
+		o_rMonitoringTracker.AddChild( CHILD_NODE, i_rNode );
+		for( std::map< std::string, std::string >::const_iterator iter = i_rParameters.begin(); iter != i_rParameters.end(); ++iter )
+		{
+			o_rMonitoringTracker.AddChild( iter->first, iter->second );
 		}
 	}
 }
@@ -175,6 +184,7 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 	}
 
 	MonitoringTracker tracker( LOAD_SCOPE_ID );
+	AddChildren( tracker, m_Name, i_rParameters );
 
 	// by default we will just use the params passed in
 	const std::map< std::string, std::string >* pUseParameters = &i_rParameters;
@@ -220,7 +230,6 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 			try
 			{
 				LoadImpl( *pUseParameters, *output );
-				output.reset( NULL );
 				break;
 			}
 			catch( const std::exception& ex )
@@ -247,6 +256,7 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 				}
 			}
 		}
+		output.reset( NULL );
 		// finally, if we need to transform, then we know we used the tempIOStream; transform it
 		boost::shared_ptr< std::stringstream > pTransformedStream;
 
@@ -288,10 +298,8 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 				"Error detected in output stream. bad(): " << o_rData.bad() << " fail(): " << o_rData.fail() << " eof(): " << o_rData.eof() );
 		}
 
-		output.reset( NULL );
-
 		// Monitoring report
-		tracker.AddChild( CHILD_STATUS, CHILD_STATUS_SUCCESS ).AddChild( CHILD_NODENAME, m_Name );
+		tracker.AddChild( CHILD_RESULT, CHILD_RESULT_SUCCESS );
 
 		if( needToTransform )
 		{
@@ -308,7 +316,7 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 	}
 	catch( const BadStreamException& e )
 	{
-		tracker.AddChild( CHILD_STATUS, CHILD_STATUS_FAILED ).AddChild( CHILD_NODENAME, m_Name );
+		tracker.AddChild( CHILD_RESULT, CHILD_RESULT_FAILED );
 
 		throw;
 	}
@@ -327,7 +335,7 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 		Nullable< std::string > forwardName = m_ReadConfig.GetValue< ForwardNodeName >();
 		if( forwardName.IsNull() )
 		{
-			tracker.AddChild( CHILD_STATUS, CHILD_STATUS_FAILED ).AddChild( CHILD_NODENAME, m_Name );
+			tracker.AddChild( CHILD_RESULT, CHILD_RESULT_FAILED );
 
 			throw;
 		}
@@ -355,6 +363,7 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 	}
 
 	MonitoringTracker tracker( STORE_SCOPE_ID );
+	AddChildren( tracker, m_Name, i_rParameters );
 	
 	// by default we will just use the params passed in
 	const std::map< std::string, std::string >* pUseParameters = &i_rParameters;
@@ -419,7 +428,7 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 				pUseData->seekg( retryPos );
 				StoreImpl( *pUseParameters, input );
 
-				tracker.AddChild( CHILD_STATUS, CHILD_STATUS_SUCCESS ).AddChild( CHILD_NODENAME, m_Name );
+				tracker.AddChild( CHILD_RESULT, CHILD_RESULT_SUCCESS );
 				if( needTransform )
 				{
 					tracker.Report( METRIC_PAYLOAD_BYTES_PRE_TRANSFORM, cntPreTransform.characters() );
@@ -474,7 +483,7 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 		Nullable< std::string > forwardName = m_WriteConfig.GetValue< ForwardNodeName >();
 		if( forwardName.IsNull() )
 		{
-			tracker.AddChild( CHILD_STATUS, CHILD_STATUS_FAILED ).AddChild( CHILD_NODENAME, m_Name );
+			tracker.AddChild( CHILD_RESULT, CHILD_RESULT_FAILED );
 
 			throw;
 		}
@@ -518,6 +527,7 @@ bool AbstractNode::Delete( const std::map<std::string,std::string>& i_rParameter
 	}
 
 	MonitoringTracker tracker( DELETE_SCOPE_ID );
+	AddChildren( tracker, m_Name, i_rParameters );
 	
 	// by default we will just use the params passed in
 	const std::map< std::string, std::string >* pUseParameters = &i_rParameters;
@@ -547,7 +557,7 @@ bool AbstractNode::Delete( const std::map<std::string,std::string>& i_rParameter
 			try
 			{
 				DeleteImpl( *pUseParameters );
-				tracker.AddChild( CHILD_STATUS, CHILD_STATUS_SUCCESS ).AddChild( CHILD_NODENAME, m_Name );
+				tracker.AddChild( CHILD_RESULT, CHILD_RESULT_SUCCESS );
 				return true;
 			}
 			catch( const std::exception& ex )
@@ -586,7 +596,7 @@ bool AbstractNode::Delete( const std::map<std::string,std::string>& i_rParameter
 		Nullable< std::string > forwardName = m_DeleteConfig.GetValue< ForwardNodeName >();
 		if( forwardName.IsNull() )
 		{
-			tracker.AddChild( CHILD_STATUS, CHILD_STATUS_FAILED ).AddChild( CHILD_NODENAME, m_Name );
+			tracker.AddChild( CHILD_RESULT, CHILD_RESULT_FAILED );
 			throw;
 		}
 
