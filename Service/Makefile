@@ -23,13 +23,13 @@ THPP2HPP = $(ROOTDIR)/lib/cpp/GDP/scripts/thpp2hpp
 MODULES=\
 	lib/cpp/DataProxy \
 	lib/cpp/Logger \
+	lib/cpp/Monitoring \
 
 INCMODULES=\
 	lib/cpp/Utility \
 	lib/cpp/GDP \
 	lib/cpp/Service \
 	lib/cpp/Database \
-	lib/cpp/Monitoring \
 
 TESTMODULES=\
 	lib/cpp/Service \

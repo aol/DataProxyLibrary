@@ -20,6 +20,7 @@ THPP2HPP = $(ROOTDIR)/lib/cpp/GDP/scripts/thpp2hpp
 # Optimization/ directory -- does not include CPPUNIT
 MODULES=\
 	lib/cpp/Logger \
+	lib/cpp/Monitoring \
 	lib/cpp/DataProxy \
 
 INCMODULES=\
