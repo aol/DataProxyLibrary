@@ -65,7 +65,7 @@ LIBLOC=\
 	$(LIB_DIRS:%=-L%) \
 
 # Libraries
-LIBS =	-lLogger -llog4cxx -lcurl -lDataProxy \
+LIBS =	-lLogger -lMonitoring -llog4cxx -lcurl -lDataProxy \
 		-lagent++ -lsnmp++ \
 		-lboost_system -lboost_filesystem -lboost_program_options -lboost_regex \
 		-lclntsh -lodbc -lxerces-c -lboost_thread -lboost_iostreams -lcrypto -lpthread -ldl

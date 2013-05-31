@@ -54,7 +54,7 @@ LIBLOC=\
 	$(TESTMODULES:%=-L$(ROOTDIR)/%) \
 
 # Libraries
-LIBS =	-lLogger -llog4cxx -lcurl -lDataProxy\
+LIBS =	-lLogger -lMonitoring -llog4cxx -lcurl -lDataProxy\
 		-lboost_system -lboost_filesystem -lboost_program_options -lboost_regex -lclntsh -lodbc -lxerces-c -lboost_thread -lcrypto
 TESTLIBS = -lTestHelpers -lcppunit
 
