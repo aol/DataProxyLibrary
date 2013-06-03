@@ -21,6 +21,7 @@ public:
 	MockNode( std::ostream& i_rLog,
 			  const std::string& i_rName,
 			  bool i_SupportsTransactions,
+			  bool i_PingException,
 			  bool i_LoadException,
 			  bool i_StoreException,
 			  bool i_DeleteException,
@@ -42,6 +43,7 @@ public:
 	virtual void LoadImpl( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData );
 	virtual void StoreImpl( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData );
 	virtual void DeleteImpl( const std::map<std::string,std::string>& i_rParameters );
+	virtual void Ping( int i_Mode ) const;
 
 	// transaction support
 	virtual bool SupportsTransactions() const;
@@ -60,6 +62,7 @@ private:
 	mutable std::ostream& m_rLog;
 	std::string m_Name;
 	bool m_SupportsTransactions;
+	bool m_PingException;
 	bool m_LoadException;
 	bool m_StoreException;
 	bool m_DeleteException;

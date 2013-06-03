@@ -33,7 +33,7 @@ DataProxyClient& AbstractHandler::GetDataProxyClient()
 	return m_rDataProxyClient;
 }
 
-bool AbstractHandler::CheckConfig( HTTPResponse& o_rResponse )
+bool AbstractHandler::CheckConfig( HTTPResponse& o_rResponse ) const
 {
 	try
 	{
@@ -52,14 +52,20 @@ bool AbstractHandler::CheckConfig( HTTPResponse& o_rResponse )
 	}
 }
 
-void AbstractHandler::GetParams( HTTPRequest& i_rRequest, std::string& o_rName, std::map< std::string, std::string >& o_rParams )
+std::string AbstractHandler::GetName( HTTPRequest& i_rRequest ) const
 {
 	// strip the trailing slash
-	o_rName = i_rRequest.GetPath();
-	if( o_rName[ o_rName.size() - 1 ] == '/' )
+	std::string result = i_rRequest.GetPath();
+	if( result[ result.size() - 1 ] == '/' )
 	{
-		o_rName = o_rName.substr( 0, o_rName.size() - 1 );
+		result = result.substr( 0, result.size() - 1 );
 	}
+	return result;
+}
+
+void AbstractHandler::GetParams( HTTPRequest& i_rRequest, std::string& o_rName, std::map< std::string, std::string >& o_rParams ) const
+{
+	o_rName = GetName( i_rRequest );
 
 	// extract the parameters
 	o_rParams = i_rRequest.GetQueryParams();

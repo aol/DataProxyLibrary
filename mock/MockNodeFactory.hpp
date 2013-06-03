@@ -28,6 +28,7 @@ public:
 	virtual void RegisterDatabaseConnections( DatabaseConnectionManager& i_rDatabaseConnectionManager );
 
 	void SetSupportsTransactions( const std::string& i_rName, bool i_Value );
+	void SetPingException( const std::string& i_rName, bool i_Value );
 	void SetLoadException( const std::string& i_rName, bool i_Value );
 	void SetStoreException( const std::string& i_rName, bool i_Value );
 	void SetDeleteException( const std::string& i_rName, bool i_Value );
@@ -45,6 +46,7 @@ public:
 private:
 	std::stringstream m_Log;
 	std::map< std::string, bool > m_SupportsTransactions;
+	std::map< std::string, bool > m_PingExceptions;
 	std::map< std::string, bool > m_LoadExceptions;
 	std::map< std::string, bool > m_StoreExceptions;
 	std::map< std::string, bool > m_DeleteExceptions;

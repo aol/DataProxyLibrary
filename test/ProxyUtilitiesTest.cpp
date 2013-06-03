@@ -7,6 +7,7 @@
 // LAST UPDATED:    $Date$
 // UPDATED BY:      $Author$
 
+#include "DPLCommon.hpp"
 #include "ProxyUtilitiesTest.hpp"
 #include "ProxyUtilities.hpp"
 #include "ProxyTestHelpers.hpp"
@@ -144,6 +145,35 @@ void ProxyUtilitiesTest::testToString()
 		"private/ProxyUtilities.cpp:\\d+: KeyValuePair number 2: '' does not a nonempty key separated by its value by a single unescaped '~' character" );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ProxyUtilities::FillMap( "justGarbage", newParams ), ProxyUtilitiesException,
 		"private/ProxyUtilities.cpp:\\d+: KeyValuePair number 1: 'justGarbage' does not a nonempty key separated by its value by a single unescaped '~' character" );
+}
+
+void ProxyUtilitiesTest::testGetMode()
+{
+	CPPUNIT_ASSERT_EQUAL( 0, ProxyUtilities::GetMode( "x" ) );
+	CPPUNIT_ASSERT_EQUAL( DPL::READ, ProxyUtilities::GetMode( "r" ) );
+	CPPUNIT_ASSERT_EQUAL( DPL::WRITE, ProxyUtilities::GetMode( "w" ) );
+	CPPUNIT_ASSERT_EQUAL( DPL::DELETE, ProxyUtilities::GetMode( "d" ) );
+
+	CPPUNIT_ASSERT_EQUAL( DPL::READ | DPL::WRITE, ProxyUtilities::GetMode( "rw" ) );
+	CPPUNIT_ASSERT_EQUAL( DPL::READ | DPL::WRITE, ProxyUtilities::GetMode( "wr" ) );
+
+	CPPUNIT_ASSERT_EQUAL( DPL::READ | DPL::DELETE, ProxyUtilities::GetMode( "rd" ) );
+	CPPUNIT_ASSERT_EQUAL( DPL::READ | DPL::DELETE, ProxyUtilities::GetMode( "dr" ) );
+
+	CPPUNIT_ASSERT_EQUAL( DPL::WRITE | DPL::DELETE, ProxyUtilities::GetMode( "wd" ) );
+	CPPUNIT_ASSERT_EQUAL( DPL::WRITE | DPL::DELETE, ProxyUtilities::GetMode( "dw" ) );
+
+	CPPUNIT_ASSERT_EQUAL( DPL::READ | DPL::WRITE | DPL::DELETE, ProxyUtilities::GetMode( "rwd" ) );
+	CPPUNIT_ASSERT_EQUAL( DPL::READ | DPL::WRITE | DPL::DELETE, ProxyUtilities::GetMode( "rdw" ) );
+	CPPUNIT_ASSERT_EQUAL( DPL::READ | DPL::WRITE | DPL::DELETE, ProxyUtilities::GetMode( "wrd" ) );
+	CPPUNIT_ASSERT_EQUAL( DPL::READ | DPL::WRITE | DPL::DELETE, ProxyUtilities::GetMode( "wdr" ) );
+	CPPUNIT_ASSERT_EQUAL( DPL::READ | DPL::WRITE | DPL::DELETE, ProxyUtilities::GetMode( "drw" ) );
+	CPPUNIT_ASSERT_EQUAL( DPL::READ | DPL::WRITE | DPL::DELETE, ProxyUtilities::GetMode( "dwr" ) );
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ProxyUtilities::GetMode( "rwx" ), ProxyUtilitiesException,
+		".*:\\d+: Unrecognized mode character: x at position 2 in string: rwx. Legal values are: r,w,d .*" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ProxyUtilities::GetMode( "blah" ), ProxyUtilitiesException,
+		".*:\\d+: Unrecognized mode character: b at position 0 in string: blah. Legal values are: r,w,d .*" );
 }
 
 void ProxyUtilitiesTest::testGetMergeQuery_IllegalXml()

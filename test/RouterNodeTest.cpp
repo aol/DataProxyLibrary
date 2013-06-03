@@ -7,6 +7,7 @@
 // LAST UPDATED:    $Date$
 // UPDATED BY:      $Author$
 
+#include "DPLCommon.hpp"
 #include "RouterNode.hpp"
 #include "RouterNodeTest.hpp"
 #include "MockDataProxyClient.hpp"
@@ -195,6 +196,132 @@ void RouterNodeTest::testOperationAttributeParsing()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	CPPUNIT_ASSERT_NO_THROW( RouterNode node( "name", client, *nodes[0] ) ); 
+}
+
+void RouterNodeTest::testPing()
+{
+	MockDataProxyClient client;
+
+	// case: read enabled
+	{
+		std::vector<xercesc::DOMNode*> nodes;
+		std::stringstream xmlContents;
+		xmlContents << "<RouterNode>" << std::endl
+					<< "  <Read>" << std::endl
+					<< "    <ForwardTo name=\"name1\" />" << std::endl
+					<< "  </Read>" << std::endl
+					<< "</RouterNode>" << std::endl;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		RouterNode node( std::string("name"), client, *nodes[0] ) ;
+		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::READ ) );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::WRITE ), PingException, ".*:\\d+: Not configured to be able to handle Write operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+
+		std::stringstream expected;
+		expected << "Ping called with Name: name1 Mode: " << ( DPL::READ ) << std::endl;
+		CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+		client.ClearLog();
+	}
+	// case: write enabled
+	{
+		std::vector<xercesc::DOMNode*> nodes;
+		std::stringstream xmlContents;
+		xmlContents << "<RouterNode>" << std::endl
+					<< "  <Write>" << std::endl
+					<< "    <ForwardTo name=\"name1\" />" << std::endl
+					<< "    <ForwardTo name=\"name2\" />" << std::endl
+					<< "    <ForwardTo name=\"name3\" />" << std::endl
+					<< "  </Write>" << std::endl
+					<< "</RouterNode>" << std::endl;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		RouterNode node( std::string("name"), client, *nodes[0] ) ;
+		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::WRITE ) );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::READ ), PingException, ".*:\\d+: Not configured to be able to handle Read operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+
+		std::stringstream expected;
+		expected << "Ping called with Name: name1 Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: name2 Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: name3 Mode: " << ( DPL::WRITE ) << std::endl;
+		CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+		client.ClearLog();
+	}
+	// case: delete enabled
+	{
+		std::vector<xercesc::DOMNode*> nodes;
+		std::stringstream xmlContents;
+		xmlContents << "<RouterNode>" << std::endl
+					<< "  <Delete>" << std::endl
+					<< "    <ForwardTo name=\"name1\" />" << std::endl
+					<< "    <ForwardTo name=\"name2\" />" << std::endl
+					<< "    <ForwardTo name=\"name3\" />" << std::endl
+					<< "  </Delete>" << std::endl
+					<< "</RouterNode>" << std::endl;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		RouterNode node( std::string("name"), client, *nodes[0] ) ;
+		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::DELETE ) );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::READ ), PingException, ".*:\\d+: Not configured to be able to handle Read operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::WRITE ), PingException, ".*:\\d+: Not configured to be able to handle Write operations" );
+
+		std::stringstream expected;
+		expected << "Ping called with Name: name1 Mode: " << ( DPL::DELETE ) << std::endl;
+		expected << "Ping called with Name: name2 Mode: " << ( DPL::DELETE ) << std::endl;
+		expected << "Ping called with Name: name3 Mode: " << ( DPL::DELETE ) << std::endl;
+		CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+		client.ClearLog();
+	}
+	// case: read-write enabled
+	{
+		std::vector<xercesc::DOMNode*> nodes;
+		std::stringstream xmlContents;
+		xmlContents << "<RouterNode>" << std::endl
+					<< "  <Read>" << std::endl
+					<< "    <ForwardTo name=\"r-name1\" />" << std::endl
+					<< "  </Read>" << std::endl
+					<< "  <Write>" << std::endl
+					<< "    <ForwardTo name=\"w-name1\" />" << std::endl
+					<< "    <ForwardTo name=\"w-name2\" />" << std::endl
+					<< "    <ForwardTo name=\"w-name3\" />" << std::endl
+					<< "  </Write>" << std::endl
+					<< "</RouterNode>" << std::endl;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		RouterNode node( std::string("name"), client, *nodes[0] ) ;
+		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::READ ) );
+		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::WRITE ) );
+		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::READ | DPL::WRITE ) );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::READ | DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::WRITE | DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::READ | DPL::WRITE | DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+
+		std::stringstream expected;
+		expected << "Ping called with Name: r-name1 Mode: " << ( DPL::READ ) << std::endl;
+		expected << "Ping called with Name: w-name1 Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: w-name2 Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: w-name3 Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: r-name1 Mode: " << ( DPL::READ ) << std::endl;
+		expected << "Ping called with Name: w-name1 Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: w-name2 Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: w-name3 Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: r-name1 Mode: " << ( DPL::READ ) << std::endl;
+		expected << "Ping called with Name: w-name1 Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: w-name2 Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: w-name3 Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: r-name1 Mode: " << ( DPL::READ ) << std::endl;
+		expected << "Ping called with Name: w-name1 Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: w-name2 Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: w-name3 Mode: " << ( DPL::WRITE ) << std::endl;
+		CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+		client.ClearLog();
+	}
 }
 
 void RouterNodeTest::testLoad()

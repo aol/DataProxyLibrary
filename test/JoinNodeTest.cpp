@@ -7,6 +7,7 @@
 // LAST UPDATED:    $Date: 2011-10-26 19:31:53 -0400 (Wed, 26 Oct 2011) $
 // UPDATED BY:      $Author: sstrick $
 
+#include "DPLCommon.hpp"
 #include "JoinNode.hpp"
 #include "ShellExecutor.hpp"
 #include "JoinNodeTest.hpp"
@@ -387,6 +388,142 @@ void JoinNodeTest::testOperationAttributeParsing()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	CPPUNIT_ASSERT_NO_THROW( JoinNode node( "name", client, *nodes[0] ) ); 
+}
+
+void JoinNodeTest::testPing()
+{
+	MockDataProxyClient client;
+
+	// case: read enabled
+	{
+		std::vector<xercesc::DOMNode*> nodes;
+		std::stringstream xmlContents;
+		xmlContents << "<JoinNode>" << std::endl
+					<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <ForwardTo name=\"name1\" key=\"campaign_id\" />" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"CAMPAIGNID\" type=\"inner\" />" << std::endl
+					<< "    <JoinTo name=\"name3\" key=\"c\" type=\"inner\" />" << std::endl
+					<< "  </Read>" << std::endl
+					<< "</JoinNode>" << std::endl;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		JoinNode node( std::string("name"), client, *nodes[0] ) ;
+		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::READ ) );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::WRITE ), PingException, ".*:\\d+: Not configured to be able to handle Write operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+
+		std::stringstream expected;
+		expected << "Ping called with Name: name1 Mode: " << ( DPL::READ ) << std::endl;
+		expected << "Ping called with Name: name2 Mode: " << ( DPL::READ ) << std::endl;
+		expected << "Ping called with Name: name3 Mode: " << ( DPL::READ ) << std::endl;
+		CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+		client.ClearLog();
+	}
+	// case: write enabled
+	{
+		std::vector<xercesc::DOMNode*> nodes;
+		std::stringstream xmlContents;
+		xmlContents << "<JoinNode>" << std::endl
+					<< "  <Write key=\"campaign_id\" behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <JoinTo name=\"name2\" key=\"CAMPAIGNID\" type=\"inner\" />" << std::endl
+					<< "    <JoinTo name=\"name3\" key=\"c\" type=\"inner\" />" << std::endl
+					<< "    <ForwardTo name=\"out\" />" << std::endl
+					<< "  </Write>" << std::endl
+					<< "</JoinNode>" << std::endl;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		JoinNode node( std::string("name"), client, *nodes[0] ) ;
+		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::WRITE ) );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::READ ), PingException, ".*:\\d+: Not configured to be able to handle Read operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+
+		std::stringstream expected;
+		expected << "Ping called with Name: out Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: name2 Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: name3 Mode: " << ( DPL::WRITE ) << std::endl;
+		CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+		client.ClearLog();
+	}
+	// case: delete enabled
+	{
+		std::vector<xercesc::DOMNode*> nodes;
+		std::stringstream xmlContents;
+		xmlContents << "<JoinNode>" << std::endl
+					<< "  <Delete>" << std::endl
+					<< "    <ForwardTo name=\"name1\" />" << std::endl
+					<< "  </Delete>" << std::endl
+					<< "</JoinNode>" << std::endl;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		JoinNode node( std::string("name"), client, *nodes[0] ) ;
+		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::DELETE ) );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::READ ), PingException, ".*:\\d+: Not configured to be able to handle Read operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::WRITE ), PingException, ".*:\\d+: Not configured to be able to handle Write operations" );
+
+		std::stringstream expected;
+		expected << "Ping called with Name: name1 Mode: " << ( DPL::DELETE ) << std::endl;
+		CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+		client.ClearLog();
+	}
+	// case: read-write enabled
+	{
+		std::vector<xercesc::DOMNode*> nodes;
+		std::stringstream xmlContents;
+		xmlContents << "<JoinNode>" << std::endl
+					<< "  <Read behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <ForwardTo name=\"r-name1\" key=\"campaign_id\" />" << std::endl
+					<< "    <JoinTo name=\"r-name2\" key=\"CAMPAIGNID\" type=\"inner\" />" << std::endl
+					<< "    <JoinTo name=\"r-name3\" key=\"c\" type=\"inner\" />" << std::endl
+					<< "  </Read>" << std::endl
+					<< "  <Write key=\"campaign_id\" behavior=\"columnJoin\" workingDir=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl
+					<< "    <JoinTo name=\"w-name2\" key=\"CAMPAIGNID\" type=\"inner\" />" << std::endl
+					<< "    <JoinTo name=\"w-name3\" key=\"c\" type=\"inner\" />" << std::endl
+					<< "    <ForwardTo name=\"w-out\" />" << std::endl
+					<< "  </Write>" << std::endl
+					<< "</JoinNode>" << std::endl;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		JoinNode node( std::string("name"), client, *nodes[0] ) ;
+		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::READ ) );
+		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::WRITE ) );
+		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::READ | DPL::WRITE ) );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::READ | DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::WRITE | DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::READ | DPL::WRITE | DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+
+		std::stringstream expected;
+		expected << "Ping called with Name: r-name1 Mode: " << ( DPL::READ ) << std::endl;
+		expected << "Ping called with Name: r-name2 Mode: " << ( DPL::READ ) << std::endl;
+		expected << "Ping called with Name: r-name3 Mode: " << ( DPL::READ ) << std::endl;
+		expected << "Ping called with Name: w-out Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: w-name2 Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: w-name3 Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: r-name1 Mode: " << ( DPL::READ ) << std::endl;
+		expected << "Ping called with Name: r-name2 Mode: " << ( DPL::READ ) << std::endl;
+		expected << "Ping called with Name: r-name3 Mode: " << ( DPL::READ ) << std::endl;
+		expected << "Ping called with Name: w-out Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: w-name2 Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: w-name3 Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: r-name1 Mode: " << ( DPL::READ ) << std::endl;
+		expected << "Ping called with Name: r-name2 Mode: " << ( DPL::READ ) << std::endl;
+		expected << "Ping called with Name: r-name3 Mode: " << ( DPL::READ ) << std::endl;
+		expected << "Ping called with Name: w-out Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: w-name2 Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: w-name3 Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: r-name1 Mode: " << ( DPL::READ ) << std::endl;
+		expected << "Ping called with Name: r-name2 Mode: " << ( DPL::READ ) << std::endl;
+		expected << "Ping called with Name: r-name3 Mode: " << ( DPL::READ ) << std::endl;
+		expected << "Ping called with Name: w-out Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: w-name2 Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: w-name3 Mode: " << ( DPL::WRITE ) << std::endl;
+		CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+		client.ClearLog();
+	}
 }
 
 void JoinNodeTest::testLoad()

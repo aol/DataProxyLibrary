@@ -7,6 +7,7 @@
 // LAST UPDATED:    $Date$
 // UPDATED BY:      $Author$
 
+#include "DPLCommon.hpp"
 #include "ExecutionProxy.hpp"
 #include "ExecutionProxyTest.hpp"
 #include "MockDataProxyClient.hpp"
@@ -275,6 +276,93 @@ void ExecutionProxyTest::testOperationAttributeParsing()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	CPPUNIT_ASSERT_NO_THROW( ExecutionProxy proxy( "name", client, *nodes[0] ) ); 
+}
+
+void ExecutionProxyTest::testPing()
+{
+	MockDataProxyClient client;
+
+	// case: read enabled
+	{
+		std::vector<xercesc::DOMNode*> nodes;
+		std::stringstream xmlContents;
+		xmlContents << "<DataNode>" << std::endl
+					<< "  <Read command=\"not-executed\" timeout=\"2\" />" << std::endl
+					<< "</DataNode>" << std::endl;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		ExecutionProxy proxy( std::string("name"), client, *nodes[0] ) ;
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ ) );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::WRITE ), PingException, ".*:\\d+: Not configured to be able to handle Write operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+
+		std::stringstream expected;
+		CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+		client.ClearLog();
+	}
+	// case: write enabled
+	{
+		std::vector<xercesc::DOMNode*> nodes;
+		std::stringstream xmlContents;
+		xmlContents << "<DataNode>" << std::endl
+					<< "  <Write command=\"not-executed\" timeout=\"2\" />" << std::endl
+					<< "</DataNode>" << std::endl;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		ExecutionProxy proxy( std::string("name"), client, *nodes[0] ) ;
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::WRITE ) );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::READ ), PingException, ".*:\\d+: Not configured to be able to handle Read operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+
+		std::stringstream expected;
+		CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+		client.ClearLog();
+	}
+	// case: delete enabled
+	{
+		std::vector<xercesc::DOMNode*> nodes;
+		std::stringstream xmlContents;
+		xmlContents << "<DataNode>" << std::endl
+					<< "  <Delete command=\"not-executed\" timeout=\"2\" />" << std::endl
+					<< "</DataNode>" << std::endl;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		ExecutionProxy proxy( std::string("name"), client, *nodes[0] ) ;
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::DELETE ) );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::READ ), PingException, ".*:\\d+: Not configured to be able to handle Read operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::WRITE ), PingException, ".*:\\d+: Not configured to be able to handle Write operations" );
+
+		std::stringstream expected;
+		CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+		client.ClearLog();
+	}
+	// case: read-write enabled
+	{
+		std::vector<xercesc::DOMNode*> nodes;
+		std::stringstream xmlContents;
+		xmlContents << "<DataNode>" << std::endl
+					<< "  <Read command=\"not-executed\" timeout=\"2\" />" << std::endl
+					<< "  <Write command=\"not-executed\" timeout=\"2\" />" << std::endl
+					<< "</DataNode>" << std::endl;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		ExecutionProxy proxy( std::string("name"), client, *nodes[0] ) ;
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ ) );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::WRITE ) );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ | DPL::WRITE ) );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::READ | DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::WRITE | DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::READ | DPL::WRITE | DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+
+		std::stringstream expected;
+		CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+		client.ClearLog();
+	}
 }
 
 void ExecutionProxyTest::testLoad()

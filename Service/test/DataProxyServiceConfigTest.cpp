@@ -51,6 +51,7 @@ void DataProxyServiceConfigTest::testParameters()
 		"--load_whitelist_file", "lwf",
 		"--store_whitelist_file", "swf",
 		"--delete_whitelist_file", "dwf",
+		"--ping_whitelist_file", "pwf",
 		"--stats_retention_hours", "17",
 		"--stats_retention_size", "123",
 		"--stats_per_hour_estimate", "468",
@@ -68,6 +69,7 @@ void DataProxyServiceConfigTest::testParameters()
 	CPPUNIT_ASSERT_EQUAL( std::string("lwf"), config.GetLoadWhitelistFile() );
 	CPPUNIT_ASSERT_EQUAL( std::string("swf"), config.GetStoreWhitelistFile() );
 	CPPUNIT_ASSERT_EQUAL( std::string("dwf"), config.GetDeleteWhitelistFile() );
+	CPPUNIT_ASSERT_EQUAL( std::string("pwf"), config.GetPingWhitelistFile() );
 	CPPUNIT_ASSERT_EQUAL( uint(123), config.GetPort() );
 	CPPUNIT_ASSERT_EQUAL( uint(45), config.GetNumThreads() );
 	CPPUNIT_ASSERT_EQUAL( uint(678), config.GetMaxRequestSize() );
@@ -100,6 +102,7 @@ void DataProxyServiceConfigTest::testOptionalParameters()
 	CPPUNIT_ASSERT_EQUAL( std::string(""), config.GetLoadWhitelistFile() );
 	CPPUNIT_ASSERT_EQUAL( std::string(""), config.GetStoreWhitelistFile() );
 	CPPUNIT_ASSERT_EQUAL( std::string(""), config.GetDeleteWhitelistFile() );
+	CPPUNIT_ASSERT_EQUAL( std::string(""), config.GetPingWhitelistFile() );
 	CPPUNIT_ASSERT_EQUAL( uint(123), config.GetPort() );
 	CPPUNIT_ASSERT_EQUAL( uint(45), config.GetNumThreads() );
 	CPPUNIT_ASSERT_EQUAL( uint(16384), config.GetMaxRequestSize() );

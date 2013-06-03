@@ -7,6 +7,7 @@
 // LAST UPDATED:    $Date$
 // UPDATED BY:      $Author$
 
+#include "DPLCommon.hpp"
 #include "DatabaseProxyTest.hpp"
 #include "Database.hpp"
 #include "FileUtilities.hpp"
@@ -521,6 +522,355 @@ void DatabaseProxyTest::testOperationNotSupported()
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy3.Store( parameters, results ),
 									   DatabaseProxyException,
 									   MATCH_FILE_AND_LINE_NUMBER + "Proxy not configured to be able to perform Store operations" );
+}
+
+void DatabaseProxyTest::testPing()
+{
+	MockDataProxyClient client;
+
+	// case: oracle / read-enabled
+	{
+		MockDatabaseConnectionManager dbManager;
+		dbManager.InsertConnection("myOracleConnection", m_pOracleDB);
+
+		std::stringstream xmlContents;
+		xmlContents << "<DataNode type=\"db\" >"
+					<< " <Read connection=\"myOracleConnection\" "
+					<< "  header=\"whatever\" "
+					<< "  query=\"whatever\" />"
+					<< "</DataNode>";
+
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ ) );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::WRITE ), PingException, ".*:\\d+: Not configured to be able to handle Write operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+
+		std::stringstream expected;
+		expected << "MockDatabaseConnectionManager::ValidateConnectionName" << std::endl
+				 << "ConnectionName: myOracleConnection" << std::endl
+				 << std::endl;
+		expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+				 << "ConnectionName: myOracleConnection" << std::endl
+				 << std::endl;
+		CPPUNIT_ASSERT_EQUAL(expected.str(), dbManager.GetLog());
+	}
+	// case: oracle / write-enabled
+	{
+		MockDatabaseConnectionManager dbManager;
+		dbManager.InsertConnection("myOracleConnection", m_pOracleDB);
+
+		std::stringstream xmlContents;
+		xmlContents << "<DataNode type=\"db\" >"
+					<< " <Write connection=\"myOracleConnection\" "
+					<< "  table=\"whatever\" >"
+					<< "    <Columns>"
+					<< "      <Column name=\"whatever\" type=\"key\" />"
+					<< "    </Columns>"
+					<< " </Write>"
+					<< "</DataNode>";
+
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::WRITE ) );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::READ ), PingException, ".*:\\d+: Not configured to be able to handle Read operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+
+		std::stringstream expected;
+		expected << "MockDatabaseConnectionManager::ValidateConnectionName" << std::endl
+				 << "ConnectionName: myOracleConnection" << std::endl
+				 << std::endl;
+		expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+				 << "ConnectionName: myOracleConnection" << std::endl
+				 << std::endl;
+		expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+				 << "ConnectionName: myOracleConnection" << std::endl
+				 << std::endl;
+		CPPUNIT_ASSERT_EQUAL(expected.str(), dbManager.GetLog());
+	}
+	// case: oracle / delete-enabled
+	{
+		MockDatabaseConnectionManager dbManager;
+		dbManager.InsertConnection("myOracleConnection", m_pOracleDB);
+
+		std::stringstream xmlContents;
+		xmlContents << "<DataNode type=\"db\" >"
+					<< " <Delete connection=\"myOracleConnection\" "
+					<< "  query=\"whatever\" />"
+					<< "</DataNode>";
+
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::DELETE ) );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::READ ), PingException, ".*:\\d+: Not configured to be able to handle Read operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::WRITE ), PingException, ".*:\\d+: Not configured to be able to handle Write operations" );
+
+		std::stringstream expected;
+		expected << "MockDatabaseConnectionManager::ValidateConnectionName" << std::endl
+				 << "ConnectionName: myOracleConnection" << std::endl
+				 << std::endl;
+		expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+				 << "ConnectionName: myOracleConnection" << std::endl
+				 << std::endl;
+		CPPUNIT_ASSERT_EQUAL(expected.str(), dbManager.GetLog());
+	}
+	// case: oracle / multiple-enabled
+	{
+		MockDatabaseConnectionManager dbManager;
+		dbManager.InsertConnection("myOracleConnection", m_pOracleDB);
+
+		std::stringstream xmlContents;
+		xmlContents << "<DataNode type=\"db\" >"
+					<< " <Read connection=\"myOracleConnection\" "
+					<< "  header=\"whatever\" "
+					<< "  query=\"whatever\" />"
+					<< " <Write connection=\"myOracleConnection\" "
+					<< "  table=\"whatever\" >"
+					<< "    <Columns>"
+					<< "      <Column name=\"whatever\" type=\"key\" />"
+					<< "    </Columns>"
+					<< " </Write>"
+					<< "</DataNode>";
+
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ ) );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::WRITE ) );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ | DPL::WRITE ) );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::READ | DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::WRITE | DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::READ | DPL::WRITE | DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+
+		std::stringstream expected;
+		// 2 validates (done at config time)
+		expected << "MockDatabaseConnectionManager::ValidateConnectionName" << std::endl
+				 << "ConnectionName: myOracleConnection" << std::endl
+				 << std::endl;
+		expected << "MockDatabaseConnectionManager::ValidateConnectionName" << std::endl
+				 << "ConnectionName: myOracleConnection" << std::endl
+				 << std::endl;
+		// one GetConnection for null-checking on the write config
+		expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+				 << "ConnectionName: myOracleConnection" << std::endl
+				 << std::endl;
+		// total of 8 GetConnections (done at ping time)
+		expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+				 << "ConnectionName: myOracleConnection" << std::endl
+				 << std::endl;
+		expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+				 << "ConnectionName: myOracleConnection" << std::endl
+				 << std::endl;
+		expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+				 << "ConnectionName: myOracleConnection" << std::endl
+				 << std::endl;
+		expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+				 << "ConnectionName: myOracleConnection" << std::endl
+				 << std::endl;
+		expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+				 << "ConnectionName: myOracleConnection" << std::endl
+				 << std::endl;
+		expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+				 << "ConnectionName: myOracleConnection" << std::endl
+				 << std::endl;
+		expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+				 << "ConnectionName: myOracleConnection" << std::endl
+				 << std::endl;
+		expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+				 << "ConnectionName: myOracleConnection" << std::endl
+				 << std::endl;
+		CPPUNIT_ASSERT_EQUAL(expected.str(), dbManager.GetLog());
+	}
+	// case: mysql / read-enabled
+	{
+		MockDatabaseConnectionManager dbManager;
+		dbManager.InsertConnection("myMySqlConnection", m_pMySQLDB);
+
+		std::stringstream xmlContents;
+		xmlContents << "<DataNode type=\"db\" >"
+					<< " <Read connection=\"myMySqlConnection\" "
+					<< "  header=\"whatever\" "
+					<< "  query=\"whatever\" />"
+					<< "</DataNode>";
+
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ ) );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::WRITE ), PingException, ".*:\\d+: Not configured to be able to handle Write operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+
+		std::stringstream expected;
+		expected << "MockDatabaseConnectionManager::ValidateConnectionName" << std::endl
+				 << "ConnectionName: myMySqlConnection" << std::endl
+				 << std::endl;
+		expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+				 << "ConnectionName: myMySqlConnection" << std::endl
+				 << std::endl;
+		CPPUNIT_ASSERT_EQUAL(expected.str(), dbManager.GetLog());
+	}
+	// case: mysql / write-enabled
+	{
+		MockDatabaseConnectionManager dbManager;
+		dbManager.InsertConnection("myMySqlConnection", m_pMySQLDB);
+		dbManager.InsertConnection("myMySqlConnection", m_pOracleDB);
+
+		std::stringstream xmlContents;
+		xmlContents << "<DataNode type=\"db\" >"
+					<< " <Write connection=\"myMySqlConnection\" "
+					<< "  table=\"whatever\" >"
+					<< "    <Columns>"
+					<< "      <Column name=\"whatever\" type=\"key\" />"
+					<< "    </Columns>"
+					<< " </Write>"
+					<< "</DataNode>";
+
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::WRITE ) );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::READ ), PingException, ".*:\\d+: Not configured to be able to handle Read operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+
+		std::stringstream expected;
+		expected << "MockDatabaseConnectionManager::ValidateConnectionName" << std::endl
+				 << "ConnectionName: myMySqlConnection" << std::endl
+				 << std::endl;
+		expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+				 << "ConnectionName: myMySqlConnection" << std::endl
+				 << std::endl;
+		expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+				 << "ConnectionName: myMySqlConnection" << std::endl
+				 << std::endl;
+		CPPUNIT_ASSERT_EQUAL(expected.str(), dbManager.GetLog());
+	}
+	// case: mysql / delete-enabled
+	{
+		MockDatabaseConnectionManager dbManager;
+		dbManager.InsertConnection("myMySqlConnection", m_pMySQLDB);
+		dbManager.InsertConnection("myMySqlConnection", m_pOracleDB);
+
+		std::stringstream xmlContents;
+		xmlContents << "<DataNode type=\"db\" >"
+					<< " <Delete connection=\"myMySqlConnection\" "
+					<< "  query=\"whatever\" />"
+					<< "</DataNode>";
+
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::DELETE ) );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::READ ), PingException, ".*:\\d+: Not configured to be able to handle Read operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::WRITE ), PingException, ".*:\\d+: Not configured to be able to handle Write operations" );
+
+		std::stringstream expected;
+		expected << "MockDatabaseConnectionManager::ValidateConnectionName" << std::endl
+				 << "ConnectionName: myMySqlConnection" << std::endl
+				 << std::endl;
+		expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+				 << "ConnectionName: myMySqlConnection" << std::endl
+				 << std::endl;
+		CPPUNIT_ASSERT_EQUAL(expected.str(), dbManager.GetLog());
+	}
+	// case: mysql / multiple-enabled
+	{
+		MockDatabaseConnectionManager dbManager;
+		dbManager.InsertConnection("myMySqlConnection", m_pMySQLDB);
+		dbManager.InsertConnection("myMySqlConnection", m_pOracleDB);
+
+		std::stringstream xmlContents;
+		xmlContents << "<DataNode type=\"db\" >"
+					<< " <Read connection=\"myMySqlConnection\" "
+					<< "  header=\"whatever\" "
+					<< "  query=\"whatever\" />"
+					<< " <Write connection=\"myMySqlConnection\" "
+					<< "  table=\"whatever\" >"
+					<< "    <Columns>"
+					<< "      <Column name=\"whatever\" type=\"key\" />"
+					<< "    </Columns>"
+					<< " </Write>"
+					<< "</DataNode>";
+
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ ) );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::WRITE ) );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ | DPL::WRITE ) );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::READ | DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::WRITE | DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::READ | DPL::WRITE | DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+
+		std::stringstream expected;
+		// 2 validates (done at config time)
+		expected << "MockDatabaseConnectionManager::ValidateConnectionName" << std::endl
+				 << "ConnectionName: myMySqlConnection" << std::endl
+				 << std::endl;
+		expected << "MockDatabaseConnectionManager::ValidateConnectionName" << std::endl
+				 << "ConnectionName: myMySqlConnection" << std::endl
+				 << std::endl;
+		// one GetConnection done for write-side config
+		expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+				 << "ConnectionName: myMySqlConnection" << std::endl
+				 << std::endl;
+		// total of 8 GetConnections (done at ping time)
+		expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+				 << "ConnectionName: myMySqlConnection" << std::endl
+				 << std::endl;
+		expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+				 << "ConnectionName: myMySqlConnection" << std::endl
+				 << std::endl;
+		expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+				 << "ConnectionName: myMySqlConnection" << std::endl
+				 << std::endl;
+		expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+				 << "ConnectionName: myMySqlConnection" << std::endl
+				 << std::endl;
+		expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+				 << "ConnectionName: myMySqlConnection" << std::endl
+				 << std::endl;
+		expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+				 << "ConnectionName: myMySqlConnection" << std::endl
+				 << std::endl;
+		expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+				 << "ConnectionName: myMySqlConnection" << std::endl
+				 << std::endl;
+		expected << "MockDatabaseConnectionManager::GetConnection" << std::endl
+				 << "ConnectionName: myMySqlConnection" << std::endl
+				 << std::endl;
+		CPPUNIT_ASSERT_EQUAL(expected.str(), dbManager.GetLog());
+	}
+
+	std::stringstream expected;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+	client.ClearLog();
 }
 
 void DatabaseProxyTest::testOracleLoad()

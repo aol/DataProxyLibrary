@@ -281,8 +281,8 @@ COVERAGEOPTS		= -fprofile-arcs -ftest-coverage -Wall -Werror -fno-strict-aliasin
 BASE_NAME				= DataProxy
 FRIENDLY_TARGET				= lib$(BASE_NAME).so
 MAJOR_VERSION_TARGET			= $(FRIENDLY_TARGET).3
-MINOR_VERSION_TARGET			= $(MAJOR_VERSION_TARGET).1
-FULL_VERSION_TARGET			= $(MINOR_VERSION_TARGET).11
+MINOR_VERSION_TARGET			= $(MAJOR_VERSION_TARGET).2
+FULL_VERSION_TARGET			= $(MINOR_VERSION_TARGET).0
 PRIMARY_TARGET				= $(FULL_VERSION_TARGET)
 MOCK_TARGET				= libMockDataProxy.a
 MATLAB_TARGET				= DataProxy.mexa64
@@ -466,7 +466,6 @@ localclean:
 			$(THPP2HPPFILES) \
 			Makefile.depend \
 			cppunit_Logger_log.txt \
-			data_proxy_tests_result
 	- rm -rf $(ALLTARGETDIRS)
 
 LOG_CONFIG_FILE=$(shell pwd)/logger.config

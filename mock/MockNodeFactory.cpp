@@ -42,6 +42,7 @@ AbstractNode* MockNodeFactory::CreateNode( const std::string& i_rName, const std
 	m_Log << "CreateNode called with Name: " << i_rName << " NodeType: " << i_rNodeType << std::endl;
 	return new MockNode( m_Log, i_rName,
 						 GetValue< bool >( i_rName, m_SupportsTransactions, true ),
+						 GetValue< bool >( i_rName, m_PingExceptions, false ),
 						 GetValue< bool >( i_rName, m_LoadExceptions, false ),
 						 GetValue< bool >( i_rName, m_StoreExceptions, false ),
 						 GetValue< bool >( i_rName, m_DeleteExceptions, false ),
@@ -64,6 +65,11 @@ void MockNodeFactory::RegisterDatabaseConnections( DatabaseConnectionManager& i_
 void MockNodeFactory::SetSupportsTransactions( const std::string& i_rName, bool i_Value )
 {
 	m_SupportsTransactions[ i_rName ] = i_Value;
+}
+
+void MockNodeFactory::SetPingException( const std::string& i_rName, bool i_Value )
+{
+	m_PingExceptions[ i_rName ] = i_Value;
 }
 
 void MockNodeFactory::SetLoadException( const std::string& i_rName, bool i_Value )

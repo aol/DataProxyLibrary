@@ -37,6 +37,7 @@ public:
 	MV_VIRTUAL const std::string& GetLoadWhitelistFile() const;
 	MV_VIRTUAL const std::string& GetStoreWhitelistFile() const;
 	MV_VIRTUAL const std::string& GetDeleteWhitelistFile() const;
+	MV_VIRTUAL const std::string& GetPingWhitelistFile() const;
 
 	MV_VIRTUAL unsigned int GetStatsRetentionHours() const;
 	MV_VIRTUAL long GetStatsRetentionSize() const;

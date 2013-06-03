@@ -125,6 +125,35 @@ void DataProxyClientTest::testDuplicateName()
 		".*/DataProxyClient.cpp:\\d+: Node name: 'name1' is configured ambiguously" );
 }
 
+void DataProxyClientTest::testPing()
+{
+	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/dataProxyConfig.xml" );
+	std::ofstream file( fileSpec.c_str() );
+	file << "<DPLConfig>" << std::endl;
+	file << "  <DataNode name=\"name1\" type=\"dummy\" />" << std::endl;
+	file << "  <DataNode name=\"name2\" type=\"dummy\" />" << std::endl;
+	file << "</DPLConfig>" << std::endl;
+	file.close();
+
+	MockNodeFactory factory;
+	factory.SetPingException( "name2", true );
+
+	TestableDataProxyClient client;
+	CPPUNIT_ASSERT_NO_THROW( client.Initialize( fileSpec, factory ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Ping( "name1", 173 ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Ping( "name1", 187 ) );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( client.Ping( "name2", 13 ), MVException, ".*:\\d+: Set to throw exception" );
+
+	std::stringstream expected;
+	expected << "RegisterDatabaseConnections called" << std::endl;
+	expected << "CreateNode called with Name: name1 NodeType: DataNode" << std::endl;
+	expected << "CreateNode called with Name: name2 NodeType: DataNode" << std::endl;
+	expected << "Ping called on: name1 with mode: 173" << std::endl;
+	expected << "Ping called on: name1 with mode: 187" << std::endl;
+	expected << "Ping called on: name2 with mode: 13" << std::endl;
+	CPPUNIT_ASSERT_EQUAL( expected.str(), factory.GetLog() );
+}
+
 void DataProxyClientTest::testDatabaseConnectionsNode()
 {
 	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/dataProxyConfig.xml" );

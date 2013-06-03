@@ -101,6 +101,7 @@ MAINFILE = DataProxyService.cpp
 PRIVFILES=\
 	DataProxyServiceConfig.cpp \
 	AbstractHandler.cpp \
+	PingHandler.cpp \
 	LoadHandler.cpp \
 	StoreHandler.cpp \
 	DeleteHandler.cpp \
@@ -108,6 +109,7 @@ PRIVFILES=\
 TESTFILES=\
 	test-main.cpp \
 	DataProxyServiceConfigTest.cpp \
+	PingHandlerTest.cpp \
 	LoadHandlerTest.cpp \
 	StoreHandlerTest.cpp \
 	DeleteHandlerTest.cpp \
@@ -186,6 +188,7 @@ tests: $(TARGETDIR)
 
 systest: $(TARGETDIR)
 	$(MAKE) SUBTARGET=debug $(SYSTEST_TARGET)
+	$(MAKE) opt
 
 test_coverage: $(COVERAGEDIR)
 	$(MAKE) TARGETDIR='$(COVERAGEDIR)' TARGETOPTS='$(COVERAGEOPTS)' \
@@ -286,8 +289,6 @@ localclean:
 		$(THPP2HPPFILES) \
 		Makefile.depend \
 		cppunit_Logger_log.xml \
-		data_proxy_service_system_test_results \
-		data_proxy_service_test_results
 	- rm -rf $(ALLTARGETDIRS)
 
 LOG_CONFIG_FILE=$(shell pwd)/logger.config

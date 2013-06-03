@@ -22,7 +22,7 @@ class DatabaseProxyTest : public CppUnit::TestFixture
 {
 private:
 	CPPUNIT_TEST_SUITE( DatabaseProxyTest );
-	
+
 	CPPUNIT_TEST( testOracleStoreNoStagingWithMaxColumnLength);
 	CPPUNIT_TEST( testOracleStoreWithStagingWithMaxColumnLength);
 	CPPUNIT_TEST( testMySQLStoreWithStagingWithMaxColumnLength);
@@ -32,6 +32,8 @@ private:
 	CPPUNIT_TEST( testOperationNotSupported );
 	
 	CPPUNIT_TEST( testOperationAttributeParsing );
+
+	CPPUNIT_TEST( testPing );
 
 	CPPUNIT_TEST( testOracleLoad );
 	CPPUNIT_TEST( testMySQLLoad );
@@ -98,6 +100,8 @@ public:
 	void testConstructorExceptionWithNoReadOrWriteOrDeleteNode();
 	void testOperationNotSupported();
 	void testOperationAttributeParsing();
+
+	void testPing();
 
 	void testOracleLoad();
 	void testMySQLLoad();

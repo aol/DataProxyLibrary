@@ -24,6 +24,7 @@ private:
 	CPPUNIT_TEST( testUninitialized );
 	CPPUNIT_TEST( testMissingName );
 	CPPUNIT_TEST( testDuplicateName );
+	CPPUNIT_TEST( testPing );
 	CPPUNIT_TEST( testDatabaseConnectionsNode );
 	CPPUNIT_TEST( testStoreDeleteUnsuccessfulRollback );
 	CPPUNIT_TEST( testStoreDeleteUnsuccessfulRollback_WithTransactions );
@@ -57,6 +58,7 @@ public:
 	void testUninitialized();
 	void testMissingName();
 	void testDuplicateName();
+	void testPing();
 	void testDatabaseConnectionsNode();
 	void testStoreDeleteUnsuccessfulRollback();
 	void testStoreDeleteUnsuccessfulRollback_WithTransactions();

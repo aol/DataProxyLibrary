@@ -18,6 +18,7 @@ TestableNode::TestableNode(	const std::string& i_rName,
 :	AbstractNode( i_rName, i_rParent, i_rNode ),
 	m_Log(),
 	m_DataToReturn(),
+	m_PingException( false ),
 	m_LoadException( false ),
 	m_StoreException( false ),
 	m_DeleteException( false ),
@@ -105,6 +106,11 @@ void TestableNode::SetDataToReturn( const std::string& i_rData )
 	m_DataToReturn = i_rData;
 }
 
+void TestableNode::SetPingException( bool i_Exception )
+{
+	m_PingException = i_Exception;
+}
+
 void TestableNode::SetLoadException( bool i_Exception )
 {
 	m_LoadException = i_Exception;
@@ -138,4 +144,13 @@ void TestableNode::AddWriteForward( const std::string& i_rForward )
 void TestableNode::AddDeleteForward( const std::string& i_rForward )
 {
 	m_DeleteForwards.insert( i_rForward );
+}
+
+void TestableNode::Ping( int i_Mode ) const
+{
+	m_Log << "Ping called with mode: " << i_Mode << std::endl;
+	if( m_PingException )
+	{
+		MV_THROW( MVException, "Set to throw exception" );
+	}
 }

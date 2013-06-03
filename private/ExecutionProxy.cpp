@@ -185,3 +185,19 @@ void ExecutionProxy::Commit()
 void ExecutionProxy::Rollback()
 {
 }
+
+void ExecutionProxy::Ping( int i_Mode ) const
+{
+	if( i_Mode & DPL::READ && m_ReadCommand.IsNull() )
+	{
+		MV_THROW( PingException, "Not configured to be able to handle Read operations" );
+	}
+	if( i_Mode & DPL::WRITE && m_WriteCommand.IsNull() )
+	{
+		MV_THROW( PingException, "Not configured to be able to handle Write operations" );
+	}
+	if( i_Mode & DPL::DELETE && m_DeleteCommand.IsNull() )
+	{
+		MV_THROW( PingException, "Not configured to be able to handle Delete operations" );
+	}
+}

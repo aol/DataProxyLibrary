@@ -133,13 +133,32 @@ void RestDataProxyTest::testMissingLocation()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Unable to find attribute: 'location' in node: DataNode" );
+
+	xmlContents.str("");
+	xmlContents << "<DataNode location=\"this-does-not-match-regex\" >"
+				<< "</DataNode>";
+	nodes.clear();
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), RestDataProxyException,
+		".*RestDataProxy\\.cpp:\\d+: Unable to extract host from location: this-does-not-match-regex. Location must be an http endpoint" );
+
+	xmlContents.str("");
+	xmlContents << "<DataNode location=\"http://localhost:1717/some/path\" >"
+				<< "	<Read ping=\"this-does-not-match-regex\" />"
+				<< "</DataNode>";
+	nodes.clear();
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), RestDataProxyException,
+		".*RestDataProxy\\.cpp:\\d+: Unable to extract host from ping location: this-does-not-match-regex. Location must be an http endpoint" );
 }
 
 void RestDataProxyTest::testMoreThanOneUriQueryParametersNode()
 {
 	MockDataProxyClient client;
 	std::stringstream xmlContents;
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read>" << std::endl
 				<< "    <UriQueryParameters />" << std::endl
 				<< "    <UriQueryParameters />" << std::endl
@@ -156,7 +175,7 @@ void RestDataProxyTest::testMoreThanOneHttpHeaderParametersNode()
 {
 	MockDataProxyClient client;
 	std::stringstream xmlContents;
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read>" << std::endl
 				<< "    <HttpHeaderParameters />" << std::endl
 				<< "    <HttpHeaderParameters />" << std::endl
@@ -173,7 +192,7 @@ void RestDataProxyTest::testMoreThanOneUriPathSegmentParametersNode()
 {
 	MockDataProxyClient client;
 	std::stringstream xmlContents;
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read>" << std::endl
 				<< "    <UriPathSegmentParameters />" << std::endl
 				<< "    <UriPathSegmentParameters />" << std::endl
@@ -190,7 +209,7 @@ void RestDataProxyTest::testMalformedReadNode()
 {
 	MockDataProxyClient client;
 	std::stringstream xmlContents;
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read>" << std::endl
 				<< "    <garbage />" << std::endl
 				<< "  </Read>" << std::endl
@@ -202,7 +221,7 @@ void RestDataProxyTest::testMalformedReadNode()
 		".*XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: Read" );
 
 	xmlContents.str("");
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read garbage=\"true\" />" << std::endl
 				<< "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
@@ -212,7 +231,7 @@ void RestDataProxyTest::testMalformedReadNode()
 
 	// Read is the only node which should permit the compression attribute
 	xmlContents.str("");
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read compression=\"deflate\" />" << std::endl
 				<< "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
@@ -224,7 +243,7 @@ void RestDataProxyTest::testMalformedWriteNode()
 {
 	MockDataProxyClient client;
 	std::stringstream xmlContents;
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Write>" << std::endl
 				<< "    <garbage />" << std::endl
 				<< "  </Write>" << std::endl
@@ -236,7 +255,7 @@ void RestDataProxyTest::testMalformedWriteNode()
 		".*XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: Write" );
 
 	xmlContents.str("");
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Write garbage=\"true\" />" << std::endl
 				<< "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
@@ -246,7 +265,7 @@ void RestDataProxyTest::testMalformedWriteNode()
 
 	// Write nodes disallow compression attribute
 	xmlContents.str("");
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Write compression=\"deflate\" />" << std::endl
 				<< "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
@@ -259,7 +278,7 @@ void RestDataProxyTest::testMalformedDeleteNode()
 {
 	MockDataProxyClient client;
 	std::stringstream xmlContents;
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Delete>" << std::endl
 				<< "    <garbage />" << std::endl
 				<< "  </Delete>" << std::endl
@@ -271,7 +290,7 @@ void RestDataProxyTest::testMalformedDeleteNode()
 		".*XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: Delete" );
 
 	xmlContents.str("");
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Delete garbage=\"true\" />" << std::endl
 				<< "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
@@ -281,7 +300,7 @@ void RestDataProxyTest::testMalformedDeleteNode()
 
 	// Delete nodes disallow compression attribute
 	xmlContents.str("");
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Delete compression=\"deflate\" />" << std::endl
 				<< "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
@@ -294,7 +313,7 @@ void RestDataProxyTest::testOperationAttributeParsing()
 {
 	MockDataProxyClient client;
 	std::stringstream xmlContents;
-	xmlContents << "<DataNode location=\"someLocation\">" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\">" << std::endl
 				<< "  <Read operation=\"ignore\" />" << std::endl
 				<< "  <Write operation=\"ignore\" />" << std::endl
 				<< "  <Delete operation=\"ignore\" />" << std::endl
@@ -310,7 +329,7 @@ void RestDataProxyTest::testMalformedUriQueryParametersNode()
 {
 	MockDataProxyClient client;
 	std::stringstream xmlContents;
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read>" << std::endl
 				<< "    <UriQueryParameters>" << std::endl
 				<< "      <garbage>" << std::endl
@@ -324,7 +343,7 @@ void RestDataProxyTest::testMalformedUriQueryParametersNode()
 		".*XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: UriQueryParameters" );
 
 	xmlContents.str("");
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read>" << std::endl
 				<< "    <UriQueryParameters garbage=\"true\" >" << std::endl
 				<< "    </UriQueryParameters>" << std::endl
@@ -340,7 +359,7 @@ void RestDataProxyTest::testMalformedUriQueryGroupParametersNode()
 {
 	MockDataProxyClient client;
 	std::stringstream xmlContents;
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read>" << std::endl
 				<< "    <UriQueryParameters>" << std::endl
 				<< "      <Group name=\"someName\" >" << std::endl
@@ -356,7 +375,7 @@ void RestDataProxyTest::testMalformedUriQueryGroupParametersNode()
 		".*XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: Group" );
 
 	xmlContents.str("");
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read>" << std::endl
 				<< "    <UriQueryParameters>" << std::endl
 				<< "      <Group name=\"someName\" garbage=\"true\" >" << std::endl
@@ -374,7 +393,7 @@ void RestDataProxyTest::testMalformedHttpHeaderParametersNode()
 {
 	MockDataProxyClient client;
 	std::stringstream xmlContents;
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read>" << std::endl
 				<< "    <HttpHeaderParameters>" << std::endl
 				<< "      <garbage>" << std::endl
@@ -388,7 +407,7 @@ void RestDataProxyTest::testMalformedHttpHeaderParametersNode()
 		".*XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: HttpHeaderParameters" );
 
 	xmlContents.str("");
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read>" << std::endl
 				<< "    <HttpHeaderParameters garbage=\"true\">" << std::endl
 				<< "    </HttpHeaderParameters>" << std::endl
@@ -404,7 +423,7 @@ void RestDataProxyTest::testMalformedUriPathSegmentParametersNode()
 {
 	MockDataProxyClient client;
 	std::stringstream xmlContents;
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read>" << std::endl
 				<< "    <UriPathSegmentParameters>" << std::endl
 				<< "      <garbage>" << std::endl
@@ -418,7 +437,7 @@ void RestDataProxyTest::testMalformedUriPathSegmentParametersNode()
 		".*XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: UriPathSegmentParameters" );
 
 	xmlContents.str("");
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read>" << std::endl
 				<< "    <UriPathSegmentParameters>" << std::endl
 				<< "      <Parameter name=\"*\" />" << std::endl
@@ -434,7 +453,7 @@ void RestDataProxyTest::testMalformedUriPathSegmentParametersNode()
 
 
 	xmlContents.str("");
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read>" << std::endl
 				<< "    <UriPathSegmentParameters garbage=\"true\">" << std::endl
 				<< "    </UriPathSegmentParameters>" << std::endl
@@ -451,7 +470,7 @@ void RestDataProxyTest::testMalformedParameterNode()
 {
 	MockDataProxyClient client;
 	std::stringstream xmlContents;
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read>" << std::endl
 				<< "    <HttpHeaderParameters>" << std::endl
 				<< "      <Parameter name=\"name1\" garbage=\"true\" />" << std::endl
@@ -465,7 +484,7 @@ void RestDataProxyTest::testMalformedParameterNode()
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: garbage in node: Parameter" );
 
 	xmlContents.str("");
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read>" << std::endl
 				<< "    <HttpHeaderParameters>" << std::endl
 				<< "      <Parameter name=\"name1\" default=\"true\" />" << std::endl
@@ -478,7 +497,7 @@ void RestDataProxyTest::testMalformedParameterNode()
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: default in node: Parameter" );
 
 	xmlContents.str("");
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read>" << std::endl
 				<< "    <UriQueryParameters>" << std::endl
 				<< "      <Parameter name=\"name1\" garbage=\"true\" />" << std::endl
@@ -491,7 +510,7 @@ void RestDataProxyTest::testMalformedParameterNode()
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: garbage in node: Parameter" );
 
 	xmlContents.str("");
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read>" << std::endl
 				<< "    <UriQueryParameters>" << std::endl
 				<< "      <Parameter name=\"name1\" default=\"true\" />" << std::endl
@@ -504,7 +523,7 @@ void RestDataProxyTest::testMalformedParameterNode()
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: default in node: Parameter" );
 
 	xmlContents.str("");
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read>" << std::endl
 				<< "    <UriQueryParameters>" << std::endl
 				<< "      <Group name=\"group1\" >" << std::endl
@@ -519,7 +538,7 @@ void RestDataProxyTest::testMalformedParameterNode()
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: garbage in node: Parameter" );
 
 	xmlContents.str("");
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read>" << std::endl
 				<< "    <UriQueryParameters>" << std::endl
 				<< "      <Group name=\"group1\" >" << std::endl
@@ -534,7 +553,7 @@ void RestDataProxyTest::testMalformedParameterNode()
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: default in node: Parameter" );
 
 	xmlContents.str("");
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read>" << std::endl
 				<< "    <UriPathSegmentParameters>" << std::endl
 				<< "      <Parameter name=\"name1\" garbage=\"true\" />" << std::endl
@@ -547,7 +566,7 @@ void RestDataProxyTest::testMalformedParameterNode()
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: garbage in node: Parameter" );
 
 	xmlContents.str("");
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read>" << std::endl
 				<< "    <UriPathSegmentParameters>" << std::endl
 				<< "      <Parameter name=\"name1\" default=\"true\" />" << std::endl
@@ -564,7 +583,7 @@ void RestDataProxyTest::testDuplicateParameters()
 {
 	MockDataProxyClient client;
 	std::stringstream xmlContents;
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read>" << std::endl
 				<< "    <UriQueryParameters>" << std::endl
 				<< "      <Parameter name=\"param1\" />" << std::endl
@@ -579,7 +598,7 @@ void RestDataProxyTest::testDuplicateParameters()
 		".*RestDataProxy\\.cpp:\\d+: Parameter or Group 'param1' is configured ambiguously" );
 
 	xmlContents.str("");
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read>" << std::endl
 				<< "    <UriQueryParameters>" << std::endl
 				<< "      <Parameter name=\"param1\" />" << std::endl
@@ -596,7 +615,7 @@ void RestDataProxyTest::testDuplicateParameters()
 		".*RestDataProxy\\.cpp:\\d+: Parameter or Group 'param1' is configured ambiguously" );
 
 	xmlContents.str("");
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read>" << std::endl
 				<< "    <UriQueryParameters>" << std::endl
 				<< "      <Parameter name=\"param1\" />" << std::endl
@@ -611,7 +630,7 @@ void RestDataProxyTest::testDuplicateParameters()
 		".*RestDataProxy\\.cpp:\\d+: Parameter or Group 'param1' is configured ambiguously" );
 
 	xmlContents.str("");
-	xmlContents << "<DataNode location=\"someLocation\" >" << std::endl
+	xmlContents << "<DataNode location=\"http://someLocation\" >" << std::endl
 				<< "  <Read>" << std::endl
 				<< "    <UriQueryParameters>" << std::endl
 				<< "      <Parameter name=\"param1\" />" << std::endl
@@ -696,6 +715,218 @@ void RestDataProxyTest::testLoadMethodOverride()
 	CPPUNIT_ASSERT_EQUAL( data, results.str() );
 }
 
+void RestDataProxyTest::testPing()
+{
+	MockDataProxyClient client;
+	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/get_results.dat" );
+	FileUtilities::Touch( fileSpec );
+
+	// case: no ping endpoint specified, host validated
+	{
+		std::stringstream xmlContents;
+		xmlContents << "<DataNode location=\"http://www.google.com:9123/some/path\" >"
+					<< "</DataNode>";
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+		RestDataProxy proxy( "name", client, *nodes[0] );
+
+		std::stringstream results;
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ | DPL::WRITE | DPL::DELETE ) );
+	}
+	{
+		std::stringstream xmlContents;
+		xmlContents << "<DataNode location=\"http://google.com/another/path\" >"
+					<< "</DataNode>";
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+		RestDataProxy proxy( "name", client, *nodes[0] );
+
+		std::stringstream results;
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ | DPL::WRITE | DPL::DELETE ) );
+	}
+	{
+		std::stringstream xmlContents;
+		xmlContents << "<DataNode location=\"http://localhost:91231/blah/blah\" >"
+					<< "</DataNode>";
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+		RestDataProxy proxy( "name", client, *nodes[0] );
+
+		std::stringstream results;
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ | DPL::WRITE | DPL::DELETE ) );
+	}
+	{
+		std::stringstream xmlContents;
+		xmlContents << "<DataNode location=\"http://127.0.0.1:91231/blah/blah\" >"
+					<< "</DataNode>";
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+		RestDataProxy proxy( "name", client, *nodes[0] );
+
+		std::stringstream results;
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ | DPL::WRITE | DPL::DELETE ) );
+	}
+
+	// case: no ping endpoint specified, host validation fails
+	{
+		std::stringstream xmlContents;
+		xmlContents << "<DataNode location=\"http://hopefully-this-host-doesnt-exist:1717/some/path\" >"
+					<< "</DataNode>";
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+		RestDataProxy proxy( "name", client, *nodes[0] );
+
+		std::stringstream results;
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::READ ), PingException,
+			".*:\\d+: Unable to resolve host: hopefully-this-host-doesnt-exist: not found" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::WRITE ), PingException,
+			".*:\\d+: Unable to resolve host: hopefully-this-host-doesnt-exist: not found" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::DELETE ), PingException,
+			".*:\\d+: Unable to resolve host: hopefully-this-host-doesnt-exist: not found" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::READ | DPL::WRITE | DPL::DELETE ), PingException,
+			".*:\\d+: Unable to resolve host: hopefully-this-host-doesnt-exist: not found" );
+	}
+
+	// case: host validated, Read ping fails
+	{
+		std::stringstream xmlContents;
+		xmlContents << "<DataNode location=\"http://localhost:1717/some/path\" >"
+					<< "	<Read ping=\"http://this-wont-pass\" />"
+					<< "</DataNode>";
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+		RestDataProxy proxy( "name", client, *nodes[0] );
+
+		std::stringstream results;
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::READ ), PingException,
+			".*:\\d+: Error issuing Read ping: .* while issuing GET to URI: http://this-wont-pass" );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::WRITE ) );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::DELETE ) );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::WRITE | DPL::DELETE ) );
+	}
+
+	// case: host validated, CUSTOM Read ping fails
+	{
+		std::stringstream xmlContents;
+		xmlContents << "<DataNode location=\"http://localhost:1717/some/path\" >"
+					<< "	<Read ping=\"MYCUSTOMMETHOD http://this-wont-pass\" />"
+					<< "</DataNode>";
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+		RestDataProxy proxy( "name", client, *nodes[0] );
+
+		std::stringstream results;
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::READ ), PingException,
+			".*:\\d+: Error issuing Read ping: .* while issuing MYCUSTOMMETHOD to URI: http://this-wont-pass" );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::WRITE ) );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::DELETE ) );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::WRITE | DPL::DELETE ) );
+	}
+
+	// case: host validated, Write ping fails
+	{
+		std::stringstream xmlContents;
+		xmlContents << "<DataNode location=\"http://localhost:1717/some/path\" >"
+					<< "	<Write ping=\"http://this-wont-pass\" />"
+					<< "</DataNode>";
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+		RestDataProxy proxy( "name", client, *nodes[0] );
+
+		std::stringstream results;
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::WRITE ), PingException,
+			".*:\\d+: Error issuing Write ping: .* while issuing GET to URI: http://this-wont-pass" );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ ) );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::DELETE ) );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ | DPL::DELETE ) );
+	}
+
+	// case: host validated, CUSTOM Write ping fails
+	{
+		std::stringstream xmlContents;
+		xmlContents << "<DataNode location=\"http://localhost:1717/some/path\" >"
+					<< "	<Write ping=\"MYCUSTOMMETHOD http://this-wont-pass\" />"
+					<< "</DataNode>";
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+		RestDataProxy proxy( "name", client, *nodes[0] );
+
+		std::stringstream results;
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::WRITE ), PingException,
+			".*:\\d+: Error issuing Write ping: .* while issuing MYCUSTOMMETHOD to URI: http://this-wont-pass" );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ ) );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::DELETE ) );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ | DPL::DELETE ) );
+	}
+
+	// case: host validated, Delete ping fails
+	{
+		std::stringstream xmlContents;
+		xmlContents << "<DataNode location=\"http://localhost:1717/some/path\" >"
+					<< "	<Delete ping=\"http://this-wont-pass\" />"
+					<< "</DataNode>";
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+		RestDataProxy proxy( "name", client, *nodes[0] );
+
+		std::stringstream results;
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::DELETE ), PingException,
+			".*:\\d+: Error issuing Delete ping: .* while issuing GET to URI: http://this-wont-pass" );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::WRITE ) );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ ) );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::WRITE | DPL::READ ) );
+	}
+
+	// case: host validated, CUSTOM Delete ping fails
+	{
+		std::stringstream xmlContents;
+		xmlContents << "<DataNode location=\"http://localhost:1717/some/path\" >"
+					<< "	<Delete ping=\"MYCUSTOMMETHOD http://this-wont-pass\" />"
+					<< "</DataNode>";
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+		RestDataProxy proxy( "name", client, *nodes[0] );
+
+		std::stringstream results;
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::DELETE ), PingException,
+			".*:\\d+: Error issuing Delete ping: .* while issuing MYCUSTOMMETHOD to URI: http://this-wont-pass" );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::WRITE ) );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ ) );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::WRITE | DPL::READ ) );
+	}
+
+	// case: host validated, ping succeeds
+	{
+		std::stringstream xmlContents;
+		xmlContents << "<DataNode location=\"http://localhost:1717/some/path\" >"
+					<< "	<Read ping=\"" << m_pService->GetEndpoint() + m_pTempDir->GetDirectoryName() << "\" />"
+					<< "	<Write ping=\"" << m_pService->GetEndpoint() + m_pTempDir->GetDirectoryName() << "\" />"
+					<< "	<Delete ping=\"" << m_pService->GetEndpoint() + m_pTempDir->GetDirectoryName() << "\" />"
+					<< "</DataNode>";
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+		RestDataProxy proxy( "name", client, *nodes[0] );
+
+		std::stringstream results;
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ ) );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::WRITE ) );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::DELETE ) );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ | DPL::WRITE | DPL::DELETE ) );
+	}
+}
+
 void RestDataProxyTest::testLoadTimeout()
 {
 	MockDataProxyClient client;
@@ -729,7 +960,7 @@ void RestDataProxyTest::testLoadComplex()
 	// boost create dir doesn't like parentheses so we change them to underscores in the mock service
 	boost::replace_all( dirPath, "(", "_" );
 	boost::replace_all( dirPath, ")", "_" );
-	FileUtilities::CreateDirectory( dirPath );
+	CPPUNIT_ASSERT_NO_THROW( FileUtilities::CreateDirectory( dirPath ) );
 	std::string fileSpec( dirPath + "/get_results.dat" );
 	std::ofstream file( fileSpec.c_str() );
 	file << data;
@@ -1028,7 +1259,7 @@ void RestDataProxyTest::testDeleteComplex()
 	// boost create dir doesn't like parentheses so we change them to underscores in the mock service
 	boost::replace_all( dirPath, "(", "_" );
 	boost::replace_all( dirPath, ")", "_" );
-	FileUtilities::CreateDirectory( dirPath );
+	CPPUNIT_ASSERT_NO_THROW( FileUtilities::CreateDirectory( dirPath ) );
 	std::string fileSpec( dirPath + "/delete_results.dat" );
 	FileUtilities::Touch( fileSpec );
 

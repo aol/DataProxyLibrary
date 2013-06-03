@@ -21,7 +21,7 @@
 
 namespace
 {
-	const std::string SHELL_VERSION( "DataProxy Shell v3.1.11" );
+	const std::string SHELL_VERSION( "DataProxy Shell v3.2.0" );
 
 	const char* INIT( "init" );
 	const char* NAME( "name" );
@@ -32,6 +32,7 @@ namespace
 	const char* LOG_CONFIG( "log_config" );
 	const char* INSTANCE_ID( "Instance" );
 	const char* TRANSACTION( "transactional" );
+	const char* PING( "Ping" );
 
 	const std::string DEFAULT_PARAMS( "null" );
 
@@ -57,6 +58,7 @@ DataProxyShellConfig::DataProxyShellConfig( int argc, char** argv )
 		( PARAMS, boost::program_options::value< std::vector< std::string > >(), "* parameters associated with this request.\n* format: 'key1~value1^key2~value2^...^keyN~valueN.\n* if absent, no parameters will be used", false )
 		( DELETE, "* issue a Delete request. If this flag is set, data with the --data flag should not be supplied", false )
 		( DATA, boost::program_options::value< std::vector< std::string > >(), "* if supplied, data to store (default op is load).\n* prepend with the '@' symbol to use data from a file.\n* use '-' to read from standard in.\n* if this option is used multiple times, each one\n  after the first will append data in order.", false )
+		( PING, boost::program_options::value<std::string>(), "* if supplied, ping node with supplied mode.\n string must contain only r,w,d characters, or the special string 'x' for no-op ping", false )
 		( LOG_CONFIG, boost::program_options::value<std::string>()->default_value(""), "* If logging is desired, use this to configure log4cxx" )
 		( INSTANCE_ID, boost::program_options::value<std::string>()->default_value(""), "* If logging, use this instance id for tracking" )
 		( TRANSACTION, "Perform operation(s) inside a transaction", false, false )
@@ -87,6 +89,21 @@ DataProxyShellConfig::DataProxyShellConfig( int argc, char** argv )
 			std::map< std::string, std::string > newParams;
 			ProxyUtilities::FillMap( *iter, newParams );
 			m_Parameters.insert( newParams.begin(), newParams.end() );
+		}
+	}
+	if( m_Options.Exists( PING ) )
+	{
+		if( m_Options.Exists( DATA ) )
+		{
+			MV_THROW( DataProxyShellConfigException, "Invalid argument: " << DATA << " cannot be supplied with a Ping request" );
+		}
+		if( m_Options.Exists( DELETE ) )
+		{
+			MV_THROW( DataProxyShellConfigException, "Invalid argument: " << DELETE << " cannot be supplied with a Ping request" );
+		}
+		if( m_Options.Exists( PARAMS ) )
+		{
+			MV_THROW( DataProxyShellConfigException, "Invalid argument: " << PARAMS << " cannot be supplied with a Ping request" );
 		}
 	}
 	if( m_Options.Exists( DATA ) )
@@ -171,6 +188,10 @@ const std::string& DataProxyShellConfig::GetOperation() const
 		{
 			return DELETE_OPERATION;
 		}
+		if( m_Options.Exists( PING ) )
+		{
+			return PING_OPERATION;
+		}
 		return ( m_pData == NULL ? LOAD_OPERATION : STORE_OPERATION );
 	}
 	return INIT_OPERATION;
@@ -184,6 +205,16 @@ const std::string& DataProxyShellConfig::GetName() const
 	}
 
 	return m_Options[NAME].as< std::string >();
+}
+
+int DataProxyShellConfig::GetPingMode() const
+{
+	if( !m_Options.Exists( PING ) )
+	{
+		MV_THROW( DataProxyShellConfigException, "Missing argument: '" << PING << "'" );
+	}
+
+	return ProxyUtilities::GetMode( m_Options[PING].as< std::string >() );
 }
 
 std::istream& DataProxyShellConfig::GetData() const

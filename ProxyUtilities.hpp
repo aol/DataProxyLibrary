@@ -47,6 +47,8 @@ namespace ProxyUtilities
 							   std::vector< std::string >* o_pBindColumns = NULL );
 
 	std::string GetVariableSubstitutedString( const std::string& i_rInput, const std::map< std::string, std::string >& i_rParameters );
+
+	int GetMode( const std::string& i_rInput );
 };
 
 #endif //_PROXY_UTILITIES_HPP_

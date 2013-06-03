@@ -26,6 +26,7 @@ namespace
 	const char* LOAD_WHITELIST_FILE( "load_whitelist_file" );
 	const char* STORE_WHITELIST_FILE( "store_whitelist_file" );
 	const char* DELETE_WHITELIST_FILE( "delete_whitelist_file" );
+	const char* PING_WHITELIST_FILE( "ping_whitelist_file" );
 	const char* STATS_RETENTION_HOURS( "stats_retention_hours" );
 	const char* STATS_RETENTION_SIZE( "stats_retention_size" );
 	const char* STATS_PER_HOUR_ESTIMATE( "stats_per_hour_estimate" );
@@ -47,6 +48,7 @@ DataProxyServiceConfig::DataProxyServiceConfig( int argc, char** argv )
 		( LOAD_WHITELIST_FILE, boost::program_options::value<std::string>()->default_value(""), "ip whitelist file for load (GET) operations.\nif empty or nonexistent, all incoming ips will be allowed.\nif present, only the ips defined in the file (newline-separated) will be allowed to load data.\nrequests may have multiple ip addresses for a single request (via X-Forwarded-For field); in this case at least one of the ips must be in the whitelist for the request to succeed" )
 		( STORE_WHITELIST_FILE, boost::program_options::value<std::string>()->default_value(""), "ip whitelist file for store (POST) operations.\nsame semantics as load whitelist" )
 		( DELETE_WHITELIST_FILE, boost::program_options::value<std::string>()->default_value(""), "ip whitelist file for delete (DELETE) operations.\nsame semantics as load whitelist" )
+		( PING_WHITELIST_FILE, boost::program_options::value<std::string>()->default_value(""), "ip whitelist file for ping (HEAD) operations.\nsame semantics as load whitelist" )
 		( STATS_RETENTION_HOURS, boost::program_options::value<unsigned int>()->default_value(24), "number of hours to keep stats information. 0 = off." )
 		( STATS_RETENTION_SIZE, boost::program_options::value<long>()->default_value(-1), "maximum number of stats logs to keep. -1 = no limit. 0 = off." )
 		( STATS_PER_HOUR_ESTIMATE, boost::program_options::value<size_t>()->default_value(5000), "estimated number of requests per hour. a good estimate optimizes insertion of stats information." )
@@ -118,6 +120,11 @@ const std::string& DataProxyServiceConfig::GetStoreWhitelistFile() const
 const std::string& DataProxyServiceConfig::GetDeleteWhitelistFile() const
 {
 	return m_Options[DELETE_WHITELIST_FILE].as< std::string >();
+}
+
+const std::string& DataProxyServiceConfig::GetPingWhitelistFile() const
+{
+	return m_Options[PING_WHITELIST_FILE].as< std::string >();
 }
 
 unsigned int DataProxyServiceConfig::GetStatsRetentionHours() const

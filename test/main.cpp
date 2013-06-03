@@ -95,32 +95,8 @@ int main(int argc, char** argv)
 
 		runner.run(controller, "");
 	
-		if(xmlOutput)
-		{	
-			std::ofstream file( CPPUNIT_OUTPUT_FILENAME );
-			CppUnit::XmlOutputter xml( &result, file );
-			xml.write();
-			file.close();
-		}
-		else
-		{
 			CppUnit::TextOutputter textOut(&result, std::cerr);
 			textOut.printFailures();
-		}
-	
-		std::ofstream outFile("data_proxy_tests_result");
-	
-		if(outFile)
-		{	
-			if(result.wasSuccessful())
-			{
-				outFile << "0";
-			}
-			else
-			{
-				outFile << "1";
-			}
-		}
 	
 		CleanUp();
 		return result.wasSuccessful() ? 0 : 1;

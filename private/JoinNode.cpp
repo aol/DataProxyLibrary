@@ -133,7 +133,11 @@ namespace
 		}
 
 		std::set< std::string > columns;
-		boost::iter_split( columns, static_cast< const std::string& >( i_rColumns ), boost::first_finder(",") );
+		std::string columnStr( static_cast< const std::string& >( i_rColumns ) );
+		if( !columnStr.empty() )
+		{
+			boost::iter_split( columns, columnStr, boost::first_finder(",") );
+		}
 		int i=1;
 		for( std::vector< std::string >::const_iterator iter = i_rHeaderColumns.begin(); iter != i_rHeaderColumns.end(); ++iter, ++i )
 		{
@@ -771,5 +775,56 @@ void JoinNode::WriteHorizontalJoin( std::istream& i_rInput,
 	for( ; removeIter != tempFiles.end(); ++removeIter )
 	{
 		FileUtilities::Remove( *removeIter );
+	}
+}
+
+void JoinNode::Ping( int i_Mode ) const
+{
+	if( i_Mode & DPL::READ )
+	{
+		// if we're not enabled for read, die here
+		if( !m_ReadEnabled )
+		{
+			MV_THROW( PingException, "Not configured to be able to handle Read operations" );
+		}
+
+		// ping the primary endpoint
+		m_rParent.Ping( m_ReadEndpoint, DPL::READ );
+
+		// and all subsequent joins (if any)
+		std::vector< StreamConfig >::const_iterator iter = m_ReadJoins.begin();
+		for( ; iter != m_ReadJoins.end(); ++iter )
+		{
+			m_rParent.Ping( iter->GetValue< NodeName >(), DPL::READ );
+		}
+	}
+	if( i_Mode & DPL::WRITE )
+	{
+		// if we're not enabled for write, die here
+		if( !m_WriteEnabled )
+		{
+			MV_THROW( PingException, "Not configured to be able to handle Write operations" );
+		}
+
+		// ping the primary endpoint
+		m_rParent.Ping( m_WriteEndpoint, DPL::WRITE );
+
+		// and all subsequent joins (if any)
+		std::vector< StreamConfig >::const_iterator iter = m_WriteJoins.begin();
+		for( ; iter != m_WriteJoins.end(); ++iter )
+		{
+			m_rParent.Ping( iter->GetValue< NodeName >(), DPL::WRITE );
+		}
+	}
+	if( i_Mode & DPL::DELETE )
+	{
+		// if we're not enabled for delete, die here
+		if( !m_DeleteEnabled )
+		{
+			MV_THROW( PingException, "Not configured to be able to handle Delete operations" );
+		}
+
+		// ping the primary endpoint
+		m_rParent.Ping( m_DeleteEndpoint, DPL::DELETE );
 	}
 }

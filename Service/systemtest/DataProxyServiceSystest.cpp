@@ -66,6 +66,7 @@ void DataProxyServiceSystest::testHappyPath( void )
 	std::string loadWhitelistFile( m_pTempDir->GetDirectoryName() + "/load_whitelist" );
 	std::string storeWhitelistFile( m_pTempDir->GetDirectoryName() + "/store_whitelist" );
 	std::string deleteWhitelistFile( m_pTempDir->GetDirectoryName() + "/delete_whitelist" );
+	std::string pingWhitelistFile( m_pTempDir->GetDirectoryName() + "/ping_whitelist" );
 
 	std::string dplConfigFileSpec = m_pTempDir->GetDirectoryName() + "/dplConfig.xml";
 	std::ofstream file( dplConfigFileSpec.c_str() );
@@ -84,7 +85,8 @@ void DataProxyServiceSystest::testHappyPath( void )
 		<< " --num_threads 4"
 		<< " --load_whitelist_file " << loadWhitelistFile
 		<< " --store_whitelist_file " << storeWhitelistFile
-		<< " --delete_whitelist_file " << deleteWhitelistFile;
+		<< " --delete_whitelist_file " << deleteWhitelistFile
+		<< " --ping_whitelist_file " << pingWhitelistFile;
 	
 	ShellExecutor exe( cmd.str() );
 	std::stringstream out;
@@ -92,21 +94,30 @@ void DataProxyServiceSystest::testHappyPath( void )
 
 	exe.RunInBackground( out, err );
 
-	::usleep( 50000 );
+	::usleep( 100000 );
+
+	std::stringstream base;
+	base << "http://localhost:" << port;
+
+	// PING the service
+	std::ostringstream results;
+	RESTParameters params;
+	params.SetMethod( std::string("HEAD") );
+	RESTClient client;
+	CPPUNIT_ASSERT_NO_THROW( client.Execute( base.str() + "/my/path/?mode=rwd", results, params ) );
+	CPPUNIT_ASSERT_EQUAL( std::string(), results.str() );
 
 	std::stringstream endpoint;
-	endpoint << "http://localhost:" << port << "/my/path/?query1=value1&query2=value2";
+	endpoint << base.str() << "/my/path/?query1=value1&query2=value2";
 
 	// POST data to the service
 	std::istringstream data( "This is some data that will eventually be returned via GET" );
-	RESTParameters params;
 	params.SetCompression( IDENTITY );
 	params.SetMethod( std::string( "POST" ) );
-	RESTClient client;
 	CPPUNIT_ASSERT_NO_THROW( client.Execute( endpoint.str(), data, params ) );
 
 	// now GET it back
-	std::ostringstream results;
+	results.str("");
 	params.SetMethod( std::string( "GET" ) );
 	CPPUNIT_ASSERT_NO_THROW( client.Execute( endpoint.str(), results, params ) );
 	CPPUNIT_ASSERT_EQUAL( data.str(), results.str() );
@@ -137,48 +148,76 @@ void DataProxyServiceSystest::testHappyPath( void )
 
 	// verify load whitelist behavior
 	FileUtilities::Touch( nodeDir + "/query1~value1^query2~value2" );
+	VERIFY_ACCESS( std::string("HEAD"), endpoint.str(), params, true );
 	VERIFY_ACCESS( std::string("GET"), endpoint.str(), params, true );
 	VERIFY_ACCESS( std::string("POST"), endpoint.str(), params, true );
 	VERIFY_ACCESS( std::string("DELETE"), endpoint.str(), params, true );
 	FileUtilities::Touch( loadWhitelistFile );
 	FileUtilities::Touch( nodeDir + "/query1~value1^query2~value2" );
+	VERIFY_ACCESS( std::string("HEAD"), endpoint.str(), params, true );
 	VERIFY_ACCESS( std::string("GET"), endpoint.str(), params, false );
 	VERIFY_ACCESS( std::string("POST"), endpoint.str(), params, true );
 	VERIFY_ACCESS( std::string("DELETE"), endpoint.str(), params, true );
 	FileUtilities::Remove( loadWhitelistFile );
 	FileUtilities::Touch( nodeDir + "/query1~value1^query2~value2" );
+	VERIFY_ACCESS( std::string("HEAD"), endpoint.str(), params, true );
 	VERIFY_ACCESS( std::string("GET"), endpoint.str(), params, true );
 	VERIFY_ACCESS( std::string("POST"), endpoint.str(), params, true );
 	VERIFY_ACCESS( std::string("DELETE"), endpoint.str(), params, true );
 
 	// verify store whitelist behavior
 	FileUtilities::Touch( nodeDir + "/query1~value1^query2~value2" );
+	VERIFY_ACCESS( std::string("HEAD"), endpoint.str(), params, true );
 	VERIFY_ACCESS( std::string("GET"), endpoint.str(), params, true );
 	VERIFY_ACCESS( std::string("POST"), endpoint.str(), params, true );
 	VERIFY_ACCESS( std::string("DELETE"), endpoint.str(), params, true );
 	FileUtilities::Touch( storeWhitelistFile );
 	FileUtilities::Touch( nodeDir + "/query1~value1^query2~value2" );
+	VERIFY_ACCESS( std::string("HEAD"), endpoint.str(), params, true );
 	VERIFY_ACCESS( std::string("GET"), endpoint.str(), params, true );
 	VERIFY_ACCESS( std::string("POST"), endpoint.str(), params, false );
 	VERIFY_ACCESS( std::string("DELETE"), endpoint.str(), params, true );
 	FileUtilities::Remove( storeWhitelistFile );
 	FileUtilities::Touch( nodeDir + "/query1~value1^query2~value2" );
+	VERIFY_ACCESS( std::string("HEAD"), endpoint.str(), params, true );
 	VERIFY_ACCESS( std::string("GET"), endpoint.str(), params, true );
 	VERIFY_ACCESS( std::string("POST"), endpoint.str(), params, true );
 	VERIFY_ACCESS( std::string("DELETE"), endpoint.str(), params, true );
 
 	// verify delete whitelist behavior
 	FileUtilities::Touch( nodeDir + "/query1~value1^query2~value2" );
+	VERIFY_ACCESS( std::string("HEAD"), endpoint.str(), params, true );
 	VERIFY_ACCESS( std::string("GET"), endpoint.str(), params, true );
 	VERIFY_ACCESS( std::string("POST"), endpoint.str(), params, true );
 	VERIFY_ACCESS( std::string("DELETE"), endpoint.str(), params, true );
 	FileUtilities::Touch( deleteWhitelistFile );
 	FileUtilities::Touch( nodeDir + "/query1~value1^query2~value2" );
+	VERIFY_ACCESS( std::string("HEAD"), endpoint.str(), params, true );
 	VERIFY_ACCESS( std::string("GET"), endpoint.str(), params, true );
 	VERIFY_ACCESS( std::string("POST"), endpoint.str(), params, true );
 	VERIFY_ACCESS( std::string("DELETE"), endpoint.str(), params, false );
 	FileUtilities::Remove( deleteWhitelistFile );
 	FileUtilities::Touch( nodeDir + "/query1~value1^query2~value2" );
+	VERIFY_ACCESS( std::string("HEAD"), endpoint.str(), params, true );
+	VERIFY_ACCESS( std::string("GET"), endpoint.str(), params, true );
+	VERIFY_ACCESS( std::string("POST"), endpoint.str(), params, true );
+	VERIFY_ACCESS( std::string("DELETE"), endpoint.str(), params, true );
+
+	// verify ping whitelist behavior
+	FileUtilities::Touch( nodeDir + "/query1~value1^query2~value2" );
+	VERIFY_ACCESS( std::string("HEAD"), endpoint.str(), params, true );
+	VERIFY_ACCESS( std::string("GET"), endpoint.str(), params, true );
+	VERIFY_ACCESS( std::string("POST"), endpoint.str(), params, true );
+	VERIFY_ACCESS( std::string("DELETE"), endpoint.str(), params, true );
+	FileUtilities::Touch( pingWhitelistFile );
+	FileUtilities::Touch( nodeDir + "/query1~value1^query2~value2" );
+	VERIFY_ACCESS( std::string("HEAD"), endpoint.str(), params, false );
+	VERIFY_ACCESS( std::string("GET"), endpoint.str(), params, true );
+	VERIFY_ACCESS( std::string("POST"), endpoint.str(), params, true );
+	VERIFY_ACCESS( std::string("DELETE"), endpoint.str(), params, true );
+	FileUtilities::Remove( pingWhitelistFile );
+	FileUtilities::Touch( nodeDir + "/query1~value1^query2~value2" );
+	VERIFY_ACCESS( std::string("HEAD"), endpoint.str(), params, true );
 	VERIFY_ACCESS( std::string("GET"), endpoint.str(), params, true );
 	VERIFY_ACCESS( std::string("POST"), endpoint.str(), params, true );
 	VERIFY_ACCESS( std::string("DELETE"), endpoint.str(), params, true );

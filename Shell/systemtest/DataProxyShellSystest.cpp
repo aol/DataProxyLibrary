@@ -50,6 +50,24 @@ void DataProxyShellSystest::testHappyPath( void )
 		 << "</DplConfig>" << std::endl;
 	file.close();
 
+	// first ping the node to be sure it's there and ready
+	std::stringstream cmd;
+	cmd << "./dplShell"
+		<< " --init " << dplConfigFileSpec
+		<< " --name my_node"
+		<< " --Ping rwd";
+
+	ShellExecutor pingExe( cmd.str() );
+	std::stringstream out;
+	std::stringstream err;
+
+	CPPUNIT_ASSERT_EQUAL( 0, pingExe.Run( 1.0, out, err ) );
+
+	CPPUNIT_ASSERT_EQUAL( std::string(""), out.str() );
+	CPPUNIT_ASSERT_EQUAL( std::string(""), err.str() );
+	out.str("");
+	err.str("");
+
 	std::stringstream stdIn;
 	stdIn << "This is some data";
 	std::string data2( " that will eventually be returned" );
@@ -57,7 +75,7 @@ void DataProxyShellSystest::testHappyPath( void )
 	std::string allData = stdIn.str() + data2;
 
 	// store some data
-	std::stringstream cmd;
+	cmd.str("");
 	cmd << "./dplShell"
 		<< " --init " << dplConfigFileSpec
 		<< " --name my_node"
@@ -66,8 +84,6 @@ void DataProxyShellSystest::testHappyPath( void )
 		<< " --params p2~v2^p1~v1^p3~v3";
 
 	ShellExecutor storeExe( cmd.str() );
-	std::stringstream out;
-	std::stringstream err;
 
 	CPPUNIT_ASSERT_EQUAL( 0, storeExe.Run( 1.0, stdIn, out, err ) );
 

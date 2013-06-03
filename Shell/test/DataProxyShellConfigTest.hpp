@@ -24,6 +24,7 @@ private:
 
 	CPPUNIT_TEST_SUITE(DataProxyShellConfigTest);
 	CPPUNIT_TEST(testInit);
+	CPPUNIT_TEST(testPing);
 	CPPUNIT_TEST(testLoadNoParams);
 	CPPUNIT_TEST(testLoadWithParams);
 	CPPUNIT_TEST(testLoadWithMultiParams);
@@ -46,6 +47,7 @@ public:
 	void tearDown();
 
 	void testInit();
+	void testPing();
 	void testLoadNoParams();
 	void testLoadWithParams();
 	void testLoadWithMultiParams();

@@ -29,6 +29,7 @@ namespace xercesc = xercesc_2_7;
 
 MV_MAKEEXCEPTIONCLASS( NodeConfigException, MVException );
 MV_MAKEEXCEPTIONCLASS( ParameterValidationException, MVException );
+MV_MAKEEXCEPTIONCLASS( PingException, MVException );
 
 class AbstractNode : public boost::noncopyable
 {
@@ -41,6 +42,10 @@ public:
 	MV_VIRTUAL void Load( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData );
 	MV_VIRTUAL bool Store( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData );
 	MV_VIRTUAL bool Delete( const std::map<std::string, std::string>& i_rParameters );
+
+	// ping support: all children must implement this to say to the outside world whether they
+	// are able to complete the indicated tasks
+	virtual void Ping( int i_Mode ) const = 0;
 	
 	// cycle-checking support
 	MV_VIRTUAL void InsertReadForwards( std::set< std::string >& o_rForwards ) const;

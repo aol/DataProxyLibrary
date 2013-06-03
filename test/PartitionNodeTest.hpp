@@ -22,6 +22,7 @@ private:
 	CPPUNIT_TEST_SUITE( PartitionNodeTest );
 	CPPUNIT_TEST( testInvalidXml );
 	CPPUNIT_TEST( testOperationAttributeParsing ); 
+	CPPUNIT_TEST( testPing );
 	CPPUNIT_TEST( testLoad );
 	CPPUNIT_TEST( testLoadNotSupported );
 	CPPUNIT_TEST( testStore );
@@ -41,6 +42,7 @@ public:
 
 	void testInvalidXml();
 	void testOperationAttributeParsing(); 
+	void testPing();
 	void testLoad();
 	void testLoadNotSupported();
 	void testStore();

@@ -127,6 +127,38 @@ namespace
 			return BAD_MD5;
 		}
 	}
+
+	std::string PrintMode( int i_Mode )
+	{
+		std::stringstream result;
+		bool foundOne( false );
+		result << i_Mode << ": ";
+		if( i_Mode | DPL::READ )
+		{
+			result << "read";
+			foundOne = true;
+		}
+		if( i_Mode | DPL::WRITE )
+		{
+			if( foundOne )
+			{
+				result << ", ";
+			}
+			result << "write";
+			foundOne = true;
+		}
+		if( i_Mode | DPL::DELETE )
+		{
+			if( foundOne )
+			{
+				result << ", ";
+			}
+			result << "delete";
+			foundOne = true;
+		}
+
+		return result.str();
+	}
 }
 
 DataProxyClient::DataProxyClient( bool i_DoNotInitializeXerces )
@@ -414,6 +446,33 @@ std::string DataProxyClient::ExtractName( xercesc::DOMNode* i_pNode ) const
 	}
 
 	return name;
+}
+
+void DataProxyClient::Ping( const std::string& i_rName, int i_Mode ) const
+{
+	boost::shared_lock< boost::shared_mutex > lock( m_ConfigMutex );
+	if( !m_Initialized )
+	{
+		MV_THROW( DataProxyClientException, "Attempted to issue Ping request on uninitialized DataProxyClient" );
+	}
+
+	MVLOGGER( "root.lib.DataProxy.DataProxyClient.Ping.Info", "Ping called for named DataNode: "
+		<< i_rName << " with mode: " << PrintMode( i_Mode ) );
+
+	NodesMap::const_iterator iter = m_Nodes.find( i_rName );
+	if( iter == m_Nodes.end() )
+	{
+		MV_THROW( DataProxyClientException, "Attempted to issue Ping request on unknown data node '" << i_rName << "'. Check XML configuration." );
+	}
+
+	try
+	{
+		iter->second->Ping( i_Mode );
+	}
+	catch( const MVException& i_rEx )
+	{
+		MV_THROW( PingException, "Caught exception issuing Ping request to node: " << i_rName << ": " << i_rEx );
+	}
 }
 
 void DataProxyClient::Load( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData ) const

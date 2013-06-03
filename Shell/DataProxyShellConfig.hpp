@@ -32,6 +32,7 @@ public:
 	MV_VIRTUAL std::istream& GetData() const;
 	MV_VIRTUAL const std::map< std::string, std::string >& GetParameters() const;
 	MV_VIRTUAL bool IsTransactional() const;
+	MV_VIRTUAL int GetPingMode() const;
 
 private:
 	CliOptions m_Options;

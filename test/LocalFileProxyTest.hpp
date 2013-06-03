@@ -25,6 +25,7 @@ private:
 	CPPUNIT_TEST( testNoLocation );
 	CPPUNIT_TEST( testBadBaseLocation );
 	CPPUNIT_TEST( testGarbageChildren );
+	CPPUNIT_TEST( testPing );
 	CPPUNIT_TEST( testLoadNonexistent );
 	CPPUNIT_TEST( testLoadUnreadable );
 	CPPUNIT_TEST( testLoad );
@@ -69,6 +70,7 @@ public:
 	void testNoLocation();
 	void testBadBaseLocation();
 	void testGarbageChildren();
+	void testPing();
 	void testLoadNonexistent();
 	void testLoadUnreadable();
 	void testLoad();

@@ -7,6 +7,7 @@
 // LAST UPDATED:    $Date$
 // UPDATED BY:      $Author$
 
+#include "DPLCommon.hpp"
 #include "PartitionNode.hpp"
 #include "PartitionNodeTest.hpp"
 #include "MockDataProxyClient.hpp"
@@ -285,6 +286,92 @@ void PartitionNodeTest::testOperationAttributeParsing()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	CPPUNIT_ASSERT_NO_THROW( PartitionNode node( "name", client, *nodes[0] ) ); 
+}
+
+void PartitionNodeTest::testPing()
+{
+	MockDataProxyClient client;
+
+	// case: read enabled
+	{
+		std::vector<xercesc::DOMNode*> nodes;
+		std::stringstream xmlContents;
+		xmlContents << "<PartitionNode>" << std::endl
+					<< "  <Read>" << std::endl
+					<< "    <ForwardTo name=\"r-name1\" />" << std::endl
+					<< "  </Read>" << std::endl
+					<< "  <Write partitionBy=\"key\" sortTimeout=\"5.0\" >" << std::endl
+					<< "    <ForwardTo name=\"w-name1\" />" << std::endl
+					<< "  </Write>" << std::endl
+					<< "</PartitionNode>" << std::endl;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		PartitionNode node( std::string("name"), client, *nodes[0] ) ;
+		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::READ ) );
+		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::WRITE ) );
+		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::READ | DPL::WRITE ) );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+
+		std::stringstream expected;
+		expected << "Ping called with Name: r-name1 Mode: " << ( DPL::READ ) << std::endl;
+		expected << "Ping called with Name: w-name1 Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: r-name1 Mode: " << ( DPL::READ ) << std::endl;
+		expected << "Ping called with Name: w-name1 Mode: " << ( DPL::WRITE ) << std::endl;
+		CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+		client.ClearLog();
+	}
+	// case: write enabled
+	{
+		std::vector<xercesc::DOMNode*> nodes;
+		std::stringstream xmlContents;
+		xmlContents << "<PartitionNode>" << std::endl
+					<< "  <Write partitionBy=\"key\" sortTimeout=\"5.0\" >" << std::endl
+					<< "    <ForwardTo name=\"name1\" />" << std::endl
+					<< "  </Write>" << std::endl
+					<< "</PartitionNode>" << std::endl;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		PartitionNode node( std::string("name"), client, *nodes[0] ) ;
+		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::WRITE ) );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::READ ), PingException, ".*:\\d+: Not configured to be able to handle Read operations" );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
+
+		std::stringstream expected;
+		expected << "Ping called with Name: name1 Mode: " << ( DPL::WRITE ) << std::endl;
+		CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+		client.ClearLog();
+	}
+	// case: delete enabled
+	{
+		std::vector<xercesc::DOMNode*> nodes;
+		std::stringstream xmlContents;
+		xmlContents << "<PartitionNode>" << std::endl
+					<< "  <Delete>" << std::endl
+					<< "    <ForwardTo name=\"d-name1\" />" << std::endl
+					<< "  </Delete>" << std::endl
+					<< "  <Write partitionBy=\"key\" sortTimeout=\"5.0\" >" << std::endl
+					<< "    <ForwardTo name=\"w-name1\" />" << std::endl
+					<< "  </Write>" << std::endl
+					<< "</PartitionNode>" << std::endl;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+		PartitionNode node( std::string("name"), client, *nodes[0] ) ;
+		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::DELETE ) );
+		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::WRITE ) );
+		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::DELETE | DPL::WRITE ) );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::READ ), PingException, ".*:\\d+: Not configured to be able to handle Read operations" );
+
+		std::stringstream expected;
+		expected << "Ping called with Name: d-name1 Mode: " << ( DPL::DELETE ) << std::endl;
+		expected << "Ping called with Name: w-name1 Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: w-name1 Mode: " << ( DPL::WRITE ) << std::endl;
+		expected << "Ping called with Name: d-name1 Mode: " << ( DPL::DELETE ) << std::endl;
+		CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+		client.ClearLog();
+	}
 }
 
 void PartitionNodeTest::testLoad()

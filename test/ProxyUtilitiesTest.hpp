@@ -24,6 +24,7 @@ class ProxyUtilitiesTest : public CppUnit::TestFixture
 private:
 	CPPUNIT_TEST_SUITE( ProxyUtilitiesTest );
 	CPPUNIT_TEST( testToString );
+	CPPUNIT_TEST( testGetMode );
 	CPPUNIT_TEST( testGetMergeQuery_IllegalXml );
 	CPPUNIT_TEST( testGetMergeQuery_InsertOnly );
 	CPPUNIT_TEST( testGetMergeQuery_FullMerge_Oracle );
@@ -50,6 +51,7 @@ public:
 	void tearDown();
 
 	void testToString();
+	void testGetMode();
 	void testGetMergeQuery_IllegalXml();
 	void testGetMergeQuery_InsertOnly();
 	void testGetMergeQuery_FullMerge_Oracle();

@@ -7,6 +7,7 @@
 // LAST UPDATED:    $Date$
 // UPDATED BY:      $Author$
 
+#include "DPLCommon.hpp"
 #include "LocalFileProxyTest.hpp"
 #include "FileUtilities.hpp"
 #include "TempDirectory.hpp"
@@ -153,6 +154,78 @@ void LocalFileProxyTest::testOperationAttributeParsing()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	CPPUNIT_ASSERT_NO_THROW( LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator ) ); 
+}
+
+void LocalFileProxyTest::testPing()
+{
+	MockDataProxyClient client;
+	MockUniqueIdGenerator uniqueIdGenerator;
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >"
+				<< "</DataNode>";
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+
+	// case: read enabled
+	{
+		::system( ( std::string( "chmod +r " ) + m_pTempDir->GetDirectoryName() ).c_str() );
+		::system( ( std::string( "chmod -w " ) + m_pTempDir->GetDirectoryName() ).c_str() );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ ) );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::READ | DPL::WRITE ), InvalidDirectoryException, ".*:\\d+: The directory .* does not have the requested file access permissions\\." );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::WRITE ), InvalidDirectoryException, ".*:\\d+: The directory .* does not have the requested file access permissions\\." );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::DELETE ), InvalidDirectoryException, ".*:\\d+: The directory .* does not have the requested file access permissions\\." );
+
+		std::stringstream expected;
+		CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+		client.ClearLog();
+	}
+	// case: write enabled
+	{
+		::system( ( std::string( "chmod -r " ) + m_pTempDir->GetDirectoryName() ).c_str() );
+		::system( ( std::string( "chmod +w " ) + m_pTempDir->GetDirectoryName() ).c_str() );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::WRITE ) );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::DELETE ) );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::READ ), InvalidDirectoryException, ".*:\\d+: The directory .* does not have the requested file access permissions\\." );
+
+		std::stringstream expected;
+		CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+		client.ClearLog();
+	}
+	// case: read-write enabled
+	{
+		::system( ( std::string( "chmod +r " ) + m_pTempDir->GetDirectoryName() ).c_str() );
+		::system( ( std::string( "chmod +w " ) + m_pTempDir->GetDirectoryName() ).c_str() );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ ) );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::WRITE ) );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ | DPL::WRITE ) );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ | DPL::WRITE | DPL::DELETE ) );
+
+		std::stringstream expected;
+		CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
+		client.ClearLog();
+	}
+	// case: write enabled, WITH append mode (requires read)
+	{
+		std::stringstream xmlContents;
+		xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >"
+					<< "  <Write onFileExist=\"append\" />"
+					<< "</DataNode>";
+		std::vector<xercesc::DOMNode*> nodes;
+		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+		LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+
+		// first, with all permissions, all operations are OK
+		::system( ( std::string( "chmod +r " ) + m_pTempDir->GetDirectoryName() ).c_str() );
+		::system( ( std::string( "chmod +w " ) + m_pTempDir->GetDirectoryName() ).c_str() );
+		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ | DPL::WRITE | DPL::DELETE ) );
+
+		// now, make the directory not readable
+		::system( ( std::string( "chmod -r " ) + m_pTempDir->GetDirectoryName() ).c_str() );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::WRITE ), InvalidDirectoryException, ".*:\\d+: The directory .* does not have the requested file access permissions\\." );
+	}
 }
 
 void LocalFileProxyTest::testLoadNonexistent()

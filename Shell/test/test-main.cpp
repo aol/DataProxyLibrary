@@ -105,20 +105,6 @@ int main(int argc, char** argv)
 			textOut.printFailures();
 		}
 	
-		std::ofstream outFile("data_proxy_shell_test_results");
-	
-		if(outFile)
-		{
-			if(result.wasSuccessful())
-			{
-				outFile << "0";
-			}
-			else
-			{
-				outFile << "1";
-			}
-		}
-	
 		CleanUp();
 		return result.wasSuccessful() ? 0 : 1;
     }

@@ -1299,3 +1299,54 @@ void DatabaseProxy::InsertImplDeleteForwards( std::set< std::string >& o_rForwar
 	// DatabaseProxy has no specific delete forwarding capabilities
 }
 
+void DatabaseProxy::Ping( int i_Mode ) const
+{
+	if( i_Mode & DPL::READ )
+	{
+		if( !m_ReadEnabled )
+		{
+			MV_THROW( PingException, "Not configured to be able to handle Read operations" );
+		}
+		// can only check the connection if we're not in shard mode
+		if( !m_ReadConnectionByTable )
+		{
+			m_rDatabaseConnectionManager.GetConnection( m_ReadConnectionName );
+		}
+		else
+		{
+			MVLOGGER("root.lib.DataProxy.DatabaseProxy.Ping.Read.UnableToCheck", "Unable to ping connection: " << m_ReadConnectionName << " for read because it is a shard connection" );
+		}
+	}
+	if( i_Mode & DPL::WRITE )
+	{
+		if( !m_WriteEnabled )
+		{
+			MV_THROW( PingException, "Not configured to be able to handle Write operations" );
+		}
+		// can only check the connection if we're not in shard mode
+		if( !m_WriteConnectionByTable )
+		{
+			m_rDatabaseConnectionManager.GetConnection( m_WriteConnectionName );
+		}
+		else
+		{
+			MVLOGGER("root.lib.DataProxy.DatabaseProxy.Ping.Write.UnableToCheck", "Unable to ping connection: " << m_WriteConnectionName << " for write because it is a shard connection" );
+		}
+	}
+	if( i_Mode & DPL::DELETE )
+	{
+		if( !m_DeleteEnabled )
+		{
+			MV_THROW( PingException, "Not configured to be able to handle Delete operations" );
+		}
+		// can only check the connection if we're not in shard mode
+		if( !m_DeleteConnectionByTable )
+		{
+			m_rDatabaseConnectionManager.GetConnection( m_DeleteConnectionName );
+		}
+		else
+		{
+			MVLOGGER("root.lib.DataProxy.DatabaseProxy.Ping.Delete.UnableToCheck", "Unable to ping connection: " << m_DeleteConnectionName << " for delete because it is a shard connection" );
+		}
+	}
+}

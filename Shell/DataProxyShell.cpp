@@ -36,6 +36,10 @@ int main(int argc, char* argv[])
 		{
 			// do nothing
 		}
+		else if( config.GetOperation() == PING_OPERATION )
+		{
+			client.Ping( config.GetName(), config.GetPingMode() );
+		}
 		else if( config.GetOperation() == LOAD_OPERATION )
 		{
 			client.Load( config.GetName(), config.GetParameters(), std::cout );

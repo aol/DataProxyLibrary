@@ -18,6 +18,7 @@
 #include "StoreHandler.hpp"
 #include "DeleteHandler.hpp"
 #include "ApplicationMonitor.hpp"
+#include "PingHandler.hpp"
 
 namespace
 {
@@ -58,6 +59,7 @@ int main( int argc, char** argv )
 
 		// create handlers
 		DataProxyClient client( true );
+		PingHandler pingHandler( client, config.GetDplConfig() );
 		LoadHandler loadHandler( client, config.GetDplConfig(), config.GetZLibCompressionLevel(), config.GetEnableXForwardedFor() );
 		StoreHandler storeHandler( client, config.GetDplConfig(), config.GetEnableXForwardedFor() );
 		DeleteHandler deleteHandler( client, config.GetDplConfig(), config.GetEnableXForwardedFor() );
@@ -66,6 +68,7 @@ int main( int argc, char** argv )
 		rWebServer.AddWebService( HTTP_POST, MATCH_ALL, storeHandler, config.GetStoreWhitelistFile() );
 		rWebServer.AddWebService( HTTP_GET, MATCH_ALL, loadHandler, config.GetLoadWhitelistFile() );
 		rWebServer.AddWebService( HTTP_DELETE, MATCH_ALL, deleteHandler, config.GetDeleteWhitelistFile() );
+		rWebServer.AddWebService( HTTP_HEAD, MATCH_ALL, pingHandler, config.GetPingWhitelistFile() );
 
 		// start webservice
 		MVLOGGER( "root.lib.DataProxy.Service.CreatedWebserver", "Starting data proxy service, instance id: " << config.GetInstanceId() << ", listening on port: " << config.GetPort() );

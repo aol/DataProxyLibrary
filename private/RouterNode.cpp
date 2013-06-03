@@ -348,3 +348,50 @@ void RouterNode::SetWriteDeleteConfig( const xercesc::DOMNode* i_pNode, Critical
 	}
 }
 
+void RouterNode::Ping( int i_Mode ) const
+{
+	if( i_Mode & DPL::READ )
+	{
+		// if we're not enabled for read, die here
+		if( !m_ReadEnabled )
+		{
+			MV_THROW( PingException, "Not configured to be able to handle Read operations" );
+		}
+
+		// if we have a read route (legal to have a dummy one), ping it
+		if( !m_ReadRoute.IsNull() )
+		{
+			m_rParent.Ping( m_ReadRoute, DPL::READ );
+		}
+	}
+	if( i_Mode & DPL::WRITE )
+	{
+		// if we're not enabled for write, die here
+		if( !m_WriteEnabled )
+		{
+			MV_THROW( PingException, "Not configured to be able to handle Write operations" );
+		}
+
+		// ping all endpoints
+		std::vector< RouteConfig >::const_iterator iter = m_WriteRoute.begin();
+		for( ; iter != m_WriteRoute.end(); ++iter )
+		{
+			m_rParent.Ping( iter->GetValue< NodeName >(), DPL::WRITE );
+		}
+	}
+	if( i_Mode & DPL::DELETE )
+	{
+		// if we're not enabled for delete, die here
+		if( !m_DeleteEnabled )
+		{
+			MV_THROW( PingException, "Not configured to be able to handle Delete operations" );
+		}
+
+		// ping all endpoints
+		std::vector< RouteConfig >::const_iterator iter = m_DeleteRoute.begin();
+		for( ; iter != m_DeleteRoute.end(); ++iter )
+		{
+			m_rParent.Ping( iter->GetValue< NodeName >(), DPL::DELETE );
+		}
+	}
+}

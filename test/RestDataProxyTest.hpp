@@ -36,6 +36,7 @@ private:
 	CPPUNIT_TEST( testMalformedUriPathSegmentParametersNode );
 	CPPUNIT_TEST( testMalformedParameterNode );
 	CPPUNIT_TEST( testDuplicateParameters );
+	CPPUNIT_TEST( testPing );
 	CPPUNIT_TEST( testLoadTimeout );
 	CPPUNIT_TEST( testLoadBasic );
 	CPPUNIT_TEST( testLoadMethodOverride );
@@ -71,6 +72,7 @@ public:
 	void testMalformedUriPathSegmentParametersNode();
 	void testMalformedParameterNode();
 	void testDuplicateParameters();
+	void testPing();
 	void testLoadTimeout();
 	void testLoadBasic();
 	void testLoadMethodOverride();

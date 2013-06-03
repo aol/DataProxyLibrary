@@ -9,6 +9,7 @@
 //
 // UPDATED BY:	  $Author$
 
+#include "DPLCommon.hpp"
 #include "DataProxyShellConfigTest.hpp"
 #include "DataProxyShellConfig.hpp"
 #include "DataProxyShell.hpp"
@@ -67,6 +68,98 @@ void DataProxyShellConfigTest::testInit()
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pConfig->GetData(), DataProxyShellConfigException,
 		".*:\\d+: Data pointer is NULL" );
 	CPPUNIT_ASSERT_EQUAL( size_t(0), pConfig->GetParameters().size() );
+}
+
+void DataProxyShellConfigTest::testPing()
+{
+	std::string configFileSpec = m_pTempDir->GetDirectoryName() + "/config.xml";
+	FileUtilities::Touch( configFileSpec );
+	
+	{
+		const char* argv[] = 
+		{
+			"dpls",
+			"--init", const_cast< char* >( configFileSpec.c_str() ),
+			"--name", "name1",
+			"--Ping", "x"
+		};
+		int argc = sizeof(argv)/sizeof(char*);
+
+		boost::scoped_ptr< DataProxyShellConfig > pConfig;
+		CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, const_cast< char** >( argv ) ) ) );
+
+		CPPUNIT_ASSERT_EQUAL( configFileSpec, pConfig->GetDplConfig() );
+		CPPUNIT_ASSERT_EQUAL( PING_OPERATION, pConfig->GetOperation() );
+		CPPUNIT_ASSERT_EQUAL( std::string("name1"), pConfig->GetName() );
+		CPPUNIT_ASSERT_EQUAL( 0, pConfig->GetPingMode() );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pConfig->GetData(), DataProxyShellConfigException, ".*:\\d+: Data pointer is NULL" );
+		CPPUNIT_ASSERT_EQUAL( size_t(0), pConfig->GetParameters().size() );
+	}
+	{
+		const char* argv[] = 
+		{
+			"dpls",
+			"--init", const_cast< char* >( configFileSpec.c_str() ),
+			"--name", "name1",
+			"--Ping", "rwd"
+		};
+		int argc = sizeof(argv)/sizeof(char*);
+
+		boost::scoped_ptr< DataProxyShellConfig > pConfig;
+		CPPUNIT_ASSERT_NO_THROW( pConfig.reset( new DataProxyShellConfig( argc, const_cast< char** >( argv ) ) ) );
+
+		CPPUNIT_ASSERT_EQUAL( configFileSpec, pConfig->GetDplConfig() );
+		CPPUNIT_ASSERT_EQUAL( PING_OPERATION, pConfig->GetOperation() );
+		CPPUNIT_ASSERT_EQUAL( std::string("name1"), pConfig->GetName() );
+		CPPUNIT_ASSERT_EQUAL( DPL::READ | DPL::WRITE | DPL::DELETE, pConfig->GetPingMode() );
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pConfig->GetData(), DataProxyShellConfigException, ".*:\\d+: Data pointer is NULL" );
+		CPPUNIT_ASSERT_EQUAL( size_t(0), pConfig->GetParameters().size() );
+	}
+	{
+		const char* argv[] = 
+		{
+			"dpls",
+			"--init", const_cast< char* >( configFileSpec.c_str() ),
+			"--name", "name1",
+			"--Ping", "rw",
+			"--Delete"
+		};
+		int argc = sizeof(argv)/sizeof(char*);
+
+		boost::scoped_ptr< DataProxyShellConfig > pConfig;
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pConfig.reset( new DataProxyShellConfig( argc, const_cast< char** >( argv ) ) ), DataProxyShellConfigException,
+			".*:\\d+: Invalid argument: Delete cannot be supplied with a Ping request" );
+	}
+	{
+		const char* argv[] = 
+		{
+			"dpls",
+			"--init", const_cast< char* >( configFileSpec.c_str() ),
+			"--name", "name1",
+			"--Ping", "rw",
+			"--data", "blah"
+		};
+		int argc = sizeof(argv)/sizeof(char*);
+
+		boost::scoped_ptr< DataProxyShellConfig > pConfig;
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pConfig.reset( new DataProxyShellConfig( argc, const_cast< char** >( argv ) ) ), DataProxyShellConfigException,
+			".*:\\d+: Invalid argument: data cannot be supplied with a Ping request" );
+	}
+	{
+		const char* argv[] = 
+		{
+			"dpls",
+			"--init", const_cast< char* >( configFileSpec.c_str() ),
+			"--name", "name1",
+			"--Ping", "rw",
+			"--params", "q~v"
+		};
+		int argc = sizeof(argv)/sizeof(char*);
+
+		boost::scoped_ptr< DataProxyShellConfig > pConfig;
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pConfig.reset( new DataProxyShellConfig( argc, const_cast< char** >( argv ) ) ), DataProxyShellConfigException,
+			".*:\\d+: Invalid argument: params cannot be supplied with a Ping request" );
+	}
 }
 
 void DataProxyShellConfigTest::testLoadNoParams()

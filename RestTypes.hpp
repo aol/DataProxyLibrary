@@ -69,6 +69,8 @@ namespace Dpl
 
 	typedef std::vector< std::string > UriPathSegmentList;
 
+	DATUMINFO( PingEndpoint, std::string );
+	DATUMINFO( PingMethod, std::string );
 	DATUMINFO( UriSuffix, std::string );
 	DATUMINFO( RestParameters, RESTParameters );
 	DATUMINFO( ClientParameters, ParameterContainer );
@@ -76,12 +78,14 @@ namespace Dpl
 	DATUMINFO( UriPathSegmentOrder, UriPathSegmentList );
 
 	typedef
+		GenericDatum< PingEndpoint,
+		GenericDatum< PingMethod,
 		GenericDatum< UriSuffix,
 		GenericDatum< RestParameters,
 		GenericDatum< ClientParameters,
 		GenericDatum< GroupConfig,
 		GenericDatum< UriPathSegmentOrder,
-		RowEnd > > > > >
+		RowEnd > > > > > > >
 	RestConfigDatum;
 };
 

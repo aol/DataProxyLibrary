@@ -76,6 +76,15 @@ void MockDataProxyClient::Initialize( const std::string& i_rConfigFileSpec )
 
 //Mock Load first checks if the tester configured a particular response for the given data node AND parameters.
 //If not, then it checks if there is a response configured for just the data node.
+void MockDataProxyClient::Ping( const std::string& i_rName, int i_Mode ) const
+{
+	m_Log << "Ping called with Name: " << i_rName << " Mode: " << i_Mode << std::endl;
+	if( m_ExceptionNames.find( i_rName ) != m_ExceptionNames.end() )
+	{
+		MV_THROW( DataProxyClientException, "Set to throw an exception for name: " << i_rName );
+	}
+}
+
 void MockDataProxyClient::Load( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData ) const
 {
 	m_rLog << "Load called with Name: " << i_rName << " Parameters: " << ToString( i_rParameters ) << std::endl;

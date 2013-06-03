@@ -28,8 +28,9 @@ public:
 	virtual ~AbstractHandler();
 
 protected:
-	bool CheckConfig( HTTPResponse& o_rResponse );
-	void GetParams( HTTPRequest& i_rRequest, std::string& o_rName, std::map< std::string, std::string >& o_rParams );
+	bool CheckConfig( HTTPResponse& o_rResponse ) const;
+	std::string GetName( HTTPRequest& i_rRequest ) const;
+	void GetParams( HTTPRequest& i_rRequest, std::string& o_rName, std::map< std::string, std::string >& o_rParams ) const;
 	DataProxyClient& GetDataProxyClient(); 
 
 	virtual void Handle( HTTPRequest& i_rRequest, HTTPResponse& o_rResponse ) = 0;

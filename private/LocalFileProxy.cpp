@@ -468,3 +468,21 @@ void LocalFileProxy::InsertImplDeleteForwards( std::set< std::string >& o_rForwa
 	// LocalFileProxy has no specific delete forwarding capabilities
 }
 
+void LocalFileProxy::Ping( int i_Mode ) const
+{
+	bool validatedRead = false;
+	if( i_Mode & DPL::READ )
+	{
+		FileUtilities::ValidateDirectory( m_BaseLocation, R_OK );
+		validatedRead = true;
+	}
+
+	if( i_Mode & DPL::WRITE || i_Mode & DPL::DELETE )
+	{
+		FileUtilities::ValidateDirectory( m_BaseLocation, W_OK | X_OK );
+		if( m_OpenMode == APPEND && !validatedRead )
+		{
+			FileUtilities::ValidateDirectory( m_BaseLocation, R_OK );
+		}
+	}
+}

@@ -22,6 +22,7 @@ private:
 	CPPUNIT_TEST_SUITE( ExecutionProxyTest );
 	CPPUNIT_TEST( testInvalidXml );
 	CPPUNIT_TEST( testOperationAttributeParsing ); 
+	CPPUNIT_TEST( testPing );
 	CPPUNIT_TEST( testLoad );
 	CPPUNIT_TEST( testLoadError );
 	CPPUNIT_TEST( testLoadTimeout );
@@ -45,6 +46,7 @@ public:
 
 	void testInvalidXml();
 	void testOperationAttributeParsing(); 
+	void testPing();
 	void testLoad();
 	void testLoadError();
 	void testLoadTimeout();

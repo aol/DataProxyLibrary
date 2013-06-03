@@ -35,6 +35,8 @@ public:
 	virtual void LoadImpl( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData );
 	virtual void StoreImpl( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData );
 	virtual void DeleteImpl( const std::map<std::string,std::string>& i_rParameters );
+	virtual void Ping( int i_Mode ) const;
+
 	virtual void InsertImplReadForwards( std::set< std::string >& o_rForwards ) const;
 	virtual void InsertImplWriteForwards( std::set< std::string >& o_rForwards ) const;
 	virtual void InsertImplDeleteForwards( std::set< std::string >& o_rForwards ) const;
@@ -46,6 +48,7 @@ public:
 
 private:
 	std::string m_Location;
+	std::string m_Host;
 	Dpl::RestConfigDatum m_ReadConfig;
 	Dpl::RestConfigDatum m_WriteConfig;
 	Dpl::RestConfigDatum m_DeleteConfig;

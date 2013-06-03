@@ -22,6 +22,7 @@ private:
 	CPPUNIT_TEST_SUITE( RouterNodeTest );
 	CPPUNIT_TEST( testInvalidXml );
 	CPPUNIT_TEST( testOperationAttributeParsing ); 
+	CPPUNIT_TEST( testPing );
 	CPPUNIT_TEST( testLoad );
 	CPPUNIT_TEST( testLoadEmpty );
 	CPPUNIT_TEST( testLoadNotSupported );
@@ -44,6 +45,7 @@ public:
 
 	void testInvalidXml();
 	void testOperationAttributeParsing();
+	void testPing();
 	void testLoad();
 	void testLoadEmpty();
 	void testLoadNotSupported();

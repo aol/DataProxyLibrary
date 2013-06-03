@@ -61,5 +61,11 @@ enum ParameterTypeIndicator
 	HTTP_HEADER
 };
 
+namespace DPL
+{
+	const int READ = 0x01;
+	const int WRITE = 0x02;
+	const int DELETE = 0x04;
+}
 
 #endif //_DPL_COMMON_HPP_

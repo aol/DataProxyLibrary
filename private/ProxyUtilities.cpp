@@ -8,6 +8,7 @@
 // LAST UPDATED:    $Date$
 // UPDATED BY:      $Author$
 
+#include "DPLCommon.hpp"
 #include "ProxyUtilities.hpp"
 #include "DPLCommon.hpp"
 #include "XMLUtilities.hpp"
@@ -769,4 +770,34 @@ bool ProxyUtilities::GetBool( const xercesc::DOMNode& i_rNode, const std::string
 	{
 		MV_THROW( ProxyUtilitiesException, "Write attribute: " << i_rAttribute << " has invalid value: " << value << ". Valid values are 'true' and 'false'" );
 	}
+}
+
+int ProxyUtilities::GetMode( const std::string& i_rInput )
+{
+	if( i_rInput == "x" )
+	{
+		return 0;
+	}
+
+	int mode( 0 );
+	for( size_t i=0; i<i_rInput.length(); ++i )
+	{
+		switch( i_rInput[i] )
+		{
+		case 'r':
+			mode |= DPL::READ;
+			break;
+		case 'w':
+			mode |= DPL::WRITE;
+			break;
+		case 'd':
+			mode |= DPL::DELETE;
+			break;
+		default:
+			MV_THROW( ProxyUtilitiesException, "Unrecognized mode character: " << i_rInput[i] << " at position " << i << " in string: "
+				<< i_rInput << ". Legal values are: r,w,d for read, write, delete, respectively. Special string 'x' may be used to signify the null-mode 0" );
+			break;
+		}
+	}
+	return mode;
 }

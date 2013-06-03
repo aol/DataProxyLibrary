@@ -20,7 +20,9 @@
 #include "GenericDataAssigner.hpp"
 #include <fstream>
 #include <set>
+#include <netdb.h>
 #include <boost/lexical_cast.hpp>
+#include <boost/regex.hpp>
 
 namespace
 {
@@ -31,6 +33,7 @@ namespace
 	const std::string GROUP_NODE( "Group" );
 
 	// attributes
+	const std::string PING_ATTRIBUTE( "ping" );
 	const std::string METHOD_OVERRIDE_ATTRIBUTE( "methodOverride" );
 	const std::string URI_SUFFIX_ATTRIBUTE( "uriSuffix" );
 	const std::string TIMEOUT_ATTRIBUTE( "timeout" );
@@ -57,6 +60,9 @@ namespace
 	const std::string NONE_VALUE( "none" );
 	const std::string GZIP_VALUE( "gzip" );
 	const std::string DEFLATE_VALUE( "deflate" );
+	const boost::regex URI_HOSTNAME_REGEX( "https?:\\/\\/([\\w\\-_\\.]+).*" );
+	const boost::regex PING_VALUE_REGEX( "([\\w]+) (https?:\\/\\/.*)" );
+	const int HOST_INFO_BUFSIZE( 1024 );
 
 	// adds the parameter to the given container if it is 
 	// a) absent from current parameters
@@ -284,9 +290,37 @@ namespace
 		}
 	}
 
+	void ExtractPing( const std::string& i_rPingValue, std::string& o_rEndpoint, std::string& o_rMethod )
+	{
+		boost::smatch matches;
+		if( boost::regex_match( i_rPingValue, matches, PING_VALUE_REGEX ) )
+		{
+			o_rMethod = matches[1];
+			o_rEndpoint = matches[2];
+		}
+		else
+		{
+			o_rMethod = "GET";
+			o_rEndpoint = i_rPingValue;
+		}
+
+		if( !boost::regex_match( o_rEndpoint, URI_HOSTNAME_REGEX ) )
+		{
+			MV_THROW( RestDataProxyException, "Unable to extract host from ping location: " << o_rEndpoint << ". Location must be an http endpoint" );
+		}
+	}
+
 	void SetRestConfig( const xercesc::DOMNode& i_rNode, Dpl::RestConfigDatum& o_rConfig )
 	{
 		xercesc::DOMAttr* pAttribute;
+
+		// get ping location (if it exists)
+		pAttribute = XMLUtilities::GetAttribute( &i_rNode, PING_ATTRIBUTE );
+		if( pAttribute != NULL )
+		{
+			std::string pingValue( XMLUtilities::XMLChToString(pAttribute->getValue()) );
+			ExtractPing( pingValue, o_rConfig.GetReference< Dpl::PingEndpoint >(), o_rConfig.GetReference< Dpl::PingMethod >() );
+		}
 
 		// get method override (if it exists)
 		pAttribute = XMLUtilities::GetAttribute( &i_rNode, METHOD_OVERRIDE_ATTRIBUTE );
@@ -361,11 +395,27 @@ namespace
 									 rParamConfig.GetValue< Dpl::Group >() );
 		}
 	}
+
+	std::string ExtractHost( const std::string& i_rLocation )
+	{
+		boost::smatch matches;
+		if( boost::regex_match( i_rLocation, matches, URI_HOSTNAME_REGEX ) )
+		{
+			return matches[1];
+		}
+		else
+		{
+			MV_THROW( RestDataProxyException, "Unable to extract host from location: " << i_rLocation << ". Location must be an http endpoint" );
+		}
+
+		return "";
+	}
 }
 
 RestDataProxy::RestDataProxy( const std::string& i_rName, DataProxyClient& i_rParent, const xercesc::DOMNode& i_rNode )
 :	AbstractNode( i_rName, i_rParent, i_rNode ),
 	m_Location( XMLUtilities::GetAttributeValue( &i_rNode, LOCATION_ATTRIBUTE ) ),
+	m_Host( ExtractHost( m_Location ) ),
 	m_ReadConfig(),
 	m_WriteConfig(),
 	m_DeleteConfig()
@@ -377,17 +427,20 @@ RestDataProxy::RestDataProxy( const std::string& i_rName, DataProxyClient& i_rPa
 	AbstractNode::ValidateXmlElements( i_rNode, allowedChildren, allowedChildren, allowedChildren );
 
 	std::set< std::string > allowedReadAttributes;
+	allowedReadAttributes.insert( PING_ATTRIBUTE );
 	allowedReadAttributes.insert( METHOD_OVERRIDE_ATTRIBUTE );
 	allowedReadAttributes.insert( TIMEOUT_ATTRIBUTE );
 	allowedReadAttributes.insert( URI_SUFFIX_ATTRIBUTE );
 	allowedReadAttributes.insert( COMPRESSION_ATTRIBUTE );
 	allowedReadAttributes.insert( MAX_REDIRECTS_ATTRIBUTE );
 	std::set< std::string > allowedWriteAttributes;
+	allowedWriteAttributes.insert( PING_ATTRIBUTE );
 	allowedWriteAttributes.insert( METHOD_OVERRIDE_ATTRIBUTE );
 	allowedWriteAttributes.insert( TIMEOUT_ATTRIBUTE );
 	allowedWriteAttributes.insert( URI_SUFFIX_ATTRIBUTE );
 	allowedWriteAttributes.insert( MAX_REDIRECTS_ATTRIBUTE );
 	std::set< std::string > allowedDeleteAttributes;
+	allowedDeleteAttributes.insert( PING_ATTRIBUTE );
 	allowedDeleteAttributes.insert( METHOD_OVERRIDE_ATTRIBUTE );
 	allowedDeleteAttributes.insert( TIMEOUT_ATTRIBUTE );
 	allowedDeleteAttributes.insert( URI_SUFFIX_ATTRIBUTE );
@@ -526,4 +579,93 @@ void RestDataProxy::InsertImplWriteForwards( std::set< std::string >& o_rForward
 void RestDataProxy::InsertImplDeleteForwards( std::set< std::string >& o_rForwards ) const
 {
 	// RestDataProxy has no specific delete forwarding capabilities
+}
+
+void RestDataProxy::Ping( int i_Mode ) const
+{
+	// regardless of the mode, resolve the host defined in the location attribute. This should ensure the host is contactable
+	char buffer[HOST_INFO_BUFSIZE];
+	int herr;
+	struct hostent host;
+	struct hostent* pResult;
+	int retCode = gethostbyname_r( m_Host.c_str(), &host, buffer, HOST_INFO_BUFSIZE, &pResult, &herr );
+	if( retCode != 0 || pResult == NULL )
+	{
+		bool noThrow( false );
+		std::stringstream error;
+		switch( herr )
+		{
+		case HOST_NOT_FOUND:
+			error << "Unable to resolve host: " << m_Host << ": not found";
+			break;
+		case NO_ADDRESS:
+			error << "Host: " << m_Host << " is valid, but does not have an IP address";
+			noThrow = true;
+			break;
+		case NO_RECOVERY:
+			error << "A non-recoverable name server error occurred while resolving host: " << m_Host;
+			break;
+		case TRY_AGAIN:
+			error << "A temporary error occurred on an authoritative name server while resolving host: " << m_Host << "; Try again later";
+			break;
+		default:
+			error << "An unknown error occurred while resolving host: " << m_Host << "; error number is: " << herr;
+			break;
+		}
+		if( noThrow )
+		{
+			MVLOGGER( "root.lib.DataProxy.RestDataProxy.Ping.Warning", error.str() );
+		}
+		else
+		{
+			MV_THROW( PingException, error.str() );
+		}
+	}
+
+	// now check for individual modes
+	if( i_Mode & DPL::READ && !m_ReadConfig.GetValue< Dpl::PingEndpoint >().empty() )
+	{
+		std::ostringstream result;
+		RESTParameters parameters;
+		parameters.SetMethod( m_ReadConfig.GetValue< Dpl::PingMethod >() );
+		try
+		{
+			RESTClient().Execute( m_ReadConfig.GetValue< Dpl::PingEndpoint >(), result, parameters );
+			MVLOGGER( "root.lib.DataProxy.RestDataProxy.Ping.Read.Result", "Read ping returned this data: " << result.str() );
+		}
+		catch( const MVException& i_rException )
+		{
+			MV_THROW( PingException, "Error issuing Read ping: " << i_rException );
+		}
+	}
+	if( i_Mode & DPL::WRITE && !m_WriteConfig.GetValue< Dpl::PingEndpoint >().empty() )
+	{
+		std::ostringstream result;
+		RESTParameters parameters;
+		parameters.SetMethod( m_WriteConfig.GetValue< Dpl::PingMethod >() );
+		try
+		{
+			RESTClient().Execute( m_WriteConfig.GetValue< Dpl::PingEndpoint >(), result, parameters );
+			MVLOGGER( "root.lib.DataProxy.RestDataProxy.Ping.Write.Result", "Write ping returned this data: " << result.str() );
+		}
+		catch( const MVException& i_rException )
+		{
+			MV_THROW( PingException, "Error issuing Write ping: " << i_rException );
+		}
+	}
+	if( i_Mode & DPL::DELETE && !m_DeleteConfig.GetValue< Dpl::PingEndpoint >().empty() )
+	{
+		std::ostringstream result;
+		RESTParameters parameters;
+		parameters.SetMethod( m_DeleteConfig.GetValue< Dpl::PingMethod >() );
+		try
+		{
+			RESTClient().Execute( m_DeleteConfig.GetValue< Dpl::PingEndpoint >(), result, parameters );
+			MVLOGGER( "root.lib.DataProxy.RestDataProxy.Ping.Delete.Result", "Delete ping returned this data: " << result.str() );
+		}
+		catch( const MVException& i_rException )
+		{
+			MV_THROW( PingException, "Error issuing Delete ping: " << i_rException );
+		}
+	}
 }

@@ -272,3 +272,34 @@ void PartitionNode::Commit()
 void PartitionNode::Rollback()
 {
 }
+
+void PartitionNode::Ping( int i_Mode ) const
+{
+	if( i_Mode & DPL::READ )
+	{
+		// if we're not enabled for read, die here
+		if( m_ReadRoute.IsNull() )
+		{
+			MV_THROW( PingException, "Not configured to be able to handle Read operations" );
+		}
+
+		// ping the endpoint
+		m_rParent.Ping( m_ReadRoute, DPL::READ );
+	}
+	if( i_Mode & DPL::WRITE )
+	{
+		// ping the endpoint
+		m_rParent.Ping( m_WriteRoute, DPL::WRITE );
+	}
+	if( i_Mode & DPL::DELETE )
+	{
+		// if we're not enabled for delete, die here
+		if( m_DeleteRoute.IsNull() )
+		{
+			MV_THROW( PingException, "Not configured to be able to handle Delete operations" );
+		}
+
+		// ping the endpoint
+		m_rParent.Ping( m_DeleteRoute, DPL::DELETE );
+	}
+}

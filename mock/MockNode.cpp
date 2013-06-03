@@ -21,6 +21,7 @@ namespace
 MockNode::MockNode( std::ostream& i_rLog,
 					const std::string& i_rName,
 					bool i_SupportsTransactions,
+					bool i_PingException,
 					bool i_LoadException,
 					bool i_StoreException,
 					bool i_DeleteException,
@@ -37,6 +38,7 @@ MockNode::MockNode( std::ostream& i_rLog,
 	m_rLog( i_rLog ),
 	m_Name( i_rName ),
 	m_SupportsTransactions( i_SupportsTransactions ),
+	m_PingException( i_PingException ),
 	m_LoadException( i_LoadException ),
 	m_StoreException( i_StoreException ),
 	m_DeleteException( i_DeleteException ),
@@ -145,4 +147,13 @@ void MockNode::InsertImplWriteForwards( std::set< std::string >& o_rForwards ) c
 
 void MockNode::InsertImplDeleteForwards( std::set< std::string >& o_rForwards ) const
 {
+}
+
+void MockNode::Ping( int i_Mode ) const
+{
+	m_rLog << "Ping called on: " << m_Name << " with mode: " << i_Mode << std::endl;
+	if( m_PingException )
+	{
+		MV_THROW( MVException, "Set to throw exception" );
+	}
 }

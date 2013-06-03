@@ -22,6 +22,7 @@ private:
 	CPPUNIT_TEST_SUITE( JoinNodeTest );
 	CPPUNIT_TEST( testInvalidXml );
 	CPPUNIT_TEST( testOperationAttributeParsing ); 
+	CPPUNIT_TEST( testPing );
 	CPPUNIT_TEST( testLoad );
 	CPPUNIT_TEST( testLoadJoinInner );
 	CPPUNIT_TEST( testLoadJoinLeft );
@@ -55,6 +56,7 @@ public:
 
 	void testInvalidXml();
 	void testOperationAttributeParsing(); 
+	void testPing();
 	void testLoad();
 	void testLoadJoinInner();
 	void testLoadJoinLeft();
