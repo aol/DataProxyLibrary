@@ -15,6 +15,7 @@ MV_MAKEEXCEPTIONCLASS( DataProxyException, MVException );
 namespace
 {
 	const std::string INIT = "Init";
+	const std::string PING = "Ping";
 	const std::string LOAD = "Load";
 	const std::string LOAD_TO_FILE = "LoadToFile";
 	const std::string STORE = "Store";
@@ -96,10 +97,6 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 	{
 		MatlabString functionName( mxArrayToString( prhs[0] ) );
 		static mxArray* pResult( NULL );
-
-		char* pInputArg = mxArrayToString( prhs[0] );
-		std::string functionName( pInputArg );
-		mxFree( pInputArg );
 		
 		if( functionName == INIT )
 		{
@@ -140,6 +137,22 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 				pResult = NULL;
 			}
 		}
+		else if( functionName == PING )
+		{
+			if( s_pDataProxyClient == NULL )
+			{
+				MV_THROW( DataProxyException, "Attempted to issue Ping request on uninitialized DataProxyClient" );
+			}
+
+			if( nrhs != 3 )
+			{
+				MV_THROW( DataProxyException, PING << " requires two parameters: named data source (string) and the mode (int)" );
+			}
+	
+			MatlabString node( mxArrayToString( prhs[1] ) );
+			int mode = int( mxGetScalar( prhs[2] ) );
+			s_pDataProxyClient->Ping( node, mode );
+		}
 		else if( functionName == LOAD )
 		{
 			if( s_pDataProxyClient == NULL )
@@ -161,7 +174,6 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 			std::ostringstream result;
 	
 			s_pDataProxyClient->Load( dataSource, parameters, result );
-
 
 			if( !pResult )
 			{
