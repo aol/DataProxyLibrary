@@ -303,13 +303,16 @@ namespace
 		return i_rManager.GetDataDefinitionConnection( i_rConnection );
 	}
 
-	std::string GetDynamicStagingTable( const std::string& i_rTablePrefix )
+	std::string GetDynamicStagingTable( const std::string& i_rTablePrefix, Nullable< size_t > i_MaxTableNameLength )
 	{
 		std::stringstream tableName;
-		tableName << i_rTablePrefix << "_" << ::getpid() << "_" << MVUtility::GetHostName();
+		tableName << i_rTablePrefix << "_" << UniqueIdGenerator().GetUniqueId();
 		std::string finalTableName( tableName.str() );
 		boost::replace_all( finalTableName, "-", "_" );
-		boost::replace_all( finalTableName, ".", "_" );
+		if( !i_MaxTableNameLength.IsNull() )
+		{
+			finalTableName = finalTableName.substr( 0, i_MaxTableNameLength );
+		}
 		return finalTableName;
 	}
 
@@ -329,31 +332,6 @@ namespace
 		}
 		return DEFAULT_MAX_BIND_SIZE;
 	}
-
-	class ScopedTempTable
-	{
-	public:
-		ScopedTempTable( Database& i_rDatabase, const std::string& i_rDatabaseType, const std::string& i_rTable, const std::string& i_rStagingTable )
-		:	m_rDatabase( i_rDatabase ),
-			m_TempTableName( i_rStagingTable )
-		{
-			std::stringstream sql;
-			sql << "CREATE TABLE " << m_TempTableName << ( i_rDatabaseType == MYSQL_DB_TYPE ? " " : " AS " ) << "( SELECT * FROM " << i_rTable << " WHERE 1 = 0 )";
-			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.CreatingStagingTable", "Creating staging table: " << m_TempTableName << " with statement: " << sql.str() );
-			Database::Statement( m_rDatabase, sql.str() ).Execute();
-		}
-		~ScopedTempTable()
-		{
-			std::stringstream sql;
-			sql << "DROP TABLE " << m_TempTableName;
-			MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.DroppingStagingTable", "Dropping staging table: " << m_TempTableName << " with statement: " << sql.str() );
-			Database::Statement( m_rDatabase, sql.str() ).Execute();
-		}
-
-	private:
-		Database& m_rDatabase;
-		const std::string m_TempTableName;
-	};
 
 	int IndexOf( const std::string& i_rKey, const std::vector< std::string >& i_rData )
 	{
@@ -389,6 +367,24 @@ namespace
 		}
 		return results.str();
 	}
+}
+
+DatabaseProxy::ScopedTempTable::ScopedTempTable( Database& i_rDatabase, const std::string& i_rDatabaseType, const std::string& i_rTable, const std::string& i_rStagingTable )
+:	m_rDatabase( i_rDatabase ),
+	m_TempTableName( i_rStagingTable )
+{
+	std::stringstream sql;
+	sql << "CREATE TABLE " << m_TempTableName << ( i_rDatabaseType == MYSQL_DB_TYPE ? " " : " AS " ) << "( SELECT * FROM " << i_rTable << " WHERE 1 = 0 )";
+	MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.CreatingStagingTable", "Creating staging table: " << m_TempTableName << " with statement: " << sql.str() );
+	Database::Statement( m_rDatabase, sql.str() ).Execute();
+}
+
+DatabaseProxy::ScopedTempTable::~ScopedTempTable()
+{
+	std::stringstream sql;
+	sql << "DROP TABLE " << m_TempTableName;
+	MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.DroppingStagingTable", "Dropping staging table: " << m_TempTableName << " with statement: " << sql.str() );
+	Database::Statement( m_rDatabase, sql.str() ).Execute();
 }
 
 DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rParent, const xercesc::DOMNode& i_rNode, DatabaseConnectionManager& i_rDatabaseConnectionManager )
@@ -427,8 +423,10 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 	m_DeleteConnectionByTable( false ),
 	m_rDatabaseConnectionManager( i_rDatabaseConnectionManager ),
 	m_PendingCommits(),
+	m_PendingDrops(),
 	m_TableMutex(),
-	m_PendingCommitsMutex()
+	m_PendingCommitsMutex(),
+	m_PendingDropsMutex()
 {
 	std::set<std::string> allowedReadElements;
 	std::set<std::string> allowedWriteElements;
@@ -560,16 +558,6 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 		if( pAttribute != NULL )
 		{
 			m_WriteMaxTableNameLength = boost::lexical_cast< size_t >( XMLUtilities::XMLChToString(pAttribute->getValue()) );
-		}
-
-		// if dynamic staging table, calculate it
-		if( m_WriteDynamicStagingTable )
-		{
-			m_WriteStagingTable = GetDynamicStagingTable( m_WriteStagingTable );
-			if( !m_WriteMaxTableNameLength.IsNull() )
-			{
-				m_WriteStagingTable = m_WriteStagingTable.substr( 0, m_WriteMaxTableNameLength );
-			}
 		}
 
 		pAttribute = XMLUtilities::GetAttribute( pNode, ON_COLUMN_PARAMETER_COLLISION_ATTRIBUTE );
@@ -997,7 +985,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 		else
 		{
 			// get the database connections needed
-			boost::scoped_ptr< ScopedTempTable > pTempTable;
+			boost::shared_ptr< ScopedTempTable > pTempTable;
 			boost::shared_ptr< Database > pDataDefinitionDatabase = GetDataDefinitionConnection( m_WriteConnectionName, m_WriteConnectionByTable, m_rDatabaseConnectionManager, i_rParameters );
 			std::string stagingTable = ProxyUtilities::GetVariableSubstitutedString( m_WriteStagingTable, i_rParameters );
 			std::string mysqlMergeQuery = ProxyUtilities::GetVariableSubstitutedString( m_WriteMySqlMergeQuery, i_rParameters );
@@ -1020,7 +1008,18 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			// if we're dynamically creating a staging table, create one via a data-definition connection, and set the staging table name
 			if( m_WriteDynamicStagingTable )
 			{
+				stagingTable = GetDynamicStagingTable( stagingTable, m_WriteMaxTableNameLength );
 				pTempTable.reset( new ScopedTempTable( *pDataDefinitionDatabase, databaseType, table, stagingTable ) );
+
+				boost::replace_all( mysqlMergeQuery, m_WriteStagingTable, stagingTable );
+				boost::replace_all( oracleMergeQuery, m_WriteStagingTable, stagingTable );
+				boost::replace_all( verticaMergeQuery, m_WriteStagingTable, stagingTable );
+
+				// lock the drop-table vector and insert it
+				{
+					boost::unique_lock< boost::shared_mutex > lock( m_PendingDropsMutex );
+					m_PendingDrops.push_back( pTempTable );
+				}
 			}
 
 			// obtain a write-lock for entire manipulation
@@ -1271,6 +1270,12 @@ void DatabaseProxy::Commit()
 	{
 		(*iter)->Commit();
 	}
+
+	// kill all the temp tables
+	{
+		boost::unique_lock< boost::shared_mutex > lock( m_PendingDropsMutex );
+		m_PendingDrops.clear();
+	}
 }
 
 
@@ -1281,6 +1286,12 @@ void DatabaseProxy::Rollback()
 	for( ; iter != m_PendingCommits.end(); m_PendingCommits.erase( iter++ ) )
 	{
 		(*iter)->Rollback();
+	}
+
+	// kill all the temp tables
+	{
+		boost::unique_lock< boost::shared_mutex > lock( m_PendingDropsMutex );
+		m_PendingDrops.clear();
 	}
 }
 

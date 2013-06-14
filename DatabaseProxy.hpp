@@ -46,6 +46,17 @@ public:
 	virtual void Rollback();
 
 private:
+	class ScopedTempTable
+	{
+	public:
+		ScopedTempTable( Database& i_rDatabase, const std::string& i_rDatabaseType, const std::string& i_rTable, const std::string& i_rStagingTable );
+		virtual ~ScopedTempTable();
+
+	private:
+		Database& m_rDatabase;
+		const std::string m_TempTableName;
+	};
+
 	// read settings
 	bool m_ReadEnabled;
 	int m_ReadMaxBindSize;
@@ -92,9 +103,11 @@ private:
 	DatabaseConnectionManager& m_rDatabaseConnectionManager;
 
 	std::set< boost::shared_ptr< Database > > m_PendingCommits;
+	std::vector< boost::shared_ptr< ScopedTempTable > > m_PendingDrops;
 
 	boost::shared_mutex m_TableMutex;
 	boost::shared_mutex m_PendingCommitsMutex;
+	boost::shared_mutex m_PendingDropsMutex;
 };
 
 #endif //_DATABASE_PROXY_HPP_
