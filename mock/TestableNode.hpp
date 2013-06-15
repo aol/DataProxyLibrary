@@ -52,6 +52,7 @@ public:
 	void AddWriteForward( const std::string& i_rForward );
 	void AddDeleteForward( const std::string& i_rForward );
 	void SetWriteOnLoadException( bool i_WriteOnLoadException );
+	void SetSeekOnStore( bool i_SeekOnStore );
 
 private:
 	mutable std::stringstream m_Log;
@@ -61,6 +62,7 @@ private:
 	bool m_StoreException;
 	bool m_DeleteException;
 	bool m_WriteOnLoadException;
+	bool m_SeekOnStore;
 	std::set< std::string > m_ReadForwards;
 	std::set< std::string > m_WriteForwards;
 	std::set< std::string > m_DeleteForwards;

@@ -1232,6 +1232,7 @@ void AbstractNodeTest::testStoreRetryCount()
 
 	TestableNode node( "name", client, *nodes[0] );
 	node.SetStoreException( true );
+	node.SetSeekOnStore( true );
 
 	std::map<std::string,std::string> parameters;
 	parameters["param1"] = "value1";

@@ -11,6 +11,7 @@
 #include "TestableNode.hpp"
 #include "DataProxyClient.hpp"
 #include "ProxyUtilities.hpp"
+#include <boost/iostreams/copy.hpp>
 
 TestableNode::TestableNode(	const std::string& i_rName,
 							DataProxyClient& i_rParent,
@@ -23,6 +24,7 @@ TestableNode::TestableNode(	const std::string& i_rName,
 	m_StoreException( false ),
 	m_DeleteException( false ),
 	m_WriteOnLoadException( false ),
+	m_SeekOnStore( false ),
 	m_ReadForwards(),
 	m_WriteForwards(),
 	m_DeleteForwards()
@@ -49,7 +51,17 @@ void TestableNode::LoadImpl( const std::map<std::string,std::string>& i_rParamet
 
 void TestableNode::StoreImpl( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData )
 {
-	m_Log << "StoreImpl called with parameters: " << ProxyUtilities::ToString( i_rParameters ) << " with data: " << i_rData.rdbuf() << std::endl;
+	if( m_SeekOnStore )
+	{
+		std::streampos current = i_rData.tellg();
+		std::stringstream temp;
+		boost::iostreams::copy( i_rData, temp );
+		i_rData.clear();
+		i_rData.seekg( current );
+	}
+	std::stringstream data;
+	boost::iostreams::copy( i_rData, data );
+	m_Log << "StoreImpl called with parameters: " << ProxyUtilities::ToString( i_rParameters ) << " with data: " << data.str() << std::endl;
 	if( m_StoreException )
 	{
 		MV_THROW( MVException, "Set to throw exception" );
@@ -129,6 +141,11 @@ void TestableNode::SetDeleteException( bool i_Exception )
 void TestableNode::SetWriteOnLoadException( bool i_Exception )
 {
 	m_WriteOnLoadException = i_Exception;
+}
+
+void TestableNode::SetSeekOnStore( bool i_SeekOnStore )
+{
+	m_SeekOnStore = i_SeekOnStore;
 }
 
 void TestableNode::AddReadForward( const std::string& i_rForward )

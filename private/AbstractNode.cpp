@@ -19,11 +19,57 @@
 #include <fstream>
 #include <boost/lexical_cast.hpp>
 #include "MonitoringTracker.hpp"
+#include <boost/iostreams/categories.hpp>
 #include <boost/iostreams/filter/counter.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/copy.hpp>
 #include <boost/ref.hpp>
 #include <boost/iostreams/filtering_streambuf.hpp>
+
+namespace boost { namespace iostreams
+{
+	class input_counter
+	{
+	public:
+		typedef char char_type;
+		struct category : input_seekable, filter_tag, multichar_tag, optimally_buffered_tag { };
+		explicit input_counter( int first_line = 0, int first_char = 0 ) : lines_(first_line), chars_(first_char) { }
+		int lines() const { return lines_; }
+		int characters() const { return chars_; }
+
+		std::streamsize optimal_buffer_size() const { return 0; }
+
+		boost::iostreams::stream_offset seek(boost::iostreams::detail::linked_streambuf<char, std::char_traits<char> >& link, boost::iostreams::stream_offset off, std::ios_base::seekdir way)
+		{
+			if( way == std::ios_base::beg )
+			{
+				chars_ = off;
+				lines_ = 0;
+			}
+			else if( way == std::ios_base::cur )
+			{
+				chars_ += off;
+			}
+			boost::iostreams::seek( link, off, way, std::ios_base::in );
+			return chars_;
+		}
+
+		template<typename Source>
+		std::streamsize read(Source& src, char_type* s, std::streamsize n)
+		{
+			std::streamsize result = iostreams::read(src, s, n);
+			if (result == -1)
+				return -1;
+			lines_ += std::count(s, s + result, char_traits<char>::newline());
+			chars_ += result;
+			return result;
+		}
+
+	private:
+		int lines_;
+		int chars_;
+	};
+} }
 
 namespace
 {
@@ -420,12 +466,13 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 		{
 			try
 			{
-				boost::iostreams::filtering_istream input;
-				boost::iostreams::counter cnt;
-				input.push( boost::ref( cnt ) );
+				pUseData->clear();
+				pUseData->seekg( retryPos );
+
+				boost::iostreams::filtering_stream<boost::iostreams::input_seekable> input;
+				input.push( boost::iostreams::input_counter() );
 				input.push( *pUseData );
 
-				pUseData->seekg( retryPos );
 				StoreImpl( *pUseParameters, input );
 
 				tracker.AddChild( CHILD_RESULT, CHILD_RESULT_SUCCESS );
@@ -433,14 +480,9 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 				{
 					tracker.Report( METRIC_PAYLOAD_BYTES_PRE_TRANSFORM, cntPreTransform.characters() );
 		            tracker.Report( METRIC_PAYLOAD_LINES_PRE_TRANSFORM, cntPreTransform.lines() );
-		            tracker.Report( METRIC_PAYLOAD_BYTES, cnt.characters() );
-		            tracker.Report( METRIC_PAYLOAD_LINES, cnt.lines() );
 				}
-				else
-				{
-					tracker.Report( METRIC_PAYLOAD_BYTES, cnt.characters() );
-					tracker.Report( METRIC_PAYLOAD_LINES, cnt.lines() );
-				}
+		        tracker.Report( METRIC_PAYLOAD_BYTES, input.component< 0, boost::iostreams::input_counter >()->characters() );
+		        tracker.Report( METRIC_PAYLOAD_LINES, input.component< 0, boost::iostreams::input_counter >()->lines() );
 
 				return true;
 			}
