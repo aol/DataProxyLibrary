@@ -22,6 +22,7 @@
 #include <xercesc/sax/HandlerBase.hpp>
 #include <xercesc/framework/LocalFileFormatTarget.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/thread/shared_mutex.hpp>
 #include <boost/thread/mutex.hpp>
 
 StreamTransformer::DynamicFunctionManager StreamTransformer::s_DynamicFunctionManager;
@@ -37,7 +38,109 @@ namespace
 	const std::string VALUE_SOURCE_ATTRIBUTE( "valueSource" );
 
 	// mutex lock for accessing shared functions
-	boost::mutex DYNAMIC_FUNCTION_MUTEX;
+	boost::shared_mutex DYNAMIC_FUNCTION_MUTEX;
+}
+
+StreamTransformer::OriginalTransformSource::OriginalTransformSource( StreamTransformer::TransformFunction i_TransformFunction, boost::shared_ptr< std::istream > i_pInput, const std::map<std::string, std::string>& i_rParameters )
+ :	m_TransformedStream(),
+ 	m_CurrentPos( 0 )
+{
+	boost::shared_ptr< std::stringstream > pResult = i_TransformFunction( *i_pInput, i_rParameters );
+
+	if (pResult == NULL )
+	{
+		// Other data will be logged by StreamTransformer::TransformStream() exception catch clause
+		MV_THROW( StreamTransformerException, "NULL transformed data stream returned" );
+	}
+
+	m_TransformedStream = pResult->str();
+}
+
+StreamTransformer::OriginalTransformSource::~OriginalTransformSource()
+{
+}
+
+std::streamsize StreamTransformer::OriginalTransformSource::read(char* o_pBuffer, std::streamsize i_BufferSize)
+{
+	if (m_CurrentPos >= m_TransformedStream.size())
+	{
+		return static_cast<std::streamsize>(-1);
+	}
+
+	// result will the the number of requested characters or the number of remaining characters returned by the transformation, whichever is less
+	std::streamsize charsCopied;
+
+	if ( (size_t(i_BufferSize) > m_TransformedStream.size()) || ((m_TransformedStream.size() - size_t(i_BufferSize)) < m_CurrentPos) )
+	{
+		charsCopied =  m_TransformedStream.copy(o_pBuffer, m_TransformedStream.size() - m_CurrentPos, m_CurrentPos);
+	}
+	else
+	{
+		charsCopied = m_TransformedStream.copy(o_pBuffer, i_BufferSize, m_CurrentPos);
+	}
+
+	m_CurrentPos += charsCopied;
+	return charsCopied;
+}
+
+std::streampos StreamTransformer::OriginalTransformSource::seek(boost::iostreams::stream_offset i_Offset, std::ios_base::seekdir i_Whence)
+{
+	switch (i_Whence)
+	{
+	case std::ios_base::beg:
+		if (i_Offset < 0)
+		{
+			m_CurrentPos = 0;
+		}
+		else if ((size_t)i_Offset > m_TransformedStream.size())
+		{
+			m_CurrentPos = m_TransformedStream.size();
+		}
+		else
+		{
+			m_CurrentPos = (size_t) i_Offset;
+		}
+		break;
+
+	case std::ios_base::end:
+		return seek(-i_Offset, std::ios_base::beg);
+		break;
+
+	case std::ios_base::cur:
+		return seek((std::streampos)m_CurrentPos + i_Offset, std::ios_base::beg);
+		break;
+
+	default:
+		MV_THROW( StreamTransformerException, "Stream transformer seek called with illegal whence value " << i_Whence );
+		break;
+	}
+
+	return (std::streampos)m_CurrentPos;
+}
+
+StreamTransformer::OriginalTransformStream::OriginalTransformStream( StreamTransformer::TransformFunction i_TransformFunction, boost::shared_ptr< std::istream > i_pInput, const std::map<std::string, std::string>& i_rParameters )
+ :	boost::iostreams::stream< OriginalTransformSource>(),
+ 	m_pSource( new OriginalTransformSource( i_TransformFunction, i_pInput, i_rParameters ) )
+{
+	open( *m_pSource );
+}
+
+StreamTransformer::OriginalTransformStream::~OriginalTransformStream()
+{
+}
+
+StreamTransformer::BackwardsCompatableTransformFunction::BackwardsCompatableTransformFunction(StreamTransformer::TransformFunction i_TransformFunction)
+ :	m_OriginalTransformFunction(i_TransformFunction)
+{
+}
+
+StreamTransformer::BackwardsCompatableTransformFunction::~BackwardsCompatableTransformFunction()
+{
+}
+
+boost::shared_ptr<std::istream>StreamTransformer::BackwardsCompatableTransformFunction::TransformInput( boost::shared_ptr< std::istream > i_pInput, const std::map<std::string, std::string>& i_rParameters )
+{
+	return boost::shared_ptr<std::istream>( new OriginalTransformStream( m_OriginalTransformFunction, i_pInput, i_rParameters ) );
 }
 
 StreamTransformer::DynamicFunctionManager::DynamicFunctionManager()
@@ -48,23 +151,30 @@ StreamTransformer::DynamicFunctionManager::~DynamicFunctionManager()
 {
 }
 
-StreamTransformer::TransformFunction StreamTransformer::DynamicFunctionManager::GetFunction( const std::string& i_rPath, const std::string& i_rFunctionName )
+boost::shared_ptr< StreamTransformer::ITransformFunction > StreamTransformer::DynamicFunctionManager::GetFunction( const std::string& i_rPath, const std::string& i_rFunctionName )
 {
+	boost::shared_lock< boost::shared_mutex > softLock( DYNAMIC_FUNCTION_MUTEX );
 	std::pair< std::string, std::string > key = std::make_pair( i_rPath, i_rFunctionName );
 
 	// if we've already accessed this function, simply return the stored handle
-	std::map< std::pair< std::string, std::string >, TransformFunction >::const_iterator iter = m_Functions.find( key );
+	TransformMap::iterator iter = m_Functions.find( key );
 	if( iter != m_Functions.end() )
 	{
 		return iter->second;
 	}
 
-	// lock the mutex so we're the only thread opening
-	boost::mutex::scoped_lock lock( DYNAMIC_FUNCTION_MUTEX );
+	// exclusive lock the mutex so we're the only thread opening
+	// but first release the shared lock to avoid deadlocks
+	softLock.unlock();
+	boost::lock_guard< boost::shared_mutex > hardLock( DYNAMIC_FUNCTION_MUTEX );
 
-	// check once more now that we have the lock
-	iter = m_Functions.find( key );
-	if( iter != m_Functions.end() )
+	// check once more now that we have the lock, since some other thread might
+	// have instantiated the function between when we unlocked the soft lock and
+	// acquired the hard lock
+	iter = m_Functions.lower_bound( key );
+
+	// if we foun
+	if( iter != m_Functions.end() && !(key < iter->first) )
 	{
 		return iter->second;
 	}
@@ -75,6 +185,25 @@ StreamTransformer::TransformFunction StreamTransformer::DynamicFunctionManager::
 	{
 		MV_THROW( StreamTransformerException, "StreamTransformer Failed to obtain handle to " << i_rPath << ": " << dlerror() );
 	}
+
+#if 0
+	const char** pVersion = static_cast<const char**>( dlsym( handle, "DLL_VERSION" ) );
+
+	if (pVersion == NULL)
+	{
+		MV_THROW( StreamTransformerException, "StreamTransformer failed to access function: " << i_rFunctionName << " because no StreamTransformer version number was found in " << i_rPath );
+	}
+
+	if (*pVersion == NULL)
+	{
+		MV_THROW( StreamTransformerException, "StreamTransformer failed to access function: " << i_rFunctionName << " because the StreamTransformer version number found in " << i_rPath << " was null" );
+	}
+
+	if (std::string(*pVersion) != std::string("1.0.0"))
+	{
+		MV_THROW( StreamTransformerException, "StreamTransformer failed to access function: " << i_rFunctionName << " because the StreamTransformer version number found in " << i_rPath << " was " << *pVersion << " not 1.0.0" );
+	}
+#endif
 
 	// access the function w/ dlsym
 	StreamTransformer::TransformFunction function = (TransformFunction)dlsym( handle, i_rFunctionName.c_str() );
@@ -87,17 +216,19 @@ StreamTransformer::TransformFunction StreamTransformer::DynamicFunctionManager::
 	MVLOGGER( "root.lib.DataProxy.StreamTransformer.LoadSharedLibrary", "Finished initialization of " << i_rPath << ": " << i_rFunctionName );
 
 	// store it for future (fast) access
-	m_Functions[ key ] = function;
+	boost::shared_ptr< ITransformFunction > result( new BackwardsCompatableTransformFunction(function) );
+
+	m_Functions.insert( iter, TransformMap::value_type( key, result ) );
 
 	// return it
-	return function;
+	return result;
 }
 
 StreamTransformer::StreamTransformer( const xercesc::DOMNode& i_rNode )
 	: m_Parameters(),
 	  m_PathOfSharedLibrary(),
 	  m_FunctionName(),
-	  m_pSharedLibraryFunction( NULL )
+	  m_pSharedLibraryFunction( )
 {
 
 	// try to validate the node attribute of StreamTransformer  
@@ -163,17 +294,17 @@ StreamTransformer::~StreamTransformer()
 }
 
 
-boost::shared_ptr<std::stringstream> StreamTransformer::TransformStream( const std::map< std::string, std:: string >& i_rParameters,
-																		 std::istream& i_rStream ) const
+boost::shared_ptr< std::istream > StreamTransformer::TransformStream( const std::map< std::string, std:: string >& i_rParameters,
+																		 boost::shared_ptr< std::istream > i_pStream ) const
 {
-	boost::shared_ptr<std::stringstream> pStream;
+	boost::shared_ptr<std::istream> pStream;
 	std::map< std::string, std::string > parameters; 
 	EvaluateParameters( i_rParameters, parameters );
 	Stopwatch stopwatch;
 
 	try
 	{	
-		pStream = m_pSharedLibraryFunction( i_rStream, parameters );
+		pStream = m_pSharedLibraryFunction->TransformInput( i_pStream, parameters );
 	}
 	catch( const std::exception& e )
 	{

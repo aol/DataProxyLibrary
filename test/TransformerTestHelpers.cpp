@@ -26,6 +26,7 @@ void TransformerTestHelpers::SetupLibraryFile( const std::string& i_rTempDirecto
 			<< "#include <stdexcept>" << std::endl
 			<< "extern \"C\"" << std::endl
 			<< "{" << std::endl
+			<< "		// const char* DLL_VERSION = \"1.0.0\";" << std::endl
 			<< "		boost::shared_ptr<std::stringstream> TransformFunction(std::istream& i_rData, const std::map<std::string, std::string>& i_rParameters)" << std::endl
 			<< "		{" << std::endl
 			<< "		boost::shared_ptr<std::stringstream> pStream;" << std::endl

@@ -29,7 +29,7 @@ public:
 	TransformerManager( const xercesc::DOMNode& i_rNode );
 	virtual ~TransformerManager();
 
-	boost::shared_ptr<std::stringstream> TransformStream( const std::map< std::string, std::string >& i_rParameters, std::istream& i_rData ) const;
+	boost::shared_ptr<std::istream> TransformStream( const std::map< std::string, std::string >& i_rParameters, boost::shared_ptr< std::istream > i_pData ) const;
 	
 	bool HasStreamTransformers() const;
 	

@@ -21,6 +21,7 @@ MV_MAKEEXCEPTIONCLASS( AggregateStreamTransformerException, MVException );
 
 extern "C"
 {
+	const char DLL_VERSION[] = "0.0.0";
 	boost::shared_ptr< std::stringstream > AggregateFields( std::istream& i_rInputStream, const std::map< std::string, std::string >& i_rParameters );
 }
 

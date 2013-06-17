@@ -15,6 +15,7 @@
 #include "DPLCommon.hpp"
 #include "XMLUtilities.hpp"
 #include "ProxyUtilities.hpp"
+#include "LargeStringStream.hpp"
 #include "MVLogger.hpp"
 #include <fstream>
 #include <boost/lexical_cast.hpp>
@@ -255,14 +256,15 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 		}
 
 		std::ostream* pUseData = &o_rData;
-		std::stringstream tempIOStream;
+		std::large_stringstream* pTempIOStream = new std::large_stringstream();
+		boost::shared_ptr< std::istream > pTempIOStreamAsIstream( pTempIOStream );
 		bool needToTransform = m_ReadConfig.GetValue< Transformers >() != NULL && m_ReadConfig.GetValue< Transformers >()->HasStreamTransformers();
 
 		// if we have a retry-count, we cannot write directly to the stream because the first n calls may fail (can only write the last result)
 		// if we have to tee the data out or if we have transformers configured, we also have to write to a temporary stream
 		if( m_ReadConfig.GetValue< RetryCount >() > 0 || !m_TeeConfig.GetValue< ForwardNodeName >().IsNull() || needToTransform )
 		{
-			pUseData = &tempIOStream;
+			pUseData = pTempIOStream;
 		}
 
 		boost::scoped_ptr< boost::iostreams::filtering_ostream > output( new boost::iostreams::filtering_ostream() );
@@ -283,8 +285,8 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 				// if we have some attempts left, clear & seek the output
 				if( i < m_ReadConfig.GetValue< RetryCount >() )
 				{
-					tempIOStream.str("");
-					tempIOStream.clear();
+					pTempIOStream->str("");
+					pTempIOStream->clear();
 
 					std::stringstream msg;
 					msg << "Caught exception while issuing load request: " << ex.what() << ". Retrying request";
@@ -303,27 +305,49 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 			}
 		}
 		output.reset( NULL );
-		// finally, if we need to transform, then we know we used the tempIOStream; transform it
-		boost::shared_ptr< std::stringstream > pTransformedStream;
+		// finally, if we need to transform, then we know we used the pTempIOStream; transform it
 
 		if ( needToTransform )
 		{
-			pTransformedStream = m_ReadConfig.GetValue< Transformers >()->TransformStream( *pUseParameters, tempIOStream );
-			pUseData = pTransformedStream.get();
+			boost::shared_ptr< std::istream > pTransformedStream =
+				m_ReadConfig.GetValue< Transformers >()->TransformStream( *pUseParameters, pTempIOStreamAsIstream );
 
-			// rewind the temp in case we need to tee
-			tempIOStream.clear();
-			tempIOStream.seekg( 0L );
+			// tee the data if we need to
+			if( !m_TeeConfig.GetValue< ForwardNodeName >().IsNull() )
+			{
+				const std::map< std::string, std::string >& rTeeParameters = ( m_TeeConfig.GetValue< UseTranslatedParameters >() ? translatedParameters : i_rParameters );
+
+				if (m_TeeConfig.GetValue< UseTransformedStream >())
+				{
+					pTransformedStream->clear();
+					pTransformedStream->seekg( 0L );
+					m_rParent.Store( m_TeeConfig.GetValue< ForwardNodeName >(), rTeeParameters, *pTransformedStream );
+					pTransformedStream->clear();
+					pTransformedStream->seekg( 0L );
+				}
+				else
+				{
+					pTempIOStream->clear();
+					pTempIOStream->seekg( 0L );
+					m_rParent.Store( m_TeeConfig.GetValue< ForwardNodeName >(), rTeeParameters, *pTempIOStream );
+				}
+			}
+
+			std::large_stringstream* pNewTempIOStream = new std::large_stringstream();
+
+			*pNewTempIOStream << pTransformedStream->rdbuf();
+
+			pTempIOStream = pNewTempIOStream;
+			pUseData = pTempIOStream;
+			pTempIOStreamAsIstream.reset( pTempIOStream );
 		}
-
 		// tee the data if we need to
-		if( !m_TeeConfig.GetValue< ForwardNodeName >().IsNull() )
+		else if( !m_TeeConfig.GetValue< ForwardNodeName >().IsNull() )
 		{
 			const std::map< std::string, std::string >& rTeeParameters = ( m_TeeConfig.GetValue< UseTranslatedParameters >() ? translatedParameters : i_rParameters );
-			std::istream& rTeeStream = ( m_TeeConfig.GetValue< UseTransformedStream >() && needToTransform ? *pTransformedStream : tempIOStream );
-			m_rParent.Store( m_TeeConfig.GetValue< ForwardNodeName >(), rTeeParameters, rTeeStream );
-			rTeeStream.clear();
-			rTeeStream.seekg( 0L );
+			m_rParent.Store( m_TeeConfig.GetValue< ForwardNodeName >(), rTeeParameters, *pTempIOStream );
+			pTempIOStream->clear();
+			pTempIOStream->seekg( 0L );
 		}
 
 		// at this point, if we didn't write directly to the output stream, push it out from the temp
@@ -419,7 +443,7 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 	std::streampos inputPos = i_rData.tellg();
 
 	// create some constructs to track transformed stream
-	boost::shared_ptr< std::iostream > pTransformedStream;
+	boost::shared_ptr< std::istream > pTransformedStream;
 	std::streampos transformedInputPos = 0;
 
 	// and by default we stick to the incoming data
@@ -450,14 +474,15 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 
 		bool needTransform = m_WriteConfig.GetValue< Transformers >() != NULL && m_WriteConfig.GetValue< Transformers >()->HasStreamTransformers();
 
-		boost::iostreams::filtering_istream preTransformInput;
+		boost::iostreams::filtering_istream* pPreTransformInput = new boost::iostreams::filtering_istream();
+		boost::shared_ptr< std::istream > pPreTransformInputAsIstream(pPreTransformInput);
 		boost::iostreams::counter cntPreTransform;
-		preTransformInput.push( boost::ref( cntPreTransform ) );
-		preTransformInput.push( i_rData );
+		pPreTransformInput->push( boost::ref( cntPreTransform ) );
+		pPreTransformInput->push( i_rData );
 
 		if ( needTransform )
 		{
-			pTransformedStream = m_WriteConfig.GetValue< Transformers >()->TransformStream( *pUseParameters, preTransformInput );
+			pTransformedStream = m_WriteConfig.GetValue< Transformers >()->TransformStream( *pUseParameters, pPreTransformInputAsIstream );
 			pUseData = pTransformedStream.get();
 			transformedInputPos = pTransformedStream->tellg();
 			retryPos = transformedInputPos;

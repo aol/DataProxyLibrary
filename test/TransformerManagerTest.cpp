@@ -21,6 +21,18 @@
 CPPUNIT_TEST_SUITE_REGISTRATION( TransformerManagerTest );
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( TransformerManagerTest, "TransformerManagerTest");
 
+namespace
+{
+	std::string StreamToString(boost::shared_ptr<std::istream> i_pStream)
+	{
+		std::stringstream result;
+
+		result << i_pStream->rdbuf();
+
+		return result.str();
+	}
+}
+
 TransformerManagerTest::TransformerManagerTest()
 	: m_pTempDir(NULL),
 	  m_LibrarySpec()
@@ -118,14 +130,15 @@ void TransformerManagerTest::testTransformStream()
 
 
 	TransformerManager transformerManager( *nodes[0] );
-	std::stringstream inputStream;
-	inputStream << "DATA FROM TEST JOB";
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	*pInputStream << "DATA FROM TEST JOB";
 
-	CPPUNIT_ASSERT_EQUAL( std::string("name3 : value3\nname2 : value2\nname1 : value1\nDATA FROM TEST JOB"), transformerManager.TransformStream( parameters1, inputStream )->str() );
+	CPPUNIT_ASSERT_EQUAL( std::string("name3 : value3\nname2 : value2\nname1 : value1\nDATA FROM TEST JOB"), StreamToString( transformerManager.TransformStream( parameters1, pInputStreamAsIstream ) ) );
 		
 	// test if there is input stream is empty
-    inputStream.str("");
-	CPPUNIT_ASSERT_EQUAL( std::string("name3 : value3\nname2 : value2\nname1 : value1\n"), transformerManager.TransformStream( parameters1, inputStream )->str() );
+    pInputStream->str("");
+	CPPUNIT_ASSERT_EQUAL( std::string("name3 : value3\nname2 : value2\nname1 : value1\n"), StreamToString( transformerManager.TransformStream( parameters1, pInputStreamAsIstream ) ) );
 		 
 	// test if there is no streamtransformer
 	xmlContents.str("");
@@ -137,10 +150,11 @@ void TransformerManagerTest::testTransformStream()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	TransformerManager transformerManager1( *nodes[0] );
-	std::stringstream inputStream1;
-	inputStream1 << "DATA FROM TEST JOB";
+	std::stringstream* pInputStream1 = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStream1AsIstream( pInputStream1 );
+	*pInputStream1 << "DATA FROM TEST JOB";
 
-	CPPUNIT_ASSERT_EQUAL( std::string("DATA FROM TEST JOB"), transformerManager1.TransformStream( parameters1, inputStream1 )->str() );
+	CPPUNIT_ASSERT_EQUAL( std::string("DATA FROM TEST JOB"), StreamToString( transformerManager1.TransformStream( parameters1, pInputStream1AsIstream ) ) );
 	
 }
 

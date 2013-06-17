@@ -22,6 +22,18 @@
 CPPUNIT_TEST_SUITE_REGISTRATION( StreamTransformerTest );
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( StreamTransformerTest, "StreamTransformerTest" );
 
+namespace
+{
+	std::string StreamToString( boost::shared_ptr< std::istream > i_pStream )
+	{
+		std::stringstream result;
+
+		result << i_pStream->rdbuf();
+
+		return result.str();
+	}
+}
+
 StreamTransformerTest::StreamTransformerTest()
 	: m_pTempDir(NULL),
 	  m_LibrarySpec()
@@ -174,17 +186,18 @@ void StreamTransformerTest::testStreamContent()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	StreamTransformer transformer( *nodes[0] );
 	
-	boost::shared_ptr<std::stringstream> transformedStream;
-	std::stringstream originalStream;
-	originalStream << " String Stream contents. ";
+	std::stringstream* pOriginalStream = new std::stringstream();
+	boost::shared_ptr<std::istream> pOriginalStreamAsIstream( pOriginalStream );
+	boost::shared_ptr<std::istream> transformedStream;
+	*pOriginalStream << " String Stream contents. ";
 	std::map< std::string, std::string > parameters;
 
 	parameters["runtimeParam1"] = "runtimeValue1"; 
 	parameters["runtimeParam2"] = "runtimeValue2";
 	
-	transformedStream = transformer.TransformStream( parameters, originalStream );
+	transformedStream = transformer.TransformStream( parameters, pOriginalStreamAsIstream );
 	CPPUNIT_ASSERT( NULL != transformedStream.get() );
-	CPPUNIT_ASSERT_EQUAL( std::string("name1 : value1\n String Stream contents. "), transformedStream->str() );
+	CPPUNIT_ASSERT_EQUAL( std::string("name1 : value1\n String Stream contents. "), StreamToString( transformedStream ) );
 }
 
 void StreamTransformerTest::testValueSourceNotFound()
@@ -201,15 +214,16 @@ void StreamTransformerTest::testValueSourceNotFound()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	StreamTransformer transformer( *nodes[0] );
 
-	boost::shared_ptr<std::stringstream> transformedStream;
-	std::stringstream originalStream;
-	originalStream << " String Stream contents. ";
+	std::stringstream* pOriginalStream = new std::stringstream;
+	boost::shared_ptr<std::istream> pOriginalStreamAsIstream( pOriginalStream );
+	boost::shared_ptr<std::istream> transformedStream;
+	*pOriginalStream << " String Stream contents. ";
 	std::map< std::string, std::string > parameters;
 
 	parameters["runtimeParam1"] = "runtimeValue1";
 	parameters["runtimeParam2"] = "runtimeValue2";
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformStream( parameters, originalStream ), StreamTransformerException, ".*.StreamTransformer.cpp:\\d+: Cannot find parameter unknownSource from runtime parameter list" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformStream( parameters, pOriginalStreamAsIstream ), StreamTransformerException, ".*.StreamTransformer.cpp:\\d+: Cannot find parameter unknownSource from runtime parameter list" );
 	
 }
 
@@ -226,16 +240,17 @@ void StreamTransformerTest::testValueSourceSetup()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	StreamTransformer transformer( *nodes[0] );
 
-	boost::shared_ptr<std::stringstream> transformedStream;
-	std::stringstream originalStream;
-	originalStream << " String Stream contents. ";
+	std::stringstream* pOriginalStream = new std::stringstream();
+	boost::shared_ptr<std::istream> pOriginalStreamAsIstream( pOriginalStream );
+	boost::shared_ptr<std::istream> transformedStream;
+	*pOriginalStream << " String Stream contents. ";
 	std::map< std::string, std::string > parameters;
 
 	parameters["runtimeParam1"] = "runtimeValue1";
 	parameters["runtimeParam2"] = "runtimeValue2";
 
-	transformedStream = transformer.TransformStream( parameters, originalStream );
-	CPPUNIT_ASSERT_EQUAL( std::string("name1 : value1\n String Stream contents. "), transformedStream->str() );
+	transformedStream = transformer.TransformStream( parameters, pOriginalStreamAsIstream );
+	CPPUNIT_ASSERT_EQUAL( std::string("name1 : value1\n String Stream contents. "), StreamToString( transformedStream ) );
 }
 
 
@@ -253,16 +268,17 @@ void StreamTransformerTest::testValueSourceReplacement()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	StreamTransformer transformer( *nodes[0] );
 
-	boost::shared_ptr<std::stringstream> transformedStream;
-	std::stringstream originalStream;
-	originalStream << " String Stream contents. ";
+	std::stringstream* pOriginalStream = new std::stringstream();
+	boost::shared_ptr<std::istream> pOriginalStreamAsIstream( pOriginalStream );
+	boost::shared_ptr<std::istream> transformedStream;
+	*pOriginalStream << " String Stream contents. ";
 	std::map< std::string, std::string > parameters;
 
 	parameters["runtimeParam1"] = "runtimeValue1";
 	parameters["runtimeParam2"] = "runtimeValue2";
 
-	transformedStream = transformer.TransformStream( parameters, originalStream );
-	CPPUNIT_ASSERT_EQUAL( std::string("name1 : value1runtimeValue1runtimeValue1\n String Stream contents. "), transformedStream->str() );
+	transformedStream = transformer.TransformStream( parameters, pOriginalStreamAsIstream );
+	CPPUNIT_ASSERT_EQUAL( std::string("name1 : value1runtimeValue1runtimeValue1\n String Stream contents. "), StreamToString( transformedStream ) );
 	
 	// try another more complicated case for replacement
 	xmlContents.str("");
@@ -275,16 +291,17 @@ void StreamTransformerTest::testValueSourceReplacement()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	StreamTransformer transformer1( *nodes[0] );
 
-	boost::shared_ptr<std::stringstream> transformedStream1;
-	std::stringstream originalStream1;
-	originalStream1 << " String Stream contents. ";
+	std::stringstream* pOriginalStream1 = new std::stringstream();
+	boost::shared_ptr<std::istream> pOriginalStream1AsIstream( pOriginalStream1 );
+	boost::shared_ptr<std::istream> transformedStream1;
+	*pOriginalStream1 << " String Stream contents. ";
 	std::map< std::string, std::string > parameters1;
 
 	parameters1["runtimeParam1"] = "runtimeValue1";
 	parameters1["runtimeParam2"] = "runtimeValue2";
 
-	transformedStream1 = transformer1.TransformStream( parameters1, originalStream1 );
-	CPPUNIT_ASSERT_EQUAL( std::string("name1 : value1runtimeValue1runtimeValue1\nname2 : runtimeValue2another\nname3 : runtimeValue1another\n String Stream contents. "), transformedStream1->str() );
+	transformedStream1 = transformer1.TransformStream( parameters1, pOriginalStream1AsIstream );
+	CPPUNIT_ASSERT_EQUAL( std::string("name1 : value1runtimeValue1runtimeValue1\nname2 : runtimeValue2another\nname3 : runtimeValue1another\n String Stream contents. "), StreamToString( transformedStream1 ) );
 
 }
 
@@ -302,16 +319,17 @@ void StreamTransformerTest::testValueSourceMultiReplacement()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	StreamTransformer transformer( *nodes[0] );
 
-	boost::shared_ptr<std::stringstream> transformedStream;
-	std::stringstream originalStream;
-	originalStream << " String Stream contents. ";
+	std::stringstream* pOriginalStream = new std::stringstream();
+	boost::shared_ptr<std::istream> pOriginalStreamAsIstream( pOriginalStream );
+	boost::shared_ptr<std::istream> transformedStream;
+	*pOriginalStream << " String Stream contents. ";
 	std::map< std::string, std::string > parameters;
 
 	parameters["runtimeParam1"] = "runtimeValue1";
 	parameters["runtimeParam2"] = "runtimeValue2";
 
-	transformedStream = transformer.TransformStream( parameters, originalStream );
-	CPPUNIT_ASSERT_EQUAL( std::string("name1 : staticValue0;runtimeValue1;runtimeValue2\n String Stream contents. "), transformedStream->str() );
+	transformedStream = transformer.TransformStream( parameters, pOriginalStreamAsIstream );
+	CPPUNIT_ASSERT_EQUAL( std::string("name1 : staticValue0;runtimeValue1;runtimeValue2\n String Stream contents. "), StreamToString( transformedStream ) );
 
 	// test if valuesource could be replaced by runtime parameter
 	xmlContents.str("");
@@ -322,14 +340,14 @@ void StreamTransformerTest::testValueSourceMultiReplacement()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	StreamTransformer transformer2( *nodes[0] );
 
-	originalStream.seekg( 0 );
-	originalStream.clear();
+	pOriginalStream->seekg( 0 );
+	pOriginalStream->clear();
 	
 	parameters.clear();
 	parameters["runtimeParam1"] = "runtimeValue1";
 	//MISSING: parameters["runtimeParam2"] = "runtimeValue2";
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer2.TransformStream( parameters, originalStream ), ProxyUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer2.TransformStream( parameters, pOriginalStreamAsIstream ), ProxyUtilitiesException,
 		".*/ProxyUtilities.cpp:\\d+: The following parameters are referenced, but are not specified in the parameters: runtimeParam2" );
 }
 
@@ -346,16 +364,17 @@ void StreamTransformerTest::testNULLReturnedStream()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	StreamTransformer transformer( *nodes[0] );
 
-	boost::shared_ptr<std::stringstream> transformedStream;
-	std::stringstream originalStream;
-	originalStream << " String Stream contents. ";
+	std::stringstream* pOriginalStream = new std::stringstream();
+	boost::shared_ptr<std::istream> pOriginalStreamAsIstream( pOriginalStream );
+	boost::shared_ptr<std::istream> transformedStream;
+	*pOriginalStream << " String Stream contents. ";
 	std::map< std::string, std::string > parameters;
 
 	parameters["runtimeParam1"] = "runtimeValue1";
 	parameters["runtimeParam2"] = "runtimeValue2";
 
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformStream( parameters, originalStream ), StreamTransformerException, ".*.StreamTransformer.cpp:\\d+: NULL Stream returned from library: " << m_pTempDir->GetDirectoryName() + "/testTransformer.so" << " function: TransformFunction_null" << " with parameters:" << " name1~value1 after .* milliseconds" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformStream( parameters, pOriginalStreamAsIstream ), StreamTransformerException, ".*.StreamTransformer.cpp:\\d+: NULL transformed data stream returned while executing library: " << m_pTempDir->GetDirectoryName() + "/testTransformer.so" << " function: TransformFunction_null" << " with parameters:" << " name1~value1 after .* milliseconds" );
 
 }
 
@@ -372,15 +391,16 @@ void StreamTransformerTest::testLibException()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	StreamTransformer transformer( *nodes[0] );
 
-	boost::shared_ptr<std::stringstream> transformedStream;
-	std::stringstream originalStream;
-	originalStream << " String Stream contents. ";
+	std::stringstream* pOriginalStream = new std::stringstream();
+	boost::shared_ptr<std::istream> pOriginalStreamAsIstream( pOriginalStream );
+	boost::shared_ptr<std::istream> transformedStream;
+	*pOriginalStream << " String Stream contents. ";
 	std::map< std::string, std::string > parameters;
 
 	parameters["runtimeParam1"] = "runtimeValue1";
 	parameters["runtimeParam2"] = "runtimeValue2";
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformStream( parameters, originalStream ), StreamTransformerException, ".*.StreamTransformer.cpp:\\d+: Caught exception: an exception while executing library: " << m_pTempDir->GetDirectoryName() + "/testTransformer.so" << " function: TransformFunction_exception" << " with parameters:" << " name1~value1 after .* milliseconds" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformStream( parameters, pOriginalStreamAsIstream ), StreamTransformerException, ".*.StreamTransformer.cpp:\\d+: Caught exception: an exception while executing library: " << m_pTempDir->GetDirectoryName() + "/testTransformer.so" << " function: TransformFunction_exception" << " with parameters:" << " name1~value1 after .* milliseconds" );
 
 }
 

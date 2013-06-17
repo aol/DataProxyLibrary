@@ -55,12 +55,11 @@ TransformerManager::~TransformerManager()
 }
 
 
-boost::shared_ptr<std::stringstream> TransformerManager::TransformStream( const std::map< std::string, std::string >& i_rParameters,
-        std::istream& i_rData ) const
+boost::shared_ptr<std::istream> TransformerManager::TransformStream( const std::map< std::string, std::string >& i_rParameters,
+        boost::shared_ptr< std::istream > i_pData ) const
 {
-	boost::shared_ptr<std::stringstream> pResult;
-	pResult.reset( new std::stringstream() );
-	(*pResult) << i_rData.rdbuf();
+	boost::shared_ptr<std::istream> pResult( i_pData );
+
 	if( m_Transformers.empty() )
 	{
 		return pResult;
@@ -71,10 +70,11 @@ boost::shared_ptr<std::stringstream> TransformerManager::TransformStream( const 
 	Stopwatch stopwatch;
 	for( ; transformerIter != m_Transformers.end() ; ++transformerIter )
 	{
-		pResult = (*transformerIter)->TransformStream( i_rParameters, *pResult );
+		pResult = (*transformerIter)->TransformStream( i_rParameters, pResult );
 	}
 	MVLOGGER( "root.lib.DataProxy.TransformerManager.TransformStream.Complete",
 		"All transformers complete after " << stopwatch.GetElapsedMilliseconds() << " milliseconds" );
+
 	return pResult;
 }
 
@@ -82,4 +82,4 @@ bool TransformerManager::HasStreamTransformers() const
 {
 	return m_Transformers.size() > 0;
 }
-	
+
