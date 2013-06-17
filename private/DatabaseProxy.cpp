@@ -62,6 +62,10 @@ namespace
 	const std::string PRE_STATEMENT_ATTRIBUTE( "pre-statement" );
 	const std::string POST_STATEMENT_ATTRIBUTE( "post-statement" );
 
+	// statement placeholders
+	const std::string TABLE_PLACEHOLDER( "&table;" );
+	const std::string STAGING_TABLE_PLACEHOLDER( "&staging;" );
+
 	// values
 	const std::string FAIL( "fail" );
 	const std::string USE_COLUMN( "useColumn" );
@@ -76,6 +80,14 @@ namespace
 	const uint MAX_FILES( 1024 );
 
 	const int DEFAULT_MAX_BIND_SIZE ( 256 );
+
+	std::string GetAllSubstitutions( const std::string& i_rStatement, const std::map< std::string, std::string >& i_rParameters, const std::string& i_rTable, const std::string& i_rStagingTable )
+	{
+		std::string result = i_rStatement;
+		boost::replace_all( result, TABLE_PLACEHOLDER, i_rTable );
+		boost::replace_all( result, STAGING_TABLE_PLACEHOLDER, i_rStagingTable );
+		return ProxyUtilities::GetVariableSubstitutedString( result, i_rParameters );
+	}
 
 	void FillSet( const std::map< std::string, std::string >& i_rMap, std::set< std::string >& o_rSet )
 	{
@@ -559,7 +571,7 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 		{
 			m_WriteMaxTableNameLength = boost::lexical_cast< size_t >( XMLUtilities::XMLChToString(pAttribute->getValue()) );
 		}
-
+		
 		pAttribute = XMLUtilities::GetAttribute( pNode, ON_COLUMN_PARAMETER_COLLISION_ATTRIBUTE );
 		if( pAttribute != NULL )
 		{
@@ -590,13 +602,25 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 			MV_THROW( DatabaseProxyException, "Attributes for " << TABLE_ATTRIBUTE << " and " << STAGING_TABLE_ATTRIBUTE << " cannot have the same value: " << m_WriteTable );
 		}
 
+		if( !m_WriteMaxTableNameLength.IsNull() && m_WriteTable == m_WriteStagingTable.substr( 0, m_WriteMaxTableNameLength ) )
+		{
+			MV_THROW( DatabaseProxyException, "Attributes for " << TABLE_ATTRIBUTE << " and " << STAGING_TABLE_ATTRIBUTE << " will collide due to the fact that the " << MAX_TABLE_NAME_LENGTH_ATTRIBUTE
+					<< " attribute will truncate the staging table name" );
+		}
+
 		// build the necessary query if we're using an explicit connection (otherwise we have to build both & wait to runtime to determine the connection type)
 		std::string dbType = "mysql";
+		std::string stagingTablePlaceholder;
+		if( !m_WriteStagingTable.empty() )
+		{
+			stagingTablePlaceholder = STAGING_TABLE_PLACEHOLDER;
+		}
+
 		if( !m_WriteConnectionByTable )
 		{
 			std::string dbType = m_rDatabaseConnectionManager.GetDatabaseType( m_WriteConnectionName );
 			std::string query = ProxyUtilities::GetMergeQuery( m_rDatabaseConnectionManager, m_WriteConnectionName,
-															   dbType, m_WriteTable, m_WriteStagingTable,
+															   dbType, TABLE_PLACEHOLDER, stagingTablePlaceholder,
 															   *XMLUtilities::GetSingletonChildByName( pNode, COLUMNS_NODE ),
 															   insertOnly, m_WriteRequiredColumns, m_WriteNodeColumnLengths, &m_WriteBindColumns );
 			if( dbType == MYSQL_DB_TYPE )
@@ -615,15 +639,15 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 		else
 		{
 			m_WriteMySqlMergeQuery = ProxyUtilities::GetMergeQuery( m_rDatabaseConnectionManager, m_WriteConnectionName,
-																	MYSQL_DB_TYPE, m_WriteTable, m_WriteStagingTable,
+																	MYSQL_DB_TYPE, TABLE_PLACEHOLDER, stagingTablePlaceholder,
 																	*XMLUtilities::GetSingletonChildByName( pNode, COLUMNS_NODE ),
 																	insertOnly, m_WriteRequiredColumns, m_WriteNodeColumnLengths, &m_WriteBindColumns );
 			m_WriteOracleMergeQuery = ProxyUtilities::GetMergeQuery( m_rDatabaseConnectionManager, m_WriteConnectionName,
-																	 ORACLE_DB_TYPE, m_WriteTable, m_WriteStagingTable,
+																	 ORACLE_DB_TYPE, TABLE_PLACEHOLDER, stagingTablePlaceholder,
 																	 *XMLUtilities::GetSingletonChildByName( pNode, COLUMNS_NODE ),
 																	 insertOnly, m_WriteRequiredColumns, m_WriteNodeColumnLengths );
 			m_WriteVerticaMergeQuery = ProxyUtilities::GetMergeQuery( m_rDatabaseConnectionManager, m_WriteConnectionName,
-																	  VERTICA_DB_TYPE, m_WriteTable, m_WriteStagingTable,
+																	  VERTICA_DB_TYPE, TABLE_PLACEHOLDER, stagingTablePlaceholder,
 																	  *XMLUtilities::GetSingletonChildByName( pNode, COLUMNS_NODE ),
 																	  insertOnly, m_WriteRequiredColumns, m_WriteNodeColumnLengths );
 		}
@@ -833,9 +857,6 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 	// if we're in per-row insert mode...
 	if( m_WriteStagingTable.empty() )
 	{
-		std::string mysqlMergeQuery = ProxyUtilities::GetVariableSubstitutedString( m_WriteMySqlMergeQuery, i_rParameters );
-		std::string oracleMergeQuery = ProxyUtilities::GetVariableSubstitutedString( m_WriteOracleMergeQuery, i_rParameters );
-		std::string verticaMergeQuery = ProxyUtilities::GetVariableSubstitutedString( m_WriteVerticaMergeQuery, i_rParameters );
 		std::string databaseType;
 		std::string table;
 		if( m_WriteConnectionByTable )
@@ -848,6 +869,10 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			table = ProxyUtilities::GetVariableSubstitutedString( m_WriteTable, i_rParameters );
 			databaseType = m_rDatabaseConnectionManager.GetDatabaseType( m_WriteConnectionName );
 		}
+
+		std::string mysqlMergeQuery = GetAllSubstitutions( m_WriteMySqlMergeQuery, i_rParameters, table, m_WriteStagingTable );
+		std::string oracleMergeQuery = GetAllSubstitutions( m_WriteOracleMergeQuery, i_rParameters, table, m_WriteStagingTable );
+		std::string verticaMergeQuery = GetAllSubstitutions( m_WriteVerticaMergeQuery, i_rParameters, table, m_WriteStagingTable );
 		if( databaseType == VERTICA_DB_TYPE )
 		{
 			MV_THROW( DatabaseProxyException, "Writing to vertica without a staging table is currently unsupported" );
@@ -988,9 +1013,6 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			boost::shared_ptr< ScopedTempTable > pTempTable;
 			boost::shared_ptr< Database > pDataDefinitionDatabase = GetDataDefinitionConnection( m_WriteConnectionName, m_WriteConnectionByTable, m_rDatabaseConnectionManager, i_rParameters );
 			std::string stagingTable = ProxyUtilities::GetVariableSubstitutedString( m_WriteStagingTable, i_rParameters );
-			std::string mysqlMergeQuery = ProxyUtilities::GetVariableSubstitutedString( m_WriteMySqlMergeQuery, i_rParameters );
-			std::string oracleMergeQuery = ProxyUtilities::GetVariableSubstitutedString( m_WriteOracleMergeQuery, i_rParameters );
-			std::string verticaMergeQuery = ProxyUtilities::GetVariableSubstitutedString( m_WriteVerticaMergeQuery, i_rParameters );
 			std::string table;
 			std::string databaseType;
 			
@@ -1004,16 +1026,12 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 				table = ProxyUtilities::GetVariableSubstitutedString( m_WriteTable, i_rParameters );
 				databaseType = m_rDatabaseConnectionManager.GetDatabaseType( m_WriteConnectionName );
 			}
-						
+
 			// if we're dynamically creating a staging table, create one via a data-definition connection, and set the staging table name
 			if( m_WriteDynamicStagingTable )
 			{
 				stagingTable = GetDynamicStagingTable( stagingTable, m_WriteMaxTableNameLength );
 				pTempTable.reset( new ScopedTempTable( *pDataDefinitionDatabase, databaseType, table, stagingTable ) );
-
-				boost::replace_all( mysqlMergeQuery, m_WriteStagingTable, stagingTable );
-				boost::replace_all( oracleMergeQuery, m_WriteStagingTable, stagingTable );
-				boost::replace_all( verticaMergeQuery, m_WriteStagingTable, stagingTable );
 
 				// lock the drop-table vector and insert it
 				{
@@ -1022,6 +1040,10 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 				}
 			}
 
+			std::string mysqlMergeQuery = GetAllSubstitutions( m_WriteMySqlMergeQuery, i_rParameters, table, stagingTable );
+			std::string oracleMergeQuery = GetAllSubstitutions( m_WriteOracleMergeQuery, i_rParameters, table, stagingTable );
+			std::string verticaMergeQuery = GetAllSubstitutions( m_WriteVerticaMergeQuery, i_rParameters, table, stagingTable );
+						
 			// obtain a write-lock for entire manipulation
 			{
 				boost::unique_lock< boost::shared_mutex > lock( m_TableMutex );

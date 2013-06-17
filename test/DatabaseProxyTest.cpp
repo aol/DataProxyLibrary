@@ -3102,7 +3102,7 @@ void DatabaseProxyTest::testDynamicTableNameLength()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( DatabaseProxy proxy( "name", client, *nodes[0], dbManager ), DatabaseProxyException,
-		".*/.*:\\d+: Attributes for table and stagingTable cannot have the same value: kna" );;
+		".*/.*:\\d+: Attributes for table and stagingTable will collide due to the fact that the maxTableNameLength attribute will truncate the staging table name" );
 }
 
 void DatabaseProxyTest::testOracleDelete()
