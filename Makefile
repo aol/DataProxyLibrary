@@ -165,6 +165,7 @@ PRIVATEFILES=\
 	ColumnAppenderStreamTransformer.cpp \
 	PropertyDomain.cpp \
 	AtomicsJSONToCSVStreamTransformer.cpp \
+	CampaignRevenueVectorStreamTransformer.cpp \
 
 THPPFILES=\
 	DatabaseConnectionBinder.thpp \
@@ -198,6 +199,7 @@ TESTFILES=\
 	ColumnAppenderStreamTransformerTest.cpp \
 	PropertyDomainTest.cpp \
 	AtomicsJSONToCSVStreamTransformerTest.cpp \
+	CampaignRevenueVectorStreamTransformerTest.cpp \
 
 THREADTESTFILES=\
 	main.cpp \

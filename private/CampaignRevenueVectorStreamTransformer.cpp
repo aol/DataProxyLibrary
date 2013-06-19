@@ -1,5 +1,6 @@
 #include "CampaignRevenueVectorStreamTransformer.hpp"
 #include "MVLogger.hpp"
+#include "LargeStringStream.hpp"
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/bind.hpp>
@@ -236,9 +237,18 @@ namespace
 	}
 }
 
-boost::shared_ptr< std::stringstream > TransformCampaignRevenueVector( std::istream& i_rInputStream, const std::map< std::string, std::string >& i_rParameters )
+CampaignRevenueVectorStreamTransformer::CampaignRevenueVectorStreamTransformer()
 {
-	boost::shared_ptr< std::stringstream > pResult( new std::stringstream() );
+}
+
+CampaignRevenueVectorStreamTransformer::~CampaignRevenueVectorStreamTransformer()
+{
+}
+
+boost::shared_ptr< std::istream > CampaignRevenueVectorStreamTransformer::TransformInput( boost::shared_ptr< std::istream > i_pInputStream, const std::map< std::string, std::string >& i_rParameters )
+{
+	std::large_stringstream* pRawResult = new std::large_stringstream();
+	boost::shared_ptr< std::istream > pResult( pRawResult );
 
 	std::map< int, CampaignRevenueVectorDataStruct > mapCRV; // maps Campaign ID to the CampaignRevenueVector data
 	
@@ -250,7 +260,7 @@ boost::shared_ptr< std::stringstream > TransformCampaignRevenueVector( std::istr
 
 	// read a line from the input to get the input header
 	std::string inputHeader;
-	std::getline( i_rInputStream, inputHeader );
+	std::getline( *i_pInputStream, inputHeader );
 	std::vector< std::string > vectorHeaderFields;
 	boost::iter_split( vectorHeaderFields, inputHeader, boost::first_finder(DELIMITER) );
 
@@ -264,13 +274,13 @@ boost::shared_ptr< std::stringstream > TransformCampaignRevenueVector( std::istr
 	int nRateIndex = mapHeaderFieldToIndex[REQUIRED_HEADER_FIELD_4];
 		
 	// output the header
-	*pResult << outputHeader << std::endl;
+	*pRawResult << outputHeader << std::endl;
 
 	// Now, we process each data row
-	while( i_rInputStream.peek() != EOF )
+	while( i_pInputStream->peek() != EOF )
 	{
 		std::string inputRow;
-		std::getline( i_rInputStream, inputRow );
+		std::getline( *i_pInputStream, inputRow );
 		std::vector< std::string > vectorFields;
 		boost::iter_split( vectorFields, inputRow, boost::first_finder(DELIMITER) );
 
@@ -296,7 +306,7 @@ boost::shared_ptr< std::stringstream > TransformCampaignRevenueVector( std::istr
 
 		if( currentCRV.bNonEmpty )
 		{
-			*pResult << nCurrentCampaignID << DELIMITER
+			*pRawResult << nCurrentCampaignID << DELIMITER
 					 << currentCRV.strUnitType << DELIMITER
 					 << currentCRV.strCostPerUnit << DELIMITER
 					 << currentCRV.strClickHardTarget << DELIMITER
