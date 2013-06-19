@@ -164,6 +164,7 @@ PRIVATEFILES=\
 	BlackoutStreamTransformer.cpp \
 	ColumnAppenderStreamTransformer.cpp \
 	PropertyDomain.cpp \
+	AtomicsJSONToCSVStreamTransformer.cpp \
 
 THPPFILES=\
 	DatabaseConnectionBinder.thpp \
@@ -196,6 +197,7 @@ TESTFILES=\
 	BlackoutStreamTransformerTest.cpp \
 	ColumnAppenderStreamTransformerTest.cpp \
 	PropertyDomainTest.cpp \
+	AtomicsJSONToCSVStreamTransformerTest.cpp \
 
 THREADTESTFILES=\
 	main.cpp \

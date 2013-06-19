@@ -1,24 +1,18 @@
 //
-// FILE NAME:		$HeadURL$	
+// FILE NAME:		$HeadURL: svn+ssh://sstrick@svn.cm.aol.com/advertising/adlearn/gen1/trunk/lib/cpp/DataProxy/StreamTransformers/Custom/AtomicsJSONTOCSV/private/AtomicsJSONToCSV.cpp $	
 //
-// REVISION:		$Revision$
+// REVISION:		$Revision: 220478 $
 // 
 // COPYRIGHT:		(c) 2005 Advertising.com All Rights Reserved.
 // 
-// LAST UPDATED:	$Date$
+// LAST UPDATED:	$Date: 2011-08-23 14:38:03 -0400 (Tue, 23 Aug 2011) $
 //
-// UPDATED BY:		$Author$
+// UPDATED BY:		$Author: bhh1988 $
 //
-#include "AtomicsJSONToCSV.hpp"
+#include "AtomicsJSONToCSVStreamTransformer.hpp"
+#include "LargeStringStream.hpp"
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
-
-boost::shared_ptr< std::stringstream > ConvertToCSV( std::istream& i_rJSONInputStream, const std::map< std::string, std::string >& i_rParameters )
-{
-	AtomicsJSONToCSV converter;
-	boost::shared_ptr<std::stringstream> csvStream  = converter.Convert(i_rJSONInputStream);
-	return csvStream;
-}
 
 namespace
 {
@@ -33,23 +27,24 @@ namespace
 	}
 }
 
-AtomicsJSONToCSV::AtomicsJSONToCSV()
+AtomicsJSONToCSVStreamTransformer::AtomicsJSONToCSVStreamTransformer()
 {
 }
 
-AtomicsJSONToCSV::~AtomicsJSONToCSV()
+AtomicsJSONToCSVStreamTransformer::~AtomicsJSONToCSVStreamTransformer()
 {
 }
 
-boost::shared_ptr< std::stringstream > AtomicsJSONToCSV::Convert(std::istream& i_rJSONInputStream)
+boost::shared_ptr< std::istream > AtomicsJSONToCSVStreamTransformer::TransformInput( boost::shared_ptr< std::istream > i_pInputStream, const std::map< std::string, std::string >& i_rParameters )
 {
+	std::large_stringstream* pRawResult = new std::large_stringstream();
+	boost::shared_ptr< std::istream > pResult( pRawResult );
+
 	boost::property_tree::ptree pt;
-	read_json(i_rJSONInputStream, pt);
+	read_json( *i_pInputStream, pt);
 	boost::property_tree::ptree fields = pt.get_child("fields");
 	boost::property_tree::ptree::const_iterator iterFieldsBegin = fields.begin();
 	boost::property_tree::ptree::const_iterator iterFieldsEnd = fields.end();
-
-	boost::shared_ptr< std::stringstream > csv(new std::stringstream);
 	//the following for loop writes the header
 	for (; iterFieldsBegin != iterFieldsEnd; ++iterFieldsBegin)
 	{
@@ -62,14 +57,14 @@ boost::shared_ptr< std::stringstream > AtomicsJSONToCSV::Convert(std::istream& i
 
 		if (iterFieldsBegin == fields.begin())
 		{
-			*csv << columnName;
+			*pRawResult << columnName;
 		}
 		else
 		{
-			*csv << "," << columnName;
+			*pRawResult << "," << columnName;
 		}
 	}
-	*csv << std::endl;
+	*pRawResult << std::endl;
 
 
 	boost::property_tree::ptree records = pt.get_child("records");
@@ -94,16 +89,16 @@ boost::shared_ptr< std::stringstream > AtomicsJSONToCSV::Convert(std::istream& i
 
 			if (iterRecordFieldBegin == iterRecordsBegin->second.begin())
 			{
-				*csv << recordField;
+				*pRawResult << recordField;
 			}
 			else
 			{
-				*csv << "," << recordField;
+				*pRawResult << "," << recordField;
 			}
 		}
-		*csv << std::endl;
+		*pRawResult << std::endl;
 
 	}
 
-	return csv;
+	return pResult;
 }

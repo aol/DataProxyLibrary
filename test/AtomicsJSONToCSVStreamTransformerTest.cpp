@@ -1,38 +1,39 @@
 //
-// FILE NAME:           $HeadURL$
+// FILE NAME:           $HeadURL: svn+ssh://sstrick@svn.cm.aol.com/advertising/adlearn/gen1/trunk/lib/cpp/DataProxy/StreamTransformers/Custom/AtomicsJSONTOCSV/test/AtomicsJSONToCSVStreamTransformerTest.cpp $
 //
-// REVISION:            $Revision$
+// REVISION:            $Revision: 220478 $
 //
 // COPYRIGHT:           (c) 2005 Advertising.com All Rights Reserved.
 //
-// LAST UPDATED:        $Date$
+// LAST UPDATED:        $Date: 2011-08-23 14:38:03 -0400 (Tue, 23 Aug 2011) $
 //
-// UPDATED BY:          $Author$
+// UPDATED BY:          $Author: bhh1988 $
 //
-#include "AtomicsJSONToCSV.hpp"
-#include "AtomicsJSONToCSVTest.hpp"
+#include "AtomicsJSONToCSVStreamTransformer.hpp"
+#include "AtomicsJSONToCSVStreamTransformerTest.hpp"
+#include "StringUtilities.hpp"
  
-CPPUNIT_TEST_SUITE_REGISTRATION(AtomicsJSONToCSVTest);
-CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(AtomicsJSONToCSVTest, "AtomicsJSONToCSVTest");
-AtomicsJSONToCSVTest::AtomicsJSONToCSVTest()
+CPPUNIT_TEST_SUITE_REGISTRATION(AtomicsJSONToCSVStreamTransformerTest);
+CPPUNIT_TEST_SUITE_NAMED_REGISTRATION(AtomicsJSONToCSVStreamTransformerTest, "AtomicsJSONToCSVStreamTransformerTest");
+AtomicsJSONToCSVStreamTransformerTest::AtomicsJSONToCSVStreamTransformerTest()
 {
 }
 
-AtomicsJSONToCSVTest::~AtomicsJSONToCSVTest()
+AtomicsJSONToCSVStreamTransformerTest::~AtomicsJSONToCSVStreamTransformerTest()
 {
 }
 
-void AtomicsJSONToCSVTest::setUp(void)
+void AtomicsJSONToCSVStreamTransformerTest::setUp(void)
 {
 }
 
-void AtomicsJSONToCSVTest::tearDown(void)
+void AtomicsJSONToCSVStreamTransformerTest::tearDown(void)
 {
 }
 
-void AtomicsJSONToCSVTest::testConvert()	
+void AtomicsJSONToCSVStreamTransformerTest::testConvert()	
 {
-	AtomicsJSONToCSV converter;
+	AtomicsJSONToCSVStreamTransformer converter;
 
 	std::string jsonToConvert
 	(
@@ -79,10 +80,8 @@ void AtomicsJSONToCSVTest::testConvert()
 		"}\n"
 	);
 	
-	std::stringstream jsonStream;
-	jsonStream << jsonToConvert;
-
-	boost::shared_ptr<std::stringstream> dataAsCSV = converter.Convert(jsonStream);
+	boost::shared_ptr< std::istream > pJsonStream( new std::istringstream( jsonToConvert ) );
+	boost::shared_ptr<std::istream> pDataAsCsv = converter.TransformInput( pJsonStream, std::map< std::string, std::string >() );
 
 	std::string expectedCSV
 	(
@@ -92,12 +91,12 @@ void AtomicsJSONToCSVTest::testConvert()
 		"5631293,cron-d01.sapi.aol.com,1,sapiadm,62636409,2011-07-08 00:30:41\n"
 	);
 
-	CPPUNIT_ASSERT_EQUAL(expectedCSV, dataAsCSV->str());
+	CPPUNIT_ASSERT_EQUAL(expectedCSV, StreamToString( *pDataAsCsv ));
 }
 
-void AtomicsJSONToCSVTest::testConvertWithNoRecords()
+void AtomicsJSONToCSVStreamTransformerTest::testConvertWithNoRecords()
 {
-	AtomicsJSONToCSV converter;
+	AtomicsJSONToCSVStreamTransformer converter;
 
 	std::string jsonToConvert
 	(
@@ -126,21 +125,19 @@ void AtomicsJSONToCSVTest::testConvertWithNoRecords()
 		"}\n"
 	);
 	
-	std::stringstream jsonStream;
-	jsonStream << jsonToConvert;
-	
-	boost::shared_ptr< std::stringstream > dataAsCSV = converter.Convert(jsonStream);
+	boost::shared_ptr< std::istream > pJsonStream( new std::istringstream( jsonToConvert ) );
+	boost::shared_ptr<std::istream> pDataAsCsv = converter.TransformInput( pJsonStream, std::map< std::string, std::string >() );
 	std::string expectedCSV
 	(
 		"element_id,hostname,line_number,user_name,fk_job_id,insert_date\n"
 	);
 
-	CPPUNIT_ASSERT_EQUAL(expectedCSV, dataAsCSV->str());
+	CPPUNIT_ASSERT_EQUAL(expectedCSV, StreamToString( *pDataAsCsv ));
 }
 
-void AtomicsJSONToCSVTest::testConvertWithCommasInRecordsAndColumnNames()
+void AtomicsJSONToCSVStreamTransformerTest::testConvertWithCommasInRecordsAndColumnNames()
 {
-	AtomicsJSONToCSV converter;
+	AtomicsJSONToCSVStreamTransformer converter;
 
 	std::string jsonToConvert
 	(
@@ -187,10 +184,8 @@ void AtomicsJSONToCSVTest::testConvertWithCommasInRecordsAndColumnNames()
 		"}\n"
 	);
 	
-	std::stringstream jsonStream;
-	jsonStream << jsonToConvert;
-
-	boost::shared_ptr<std::stringstream> dataAsCSV = converter.Convert(jsonStream);
+	boost::shared_ptr< std::istream > pJsonStream( new std::istringstream( jsonToConvert ) );
+	boost::shared_ptr<std::istream> pDataAsCsv = converter.TransformInput( pJsonStream, std::map< std::string, std::string >() );
 
 	std::string expectedCSV
 	(
@@ -200,6 +195,6 @@ void AtomicsJSONToCSVTest::testConvertWithCommasInRecordsAndColumnNames()
 		"5631293,cron-d01.sapi.aol.com,1,sapiadm,62636409,2011-07-08 00:30:41\n"
 	);
 
-	CPPUNIT_ASSERT_EQUAL(expectedCSV, dataAsCSV->str());
+	CPPUNIT_ASSERT_EQUAL(expectedCSV, StreamToString( *pDataAsCsv ));
 }
 
