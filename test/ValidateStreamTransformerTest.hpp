@@ -1,12 +1,12 @@
 //
-// FILE NAME:       $HeadURL$
+// FILE NAME:       $HeadURL: svn+ssh://sstrick@svn.cm.aol.com/advertising/adlearn/gen1/trunk/lib/cpp/DataProxy/StreamTransformers/Validator/test/ValidateStreamTransformerTest.hpp $
 //
-// REVISION:        $Revision$
+// REVISION:        $Revision: 220478 $
 //
 // COPYRIGHT:       (c) 2006 Advertising.com All Rights Reserved.
 //
-// LAST UPDATED:    $Date$
-// UPDATED BY:      $Author$
+// LAST UPDATED:    $Date: 2011-08-23 14:38:03 -0400 (Tue, 23 Aug 2011) $
+// UPDATED BY:      $Author: bhh1988 $
 
 #ifndef _VALIDATE_STREAM_TRANSFORMER_TEST_HPP_
 #define _VALIDATE_STREAM_TRANSFORMER_TEST_HPP_

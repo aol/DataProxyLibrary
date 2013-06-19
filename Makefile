@@ -167,6 +167,7 @@ PRIVATEFILES=\
 	AtomicsJSONToCSVStreamTransformer.cpp \
 	CampaignRevenueVectorStreamTransformer.cpp \
 	CampaignReferenceGeneratorStreamTransformer.cpp \
+	ValidateStreamTransformer.cpp \
 
 THPPFILES=\
 	DatabaseConnectionBinder.thpp \
@@ -203,6 +204,7 @@ TESTFILES=\
 	AtomicsJSONToCSVStreamTransformerTest.cpp \
 	CampaignRevenueVectorStreamTransformerTest.cpp \
 	CampaignReferenceGeneratorStreamTransformerTest.cpp \
+	ValidateStreamTransformerTest.cpp \
 
 THREADTESTFILES=\
 	main.cpp \

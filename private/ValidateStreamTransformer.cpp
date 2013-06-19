@@ -1,19 +1,20 @@
 //
-// FILE NAME:       $HeadURL$
+// FILE NAME:       $HeadURL: svn+ssh://sstrick@svn.cm.aol.com/advertising/adlearn/gen1/trunk/lib/cpp/DataProxy/StreamTransformers/Validate/private/ValidateStreamTransformer.cpp $
 //
-// REVISION:        $Revision$
+// REVISION:        $Revision: 245305 $
 //
 // COPYRIGHT:       (c) 2008 Advertising.com All Rights Reserved.
 //
-// LAST UPDATED:    $Date$
-// UPDATED BY:      $Author$
+// LAST UPDATED:    $Date: 2012-04-18 18:55:50 -0400 (Wed, 18 Apr 2012) $
+// UPDATED BY:      $Author: sstrick $
 
 #include "ValidateStreamTransformer.hpp"
 #include "ShellExecutor.hpp"
 #include "MVLogger.hpp"
 #include "AwkUtilities.hpp"
-#include "Rule.hpp"
 #include "TransformerUtilities.hpp"
+#include "LargeStringStream.hpp"
+#include "GenericDataObject.hpp"
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/regex.hpp>
@@ -30,6 +31,15 @@ namespace
 	const std::string VERBOSE_DEFAULT( "false" );
 
 	const std::string COMMA( "," );
+
+	DATUMINFO( Expression, std::string );
+	DATUMINFO( Modification, std::string );
+
+	typedef
+		GenericDatum< Expression,
+		GenericDatum< Modification,
+		RowEnd > >
+	Rule;
 
 	// this function returns the awk command to order & format each field
 	std::string GetFormatCommand( const std::string& i_rHeader,
@@ -175,9 +185,18 @@ namespace
 	}
 }
 
-boost::shared_ptr< std::stringstream > Validate( std::istream& i_rInputStream, const std::map< std::string, std::string >& i_rParameters )
+ValidateStreamTransformer::ValidateStreamTransformer()
 {
-	boost::shared_ptr< std::stringstream > pResult( new std::stringstream() );
+}
+
+ValidateStreamTransformer::~ValidateStreamTransformer()
+{
+}
+
+boost::shared_ptr< std::istream > ValidateStreamTransformer::TransformInput( boost::shared_ptr< std::istream > i_pInputStream, const std::map< std::string, std::string >& i_rParameters )
+{
+	std::large_stringstream* pRawResult = new std::large_stringstream();
+	boost::shared_ptr< std::istream > pResult( pRawResult );
 
 	// parse out rules
 	std::vector< std::string > globals;
@@ -200,7 +219,7 @@ boost::shared_ptr< std::stringstream > Validate( std::istream& i_rInputStream, c
 
 	// read a line from the input to get the input header
 	std::string inputHeader;
-	std::getline( i_rInputStream, inputHeader );
+	std::getline( *i_pInputStream, inputHeader );
 	std::vector< std::string > headerFields;
 	boost::iter_split( headerFields, inputHeader, boost::first_finder(COMMA) );
 
@@ -209,16 +228,16 @@ boost::shared_ptr< std::stringstream > Validate( std::istream& i_rInputStream, c
 	// execute!
 	std::stringstream standardError;
 	ShellExecutor executor( command );
-	MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.Validator.Validate.ExecutingCommand", "Executing command: '" << command << "'" );
-	int status = executor.Run( timeout, i_rInputStream, *pResult, standardError );
+	MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.Validate.ExecutingCommand", "Executing command: '" << command << "'" );
+	int status = executor.Run( timeout, *i_pInputStream, *pRawResult, standardError );
 	if( status != 0 )
 	{
 		MV_THROW( ValidationFailedException, "Validation failed. Return code: " << status << ":" << std::endl << standardError.rdbuf() );
 	}
 	if( !standardError.str().empty() )
 	{
-		MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.Validator.Validate.StandardError",
-			"Validator generated standard error output:" << std::endl << standardError.rdbuf() );
+		MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.Validate.StandardError",
+			"Validate generated standard error output:" << std::endl << standardError.rdbuf() );
 	}
 
 	return pResult;
