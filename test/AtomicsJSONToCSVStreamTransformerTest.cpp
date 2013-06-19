@@ -91,6 +91,7 @@ void AtomicsJSONToCSVStreamTransformerTest::testConvert()
 		"5631293,cron-d01.sapi.aol.com,1,sapiadm,62636409,2011-07-08 00:30:41\n"
 	);
 
+	CPPUNIT_ASSERT( pDataAsCsv != NULL );
 	CPPUNIT_ASSERT_EQUAL(expectedCSV, StreamToString( *pDataAsCsv ));
 }
 
@@ -132,6 +133,7 @@ void AtomicsJSONToCSVStreamTransformerTest::testConvertWithNoRecords()
 		"element_id,hostname,line_number,user_name,fk_job_id,insert_date\n"
 	);
 
+	CPPUNIT_ASSERT( pDataAsCsv != NULL );
 	CPPUNIT_ASSERT_EQUAL(expectedCSV, StreamToString( *pDataAsCsv ));
 }
 
@@ -195,6 +197,7 @@ void AtomicsJSONToCSVStreamTransformerTest::testConvertWithCommasInRecordsAndCol
 		"5631293,cron-d01.sapi.aol.com,1,sapiadm,62636409,2011-07-08 00:30:41\n"
 	);
 
+	CPPUNIT_ASSERT( pDataAsCsv != NULL );
 	CPPUNIT_ASSERT_EQUAL(expectedCSV, StreamToString( *pDataAsCsv ));
 }
 
