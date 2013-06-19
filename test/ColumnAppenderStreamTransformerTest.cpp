@@ -12,6 +12,7 @@
 #include "ColumnAppenderStreamTransformer.hpp"
 #include "TempDirectory.hpp"
 #include "AssertThrowWithMessage.hpp"
+#include "StringUtilities.hpp"
 
 #include "MockDataProxyClient.hpp"
 #include <fstream>
@@ -84,8 +85,10 @@ void ColumnAppenderStreamTransformerTest::testColumnAppender()
 
 	parameters[ ON_MISSING_PROPERTY ] = "useNull";
 	
-	std::stringstream inputStream;
-	inputStream << MEDIA_ID << "," << WEBSITE_ID << std::endl
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	ColumnAppenderStreamTransformer transformer;
+	*pInputStream << MEDIA_ID << "," << WEBSITE_ID << std::endl
 				<< "354288" << "," << "1" << std::endl
 				<< "476733" << "," << "2" << std::endl
 				<< "572226" << "," << "4" << std::endl
@@ -105,18 +108,19 @@ void ColumnAppenderStreamTransformerTest::testColumnAppender()
 				<< "476733,6,2col05,1col05" << std::endl
 				<< "476733,9,2col05,1col05" << std::endl
 				<< "411111,9,," << std::endl;
-	boost::shared_ptr<std::stringstream > pResult;
+	boost::shared_ptr< std::istream > pResult;
 
-	pResult = AppendColumns( inputStream, parameters );
+	CPPUNIT_ASSERT_NO_THROW( pResult = transformer.TransformInput( pInputStreamAsIstream, parameters ) );
 			
-	CPPUNIT_ASSERT_EQUAL( expected.str(), pResult->str() );
+	CPPUNIT_ASSERT_EQUAL( expected.str(), StreamToString( *pResult ) );
 	
 	// test for OnMissingProperty = discard 
 
 	parameters[ ON_MISSING_PROPERTY ] = "discard";
 
-	std::stringstream testInputStream;
-	testInputStream << MEDIA_ID << "," << WEBSITE_ID << std::endl
+	std::stringstream* pTestInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pTestInputStreamAsIstream( pTestInputStream );
+	*pTestInputStream << MEDIA_ID << "," << WEBSITE_ID << std::endl
 				<< "354288" << "," << "1" << std::endl
 				<< "476733" << "," << "2" << std::endl
 				<< "572226" << "," << "4" << std::endl
@@ -136,13 +140,14 @@ void ColumnAppenderStreamTransformerTest::testColumnAppender()
 				<< "476733,6,2col05,1col05" << std::endl
 				<< "476733,9,2col05,1col05" << std::endl;
 
-	pResult = AppendColumns( testInputStream, parameters );
-	CPPUNIT_ASSERT_EQUAL( discardExpected.str(), pResult->str() );
+	CPPUNIT_ASSERT_NO_THROW( pResult = transformer.TransformInput( pTestInputStreamAsIstream, parameters ) );
+	CPPUNIT_ASSERT_EQUAL( discardExpected.str(), StreamToString( *pResult ) );
 	
 	// test for OnMissingProperty = throw 
 	parameters[ ON_MISSING_PROPERTY ] = "throw";
-	std::stringstream testInputStream2;
-	testInputStream2 << MEDIA_ID << "," << WEBSITE_ID << std::endl
+	std::stringstream* pTestInputStream2 = new std::stringstream();
+	boost::shared_ptr< std::istream > pTestInputStream2AsIstream( pTestInputStream2 );
+	*pTestInputStream2 << MEDIA_ID << "," << WEBSITE_ID << std::endl
 				<< "354288" << "," << "1" << std::endl
 				<< "476733" << "," << "2" << std::endl
 				<< "572226" << "," << "4" << std::endl
@@ -152,7 +157,7 @@ void ColumnAppenderStreamTransformerTest::testColumnAppender()
 				<< "476733" << "," << "9" << std::endl
 				<< "411111" << "," << "9" << std::endl;
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AppendColumns( testInputStream2, parameters ) , ColumnAppenderStreamTransformerException, ".*\\.cpp:\\d+: Unable to find properties for key: .*" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pTestInputStream2AsIstream, parameters ) ,
+		ColumnAppenderStreamTransformerException, ".*\\.cpp:\\d+: Unable to find properties for key: .*" );
 	
 }
-

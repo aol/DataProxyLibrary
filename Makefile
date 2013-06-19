@@ -51,6 +51,9 @@ TESTMODULES=\
 MATLABMODULES=\
 	lib/cpp/Matlab \
 
+TRANSFORMERS=\
+	Aggregator \
+
 MODULESPEC		= $(MODULES:%=$(ROOTDIR)/%)
 INCMODULESPEC		= $(INCMODULES:%=$(ROOTDIR)/%)
 TESTMODULESPEC		= $(TESTMODULES:%=$(ROOTDIR)/%)
@@ -59,8 +62,10 @@ MATLABMODULESPEC	= $(MATLABMODULES:%=$(ROOTDIR)/%)
 # Include directories
 INCS=\
 	-I. \
+	-Iinterface \
 	$(MODULESPEC:%=-I%) \
 	$(INCMODULESPEC:%=-I%) \
+	$(TRANSFORMERS:%=-I%) \
 	-I${ROOTDIR}/lib/cpp/Database/private \
 	-I${MYSQLHOME}/include \
 	-I${ORACLE_HOME}/rdbms/demo \
@@ -74,6 +79,7 @@ TESTINCS=\
 	$(MODULESPEC:%=-I%/mock) \
 	$(INCMODULESPEC:%=-I%/mock) \
 	$(MATLABMODULESPEC:%=-I%) \
+	$(TRANSFORMERS:%=-I%/test) \
 	-I$(MATLABDIR)/extern/include \
 	-I$(TESTDIR) \
 	-I$(MOCKDIR) \
@@ -152,6 +158,12 @@ PRIVATEFILES=\
 	DataProxyClient.cpp \
 	DatabaseProxy.cpp \
 	DatabaseConnectionManager.cpp \
+	AggregateStreamTransformer.cpp \
+	AwkUtilities.cpp \
+	TransformerUtilities.cpp \
+	BlackoutStreamTransformer.cpp \
+	ColumnAppenderStreamTransformer.cpp \
+	PropertyDomain.cpp \
 
 THPPFILES=\
 	DatabaseConnectionBinder.thpp \
@@ -178,6 +190,12 @@ TESTFILES=\
 	TransformerManagerTest.cpp \
 	DataProxyClientTest.cpp \
 	GenericDPLDomainTest.cpp \
+	AggregateStreamTransformerTest.cpp \
+	AwkUtilitiesTest.cpp \
+	TransformerUtilitiesTest.cpp \
+	BlackoutStreamTransformerTest.cpp \
+	ColumnAppenderStreamTransformerTest.cpp \
+	PropertyDomainTest.cpp \
 
 THREADTESTFILES=\
 	main.cpp \

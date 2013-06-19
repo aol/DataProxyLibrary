@@ -13,10 +13,24 @@
 #include "AwkUtilities.hpp"
 #include "TransformerUtilities.hpp"
 #include "AssertThrowWithMessage.hpp"
+#include <sstream>
 #include <boost/lexical_cast.hpp>
+#include <boost/shared_ptr.hpp>
 
 CPPUNIT_TEST_SUITE_REGISTRATION( AggregateStreamTransformerTest );
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( AggregateStreamTransformerTest, "AggregateStreamTransformerTest" );
+
+namespace
+{
+	std::string StreamToString( boost::shared_ptr< std::istream > i_pInput )
+	{
+		std::stringstream result;
+
+		result << i_pInput->rdbuf();
+
+		return result.str();
+	}
+}
 
 AggregateStreamTransformerTest::AggregateStreamTransformerTest()
 {
@@ -36,8 +50,10 @@ void AggregateStreamTransformerTest::tearDown()
 
 void AggregateStreamTransformerTest::testMissingParameters()
 {
-	std::stringstream inputStream;
-	inputStream << "key1,data1" << std::endl;
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	AggregateStreamTransformer transformer;
+	*pInputStream << "key1,data1" << std::endl;
 
 	std::map< std::string, std::string > parameters;
 	parameters["timeout"] = "5";
@@ -45,72 +61,76 @@ void AggregateStreamTransformerTest::testMissingParameters()
 	parameters["fields"] = "data1: output(1)";
 
 	parameters.erase( "timeout" );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), TransformerUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), TransformerUtilitiesException,
 		".*\\.cpp:\\d+: Attempted to fetch missing required parameter: 'timeout'" );
 
 	parameters["timeout"] = "5";
 	parameters.erase( "key" );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), TransformerUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), TransformerUtilitiesException,
 		".*\\.cpp:\\d+: Attempted to fetch missing required parameter: 'key'" );
 
 	parameters["key"] = "key1";
 	parameters.erase( "fields" );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), TransformerUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), TransformerUtilitiesException,
 		".*\\.cpp:\\d+: Attempted to fetch missing required parameter: 'fields'" );
 }
 
 void AggregateStreamTransformerTest::testAmbiguousProperty()
 {
-	std::stringstream inputStream;
-	inputStream << "key1,data1" << std::endl;
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	AggregateStreamTransformer transformer;
+	*pInputStream << "key1,data1" << std::endl;
 
 	std::map< std::string, std::string > parameters;
 	parameters["timeout"] = "5";
 	parameters["key"] = "key1: rename(KEY) rename(KEY)";
 	parameters["fields"] = "data1: output(1)";
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), AwkUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), AwkUtilitiesException,
 		".*:\\d+: Value for rename is ambiguously defined for column: 'key1'" );
 	
 	parameters["key"] = "key1: type(%i) type(%i)";
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), AwkUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), AwkUtilitiesException,
 		".*:\\d+: Value for type is ambiguously defined for column: 'key1'" );
 	
 	parameters["key"] = "key1: modify(%v) modify(%v)";
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), AwkUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), AwkUtilitiesException,
 		".*:\\d+: Value for modify is ambiguously defined for column: 'key1'" );
 
 	parameters["key"] = "key1";
 
 	parameters["fields"] = "data1: type(%i) type(%i)";
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), AwkUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), AwkUtilitiesException,
 		".*:\\d+: Value for type is ambiguously defined for column: 'data1'" );
 
 	parameters["fields"] = "data1: rename(d) rename(d)";
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), AwkUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), AwkUtilitiesException,
 		".*:\\d+: Value for rename is ambiguously defined for column: 'data1'" );
 
 	parameters["fields"] = "data1: modify(%v) modify(%v)";
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), AwkUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), AwkUtilitiesException,
 		".*:\\d+: Value for modify is ambiguously defined for column: 'data1'" );
 
 	parameters["fields"] = "data1: init(0) init(0)";
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), AwkUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), AwkUtilitiesException,
 		".*:\\d+: Value for init is ambiguously defined for column: 'data1'" );
 
 	parameters["fields"] = "data1: op(%a++) op(%a++)";
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), AwkUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), AwkUtilitiesException,
 		".*:\\d+: Value for op is ambiguously defined for column: 'data1'" );
 
 	parameters["fields"] = "data1: output(%a) output(%a)";
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), AwkUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), AwkUtilitiesException,
 		".*:\\d+: Value for output is ambiguously defined for column: 'data1'" );
 }
 
 void AggregateStreamTransformerTest::testBadAwkType()
 {
-	std::stringstream inputStream;
-	inputStream << "key1,data1" << std::endl;
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	AggregateStreamTransformer transformer;
+	*pInputStream << "key1,data1" << std::endl;
 
 	std::map< std::string, std::string > parameters;
 	parameters["timeout"] = "5";
@@ -163,140 +183,154 @@ void AggregateStreamTransformerTest::testBadAwkType()
 						   "data67: type(%#+ -- +#f) output(1),"	// OK
 						   "dataBad: type(doesnt_match) output(1)";
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), AwkUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), AwkUtilitiesException,
 		".*\\.cpp:\\d+: Unrecognized awk format type: doesnt_match defined for field: dataBad" );
 }
 
 void AggregateStreamTransformerTest::testUnrecognizedParameter()
 {
-	std::stringstream inputStream;
-	inputStream << "key1,data1" << std::endl;
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	AggregateStreamTransformer transformer;
+	*pInputStream << "key1,data1" << std::endl;
 
 	std::map< std::string, std::string > parameters;
 	parameters["timeout"] = "5";
 	parameters["key"] = "key1";
 	parameters["fields"] = "data1:garbage(1)";
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), AggregateStreamTransformerException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), AggregateStreamTransformerException,
 		".*\\.cpp:\\d+: Unrecognized parameter or parameter format: 'garbage\\(1\\)' for field name: 'data1'\\. "
 		"Format for each comma-separated field is: column:param1\\(value1\\) param2\\(value2\\) \\.\\.\\. paramN\\(valueN\\) where each param is one of: type, rename, modify, init, op, output" );
 
 	parameters["fields"] = "data1";
 
 	parameters["key"] = "key1:garbage(0)";
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), AggregateStreamTransformerException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), AggregateStreamTransformerException,
 		".*\\.cpp:\\d+: Unrecognized parameter or parameter format: 'garbage\\(0\\)' for key name: 'key1'\\. "
 		"Format for each comma-separated key is: column:param1\\(value1\\) param2\\(value2\\) \\.\\.\\. paramN\\(valueN\\) where each param is one of: type, rename, modify" );
 
 	parameters["key"] = "key1:init(0)";
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), AggregateStreamTransformerException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), AggregateStreamTransformerException,
 		".*\\.cpp:\\d+: Unrecognized parameter or parameter format: 'init\\(0\\)' for key name: 'key1'\\. "
 		"Format for each comma-separated key is: column:param1\\(value1\\) param2\\(value2\\) \\.\\.\\. paramN\\(valueN\\) where each param is one of: type, rename, modify" );
 
 	parameters["key"] = "key1:op(%a++)";
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), AggregateStreamTransformerException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), AggregateStreamTransformerException,
 		".*\\.cpp:\\d+: Unrecognized parameter or parameter format: 'op\\(%a\\+\\+\\)' for key name: 'key1'\\. "
 		"Format for each comma-separated key is: column:param1\\(value1\\) param2\\(value2\\) \\.\\.\\. paramN\\(valueN\\) where each param is one of: type, rename, modify" );
 
 	parameters["key"] = "key1:output(0)";
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), AggregateStreamTransformerException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), AggregateStreamTransformerException,
 		".*\\.cpp:\\d+: Unrecognized parameter or parameter format: 'output\\(0\\)' for key name: 'key1'\\. "
 		"Format for each comma-separated key is: column:param1\\(value1\\) param2\\(value2\\) \\.\\.\\. paramN\\(valueN\\) where each param is one of: type, rename, modify" );
 
 	parameters["key"] = "key1:rename(k) blah";
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), AggregateStreamTransformerException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), AggregateStreamTransformerException,
 		".*\\.cpp:\\d+: Unrecognized parameter or parameter format: 'blah' for key name: 'key1'\\. "
 		"Format for each comma-separated key is: column:param1\\(value1\\) param2\\(value2\\) \\.\\.\\. paramN\\(valueN\\) where each param is one of: type, rename, modify" );
 }
 
 void AggregateStreamTransformerTest::testMissingParameter()
 {
-	std::stringstream inputStream;
-	inputStream << "key1,data1" << std::endl;
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	AggregateStreamTransformer transformer;
+	*pInputStream << "key1,data1" << std::endl;
 
 	std::map< std::string, std::string > parameters;
 	parameters["timeout"] = "5";
 	parameters["key"] = "key1";
 	parameters["fields"] = "data1: type(%f) modify(%v/2) rename(D1) init(0)";
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), AggregateStreamTransformerException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), AggregateStreamTransformerException,
 		".*\\.cpp:\\d+: No operation or output defined for field: 'data1'" );
 }
 
 void AggregateStreamTransformerTest::testBadFields()
 {
-	std::stringstream inputStream;
-	inputStream << "key1,data1" << std::endl;
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	AggregateStreamTransformer transformer;
+	*pInputStream << "key1,data1" << std::endl;
 
 	std::map< std::string, std::string > parameters;
 	parameters["timeout"] = "5";
 	parameters["key"] = "";
 	parameters["fields"] = "data1: output(0)";
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), AggregateStreamTransformerException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), AggregateStreamTransformerException,
 		".*\\.cpp:\\d+: No keys have been specified" );
 
 	parameters["key"] = "key1";
 	parameters["fields"] = "";
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), AggregateStreamTransformerException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), AggregateStreamTransformerException,
 		".*\\.cpp:\\d+: No fields have been specified" );
 }
 
 void AggregateStreamTransformerTest::testMissingColumn()
 {
-	std::stringstream inputStream;
-	inputStream << "key1,data1" << std::endl;
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	AggregateStreamTransformer transformer;
+	*pInputStream << "key1,data1" << std::endl;
 
 	std::map< std::string, std::string > parameters;
 	parameters["timeout"] = "5";
 	parameters["key"] = "key2";
 	parameters["fields"] = "data1: output(0)";
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), AggregateStreamTransformerException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), AggregateStreamTransformerException,
 		".*\\.cpp:\\d+: Input stream is missing required column: 'key2'" );
 
 	parameters["key"] = "key1";
 	parameters["fields"] = "data2: op(%a+=%v)";
-	inputStream.clear();
-	inputStream.seekg(0);
+	pInputStream->clear();
+	pInputStream->seekg(0);
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), AggregateStreamTransformerException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), AggregateStreamTransformerException,
 		".*\\.cpp:\\d+: Input stream is missing required column: 'data2'" );
 }
 
 void AggregateStreamTransformerTest::testBadTimeout()
 {
-	std::stringstream inputStream;
-	inputStream << "key1,data1" << std::endl;
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	AggregateStreamTransformer transformer;
+	*pInputStream << "key1,data1" << std::endl;
 
 	std::map< std::string, std::string > parameters;
 	parameters["timeout"] = "badTimeout";
 	parameters["key"] = "key2";
 	parameters["fields"] = "data1: output(0)";
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), TransformerUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), TransformerUtilitiesException,
 		".*:\\d+: Error interpreting timeout: 'badTimeout' as requested type \\(d\\)" );
 }
 
 void AggregateStreamTransformerTest::testAmbiguousFields()
 {
-	std::stringstream inputStream;
-	inputStream << "key1,random,key1" << std::endl;
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	AggregateStreamTransformer transformer;
+	*pInputStream << "key1,random,key1" << std::endl;
 	
 	std::map<std::string, std::string> parameters;
 	parameters["timeout"] = "5";
 	parameters["key"] = "key1";
 	parameters["fields"] = "data1: output(1)";
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( AggregateFields( inputStream, parameters ), AggregateStreamTransformerException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), AggregateStreamTransformerException,
 		".*:\\d+: Input stream has ambiguous required column: 'key1'" );
 }
 
 void AggregateStreamTransformerTest::testTransformTrivialStream()
 {
-	std::stringstream inputStream;
-	inputStream << "key1" << std::endl;
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	AggregateStreamTransformer transformer;
+	*pInputStream << "key1" << std::endl;
 	
 	std::map<std::string, std::string> parameters;
 	parameters["timeout"] = "5";
@@ -306,15 +340,19 @@ void AggregateStreamTransformerTest::testTransformTrivialStream()
 	std::stringstream expected;
 	expected << "key1,data1" << std::endl;
 	
-	boost::shared_ptr< std::stringstream > pResult = AggregateFields( inputStream, parameters );
-	CPPUNIT_ASSERT( pResult != NULL );
-	CPPUNIT_ASSERT_EQUAL( expected.str(), pResult->str() );
+	boost::shared_ptr< std::istream > pResult;
+	
+	CPPUNIT_ASSERT_NO_THROW( pResult = transformer.TransformInput( pInputStreamAsIstream, parameters ) );
+	CPPUNIT_ASSERT( pResult.get() != NULL );
+	CPPUNIT_ASSERT_EQUAL( expected.str(), StreamToString( pResult ) );
 }
 
 void AggregateStreamTransformerTest::testAggregateFields()
 {
-	std::stringstream inputStream;
-	inputStream << "random,website \t,\t slot \t,segment,campaign id,hour,impressions,clicks,actions,media id" << std::endl
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	AggregateStreamTransformer transformer;
+	*pInputStream << "random,website \t,\t slot \t,segment,campaign id,hour,impressions,clicks,actions,media id" << std::endl
 				<< "7,113,114,115,10,24,1101,1102,1103,112" << std::endl
 				<< "9,113,134,135,10,25,1301,1302,1303,112" << std::endl
 				<< "4,213,214,215,20,95,2101,2102,2103,212" << std::endl
@@ -346,15 +384,19 @@ void AggregateStreamTransformerTest::testAggregateFields()
 			 << "212,213,3,21," << 2101+2201 << ',' << 2102+2202 << ",2," << 2103+2203 << ".00,16," << int((2101+2201)/2) << ",my_constant,2009-04-16 05:45:24,17" << std::endl
 			 << "312,313,2,31,3101,3102,1,3103.00,15,3101,my_constant,2009-04-16 05:45:24,17" << std::endl;
 	
-	boost::shared_ptr< std::stringstream > pResult = AggregateFields( inputStream, parameters );
+	boost::shared_ptr< std::istream > pResult;
+	
+	CPPUNIT_ASSERT_NO_THROW( pResult = transformer.TransformInput( pInputStreamAsIstream, parameters ) );
 	CPPUNIT_ASSERT( pResult != NULL );
-	CPPUNIT_ASSERT_EQUAL( expected.str(), pResult->str() );
+	CPPUNIT_ASSERT_EQUAL( expected.str(), StreamToString( pResult ) );
 }
 
 void AggregateStreamTransformerTest::testAggregateFieldsNoColumnManipulation()
 {
-	std::stringstream inputStream;
-	inputStream << "RANDOM,media id,website,day,slot,segment,campaign id,impressions,clicks,actions" << std::endl
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	AggregateStreamTransformer transformer;
+	*pInputStream << "RANDOM,media id,website,day,slot,segment,campaign id,impressions,clicks,actions" << std::endl
 				<< "1,112,113,1,114,115,10,1101,1102,1103" << std::endl
 				<< "6,112,113,1,134,135,10,1301,1302,1303" << std::endl
 				<< "3,212,213,3,214,215,20,2101,2102,2103" << std::endl
@@ -387,15 +429,19 @@ void AggregateStreamTransformerTest::testAggregateFieldsNoColumnManipulation()
 			 << "212,213,3,20," << 2101+2201 << ',' << 2102+2202 << ",2," << 2103+2203 << ".00,16," << int((2101+2201)/2) << ",my_constant,2009-04-16 05:45:24,17" << std::endl
 			 << "312,313,2,30,3101,3102,1,3103.00,15,3101,my_constant,2009-04-16 05:45:24,17" << std::endl;
 	
-	boost::shared_ptr< std::stringstream > pResult = AggregateFields( inputStream, parameters );
-	CPPUNIT_ASSERT( pResult != NULL );
-	CPPUNIT_ASSERT_EQUAL( expected.str(), pResult->str() );
+	boost::shared_ptr< std::istream > pResult;
+	
+	CPPUNIT_ASSERT_NO_THROW( pResult = transformer.TransformInput( pInputStreamAsIstream, parameters ) );
+	CPPUNIT_ASSERT( pResult.get() != NULL );
+	CPPUNIT_ASSERT_EQUAL( expected.str(), StreamToString( pResult ) );
 }
 
 void AggregateStreamTransformerTest::testAggregateFieldsSortOptimization()
 {
-	std::stringstream inputStream;
-	inputStream << "key,data" << std::endl
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	AggregateStreamTransformer transformer;
+	*pInputStream << "key,data" << std::endl
 				<< "1,11" << std::endl
 				<< "1,12" << std::endl
 				<< "1,13" << std::endl
@@ -417,12 +463,14 @@ void AggregateStreamTransformerTest::testAggregateFieldsSortOptimization()
 	expected << "key,data" << std::endl
 			 << "1," << 11+12+13+14+15 << std::endl
 			 << "2," << 21+22+23+24+25 << std::endl;
-	boost::shared_ptr< std::stringstream > pResult = AggregateFields( inputStream, parameters );
+	boost::shared_ptr< std::istream > pResult;
+	
+	CPPUNIT_ASSERT_NO_THROW( pResult = transformer.TransformInput( pInputStreamAsIstream, parameters ) );
 	CPPUNIT_ASSERT( pResult != NULL );
-	CPPUNIT_ASSERT_EQUAL( expected.str(), pResult->str() );
+	CPPUNIT_ASSERT_EQUAL( expected.str(), StreamToString( pResult ) );
 
-	inputStream.clear();
-	inputStream.seekg( 0 );
+	pInputStream->clear();
+	pInputStream->seekg( 0 );
 
 	// now do it without the sort; we will get the groups that occur in order
 	parameters["skipSort"] = "true";
@@ -432,7 +480,7 @@ void AggregateStreamTransformerTest::testAggregateFieldsSortOptimization()
 			 << "2," << 21+22+23 << std::endl
 			 << "1,15" << std::endl
 			 << "2," << 24+25 << std::endl;
-	pResult = AggregateFields( inputStream, parameters );
+	CPPUNIT_ASSERT_NO_THROW( pResult = transformer.TransformInput( pInputStreamAsIstream, parameters ) );
 	CPPUNIT_ASSERT( pResult != NULL );
-	CPPUNIT_ASSERT_EQUAL( expected.str(), pResult->str() );
+	CPPUNIT_ASSERT_EQUAL( expected.str(), StreamToString( pResult ) );
 }

@@ -13,6 +13,7 @@
 #include "BlackoutTransformerCommon.hpp"
 #include "TransformerUtilities.hpp"
 #include "AssertThrowWithMessage.hpp"
+#include "StringUtilities.hpp"
 #include "TempDirectory.hpp"
 #include <fstream>
 #include <boost/regex.hpp>
@@ -92,27 +93,32 @@ void BlackoutStreamTransformerTest::testCorruptStreamHeader()
 	parameters[ CAMPAIGN_ID ] = "100";
 
     {	
-		std::stringstream inputStream;
-    	inputStream << "med_id" << "," << "web_id" << "," << SOURCED_TIME_PERIOD << std::endl
+		BlackoutStreamTransformer transformer;
+		std::stringstream* pInputStream = new std::stringstream();
+		boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+    	*pInputStream << "med_id" << "," << "web_id" << "," << SOURCED_TIME_PERIOD << std::endl
 		        << "200,300,1000" << std::endl;
 
-		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ApplyBlackouts( inputStream, parameters ), BlackoutTransformerException,
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), BlackoutTransformerException,
 				"private/BlackoutStreamTransformer\\.cpp:\\d+: Incoming KNA Stream is missing the following column headers: "
 								<< CAMPAIGN_ID << ", " << MEDIA_ID << ", " << WEBSITE_ID );
 	}
 
 	{
 		PrepareCorruptHeaderBlackoutDataFile();
-		std::stringstream inputStream;
-		inputStream << CAMPAIGN_ID << "," << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << std::endl
+		std::stringstream* pInputStream = new std::stringstream();
+		boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+		BlackoutStreamTransformer transformer;
+		*pInputStream << CAMPAIGN_ID << "," << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << std::endl
 		            << "100,200,300,1000" << std::endl;
-		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ApplyBlackouts( inputStream, parameters ), BlackoutTransformerException, 
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), BlackoutTransformerException, 
 				"private/BlackoutStreamTransformer\\.cpp:\\d+: Incoming blackout data is missing the following column headers: "
 								<< CAMPAIGN_ID << ", " << MEDIA_ID << ", " << START_TIME_PERIOD );
-		std::stringstream inputStreamOne;
-		inputStreamOne << CAMPAIGN_ID << "," << MEDIA_ID << ",," << "colum\\,column," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << "\r\n"
+		std::stringstream* pInputStreamOne = new std::stringstream();
+		boost::shared_ptr< std::istream > pInputStreamOneAsIstream( pInputStreamOne );
+		*pInputStreamOne << CAMPAIGN_ID << "," << MEDIA_ID << ",," << "colum\\,column," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << "\r\n"
 					   << "100,200,300,1000" << std::endl;
-		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ApplyBlackouts( inputStreamOne, parameters ), BlackoutTransformerException,
+		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamOneAsIstream, parameters ), BlackoutTransformerException,
 				"private/BlackoutStreamTransformer\\.cpp:\\d+: Incoming blackout data is missing the following column headers: "
 								<< CAMPAIGN_ID << ", " << MEDIA_ID << ", " << START_TIME_PERIOD );
 	}
@@ -121,11 +127,13 @@ void BlackoutStreamTransformerTest::testCorruptStreamHeader()
 void BlackoutStreamTransformerTest::testInputParameters()
 {
 	std::map<std::string, std::string > parameters;
-	std::stringstream inputStream;
-	inputStream << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << std::endl 
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	BlackoutStreamTransformer transformer;
+	*pInputStream << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << std::endl 
 				<< "200,300,1000" << std::endl;
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ApplyBlackouts( inputStream, parameters ), TransformerUtilitiesException,
-			"../Common/private/TransformerUtilities\\.cpp:\\d+: Attempted to fetch missing required parameter: '" << DPL_CONFIG << "'" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), TransformerUtilitiesException,
+			"private/TransformerUtilities\\.cpp:\\d+: Attempted to fetch missing required parameter: '" << DPL_CONFIG << "'" );
 
 }
 
@@ -150,26 +158,29 @@ void BlackoutStreamTransformerTest::testStreamTransformerParameters()
 
 	parameters[ "camp_id" ] = "100";
 
-	std::stringstream inputStream;
-	inputStream << CAMPAIGN_ID << "," << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << std::endl
+	BlackoutStreamTransformer transformer;
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	*pInputStream << CAMPAIGN_ID << "," << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << std::endl
 				<< "100,200,300,1000" << std::endl;
 	
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ApplyBlackouts( inputStream, parameters ), BlackoutTransformerException, 
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), BlackoutTransformerException, 
 		"private/BlackoutStreamTransformer\\.cpp:\\d+: Incoming KNA Stream is missing the following column headers: "
 									<< "camp_id, med_id, src_hourperiod, web_id" );
 
-	std::stringstream inputStreamOne;
-	inputStreamOne << "camp_id,med_id,web_id,src_hourperiod" << std::endl
+	std::stringstream* pInputStreamOne = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamOneAsIstream( pInputStreamOne );
+	*pInputStreamOne << "camp_id,med_id,web_id,src_hourperiod" << std::endl
 				   << "100,200,300,7000" << std::endl;
 	std::stringstream expected;
 	expected << "camp_id,med_id,web_id,src_hourperiod" << std::endl
 			 << "100,200,300,7000" << std::endl;
 	PrepareBlackoutDataFile();
 
-	boost::shared_ptr<std::stringstream > pResult;
-	pResult = ApplyBlackouts( inputStreamOne, parameters );
+	boost::shared_ptr< std::istream > pResult;
+	CPPUNIT_ASSERT_NO_THROW( pResult = transformer.TransformInput( pInputStreamOneAsIstream, parameters ) );
 
-	CPPUNIT_ASSERT_EQUAL( expected.str(), pResult->str() );
+	CPPUNIT_ASSERT_EQUAL( expected.str(), StreamToString( *pResult ) );
 }
 
 void BlackoutStreamTransformerTest::testBlackout()
@@ -182,8 +193,10 @@ void BlackoutStreamTransformerTest::testBlackout()
 	file << "</DPLConfig>" << std::endl;
     file.close();
 
-	std::stringstream inputStream;
-	inputStream << CAMPAIGN_ID << "," << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << std::endl
+	BlackoutStreamTransformer transformer;
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	*pInputStream << CAMPAIGN_ID << "," << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << std::endl
 				<< "100,200,300,1000" << std::endl  // Check for all levels of blackout; srchp does not fall in any window 
 				<< "100,200,300,1600" << std::endl 	// all levels; srchp in window for camp-web level 
 				<< "100,200,300,1525" << std::endl  // all levels; srchp in window for media-web level
@@ -214,7 +227,9 @@ void BlackoutStreamTransformerTest::testBlackout()
 	parameters[ CAMPAIGN_ID ] = "100,101"; 
 	
 	PrepareBlackoutDataFile();
-	boost::shared_ptr<std::stringstream > pResult = ApplyBlackouts( inputStream, parameters );
+	boost::shared_ptr< std::istream > pResult;
+	
+	CPPUNIT_ASSERT_NO_THROW( pResult = transformer.TransformInput( pInputStreamAsIstream, parameters ) );
 
 	std::stringstream expected;
 	expected << CAMPAIGN_ID << "," << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << std::endl
@@ -228,16 +243,17 @@ void BlackoutStreamTransformerTest::testBlackout()
 		 << "100,200,300,1599" << std::endl
 		 << "100,200,300,2700" << std::endl;
 
-	CPPUNIT_ASSERT_EQUAL( expected.str(), pResult->str() );
+	CPPUNIT_ASSERT_EQUAL( expected.str(), StreamToString( *pResult ) );
 
-	std::stringstream inputStreamOne;
-	inputStreamOne << CAMPAIGN_ID << "," << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << ",NEWCOL" << std::endl
+	std::stringstream* pInputStreamOne = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamOneAsIstream( pInputStreamOne );
+	*pInputStreamOne << CAMPAIGN_ID << "," << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << ",NEWCOL" << std::endl
 					<< "100,200,300,7002,10000" << std::endl;
 
 	std::stringstream expectedOne;
 	expectedOne << CAMPAIGN_ID << "," << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << ",NEWCOL" << std::endl
 				<< "100,200,300,7002,10000" << std::endl;
 
-	pResult = ApplyBlackouts( inputStreamOne, parameters );
-	CPPUNIT_ASSERT_EQUAL( expectedOne.str(), pResult->str() );
+	CPPUNIT_ASSERT_NO_THROW( pResult = transformer.TransformInput( pInputStreamOneAsIstream, parameters ) );
+	CPPUNIT_ASSERT_EQUAL( expectedOne.str(), StreamToString( *pResult ) );
 }

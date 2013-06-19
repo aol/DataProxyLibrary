@@ -12,6 +12,7 @@
 #define _AGGREGATE_STREAM_TRANSFORMER_HPP_
 
 #include "MVException.hpp"
+#include "ITransformFunction.hpp"
 #include <boost/shared_ptr.hpp>
 #include <istream>
 #include <map>
@@ -19,11 +20,14 @@
 
 MV_MAKEEXCEPTIONCLASS( AggregateStreamTransformerException, MVException );
 
-extern "C"
+class AggregateStreamTransformer : public ITransformFunction
 {
-	const char DLL_VERSION[] = "0.0.0";
-	boost::shared_ptr< std::stringstream > AggregateFields( std::istream& i_rInputStream, const std::map< std::string, std::string >& i_rParameters );
-}
+public:
+	AggregateStreamTransformer();
+	virtual ~AggregateStreamTransformer();
+
+	virtual boost::shared_ptr<std::istream> TransformInput( boost::shared_ptr< std::istream > i_pInput, const std::map< std::string, std::string >& i_rParameters );
+};
 
 #endif //_AGGREGATE_STREAM_TRANSFORMER_HPP_
 

@@ -38,6 +38,6 @@ typedef
 	GenericDatum< AwkIndex,
 	GenericDatum< InitValue,
 	RowEnd > > > > > > > > > > >
-Field;
+AggregatorField;
 
 #endif //_FIELD_HPP_

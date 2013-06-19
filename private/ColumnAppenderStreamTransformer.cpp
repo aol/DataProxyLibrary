@@ -15,12 +15,22 @@
 #include "CSVReader.hpp"
 #include "DataProxyClient.hpp"
 #include "PropertyDomain.hpp"
+#include "LargeStringStream.hpp"
 #include <boost/algorithm/string/split.hpp>
 #include <set>
 
-boost::shared_ptr< std::stringstream > AppendColumns( std::istream& i_rInputStream, const std::map< std::string, std::string >& i_rParameters )
+ColumnAppenderStreamTransformer::ColumnAppenderStreamTransformer()
 {
-	boost::shared_ptr< std::stringstream > pResult( new std::stringstream() );
+}
+
+ColumnAppenderStreamTransformer::~ColumnAppenderStreamTransformer()
+{
+}
+
+boost::shared_ptr< std::istream > ColumnAppenderStreamTransformer::TransformInput( boost::shared_ptr< std::istream > i_pInputStream, const std::map< std::string, std::string >& i_rParameters )
+{
+	std::large_stringstream* pResult = new std::large_stringstream();
+	boost::shared_ptr< std::istream > pResultAsIstream( pResult );
 
 	// parse input parameters
 	std::string propertyNodeName =  TransformerUtilities::GetValue( PROPERTY_NODE_NAME, i_rParameters );
@@ -59,7 +69,7 @@ boost::shared_ptr< std::stringstream > AppendColumns( std::istream& i_rInputStre
 	propDomain.Load( client, propertyNodeName, propertiesKeyColumnName, propertiesToAppend, i_rParameters );
 
 	// Reading from input stream 
-	CSVReader reader( i_rInputStream );
+	CSVReader reader( *i_pInputStream );
 	std::string headerText = reader.GetHeaderLine();
 	*pResult << headerText << "," << propertiesToAppend << std::endl;	
 	std::string streamKeyValue; 
@@ -97,5 +107,5 @@ boost::shared_ptr< std::stringstream > AppendColumns( std::istream& i_rInputStre
 			"Rows with the following keys have been discarded from the input stream: " << discardedColumnString
 			<< " because properties could not be located for their values and " << ON_MISSING_PROPERTY << " was set to " << ON_MISSING_PROPERTY_DISCARD );
 	}
-	return pResult;
+	return pResultAsIstream;
 }

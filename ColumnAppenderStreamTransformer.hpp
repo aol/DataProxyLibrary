@@ -12,8 +12,9 @@
 #define _COLUMN_FORMAT_STREAM_TRANSFORMER_HPP_
 
 #include "MVException.hpp"
+#include "ITransformFunction.hpp"
 #include <boost/shared_ptr.hpp>
-#include <sstream>
+#include <istream>
 #include <string>
 
 MV_MAKEEXCEPTIONCLASS( ColumnAppenderStreamTransformerException, MVException );
@@ -32,10 +33,14 @@ const std::string ON_MISSING_PROPERTY_THROW("throw" );
 
 enum OnMissingPropertyBehavior { USE_NULL, DISCARD, THROW };
 
-extern "C"
+class ColumnAppenderStreamTransformer : public ITransformFunction
 {
-	boost::shared_ptr< std::stringstream > AppendColumns( std::istream& i_rInputStream, const std::map< std::string, std::string >& i_rParameters );
-}
+public:
+	ColumnAppenderStreamTransformer();
+	virtual ~ColumnAppenderStreamTransformer();
+
+	boost::shared_ptr< std::istream > TransformInput( boost::shared_ptr< std::istream > i_pInputStream, const std::map< std::string, std::string >& i_rParameters );
+};
 
 #endif //_COLUMN_APPENDER_STREAM_TRANSFORMER_HPP_
 

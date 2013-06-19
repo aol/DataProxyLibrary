@@ -138,7 +138,7 @@ StreamTransformer::BackwardsCompatableTransformFunction::~BackwardsCompatableTra
 {
 }
 
-boost::shared_ptr<std::istream>StreamTransformer::BackwardsCompatableTransformFunction::TransformInput( boost::shared_ptr< std::istream > i_pInput, const std::map<std::string, std::string>& i_rParameters )
+boost::shared_ptr<std::istream> StreamTransformer::BackwardsCompatableTransformFunction::TransformInput( boost::shared_ptr< std::istream > i_pInput, const std::map<std::string, std::string>& i_rParameters )
 {
 	return boost::shared_ptr<std::istream>( new OriginalTransformStream( m_OriginalTransformFunction, i_pInput, i_rParameters ) );
 }
@@ -151,7 +151,7 @@ StreamTransformer::DynamicFunctionManager::~DynamicFunctionManager()
 {
 }
 
-boost::shared_ptr< StreamTransformer::ITransformFunction > StreamTransformer::DynamicFunctionManager::GetFunction( const std::string& i_rPath, const std::string& i_rFunctionName )
+boost::shared_ptr< ITransformFunction > StreamTransformer::DynamicFunctionManager::GetFunction( const std::string& i_rPath, const std::string& i_rFunctionName )
 {
 	boost::shared_lock< boost::shared_mutex > softLock( DYNAMIC_FUNCTION_MUTEX );
 	std::pair< std::string, std::string > key = std::make_pair( i_rPath, i_rFunctionName );

@@ -60,9 +60,10 @@
 #include "ShellExecutor.hpp"
 #include "MVLogger.hpp"
 #include "Nullable.hpp"
-#include "Field.hpp"
+#include "AggregatorField.hpp"
 #include "AwkUtilities.hpp"
 #include "TransformerUtilities.hpp"
+#include "LargeStringStream.hpp"
 #include <algorithm>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
@@ -96,7 +97,7 @@ namespace
 	const boost::regex OUTPUT_REGEX( "output\\((.*)\\)" );
 
 	// function responsible for parsing keys & fields, and setting the configuration based on the input parameters
-	void ParseFields( const std::map< std::string, std::string >& i_rParameters, std::vector< Field >& o_rFields, bool i_IsKey )
+	void ParseFields( const std::map< std::string, std::string >& i_rParameters, std::vector< AggregatorField >& o_rFields, bool i_IsKey )
 	{
 		std::vector< std::string > fields;
 		std::string fieldString;
@@ -118,7 +119,7 @@ namespace
 		std::vector< std::string >::const_iterator fieldIter = fields.begin();
 		for( ; fieldIter != fields.end(); ++fieldIter )
 		{
-			Field dataField;
+			AggregatorField dataField;
 			std::vector< std::string > params;
 			std::string::size_type nameEnd = fieldIter->find( COLON );
 
@@ -159,28 +160,28 @@ namespace
 					boost::smatch matches;
 					if( boost::regex_match( *paramIter, matches, TYPE_REGEX ) )
 					{
-						AwkUtilities::SetParameter< Field, AwkType, Name >( dataField, matches[1], foundType, "type" );
+						AwkUtilities::SetParameter< AggregatorField, AwkType, Name >( dataField, matches[1], foundType, "type" );
 						AwkUtilities::ValidateType( dataField.GetValue< AwkType >(), dataField.GetValue< Name >() );
 					}
 					else if( boost::regex_match( *paramIter, matches, RENAME_REGEX ) )
 					{
-						AwkUtilities::SetParameter< Field, ColumnName, Name >( dataField, matches[1], foundRename, "rename" );
+						AwkUtilities::SetParameter< AggregatorField, ColumnName, Name >( dataField, matches[1], foundRename, "rename" );
 					}
 					else if( boost::regex_match( *paramIter, matches, MODIFY_REGEX ) )
 					{
-						AwkUtilities::SetParameter< Field, PreModification, Name >( dataField, matches[1], foundPreModification, "modify" );
+						AwkUtilities::SetParameter< AggregatorField, PreModification, Name >( dataField, matches[1], foundPreModification, "modify" );
 					}
 					else if( !i_IsKey && boost::regex_match( *paramIter, matches, INIT_REGEX ) )
 					{
-						AwkUtilities::SetParameter< Field, InitValue, Name >( dataField, matches[1], foundInit, "init" );
+						AwkUtilities::SetParameter< AggregatorField, InitValue, Name >( dataField, matches[1], foundInit, "init" );
 					}
 					else if( !i_IsKey && boost::regex_match( *paramIter, matches, OP_REGEX ) )
 					{
-						AwkUtilities::SetParameter< Field, Operation, Name >( dataField, matches[1], foundOp, "op" );
+						AwkUtilities::SetParameter< AggregatorField, Operation, Name >( dataField, matches[1], foundOp, "op" );
 					}
 					else if( !i_IsKey && boost::regex_match( *paramIter, matches, OUTPUT_REGEX ) )
 					{
-						AwkUtilities::SetParameter< Field, Output, Name >( dataField, matches[1], foundOutput, "output" );
+						AwkUtilities::SetParameter< AggregatorField, Output, Name >( dataField, matches[1], foundOutput, "output" );
 					}
 					else
 					{
@@ -228,7 +229,7 @@ namespace
 	// function to determine whether columns will have to be re-ordered.  This will return true if one of the following is true:
 	// 1. a key or field needs to be modified
 	// 2. keys are not contiguous columns in the stream
-	bool NeedColumnManipulation( std::vector< Field >& i_rKeys, std::vector< Field >& i_rFields, size_t& o_rMinKeyIndex, size_t& o_rMaxKeyIndex )
+	bool NeedColumnManipulation( std::vector< AggregatorField >& i_rKeys, std::vector< AggregatorField >& i_rFields, size_t& o_rMinKeyIndex, size_t& o_rMaxKeyIndex )
 	{
 		bool result = false;
 
@@ -236,7 +237,7 @@ namespace
 		std::stringstream indeces;
 
 		std::set< size_t > keyIndeces;
-		std::vector< Field >::const_iterator fieldIter = i_rKeys.begin();
+		std::vector< AggregatorField >::const_iterator fieldIter = i_rKeys.begin();
 		for( ; fieldIter != i_rKeys.end(); ++fieldIter )
 		{
 			if( !fieldIter->GetValue< PreModification >().empty() )
@@ -292,12 +293,12 @@ namespace
 	// the first step is to modify columns as requested (i.e. turn hourperiods->dayperiods)
 	// and ensure that key fields make up the first n columns so they can be sorted.
 	// this function returns the awk command to do both of these things
-	std::string GetPreprocessAndOrderCommand( std::vector< Field >& i_rKeys, std::vector< Field >& i_rFields )
+	std::string GetPreprocessAndOrderCommand( std::vector< AggregatorField >& i_rKeys, std::vector< AggregatorField >& i_rFields )
 	{
 		std::stringstream result;
 		std::stringstream fields;
 		result << "awk -F, '{printf(\"";
-		std::vector< Field >::iterator iter = i_rKeys.begin();
+		std::vector< AggregatorField >::iterator iter = i_rKeys.begin();
 		for( int count=1; iter != i_rFields.end(); ++iter )
 		{
 			// if we're finished with keys, move on to fields
@@ -340,7 +341,7 @@ namespace
 
 	// the second step is to sort the incoming data by the keys. To do this,
 	// we will use the unix command sort
-	std::string GetSortCommand( std::vector< Field >& i_rKeys, size_t i_MinKeyIndex, size_t i_MaxKeyIndex, const std::string& i_rTempDirectory )
+	std::string GetSortCommand( std::vector< AggregatorField >& i_rKeys, size_t i_MinKeyIndex, size_t i_MaxKeyIndex, const std::string& i_rTempDirectory )
 	{
 		std::stringstream result;
 
@@ -350,8 +351,8 @@ namespace
 
 	// this function forms the keyFields string & the preprocess/order command, and
 	// returns the number of columns that represent the key (so an appropriate call to sort can be made)
-	void ParseFieldOrder( std::vector< Field >& i_rKeys,
-						  std::vector< Field >& i_rFieldOperations,
+	void ParseFieldOrder( std::vector< AggregatorField >& i_rKeys,
+						  std::vector< AggregatorField >& i_rFieldOperations,
 						  const std::vector< std::string >& i_rHeaderFields,
 						  bool i_SkipSort,
 						  const std::string& i_rTempDirectory,
@@ -360,7 +361,7 @@ namespace
 						  std::string& o_rSortCommand )
 	{
 		std::stringstream keyFields;
-		std::vector< Field >::iterator fieldIter = i_rKeys.begin();
+		std::vector< AggregatorField >::iterator fieldIter = i_rKeys.begin();
 		// iterate over the keys & set the AwkIndex
 		for( ; fieldIter != i_rKeys.end(); ++fieldIter )
 		{
@@ -406,12 +407,12 @@ namespace
 	}
 
 	// the print command dictates how every fully-aggregated line will be formatted once it is ready
-	std::string GetPrintCommand( const std::vector< Field >& i_rFields )
+	std::string GetPrintCommand( const std::vector< AggregatorField >& i_rFields )
 	{
 		std::stringstream result;
 		std::stringstream fields;
 		result << "printf(\"%s";
-		std::vector< Field >::const_iterator iter = i_rFields.begin();
+		std::vector< AggregatorField >::const_iterator iter = i_rFields.begin();
 		for( ; iter != i_rFields.end(); ++iter )
 		{
 			std::string outputColumn = iter->GetValue< Output >();
@@ -430,10 +431,10 @@ namespace
 	// we will have to call the init assignment at the beginning of the function,
 	// as well as whenever we move onto the next key, so our aggregations start
 	// from the requested value every time
-	std::string GetInitAssignment( const std::vector< Field >& i_rFields )
+	std::string GetInitAssignment( const std::vector< AggregatorField >& i_rFields )
 	{
 		std::stringstream result;
-		std::vector< Field >::const_iterator iter = i_rFields.begin();
+		std::vector< AggregatorField >::const_iterator iter = i_rFields.begin();
 		for( ; iter != i_rFields.end(); ++iter )
 		{
 			result << iter->GetValue< VarName >() << " = " << iter->GetValue< InitValue >() << "; ";
@@ -443,10 +444,10 @@ namespace
 
 	// every time we process a row, we have to perform operations on the
 	// appropriate aggregations.
-	std::string GetIncrementAssignment( const std::vector< Field >& i_rFields )
+	std::string GetIncrementAssignment( const std::vector< AggregatorField >& i_rFields )
 	{
 		std::stringstream result;
-		std::vector< Field >::const_iterator iter = i_rFields.begin();
+		std::vector< AggregatorField >::const_iterator iter = i_rFields.begin();
 		for( ; iter != i_rFields.end(); ++iter )
 		{
 			std::string operation = iter->GetValue< Operation >();
@@ -476,9 +477,9 @@ namespace
 		return count;
 	}
 
-	void ValidateUniquePresence( const std::vector< std::string >& i_rHeaders, const std::vector< Field >& i_rKeys, const std::vector< Field >& i_rFields )
+	void ValidateUniquePresence( const std::vector< std::string >& i_rHeaders, const std::vector< AggregatorField >& i_rKeys, const std::vector< AggregatorField >& i_rFields )
 	{
-		std::vector< Field >::const_iterator iter = i_rKeys.begin();
+		std::vector< AggregatorField >::const_iterator iter = i_rKeys.begin();
 		for( ; iter != i_rFields.end(); ++iter )
 		{
 			// if we're done with keys, move on to fields
@@ -498,91 +499,105 @@ namespace
 			}
 		}
 	}
+
+	boost::shared_ptr< std::istream > AggregateFields( boost::shared_ptr< std::istream> i_pInputStream, const std::map< std::string, std::string >& i_rParameters )
+	{
+		std::large_stringstream* pResult( new std::large_stringstream() );
+		boost::shared_ptr< std::istream > pResultAsIstream( pResult );
+		std::stringstream command;
+
+		// parse out configuration values
+		double timeout = TransformerUtilities::GetValueAs< double >( TIMEOUT, i_rParameters );
+		bool skipSort = TransformerUtilities::GetValueAsBool( SKIP_SORT, i_rParameters, SKIP_DEFAULT );
+		std::string tempDirectory = TransformerUtilities::GetValue( TEMP_DIRECTORY, i_rParameters, TEMP_DEFAULT );
+
+		// parse out required key columns
+		std::vector< AggregatorField > keys;
+		ParseFields( i_rParameters, keys, true );
+		
+		// parse out fields & their operations
+		std::vector< AggregatorField > fields;
+		ParseFields( i_rParameters, fields, false );
+
+		// form the output header
+		std::vector< AggregatorField > outputFields;
+		for( std::vector< AggregatorField >::const_iterator iter = keys.begin(); iter != fields.end(); ++iter )
+		{
+			if( iter == keys.end() )
+			{
+				iter = fields.begin();
+			}
+			// if this is a non-key, and is set to empty output, skip it
+			if( !iter->GetValue< IsKey >() && iter->GetValue< Output >().empty() )
+			{
+				continue;
+			}
+			outputFields.push_back( *iter );
+		}
+		std::string outputHeader = AwkUtilities::GetOutputHeader< AggregatorField, ColumnName >( outputFields );
+		MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.Aggregate.AggregateFields.OutputHeader", "Output format will be: '" << outputHeader << "'" );
+
+		// read a line from the input to get the input header
+		std::string inputHeader;
+		std::getline( *i_pInputStream, inputHeader );
+		std::vector< std::string > headerFields;
+		boost::iter_split( headerFields, inputHeader, boost::first_finder(COMMA) );
+		ValidateUniquePresence( headerFields, keys, fields );
+
+		// get the string that will represent our key & the initial command that will order key-columns first
+		std::string keyFields;
+		std::string orderCommand;
+		std::string sortCommand;
+		ParseFieldOrder( keys, fields, headerFields, skipSort, tempDirectory, keyFields, orderCommand, sortCommand );
+		command << orderCommand << sortCommand;
+
+		// form the awk command
+		std::string printCommand = GetPrintCommand( fields );
+		command << "awk -F, 'BEGIN { print \"" << outputHeader << "\"; " << GetInitAssignment( fields ) << " } { ";
+		command << "__currentKey = " << keyFields << "; "
+				<< "if( __count == 0 ) { __prevKey = __currentKey; } "
+				<< "else if( __currentKey != __prevKey ) { " << printCommand << " "
+				<< "__count = 1; __prevKey = __currentKey; "
+				<< GetInitAssignment( fields ) << " "
+				<< "}"
+				<< GetIncrementAssignment( fields ) << " "
+				<< "__count++; } "
+				<< "END { if( __result != 0 ) { exit __result; }" << printCommand << " }'";
+
+		// short circuit if we're done
+		if( i_pInputStream->peek() == EOF )
+		{
+			*pResult << outputHeader << std::endl;
+			return pResultAsIstream;
+		}
+
+		// execute!
+		std::stringstream standardError;
+		ShellExecutor executor( command.str() );
+		MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.Aggregate.AggregateFields.ExecutingCommand", "Executing command: '" << command.str() << "'" );
+		int status = executor.Run( timeout, *i_pInputStream, *pResult, standardError );
+		if( status != 0 )
+		{
+			MV_THROW( AggregateStreamTransformerException, "Aggregator returned non-zero status: " << status << ". Standard error: " << standardError.rdbuf() );
+		}
+		if( !standardError.str().empty() )
+		{
+			MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.Aggregate.AggregateFields.StandardError",
+				"Aggregator generated standard error output: " << standardError.rdbuf() );
+		}
+		return pResultAsIstream;
+	}
 }
 
-boost::shared_ptr< std::stringstream > AggregateFields( std::istream& i_rInputStream, const std::map< std::string, std::string >& i_rParameters )
+AggregateStreamTransformer::AggregateStreamTransformer()
 {
-	boost::shared_ptr< std::stringstream > pResult( new std::stringstream() );
-	std::stringstream command;
+}
 
-	// parse out configuration values
-	double timeout = TransformerUtilities::GetValueAs< double >( TIMEOUT, i_rParameters );
-	bool skipSort = TransformerUtilities::GetValueAsBool( SKIP_SORT, i_rParameters, SKIP_DEFAULT );
-	std::string tempDirectory = TransformerUtilities::GetValue( TEMP_DIRECTORY, i_rParameters, TEMP_DEFAULT );
+AggregateStreamTransformer::~AggregateStreamTransformer()
+{
+}
 
-	// parse out required key columns
-	std::vector< Field > keys;
-	ParseFields( i_rParameters, keys, true );
-	
-	// parse out fields & their operations
-	std::vector< Field > fields;
-	ParseFields( i_rParameters, fields, false );
-
-	// form the output header
-	std::vector< Field > outputFields;
-	for( std::vector< Field >::const_iterator iter = keys.begin(); iter != fields.end(); ++iter )
-	{
-		if( iter == keys.end() )
-		{
-			iter = fields.begin();
-		}
-		// if this is a non-key, and is set to empty output, skip it
-		if( !iter->GetValue< IsKey >() && iter->GetValue< Output >().empty() )
-		{
-			continue;
-		}
-		outputFields.push_back( *iter );
-	}
-	std::string outputHeader = AwkUtilities::GetOutputHeader< Field, ColumnName >( outputFields );
-	MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.Aggregate.AggregateFields.OutputHeader", "Output format will be: '" << outputHeader << "'" );
-
-	// read a line from the input to get the input header
-	std::string inputHeader;
-	std::getline( i_rInputStream, inputHeader );
-	std::vector< std::string > headerFields;
-	boost::iter_split( headerFields, inputHeader, boost::first_finder(COMMA) );
-	ValidateUniquePresence( headerFields, keys, fields );
-
-	// get the string that will represent our key & the initial command that will order key-columns first
-	std::string keyFields;
-	std::string orderCommand;
-	std::string sortCommand;
-	ParseFieldOrder( keys, fields, headerFields, skipSort, tempDirectory, keyFields, orderCommand, sortCommand );
-	command << orderCommand << sortCommand;
-
-	// form the awk command
-	std::string printCommand = GetPrintCommand( fields );
-	command << "awk -F, 'BEGIN { print \"" << outputHeader << "\"; " << GetInitAssignment( fields ) << " } { ";
-	command << "__currentKey = " << keyFields << "; "
-			<< "if( __count == 0 ) { __prevKey = __currentKey; } "
-			<< "else if( __currentKey != __prevKey ) { " << printCommand << " "
-			<< "__count = 1; __prevKey = __currentKey; "
-			<< GetInitAssignment( fields ) << " "
-			<< "}"
-			<< GetIncrementAssignment( fields ) << " "
-			<< "__count++; } "
-			<< "END { if( __result != 0 ) { exit __result; }" << printCommand << " }'";
-
-	// short circuit if we're done
-	if( i_rInputStream.peek() == EOF )
-	{
-		*pResult << outputHeader << std::endl;
-		return pResult;
-	}
-
-	// execute!
-	std::stringstream standardError;
-	ShellExecutor executor( command.str() );
-	MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.Aggregate.AggregateFields.ExecutingCommand", "Executing command: '" << command.str() << "'" );
-	int status = executor.Run( timeout, i_rInputStream, *pResult, standardError );
-	if( status != 0 )
-	{
-		MV_THROW( AggregateStreamTransformerException, "Aggregator returned non-zero status: " << status << ". Standard error: " << standardError.rdbuf() );
-	}
-	if( !standardError.str().empty() )
-	{
-		MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.Aggregate.AggregateFields.StandardError",
-			"Aggregator generated standard error output: " << standardError.rdbuf() );
-	}
-	return pResult;
+boost::shared_ptr<std::istream> AggregateStreamTransformer::TransformInput( boost::shared_ptr< std::istream > i_pInput, const std::map< std::string, std::string >& i_rParameters )
+{
+	return AggregateFields( i_pInput, i_rParameters );
 }

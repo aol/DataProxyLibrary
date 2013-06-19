@@ -16,6 +16,7 @@
 #include "Nullable.hpp"
 #include "MVCommon.hpp"
 #include "MVException.hpp"
+#include "ITransformFunction.hpp"
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/scoped_ptr.hpp>
@@ -61,15 +62,6 @@ private:
 	typedef GenericOrderedDataContainer< TransformerParameterDatum, TransformerParameterDesc > TransformerParameterContainer;
 
 	typedef boost::shared_ptr<std::stringstream>(*TransformFunction)( std::istream&, const std::map<std::string, std::string>& );
-
-	class ITransformFunction : public boost::noncopyable
-	{
-	public:
-		ITransformFunction() {};
-		virtual ~ITransformFunction() {};
-
-		virtual boost::shared_ptr<std::istream> TransformInput( boost::shared_ptr< std::istream > i_pInput, const std::map<std::string, std::string>& i_rParameters ) = 0;
-	};
 
 	class OriginalTransformSource
 	{
