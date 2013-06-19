@@ -166,10 +166,12 @@ PRIVATEFILES=\
 	PropertyDomain.cpp \
 	AtomicsJSONToCSVStreamTransformer.cpp \
 	CampaignRevenueVectorStreamTransformer.cpp \
+	CampaignReferenceGeneratorStreamTransformer.cpp \
 
 THPPFILES=\
 	DatabaseConnectionBinder.thpp \
 	GenericDPLDomainTestTypes.thpp \
+	PreCampaignReferenceSerialization.thpp \
 
 TESTFILES=\
 	main.cpp \
@@ -200,6 +202,7 @@ TESTFILES=\
 	PropertyDomainTest.cpp \
 	AtomicsJSONToCSVStreamTransformerTest.cpp \
 	CampaignRevenueVectorStreamTransformerTest.cpp \
+	CampaignReferenceGeneratorStreamTransformerTest.cpp \
 
 THREADTESTFILES=\
 	main.cpp \
