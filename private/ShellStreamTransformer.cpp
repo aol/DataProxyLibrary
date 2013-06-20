@@ -12,6 +12,7 @@
 #include "ShellExecutor.hpp"
 #include "TransformerUtilities.hpp"
 #include "MVLogger.hpp"
+#include "LargeStringStream.hpp"
 #include <boost/lexical_cast.hpp>
 
 namespace
@@ -20,16 +21,25 @@ namespace
 	const std::string TIMEOUT( "timeout" );
 }
 
-boost::shared_ptr< std::stringstream > TransformStream( std::istream& i_rInputStream, const std::map< std::string, std::string >& i_rParameters )
+ShellStreamTransformer::ShellStreamTransformer()
+ :	ITransformFunction()
 {
-	boost::shared_ptr< std::stringstream > pResult( new std::stringstream() );
+}
+
+ShellStreamTransformer::~ShellStreamTransformer()
+{
+}
+
+boost::shared_ptr< std::istream > ShellStreamTransformer::TransformInput( boost::shared_ptr< std::istream > i_pInputStream, const std::map< std::string, std::string >& i_rParameters )
+{
+	std::large_stringstream* pResult( new std::large_stringstream() );
 	std::string command = TransformerUtilities::GetValue( COMMAND, i_rParameters );
 	double timeout = TransformerUtilities::GetValueAs< double >( TIMEOUT, i_rParameters );
 
-	std::stringstream standardError;
+	std::large_stringstream standardError;
 	ShellExecutor executor( command );
 	MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.Shell.TransformStream.ExecutingCommand", "Executing command: '" << command << "'" );
-	int status = executor.Run( timeout, i_rInputStream, *pResult, standardError );
+	int status = executor.Run( timeout, *i_pInputStream, *pResult, standardError );
 	if( status != 0 )
 	{
 		MV_THROW( ShellStreamTransformerException, "Command: '" << command << "' returned non-zero status: " << status << ". Standard error: " << standardError.rdbuf() );
@@ -39,5 +49,5 @@ boost::shared_ptr< std::stringstream > TransformStream( std::istream& i_rInputSt
 		MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.Shell.TransformStream.StandardError",
 			"Command: '" << command << "' generated standard error output: " << standardError.rdbuf() );
 	}
-	return pResult;
+	return boost::shared_ptr< std::istream >( pResult );
 }

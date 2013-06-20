@@ -172,6 +172,7 @@ PRIVATEFILES=\
 	CampaignRevenueVectorStreamTransformer.cpp \
 	CampaignReferenceGeneratorStreamTransformer.cpp \
 	ValidateStreamTransformer.cpp \
+	ShellStreamTransformer.cpp \
 
 THPPFILES=\
 	DatabaseConnectionBinder.thpp \
@@ -213,6 +214,7 @@ TESTFILES=\
 	CampaignRevenueVectorStreamTransformerTest.cpp \
 	CampaignReferenceGeneratorStreamTransformerTest.cpp \
 	ValidateStreamTransformerTest.cpp \
+	ShellStreamTransformerTest.cpp \
 
 THREADTESTFILES=\
 	main.cpp \
