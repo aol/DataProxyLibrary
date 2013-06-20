@@ -12,6 +12,7 @@
 #include "EquivalenceClassStreamTransformer.hpp"
 #include "TransformerUtilities.hpp"
 #include "AssertThrowWithMessage.hpp"
+#include "StringUtilities.hpp"
 
 namespace
 {
@@ -44,20 +45,24 @@ void EquivalenceClassStreamTransformerTest::tearDown()
 
 void EquivalenceClassStreamTransformerTest::testMissingColumn()
 {
-	std::stringstream inputStream;
-	inputStream << SEED_ID_COLUMN_NAME << std::endl
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	EquivalenceClassStreamTransformer transformer;
+	*pInputStream << SEED_ID_COLUMN_NAME << std::endl
 				<< "500" << std::endl;  
 
 	std::map<std::string, std::string > parameters;
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( GenerateEquivalenceClasses( inputStream, parameters ), EquivalenceClassStreamTransformerException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), EquivalenceClassStreamTransformerException,
 			"private/EquivalenceClassStreamTransformer\\.cpp:\\d+: Incoming Seeds_Transfer Stream is missing the following column headers: "
 			<< "id_type, new_id" );
 }
 
 void EquivalenceClassStreamTransformerTest::testEquivalenceClass()
 {
-	std::stringstream inputStream;
-	inputStream << SEED_ID_COLUMN_NAME << "," << NEW_ID_COLUMN_NAME << "," << TYPE_ID_COLUMN_NAME << std::endl
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	EquivalenceClassStreamTransformer transformer;
+	*pInputStream << SEED_ID_COLUMN_NAME << "," << NEW_ID_COLUMN_NAME << "," << TYPE_ID_COLUMN_NAME << std::endl
 				<< "100,200,1" << std::endl  // both ids are new 
 				<< "100,300,1" << std::endl  // second id is new 
 				<< "400,300,1" << std::endl  // first id is new
@@ -69,7 +74,9 @@ void EquivalenceClassStreamTransformerTest::testEquivalenceClass()
 
 	std::map<std::string, std::string > parameters;
 	
-	boost::shared_ptr<std::stringstream > pResult = GenerateEquivalenceClasses( inputStream, parameters );
+	boost::shared_ptr< std::istream > pResult;
+	
+	CPPUNIT_ASSERT_NO_THROW( pResult = transformer.TransformInput( pInputStreamAsIstream, parameters ) );
 
 	std::stringstream expected;
 	expected << EQUIVALENCE_CLASS_TABLE_HEADER << std::endl
@@ -84,6 +91,6 @@ void EquivalenceClassStreamTransformerTest::testEquivalenceClass()
 		 << "700,4,1" << std::endl
 		 << "800,4,1" << std::endl;
 
-	CPPUNIT_ASSERT_EQUAL( expected.str(), pResult->str() );
+	CPPUNIT_ASSERT_EQUAL( expected.str(), StreamToString( *pResult ) );
 
 }

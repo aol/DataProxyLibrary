@@ -12,6 +12,7 @@
 #define _COLUMN_FORMAT_STREAM_TRANSFORMER_HPP_
 
 #include "MVException.hpp"
+#include "ITransformFunction.hpp"
 #include <boost/shared_ptr.hpp>
 #include <istream>
 #include <map>
@@ -19,10 +20,14 @@
 
 MV_MAKEEXCEPTIONCLASS( ColumnFormatStreamTransformerException, MVException );
 
-extern "C"
+class ColumnFormatStreamTransformer : public ITransformFunction
 {
-	boost::shared_ptr< std::stringstream > FormatColumns( std::istream& i_rInputStream, const std::map< std::string, std::string >& i_rParameters );
-}
+public:
+	ColumnFormatStreamTransformer();
+	virtual ~ColumnFormatStreamTransformer();
+
+	virtual boost::shared_ptr< std::istream > TransformInput( boost::shared_ptr< std::istream > i_pInputStream, const std::map< std::string, std::string >& i_rParameters );
+};
 
 #endif //_COLUMN_FORMAT_STREAM_TRANSFORMER_HPP_
 

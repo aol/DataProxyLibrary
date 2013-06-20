@@ -1,4 +1,15 @@
+//
+// FILE NAME:       $HeadURL$
+//
+// REVISION:        $Revision$
+//
+// COPYRIGHT:       (c) 2008 Advertising.com All Rights Reserved.
+//
+// LAST UPDATED:    $Date$
+// UPDATED BY:      $Author$
+
 #include "SelfDescribingStreamHeaderTransformer.hpp"
+#include "LargeStringStream.hpp"
 #include "MVLogger.hpp"
 #include <boost/regex.hpp>
 #include "DateTime.hpp"
@@ -121,22 +132,31 @@ namespace
 	}
 }
 
-// Adds a self describing header to the beginning
-boost::shared_ptr< std::stringstream > AddSelfDescribingStreamHeader( std::istream& i_rInputStream, const std::map< std::string, std::string >& i_rParameters )
+AddSelfDescribingStreamHeaderTransformer::AddSelfDescribingStreamHeaderTransformer()
+ :	ITransformFunction()
 {
-	boost::shared_ptr< std::stringstream > pResult( new std::stringstream() );
+}
+
+AddSelfDescribingStreamHeaderTransformer::~AddSelfDescribingStreamHeaderTransformer()
+{
+}
+
+// Adds a self describing header to the beginning
+boost::shared_ptr< std::istream > AddSelfDescribingStreamHeaderTransformer::TransformInput( boost::shared_ptr< std::istream > i_pInputStream, const std::map< std::string, std::string >& i_rParameters )
+{
+	std::large_stringstream* pResult( new std::large_stringstream() );
 	
 	std::string inputRow;
 	int nNumRecords = 0;
 
 	// Grab the regular (non-self describing) csv header row
-	std::getline( i_rInputStream, inputRow );
+	std::getline( *i_pInputStream, inputRow );
 	
 	// Process each row of real data
-	while( i_rInputStream.peek() != EOF )
+	while( i_pInputStream->peek() != EOF )
 	{
 		std::string inputRow;
-		std::getline( i_rInputStream, inputRow );
+		std::getline( *i_pInputStream, inputRow );
 		nNumRecords++;
 	}
 	
@@ -146,7 +166,7 @@ boost::shared_ptr< std::stringstream > AddSelfDescribingStreamHeader( std::istre
 	std::string strHeaderXML = CreateSelfDescribingHeaderXML( strRecordCount, strRecordType );
 	
 	uint64_t nHeaderXMLLength = strHeaderXML.length();
-	uint64_t nDataLength = i_rInputStream.tellg(); // we are at the end of the stream, so the position should be the length
+	uint64_t nDataLength = i_pInputStream->tellg(); // we are at the end of the stream, so the position should be the length
 	
 	// write out the total and header sizes followed by the self describing header and then the data
 	// the +1 below is to account for the newline that is added after strHeaderXML
@@ -154,22 +174,31 @@ boost::shared_ptr< std::stringstream > AddSelfDescribingStreamHeader( std::istre
 	*pResult << CreateZeroPaddedInteger( nHeaderXMLLength, 19 ) << std::endl;
 	*pResult << strHeaderXML << std::endl;
 	
-	i_rInputStream.seekg( std::ios_base::beg );
-	*pResult << i_rInputStream.rdbuf();
+	i_pInputStream->seekg( std::ios_base::beg );
+	*pResult << i_pInputStream->rdbuf();
 	
-	return pResult;
+	return boost::shared_ptr< std::istream >( pResult );
+}
+
+RemoveSelfDescribingStreamHeaderTransformer::RemoveSelfDescribingStreamHeaderTransformer()
+ :	ITransformFunction()
+{
+}
+
+RemoveSelfDescribingStreamHeaderTransformer::~RemoveSelfDescribingStreamHeaderTransformer()
+{
 }
 
 // Remove the self describing header if it exists.
-boost::shared_ptr< std::stringstream > RemoveSelfDescribingStreamHeader( std::istream& i_rInputStream, const std::map< std::string, std::string >& i_rParameters )
+boost::shared_ptr< std::istream > RemoveSelfDescribingStreamHeaderTransformer::TransformInput( boost::shared_ptr< std::istream > i_pInputStream, const std::map< std::string, std::string >& i_rParameters )
 {
-	boost::shared_ptr< std::stringstream > pResult( new std::stringstream() );
+	std::large_stringstream* pResult( new std::large_stringstream() );
 
 	// Consumes the self-describing header if it exists and performs some validation
-	ProcessSelfDescribingHeader( i_rInputStream );
+	ProcessSelfDescribingHeader( *i_pInputStream );
 	
 	// Output the data without the self describing header
-	*pResult << i_rInputStream.rdbuf();
+	*pResult << i_pInputStream->rdbuf();
 	
-	return pResult;
+	return boost::shared_ptr< std::istream >( pResult );
 }

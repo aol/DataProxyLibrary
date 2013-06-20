@@ -304,6 +304,7 @@ namespace
 }
 
 BlackoutStreamTransformer::BlackoutStreamTransformer()
+ :	ITransformFunction()
 {
 }
 

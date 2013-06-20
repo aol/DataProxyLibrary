@@ -590,6 +590,7 @@ namespace
 }
 
 AggregateStreamTransformer::AggregateStreamTransformer()
+ :	ITransformFunction()
 {
 }
 

@@ -12,6 +12,7 @@
 #define _EQUIVALENCE_CLASS_STREAM_TRANSFORMER_HPP_
 
 #include "MVException.hpp"
+#include "ITransformFunction.hpp"
 #include <boost/shared_ptr.hpp>
 #include <istream>
 #include <map>
@@ -19,10 +20,14 @@
 
 MV_MAKEEXCEPTIONCLASS( EquivalenceClassStreamTransformerException, MVException );
 
-extern "C"
+class EquivalenceClassStreamTransformer : public ITransformFunction
 {
-	boost::shared_ptr< std::stringstream > GenerateEquivalenceClasses( std::istream& i_rInputStream, const std::map< std::string, std::string >& i_rParameters );
-}
+public:
+	EquivalenceClassStreamTransformer();
+	virtual ~EquivalenceClassStreamTransformer();
+
+	virtual boost::shared_ptr< std::istream > TransformInput( boost::shared_ptr< std::istream > i_pInputStream, const std::map< std::string, std::string >& i_rParameters );
+};
 
 #endif //_EQUIVALENCE_CLASS_STREAM_TRANSFORMER_HPP_
 

@@ -9,6 +9,7 @@
 // UPDATED BY:      $Author$
 
 #include "ColumnFormatStreamTransformerTest.hpp"
+#include "StringUtilities.hpp"
 #include "ColumnFormatStreamTransformer.hpp"
 #include "AwkUtilities.hpp"
 #include "TransformerUtilities.hpp"
@@ -36,48 +37,54 @@ void ColumnFormatStreamTransformerTest::tearDown()
 
 void ColumnFormatStreamTransformerTest::testMissingParameters()
 {
-	std::stringstream inputStream;
-	inputStream << "data2,data2" << std::endl;
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	ColumnFormatStreamTransformer transformer;
+	*pInputStream << "data2,data2" << std::endl;
 
 	std::map< std::string, std::string > parameters;
 	parameters["timeout"] = "5";
 	parameters["fields"] = "data2";
 
 	parameters.erase( "timeout" );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( FormatColumns( inputStream, parameters ), TransformerUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), TransformerUtilitiesException,
 		".*\\.cpp:\\d+: Attempted to fetch missing required parameter: 'timeout'" );
 
 	parameters["timeout"] = "5";
 	parameters.erase( "fields" );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( FormatColumns( inputStream, parameters ), TransformerUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), TransformerUtilitiesException,
 		".*\\.cpp:\\d+: Attempted to fetch missing required parameter: 'fields'" );
 }
 
 void ColumnFormatStreamTransformerTest::testAmbiguousProperty()
 {
-	std::stringstream inputStream;
-	inputStream << "data1,data2" << std::endl;
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	ColumnFormatStreamTransformer transformer;
+	*pInputStream << "data1,data2" << std::endl;
 
 	std::map< std::string, std::string > parameters;
 	parameters["timeout"] = "5";
 
 	parameters["fields"] = "data2: rename(d1) rename(D1)";
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( FormatColumns( inputStream, parameters ), AwkUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), AwkUtilitiesException,
 		".*:\\d+: Value for rename is ambiguously defined for column: 'data2'" );
 	
 	parameters["fields"] = "data2: type(%i) type(%i)";
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( FormatColumns( inputStream, parameters ), AwkUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), AwkUtilitiesException,
 		".*:\\d+: Value for type is ambiguously defined for column: 'data2'" );
 
 	parameters["fields"] = "data2: output(%v) output(%v)";
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( FormatColumns( inputStream, parameters ), AwkUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), AwkUtilitiesException,
 		".*:\\d+: Value for output is ambiguously defined for column: 'data2'" );
 }
 
 void ColumnFormatStreamTransformerTest::testBadAwkType()
 {
-	std::stringstream inputStream;
-	inputStream << "data1,data2" << std::endl;
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	ColumnFormatStreamTransformer transformer;
+	*pInputStream << "data1,data2" << std::endl;
 
 	std::map< std::string, std::string > parameters;
 	parameters["timeout"] = "5";
@@ -129,72 +136,82 @@ void ColumnFormatStreamTransformerTest::testBadAwkType()
 						   "data67: type(%#+ -- +#f) output(1),"	// OK
 						   "dataBad: type(doesnt_match) output(1)";
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( FormatColumns( inputStream, parameters ), AwkUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), AwkUtilitiesException,
 		".*\\.cpp:\\d+: Unrecognized awk format type: doesnt_match defined for field: dataBad" );
 }
 
 void ColumnFormatStreamTransformerTest::testUnrecognizedParameter()
 {
-	std::stringstream inputStream;
-	inputStream << "data1,data2" << std::endl;
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	ColumnFormatStreamTransformer transformer;
+	*pInputStream << "data1,data2" << std::endl;
 
 	std::map< std::string, std::string > parameters;
 	parameters["timeout"] = "5";
 
 	parameters["fields"] = "data2:rename(d2) garbage(1)";
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( FormatColumns( inputStream, parameters ), ColumnFormatStreamTransformerException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), ColumnFormatStreamTransformerException,
 		".*\\.cpp:\\d+: Unrecognized parameter or parameter format: 'garbage\\(1\\)' for field name: 'data2'\\. "
 		"Format for each comma-separated field is: column:param1\\(value1\\) param2\\(value2\\) \\.\\.\\. paramN\\(valueN\\) where each param is one of: type, rename, output" );
 
 	parameters["fields"] = "data2:rename(d2) extra";
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( FormatColumns( inputStream, parameters ), ColumnFormatStreamTransformerException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), ColumnFormatStreamTransformerException,
 		".*\\.cpp:\\d+: Unrecognized parameter or parameter format: 'extra' for field name: 'data2'\\. "
 		"Format for each comma-separated field is: column:param1\\(value1\\) param2\\(value2\\) \\.\\.\\. paramN\\(valueN\\) where each param is one of: type, rename, output" );
 }
 
 void ColumnFormatStreamTransformerTest::testBadFields()
 {
-	std::stringstream inputStream;
-	inputStream << "data1,data2" << std::endl;
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	ColumnFormatStreamTransformer transformer;
+	*pInputStream << "data1,data2" << std::endl;
 
 	std::map< std::string, std::string > parameters;
 	parameters["timeout"] = "5";
 	parameters["fields"] = "";
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( FormatColumns( inputStream, parameters ), ColumnFormatStreamTransformerException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), ColumnFormatStreamTransformerException,
 		".*\\.cpp:\\d+: No fields have been specified" );
 }
 
 void ColumnFormatStreamTransformerTest::testMissingColumn()
 {
-	std::stringstream inputStream;
-	inputStream << "data1,data2" << std::endl;
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	ColumnFormatStreamTransformer transformer;
+	*pInputStream << "data1,data2" << std::endl;
 
 	std::map< std::string, std::string > parameters;
 	parameters["timeout"] = "5";
 	parameters["fields"] = "data3";
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( FormatColumns( inputStream, parameters ), ColumnFormatStreamTransformerException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), ColumnFormatStreamTransformerException,
 		".*\\.cpp:\\d+: Input stream is missing required field: 'data3'" );
 }
 
 void ColumnFormatStreamTransformerTest::testBadTimeout()
 {
-	std::stringstream inputStream;
-	inputStream << "data1,data2" << std::endl;
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	ColumnFormatStreamTransformer transformer;
+	*pInputStream << "data1,data2" << std::endl;
 
 	std::map< std::string, std::string > parameters;
 	parameters["timeout"] = "badTimeout";
 	parameters["fields"] = "data2";
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( FormatColumns( inputStream, parameters ), TransformerUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), TransformerUtilitiesException,
 		".*:\\d+: Error interpreting timeout: 'badTimeout' as requested type \\(d\\)" );
 }
 
 void ColumnFormatStreamTransformerTest::testTransformTrivialStream()
 {
-	std::stringstream inputStream;
-	inputStream << "data1,data2,data3" << std::endl;
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	ColumnFormatStreamTransformer transformer;
+	*pInputStream << "data1,data2,data3" << std::endl;
 	
 	std::map<std::string, std::string> parameters;
 	parameters["timeout"] = "5";
@@ -203,15 +220,18 @@ void ColumnFormatStreamTransformerTest::testTransformTrivialStream()
 	std::stringstream expected;
 	expected << "data3,data2" << std::endl;
 	
-	boost::shared_ptr< std::stringstream > pResult = FormatColumns( inputStream, parameters );
+	boost::shared_ptr< std::istream > pResult;
+	CPPUNIT_ASSERT_NO_THROW( pResult = transformer.TransformInput( pInputStreamAsIstream, parameters ) );
 	CPPUNIT_ASSERT( pResult != NULL );
-	CPPUNIT_ASSERT_EQUAL( expected.str(), pResult->str() );
+	CPPUNIT_ASSERT_EQUAL( expected.str(), StreamToString( *pResult ) );
 }
 
 void ColumnFormatStreamTransformerTest::testTransformNotMatchingColumnStream()
 {
-	std::stringstream inputStream;
-	inputStream << "data1  ,\tdata2   ,   data3" << std::endl
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	ColumnFormatStreamTransformer transformer;
+	*pInputStream << "data1  ,\tdata2   ,   data3" << std::endl
 				<< "11,12,13" << std::endl
 				<< "21,22,23" << std::endl
 				<< "31,32,33" << std::endl
@@ -230,15 +250,18 @@ void ColumnFormatStreamTransformerTest::testTransformNotMatchingColumnStream()
 			 << "41,42,99" << std::endl
 			 << "51,52,99" << std::endl;
 	
-	boost::shared_ptr< std::stringstream > pResult = FormatColumns( inputStream, parameters );
+	boost::shared_ptr< std::istream > pResult;
+	CPPUNIT_ASSERT_NO_THROW( pResult = transformer.TransformInput( pInputStreamAsIstream, parameters ) );
 	CPPUNIT_ASSERT( pResult != NULL );
-	CPPUNIT_ASSERT_EQUAL( expected.str(), pResult->str() );
+	CPPUNIT_ASSERT_EQUAL( expected.str(), StreamToString( *pResult ) );
 }
 
 void ColumnFormatStreamTransformerTest::testTransformMatchingColumnStream()
 {
-	std::stringstream inputStream;
-	inputStream << "data1  ,\tdata2   ,   data3" << std::endl
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	ColumnFormatStreamTransformer transformer;
+	*pInputStream << "data1  ,\tdata2   ,   data3" << std::endl
 				<< "11,12,13" << std::endl
 				<< "21,22,23" << std::endl
 				<< "a bad line to be sure we skipped reformatting" << std::endl
@@ -257,15 +280,18 @@ void ColumnFormatStreamTransformerTest::testTransformMatchingColumnStream()
 			 << "41,42,43" << std::endl
 			 << "51,52,53" << std::endl;
 	
-	boost::shared_ptr< std::stringstream > pResult = FormatColumns( inputStream, parameters );
+	boost::shared_ptr< std::istream > pResult;
+	CPPUNIT_ASSERT_NO_THROW( pResult = transformer.TransformInput( pInputStreamAsIstream, parameters ) );
 	CPPUNIT_ASSERT( pResult != NULL );
-	CPPUNIT_ASSERT_EQUAL( expected.str(), pResult->str() );
+	CPPUNIT_ASSERT_EQUAL( expected.str(), StreamToString( *pResult ) );
 }
 
 void ColumnFormatStreamTransformerTest::testTransformStream()
 {
-	std::stringstream inputStream;
-	inputStream << "col1, 2 c o\tl 2.:;'!@#$%^&*() ,col3,NR,col5,col6,col7" << std::endl	// second column accessed as "_2col2" (illegal var chars), fourth as "_NR" (NR is built-in awk variable)
+	std::stringstream* pInputStream = new std::stringstream();
+	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
+	ColumnFormatStreamTransformer transformer;
+	*pInputStream << "col1, 2 c o\tl 2.:;'!@#$%^&*() ,col3,NR,col5,col6,col7" << std::endl	// second column accessed as "_2col2" (illegal var chars), fourth as "_NR" (NR is built-in awk variable)
 				<< "11,12,13,14,15,16,17" << std::endl
 				<< "21,22,23,24,25,26,27" << std::endl
 				<< "31,32,33,34,35,36,37" << std::endl
@@ -290,7 +316,8 @@ void ColumnFormatStreamTransformerTest::testTransformStream()
 			 << "22.5,3.20,143,myConstant,2009-04-16 05:45:24,4.1e+01," << 42+44 << std::endl
 			 << "27.5,3.20,153,myConstant,2009-04-16 05:45:24,5.1e+01," << 52+54 << std::endl;
 	
-	boost::shared_ptr< std::stringstream > pResult = FormatColumns( inputStream, parameters );
+	boost::shared_ptr< std::istream > pResult;
+	CPPUNIT_ASSERT_NO_THROW( pResult = transformer.TransformInput( pInputStreamAsIstream, parameters ) );
 	CPPUNIT_ASSERT( pResult != NULL );
-	CPPUNIT_ASSERT_EQUAL( expected.str(), pResult->str() );
+	CPPUNIT_ASSERT_EQUAL( expected.str(), StreamToString( *pResult ) );
 }

@@ -9,10 +9,11 @@
 // UPDATED BY:      $Author$
 
 #include "ColumnFormatStreamTransformer.hpp"
+#include "LargeStringStream.hpp"
 #include "ShellExecutor.hpp"
 #include "MVLogger.hpp"
 #include "Nullable.hpp"
-#include "Field.hpp"
+#include "ColumnFormatterField.hpp"
 #include "AwkUtilities.hpp"
 #include "TransformerUtilities.hpp"
 #include <algorithm>
@@ -38,7 +39,7 @@ namespace
 
 	// function responsible for parsing keys & fields, and setting the configuration based on the input parameters
 	// returns whether a output() or type() field was found
-	bool ParseFields( const std::map< std::string, std::string >& i_rParameters, std::vector< Field >& o_rFields )
+	bool ParseFields( const std::map< std::string, std::string >& i_rParameters, std::vector< ColumnFormatterField >& o_rFields )
 	{
 		bool foundMod = false;
 		std::vector< std::string > fields;
@@ -53,7 +54,7 @@ namespace
 		std::vector< std::string >::const_iterator fieldIter = fields.begin();
 		for( ; fieldIter != fields.end(); ++fieldIter )
 		{
-			Field dataField;
+			ColumnFormatterField dataField;
 			std::vector< std::string > params;
 			std::string::size_type nameEnd = fieldIter->find( COLON );
 
@@ -82,17 +83,17 @@ namespace
 					boost::smatch matches;
 					if( boost::regex_match( *paramIter, matches, TYPE_REGEX ) )
 					{
-						AwkUtilities::SetParameter< Field, AwkType, Name >( dataField, matches[1], foundType, "type" );
+						AwkUtilities::SetParameter< ColumnFormatterField, AwkType, Name >( dataField, matches[1], foundType, "type" );
 						AwkUtilities::ValidateType( dataField.GetValue< AwkType >(), dataField.GetValue< Name >() );
 						foundMod = true;
 					}
 					else if( boost::regex_match( *paramIter, matches, RENAME_REGEX ) )
 					{
-						AwkUtilities::SetParameter< Field, ColumnName, Name >( dataField, matches[1], foundRename, "rename" );
+						AwkUtilities::SetParameter< ColumnFormatterField, ColumnName, Name >( dataField, matches[1], foundRename, "rename" );
 					}
 					else if( boost::regex_match( *paramIter, matches, OUTPUT_REGEX ) )
 					{
-						AwkUtilities::SetParameter< Field, Output, Name >( dataField, matches[1], foundOutput, "output" );
+						AwkUtilities::SetParameter< ColumnFormatterField, Output, Name >( dataField, matches[1], foundOutput, "output" );
 						foundMod = true;
 					}
 					else
@@ -128,7 +129,7 @@ namespace
 	}
 
 	// this function returns the awk command to order & format each field
-	std::string GetFormatCommand( std::vector< Field >& i_rFields, const std::vector< std::string >& i_rHeaderFields )
+	std::string GetFormatCommand( std::vector< ColumnFormatterField >& i_rFields, const std::vector< std::string >& i_rHeaderFields )
 	{
 		std::stringstream result;
 		std::stringstream fields;
@@ -142,7 +143,7 @@ namespace
 		}
 
 		result << " printf(\"";
-		std::vector< Field >::iterator fieldIter = i_rFields.begin();
+		std::vector< ColumnFormatterField >::iterator fieldIter = i_rFields.begin();
 		for( ; fieldIter != i_rFields.end(); ++fieldIter )
 		{
 			if( fieldIter != i_rFields.begin() )
@@ -176,13 +177,13 @@ namespace
 		return result.str();
 	}
 
-	bool NeedFormatting( const std::vector< Field >& i_rFields, const std::vector< std::string >& i_rInputHeaderFields )
+	bool NeedFormatting( const std::vector< ColumnFormatterField >& i_rFields, const std::vector< std::string >& i_rInputHeaderFields )
 	{
 		if( i_rFields.size() != i_rInputHeaderFields.size() )
 		{
 			return true;
 		}
-		std::vector< Field >::const_iterator fieldIter = i_rFields.begin();
+		std::vector< ColumnFormatterField >::const_iterator fieldIter = i_rFields.begin();
 		std::vector< std::string >::const_iterator headerIter = i_rInputHeaderFields.begin();
 		for( ; headerIter != i_rInputHeaderFields.end(); ++headerIter, ++fieldIter )
 		{
@@ -195,24 +196,34 @@ namespace
 	}
 }
 
-boost::shared_ptr< std::stringstream > FormatColumns( std::istream& i_rInputStream, const std::map< std::string, std::string >& i_rParameters )
+ColumnFormatStreamTransformer::ColumnFormatStreamTransformer()
+ :	ITransformFunction()
 {
-	boost::shared_ptr< std::stringstream > pResult( new std::stringstream() );
+}
+
+ColumnFormatStreamTransformer::~ColumnFormatStreamTransformer()
+{
+}
+
+
+boost::shared_ptr< std::istream > ColumnFormatStreamTransformer::TransformInput( boost::shared_ptr< std::istream > i_pInputStream, const std::map< std::string, std::string >& i_rParameters )
+{
+	std::large_stringstream* pResult( new std::large_stringstream() );
 
 	// parse out fields
-	std::vector< Field > fields;
+	std::vector< ColumnFormatterField > fields;
 	bool foundMod = ParseFields( i_rParameters, fields );
 
 	// parse out timeout for the operation
 	double timeout = TransformerUtilities::GetValueAs< double >( TIMEOUT, i_rParameters );
 
 	// form the output header
-	std::string outputHeader = AwkUtilities::GetOutputHeader< Field, ColumnName >( fields );
+	std::string outputHeader = AwkUtilities::GetOutputHeader< ColumnFormatterField, ColumnName >( fields );
 	MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.ColumnFormat.FormatColumns.OutputHeader", "Output format will be: '" << outputHeader << "'" );
 
 	// read a line from the input to get the input header
 	std::string inputHeader;
-	std::getline( i_rInputStream, inputHeader );
+	std::getline( *i_pInputStream, inputHeader );
 	std::vector< std::string > headerFields;
 	boost::iter_split( headerFields, inputHeader, boost::first_finder(COMMA) );
 
@@ -224,9 +235,9 @@ boost::shared_ptr< std::stringstream > FormatColumns( std::istream& i_rInputStre
 	*pResult << outputHeader << std::endl;
 
 	// short circuit if we're done
-	if( i_rInputStream.peek() == EOF )
+	if( i_pInputStream->peek() == EOF )
 	{
-		return pResult;
+		return boost::shared_ptr< std::istream >(pResult);
 	}
 
 	// just write the readbuffer from here if the output format is going to be the same (e.g. if we just did renames)
@@ -234,15 +245,15 @@ boost::shared_ptr< std::stringstream > FormatColumns( std::istream& i_rInputStre
 	{
 		MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.ColumnFormat.FormatColumns.NoTransform",
 			"No transformation of data is necessary, as the input columns match the output columns" );
-		*pResult << i_rInputStream.rdbuf();
-		return pResult;
+		*pResult << i_pInputStream->rdbuf();
+		return boost::shared_ptr< std::istream >(pResult);
 	}
 
 	// execute!
 	std::stringstream standardError;
 	ShellExecutor executor( orderCommand );
 	MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.ColumnFormat.FormatColumns.ExecutingCommand", "Executing command: '" << orderCommand << "'" );
-	int status = executor.Run( timeout, i_rInputStream, *pResult, standardError );
+	int status = executor.Run( timeout, *i_pInputStream, *pResult, standardError );
 	if( status != 0 )
 	{
 		MV_THROW( ColumnFormatStreamTransformerException, "Column Formatter returned non-zero status: " << status << ". Standard error: " << standardError.rdbuf() );
@@ -252,5 +263,5 @@ boost::shared_ptr< std::stringstream > FormatColumns( std::istream& i_rInputStre
 		MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.ColumnFormat.FormatColumns.StandardError",
 			"Column Formatter generated standard error output: " << standardError.rdbuf() );
 	}
-	return pResult;
+	return boost::shared_ptr< std::istream >(pResult);
 }

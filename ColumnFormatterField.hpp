@@ -8,8 +8,8 @@
 // LAST UPDATED:    $Date$
 // UPDATED BY:      $Author$
 
-#ifndef _FIELD_HPP_
-#define _FIELD_HPP_
+#ifndef _COLUMN_FORMATTER_FIELD_HPP_
+#define _COLUMN_FORMATTER_FIELD_HPP_
 
 #include "GenericDataObject.hpp"
 
@@ -26,6 +26,6 @@ typedef
 	GenericDatum< IsRequired,
 	GenericDatum< AwkType,
 	RowEnd > > > > >
-Field;
+ColumnFormatterField;
 
-#endif //_FIELD_HPP_
+#endif //_COLUMN_FORMATTER_FIELD_HPP_

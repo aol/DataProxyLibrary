@@ -12,6 +12,7 @@
 #include "WrappedPrimitive.hpp"
 #include "CSVReader.hpp"
 #include "TransformerUtilities.hpp"
+#include "LargeStringStream.hpp"
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <string>
@@ -57,18 +58,25 @@ namespace
 	}
 
 	const std::string DELIMITER = ",";
-
 }
 
-boost::shared_ptr<std::stringstream > GenerateEquivalenceClasses( std::istream& i_rInputStream, const std::map<std::string, std::string >& i_rParameters )
+EquivalenceClassStreamTransformer::EquivalenceClassStreamTransformer()
+ :	ITransformFunction()
 {
-	boost::shared_ptr<std::stringstream > pResult( new std::stringstream() );
+}
+
+EquivalenceClassStreamTransformer::~EquivalenceClassStreamTransformer()
+{
+}
+boost::shared_ptr< std::istream > EquivalenceClassStreamTransformer::TransformInput( boost::shared_ptr< std::istream > i_pInputStream, const std::map<std::string, std::string >& i_rParameters )
+{
+	std::large_stringstream* pResult( new std::large_stringstream() );
 
 	std::string seedIdColumnName = SEED_ID_COLUMN_NAME;
 	std::string newIdColumnName = NEW_ID_COLUMN_NAME;
 	std::string typeIdColumnName = TYPE_ID_COLUMN_NAME;
 
-	CSVReader reader( i_rInputStream, ',', true );
+	CSVReader reader( *i_pInputStream, ',', true );
 	std::vector<std::string > headerTokens;
 	std::string inputHeader = reader.GetHeaderLine();
 	boost::trim( inputHeader );
@@ -155,5 +163,5 @@ boost::shared_ptr<std::stringstream > GenerateEquivalenceClasses( std::istream& 
 	}
 
 	
-	return pResult;
+	return boost::shared_ptr< std::istream >(pResult);
 }

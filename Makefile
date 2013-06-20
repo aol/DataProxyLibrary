@@ -159,11 +159,15 @@ PRIVATEFILES=\
 	DatabaseProxy.cpp \
 	DatabaseConnectionManager.cpp \
 	AggregateStreamTransformer.cpp \
+	GroupingAggregateStreamTransformer.cpp \
 	AwkUtilities.cpp \
 	TransformerUtilities.cpp \
 	BlackoutStreamTransformer.cpp \
 	ColumnAppenderStreamTransformer.cpp \
 	PropertyDomain.cpp \
+	EquivalenceClassStreamTransformer.cpp \
+	ColumnFormatStreamTransformer.cpp \
+	SelfDescribingStreamHeaderTransformer.cpp \
 	AtomicsJSONToCSVStreamTransformer.cpp \
 	CampaignRevenueVectorStreamTransformer.cpp \
 	CampaignReferenceGeneratorStreamTransformer.cpp \
@@ -196,11 +200,15 @@ TESTFILES=\
 	DataProxyClientTest.cpp \
 	GenericDPLDomainTest.cpp \
 	AggregateStreamTransformerTest.cpp \
+	GroupingAggregateStreamTransformerTest.cpp \
 	AwkUtilitiesTest.cpp \
 	TransformerUtilitiesTest.cpp \
 	BlackoutStreamTransformerTest.cpp \
 	ColumnAppenderStreamTransformerTest.cpp \
 	PropertyDomainTest.cpp \
+	EquivalenceClassStreamTransformerTest.cpp \
+	ColumnFormatStreamTransformerTest.cpp \
+	SelfDescribingStreamHeaderTransformerTest.cpp \
 	AtomicsJSONToCSVStreamTransformerTest.cpp \
 	CampaignRevenueVectorStreamTransformerTest.cpp \
 	CampaignReferenceGeneratorStreamTransformerTest.cpp \
