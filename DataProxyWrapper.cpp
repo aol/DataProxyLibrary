@@ -2,11 +2,13 @@
 #include "MVException.hpp"
 #include "RESTClient.hpp"
 #include "LocalFileProxy.hpp"
+#include "LargeStringStream.hpp"
 #include "mex.h"
 #include <sstream>
 #include <string>
 #include <map>
 #include <fstream>
+#include <boost/iostrems/copy.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/scoped_ptr.hpp>
 
@@ -171,7 +173,7 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 	
 			MatlabString dataSource( mxArrayToString( prhs[1] ) );
 			
-			std::ostringstream result;
+			std::large_ostringstream result;
 	
 			s_pDataProxyClient->Load( dataSource, parameters, result );
 
@@ -200,14 +202,14 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 			ReadParameters( prhs, parameters );
 	
 			MatlabString dataSource( mxArrayToString( prhs[1] ) );
-			std::stringstream output;
+			std::large_stringstream output;
 	
 			s_pDataProxyClient->Load( dataSource, parameters, output );
 
 			MatlabString fileName( mxArrayToString( prhs[3] ) );
 			std::ofstream result( fileName.c_str() );
 			
-			result << output.rdbuf();
+			boost::iostreams::copy( output, result );
 			result.close();
 		}
 		else if( functionName == STORE )
@@ -231,8 +233,7 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 			
 			char* pDataToStore = mxArrayToString(prhs[3]);
 			
-			std::stringstream data;
-			data << dataToStore;
+			std::large_istringstream data( dataToStore );
 
 			s_pDataProxyClient->Store( dataSource, parameters, data );
 		}
