@@ -8,8 +8,8 @@
 // LAST UPDATED:    $Date$
 // UPDATED BY:      $Author$
 
-#ifndef _COLUMN_FORMAT_STREAM_TRANSFORMER_HPP_
-#define _COLUMN_FORMAT_STREAM_TRANSFORMER_HPP_
+#ifndef _COLUMN_APPENDER_STREAM_TRANSFORMER_HPP_
+#define _COLUMN_APPENDER_STREAM_TRANSFORMER_HPP_
 
 #include "MVException.hpp"
 #include "ITransformFunction.hpp"
