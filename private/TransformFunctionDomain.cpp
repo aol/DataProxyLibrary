@@ -29,34 +29,6 @@
 
 namespace
 {
-	const std::pair< std::string, std::string > AGGREGATE_STREAM_TRANSFORMER_KEY_PAIR( "AggregateStreamTransformer", "AggregateFields" );
-	const std::pair< std::string, std::string > ATOMIC_JSON_TO_CSV_STREAM_TRANSFORMER_KEY_PAIR( "AtomicsJSONToCSVStreamTransformer", "ConvertToCSV" );
-	const std::pair< std::string, std::string > BLACKOUT_STREAM_TRANSFORMER_KEY_PAIR( "BlackoutStreamTransformer", "ApplyBlackouts" );
-	const std::pair< std::string, std::string > CAMPAIGN_REFERENCE_GENERATOR_STREAM_TRANSFORMER_KEY_PAIR( "CampaignReferenceStreamTransformer", "GenerateCampaignReference" );
-	const std::pair< std::string, std::string > CAMPAIGN_REVENUE_VECTOR_STREAM_TRANSFORMER_KEY_PAIR( "CampaignRevenueVectorStreamTransformer", "TransformCampaignRevenueVector" );
-	const std::pair< std::string, std::string > COLUMN_APPENDER_STREAM_TRANSFORMER_KEY_PAIR( "ColumnAppenderStreamTransformer", "AppendColumns" );
-	const std::pair< std::string, std::string > COLUMN_FORMAT_STREAM_TRANSFORMER_KEY_PAIR( "ColumnFormatStreamTransformer", "FormatColumns" );
-	const std::pair< std::string, std::string > EQUIVALENCE_CLASS_STREAM_TRANSFORMER_KEY_PAIR( "EquivalenceClassStreamTransformer", "GenerateEquivalenceClasses" );
-	const std::pair< std::string, std::string > GROUPING_AGGREGATE_STREAM_TRANSFORMER_KEY_PAIR( "GroupingAggregateStreamTransformer", "AggregateFields" );
-	const std::pair< std::string, std::string > ADD_SELF_DESCRIBING_STREAM_TRANSFORMER_KEY_PAIR( "SelfDescribingStreamHeaderTransformer", "AddSelfDescribingStreamHeader" );
-	const std::pair< std::string, std::string > REMOVE_SELF_DESCRIBING_STREAM_TRANSFORMER_KEY_PAIR( "SelfDescribingStreamHeaderTransformer", "RemoveSelfDescribingStreamHeader" );
-	const std::pair< std::string, std::string > SHELL_STREAM_TRANSFORMER_KEY_PAIR( "ShellStreamTransformer", "TransformStream" );
-	const std::pair< std::string, std::string > VALIDATE_STREAM_TRANSFORMER_KEY_PAIR( "ValidateStreamTransformer", "Validate" );
-
-	const std::string AGGREGATE_STREAM_TRANSFORMER_KEY( "AggregateStreamTransformer" );
-	const std::string ATOMIC_JSON_TO_CSV_STREAM_TRANSFORMER_KEY( "AtomicsJSONToCSVStreamTransformer" );
-	const std::string BLACKOUT_STREAM_TRANSFORMER_KEY( "BlackoutStreamTransformer" );
-	const std::string CAMPAIGN_REFERENCE_GENERATOR_STREAM_TRANSFORMER_KEY( "CampaignReferenceGeneratorStreamTransformer" );
-	const std::string CAMPAIGN_REVENUE_VECTOR_STREAM_TRANSFORMER_KEY( "CampaignRevenueVectorStreamTransformer" );
-	const std::string COLUMN_APPENDER_STREAM_TRANSFORMER_KEY( "ColumnAppenderStreamTransformer" );
-	const std::string COLUMN_FORMAT_STREAM_TRANSFORMER_KEY( "ColumnFormatStreamTransformer" );
-	const std::string EQUIVALENCE_CLASS_STREAM_TRANSFORMER_KEY( "EquivalenceClassStreamTransformer" );
-	const std::string GROUPING_AGGREGATE_STREAM_TRANSFORMER_KEY( "GroupingAggregateStreamTransformer" );
-	const std::string ADD_SELF_DESCRIBING_STREAM_TRANSFORMER_KEY( "AddSelfDescribingStreamHeaderTransformer" );
-	const std::string REMOVE_SELF_DESCRIBING_STREAM_TRANSFORMER_KEY( "RemoveSelfDescribingStreamHeaderTransformer" );
-	const std::string SHELL_STREAM_TRANSFORMER_KEY( "ShellStreamTransformer" );
-	const std::string VALIDATE_STREAM_TRANSFORMER_KEY( "ValidateStreamTransformer" );
-
 	boost::shared_ptr< ITransformFunction > SharedTransformFunction( ITransformFunction* i_pFunction )
 	{
 		return boost::shared_ptr<ITransformFunction>(i_pFunction);
@@ -70,6 +42,34 @@ TransformFunctionDomain::TransformFunctionDomain()
  	m_FunctionsByPathAndName(),
 	m_FunctionsByType()
 {
+	static const std::pair< std::string, std::string > AGGREGATE_STREAM_TRANSFORMER_KEY_PAIR( "AggregateStreamTransformer", "AggregateFields" );
+	static const std::pair< std::string, std::string > ATOMIC_JSON_TO_CSV_STREAM_TRANSFORMER_KEY_PAIR( "AtomicsJSONToCSVStreamTransformer", "ConvertToCSV" );
+	static const std::pair< std::string, std::string > BLACKOUT_STREAM_TRANSFORMER_KEY_PAIR( "BlackoutStreamTransformer", "ApplyBlackouts" );
+	static const std::pair< std::string, std::string > CAMPAIGN_REFERENCE_GENERATOR_STREAM_TRANSFORMER_KEY_PAIR( "CampaignReferenceStreamTransformer", "GenerateCampaignReference" );
+	static const std::pair< std::string, std::string > CAMPAIGN_REVENUE_VECTOR_STREAM_TRANSFORMER_KEY_PAIR( "CampaignRevenueVectorStreamTransformer", "TransformCampaignRevenueVector" );
+	static const std::pair< std::string, std::string > COLUMN_APPENDER_STREAM_TRANSFORMER_KEY_PAIR( "ColumnAppenderStreamTransformer", "AppendColumns" );
+	static const std::pair< std::string, std::string > COLUMN_FORMAT_STREAM_TRANSFORMER_KEY_PAIR( "ColumnFormatStreamTransformer", "FormatColumns" );
+	static const std::pair< std::string, std::string > EQUIVALENCE_CLASS_STREAM_TRANSFORMER_KEY_PAIR( "EquivalenceClassStreamTransformer", "GenerateEquivalenceClasses" );
+	static const std::pair< std::string, std::string > GROUPING_AGGREGATE_STREAM_TRANSFORMER_KEY_PAIR( "GroupingAggregateStreamTransformer", "AggregateFields" );
+	static const std::pair< std::string, std::string > ADD_SELF_DESCRIBING_STREAM_TRANSFORMER_KEY_PAIR( "SelfDescribingStreamHeaderTransformer", "AddSelfDescribingStreamHeader" );
+	static const std::pair< std::string, std::string > REMOVE_SELF_DESCRIBING_STREAM_TRANSFORMER_KEY_PAIR( "SelfDescribingStreamHeaderTransformer", "RemoveSelfDescribingStreamHeader" );
+	static const std::pair< std::string, std::string > SHELL_STREAM_TRANSFORMER_KEY_PAIR( "ShellStreamTransformer", "TransformStream" );
+	static const std::pair< std::string, std::string > VALIDATE_STREAM_TRANSFORMER_KEY_PAIR( "ValidateStreamTransformer", "Validate" );
+
+	static const std::string AGGREGATE_STREAM_TRANSFORMER_KEY( "AggregateStreamTransformer" );
+	static const std::string ATOMIC_JSON_TO_CSV_STREAM_TRANSFORMER_KEY( "AtomicsJSONToCSVStreamTransformer" );
+	static const std::string BLACKOUT_STREAM_TRANSFORMER_KEY( "BlackoutStreamTransformer" );
+	static const std::string CAMPAIGN_REFERENCE_GENERATOR_STREAM_TRANSFORMER_KEY( "CampaignReferenceGeneratorStreamTransformer" );
+	static const std::string CAMPAIGN_REVENUE_VECTOR_STREAM_TRANSFORMER_KEY( "CampaignRevenueVectorStreamTransformer" );
+	static const std::string COLUMN_APPENDER_STREAM_TRANSFORMER_KEY( "ColumnAppenderStreamTransformer" );
+	static const std::string COLUMN_FORMAT_STREAM_TRANSFORMER_KEY( "ColumnFormatStreamTransformer" );
+	static const std::string EQUIVALENCE_CLASS_STREAM_TRANSFORMER_KEY( "EquivalenceClassStreamTransformer" );
+	static const std::string GROUPING_AGGREGATE_STREAM_TRANSFORMER_KEY( "GroupingAggregateStreamTransformer" );
+	static const std::string ADD_SELF_DESCRIBING_STREAM_TRANSFORMER_KEY( "AddSelfDescribingStreamHeaderTransformer" );
+	static const std::string REMOVE_SELF_DESCRIBING_STREAM_TRANSFORMER_KEY( "RemoveSelfDescribingStreamHeaderTransformer" );
+	static const std::string SHELL_STREAM_TRANSFORMER_KEY( "ShellStreamTransformer" );
+	static const std::string VALIDATE_STREAM_TRANSFORMER_KEY( "ValidateStreamTransformer" );
+
 	m_FunctionsByType = boost::assign::map_list_of
 		( AGGREGATE_STREAM_TRANSFORMER_KEY, SharedTransformFunction(new AggregateStreamTransformer()) )
 		( ATOMIC_JSON_TO_CSV_STREAM_TRANSFORMER_KEY, SharedTransformFunction(new AtomicsJSONToCSVStreamTransformer()) )
