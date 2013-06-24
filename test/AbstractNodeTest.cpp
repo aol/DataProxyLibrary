@@ -27,6 +27,8 @@
 #include <boost/algorithm/string/replace.hpp>
 #include "MonitoringTracker.hpp"
 #include "MockMonitoringInstance.hpp"
+#include "MockTransformFunctionDomain.hpp"
+#include "StreamTransformer.hpp"
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/ref.hpp>
@@ -36,7 +38,8 @@ CPPUNIT_TEST_SUITE_REGISTRATION( AbstractNodeTest );
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( AbstractNodeTest, "AbstractNodeTest" );
 
 AbstractNodeTest::AbstractNodeTest()
-:	m_pTempDir(NULL)
+:	m_pTempDir(NULL),
+	m_pMockTransformFunctionDomain( new MockTransformFunctionDomain() )
 {
 }
 
@@ -48,12 +51,14 @@ void AbstractNodeTest::setUp()
 {
 	XMLPlatformUtils::Initialize();
 	m_pTempDir.reset( new TempDirectory() );
+	StreamTransformer::SetTransformFunctionDomain( m_pMockTransformFunctionDomain );
 }
 
 void AbstractNodeTest::tearDown()
 {
 	::system( (std::string("chmod 777 ") + m_pTempDir->GetDirectoryName() + "/* >/dev/null 2>&1" ).c_str() );
 	m_pTempDir.reset( NULL );
+	StreamTransformer::SetTransformFunctionDomain( m_pMockTransformFunctionDomain );
 	//XMLPlatformUtils::Terminate();
 }
 

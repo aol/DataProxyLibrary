@@ -17,6 +17,7 @@
 #include "TransformerManager.hpp"
 
 class TempDirectory;
+class ITransformFunctionDomain;
 
 class TransformerManagerTest : public CppUnit::TestFixture
 {
@@ -42,6 +43,7 @@ public:
 
 private:
 	boost::scoped_ptr<TempDirectory> m_pTempDir;
+	boost::scoped_ptr<ITransformFunctionDomain> m_pMockTransformFunctionDomain;
 	std::string m_LibrarySpec;
 }; 
 

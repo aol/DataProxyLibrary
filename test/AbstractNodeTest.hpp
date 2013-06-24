@@ -16,6 +16,7 @@
 #include "DataProxyClient.hpp"
 
 class TempDirectory;
+class ITransformFunctionDomain;
 
 class AbstractNodeTest : public CppUnit::TestFixture
 {
@@ -134,6 +135,7 @@ public:
 
 private:
 	boost::scoped_ptr< TempDirectory > m_pTempDir;
+	boost::scoped_ptr< ITransformFunctionDomain > m_pMockTransformFunctionDomain;
 };
 
 #endif //_ABSTRACT_NODE_TEST_HPP_

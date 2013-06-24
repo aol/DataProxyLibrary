@@ -11,7 +11,9 @@
 #ifndef _I_TRANFORM_FUNCTION_HPP_
 #define _I_TRANFORM_FUNCTION_HPP_
 
-#include <iostream>
+#include <istream>
+#include <string>
+#include <map>
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 

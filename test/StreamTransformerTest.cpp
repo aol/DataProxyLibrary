@@ -15,6 +15,7 @@
 #include "ProxyTestHelpers.hpp"
 #include "AssertThrowWithMessage.hpp"
 #include "StreamTransformer.hpp"
+#include "MockTransformFunctionDomain.hpp"
 #include <fstream>
 #include <boost/regex.hpp>
 #include <TransformerTestHelpers.hpp>
@@ -35,8 +36,9 @@ namespace
 }
 
 StreamTransformerTest::StreamTransformerTest()
-	: m_pTempDir(NULL),
-	  m_LibrarySpec()
+ :	m_pTempDir(NULL),
+	m_pMockTransformFunctionDomain( new MockTransformFunctionDomain() ),
+	m_LibrarySpec()
 {
 }
 
@@ -48,7 +50,8 @@ void StreamTransformerTest::setUp()
 {
 	XMLPlatformUtils::Initialize();
 	m_pTempDir.reset( new TempDirectory() );
-	// setup the so file
+	// set up the mock transforms
+	StreamTransformer::SetTransformFunctionDomain( m_pMockTransformFunctionDomain );
 	TransformerTestHelpers::SetupLibraryFile( m_pTempDir->GetDirectoryName(), m_LibrarySpec );
 }
 
@@ -56,6 +59,8 @@ void StreamTransformerTest::tearDown()
 {
 	//XMLPlatformUtils::Terminate();
 	m_pTempDir.reset(NULL);
+	// reset the prior transforms
+	StreamTransformer::SetTransformFunctionDomain( m_pMockTransformFunctionDomain );
 }
 
 void StreamTransformerTest::testGarbageNode()
@@ -87,23 +92,6 @@ void StreamTransformerTest::testGarbageNode()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( StreamTransformer transformer( *nodes[0] ), XMLUtilitiesException, ".*.XMLUtilities.cpp:\\d+: Found invalid attribute: something in node: StreamTransformer" );
 	
-	
-	// if library file does not exist
-	xmlContents.str("");
-	xmlContents << "<StreamTransformer path=\"/data/doesnotexist.file\" functionName=\"binarytocsv\">"
-				<< "</StreamTransformer>";
-	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "StreamTransformer", nodes );
-	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( StreamTransformer transformer( *nodes[0] ), StreamTransformerException, ".*.StreamTransformer.cpp:\\d+: StreamTransformer Library file does not exist : " << "/data/doesnotexist.file" );
-
-	// test if the function does not exist
-	xmlContents.str("");
-	xmlContents << "<StreamTransformer path=\"" << m_LibrarySpec << "\"" << " functionName=\"doesnotexistfunction\">"
-				<< "</StreamTransformer>";
-	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "StreamTransformer", nodes );
-	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( StreamTransformer transformer( *nodes[0] ), StreamTransformerException, ".*.StreamTransformer.cpp:\\d+: StreamTransformer failed to access function: doesnotexistfunction: " << m_pTempDir->GetDirectoryName() + "/testTransformer.so" << ": undefined symbol: doesnotexistfunction" );
-
 	 // test if node of StreamTransformer is not Parameter
 	xmlContents.str("");
 	xmlContents << "<StreamTransformer path=\"" << m_LibrarySpec << "\"" << " functionName=\"TransformFunction\">"
@@ -374,7 +362,7 @@ void StreamTransformerTest::testNULLReturnedStream()
 	parameters["runtimeParam2"] = "runtimeValue2";
 
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformStream( parameters, pOriginalStreamAsIstream ), StreamTransformerException, ".*.StreamTransformer.cpp:\\d+: NULL transformed data stream returned while executing library: " << m_pTempDir->GetDirectoryName() + "/testTransformer.so" << " function: TransformFunction_null" << " with parameters:" << " name1~value1 after .* milliseconds" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformStream( parameters, pOriginalStreamAsIstream ), StreamTransformerException, ".*.StreamTransformer.cpp:\\d+: NULL stream returned from library: " << m_pTempDir->GetDirectoryName() + "/testTransformer.so" << " function: TransformFunction_null" << " with parameters:" << " name1~value1 after .* milliseconds" );
 
 }
 

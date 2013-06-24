@@ -15,6 +15,8 @@
 #include "ProxyTestHelpers.hpp"
 #include "AssertThrowWithMessage.hpp"
 #include "TransformerTestHelpers.hpp"
+#include "MockTransformFunctionDomain.hpp"
+#include "StreamTransformer.hpp"
 #include <fstream>
 #include <boost/regex.hpp>
 
@@ -35,6 +37,7 @@ namespace
 
 TransformerManagerTest::TransformerManagerTest()
 	: m_pTempDir(NULL),
+	  m_pMockTransformFunctionDomain( new MockTransformFunctionDomain() ),
 	  m_LibrarySpec()
 {
 }
@@ -48,12 +51,14 @@ void TransformerManagerTest::setUp()
 	XMLPlatformUtils::Initialize();
 	m_pTempDir.reset( new TempDirectory() );
 	TransformerTestHelpers::SetupLibraryFile( m_pTempDir->GetDirectoryName(), m_LibrarySpec );
+	StreamTransformer::SetTransformFunctionDomain( m_pMockTransformFunctionDomain );
 }
 
 void TransformerManagerTest::tearDown()
 {
 	//XMLPlatformUtils::Terminate();
 	m_pTempDir.reset( NULL );
+	StreamTransformer::SetTransformFunctionDomain( m_pMockTransformFunctionDomain );
 }
 
 void TransformerManagerTest::testGarbageNode()

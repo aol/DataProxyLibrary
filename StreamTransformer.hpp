@@ -16,7 +16,6 @@
 #include "Nullable.hpp"
 #include "MVCommon.hpp"
 #include "MVException.hpp"
-#include "ITransformFunction.hpp"
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/scoped_ptr.hpp>
@@ -28,6 +27,9 @@ MV_MAKEEXCEPTIONCLASS( StreamTransformerException, MVException );
 namespace xercesc_2_7 { class DOMNode; }
 namespace xercesc = xercesc_2_7;
 
+class ITransformFunctionDomain;
+class ITransformFunction;
+
 class StreamTransformer : public boost::noncopyable
 {
 public:
@@ -36,7 +38,9 @@ public:
 
 	virtual boost::shared_ptr< std::istream > TransformStream( const std::map< std::string, std::string >& i_rParameters,
 																boost::shared_ptr< std::istream > i_pStream ) const;
-	
+
+	static void SetTransformFunctionDomain( boost::scoped_ptr< ITransformFunctionDomain >& i_pSwapDomain );
+
 private:
 	void EvaluateParameters(const std::map< std::string, std::string >& i_rParameters, std::map< std::string, std::string >& o_rParameters) const;
 
@@ -61,67 +65,11 @@ private:
 
 	typedef GenericOrderedDataContainer< TransformerParameterDatum, TransformerParameterDesc > TransformerParameterContainer;
 
-	typedef boost::shared_ptr<std::stringstream>(*TransformFunction)( std::istream&, const std::map<std::string, std::string>& );
-
-	class OriginalTransformSource
-	{
-	public:
-		OriginalTransformSource( TransformFunction i_TransformFunction, boost::shared_ptr< std::istream > i_pInput, const std::map<std::string, std::string>& i_rParameters );
-		virtual ~OriginalTransformSource();
-
-		typedef char char_type;
-		// No boost::iostreams::input_seekable_device_tag?  Make our own.
-		struct input_seekable_device_tag : boost::iostreams::device_tag, boost::iostreams::input_seekable { };
-		typedef input_seekable_device_tag category;
-
-		std::streamsize read(char* o_pBuffer, std::streamsize i_BufferSize);
-		std::streampos seek(boost::iostreams::stream_offset i_Offset, std::ios_base::seekdir i_Whence);
-
-	private:
-		std::string m_TransformedStream;
-		size_t m_CurrentPos;
-	};
-
-	class OriginalTransformStream : public boost::iostreams::stream< OriginalTransformSource >
-	{
-	public:
-		OriginalTransformStream( TransformFunction i_TransformFunction, boost::shared_ptr< std::istream > i_pInput, const std::map<std::string, std::string>& i_rParameters );
-		virtual ~OriginalTransformStream();
-
-	private:
-		boost::scoped_ptr< OriginalTransformSource > m_pSource;
-	};
-
-	class BackwardsCompatableTransformFunction : public ITransformFunction
-	{
-	public:
-		BackwardsCompatableTransformFunction(TransformFunction i_TransformFunction);
-		virtual ~BackwardsCompatableTransformFunction();
-
-		virtual boost::shared_ptr<std::istream> TransformInput( boost::shared_ptr< std::istream > i_pInput, const std::map<std::string, std::string>& i_rParameters );
-
-	private:
-		TransformFunction m_OriginalTransformFunction;
-	};
-
-	class DynamicFunctionManager : public boost::noncopyable
-	{
-	public:
-		DynamicFunctionManager();
-		virtual ~DynamicFunctionManager();
-		boost::shared_ptr<ITransformFunction> GetFunction( const std::string& i_rPath, const std::string& i_rFunctionName );
-	
-	private:
-		typedef std::map< std::pair< std::string, std::string >, boost::shared_ptr<ITransformFunction> > TransformMap;
-		TransformMap m_Functions;
-	};
-
 	TransformerParameterContainer m_Parameters;
-	std::string m_PathOfSharedLibrary;
-	std::string m_FunctionName;
+	std::string m_Description;
 	boost::shared_ptr<ITransformFunction> m_pSharedLibraryFunction;
 
-	static DynamicFunctionManager s_DynamicFunctionManager;
+	static boost::scoped_ptr< ITransformFunctionDomain > s_pTransformFunctionDomain;
 };
 
 #endif //_STREAM_TRANSFORMER_HPP_

@@ -233,6 +233,8 @@ MOCKFILES=\
 	MockNodeFactory.cpp \
 	MockDatabaseConnectionManager.cpp \
 	MockDataProxyClient.cpp \
+	MockTransformFunctions.cpp \
+	MockTransformFunctionDomain.cpp \
 
 # The following files need to be built in order to create an independent shared object library
 SERVICEFILES=\

@@ -16,6 +16,7 @@
 #include <boost/scoped_ptr.hpp>
 
 class TempDirectory;
+class ITransformFunctionDomain;
 
 class StreamTransformerTest : public CppUnit::TestFixture
 {
@@ -49,6 +50,7 @@ public:
 	void testLibException();
 private:
 	boost::scoped_ptr< TempDirectory > m_pTempDir;
+	boost::scoped_ptr< ITransformFunctionDomain > m_pMockTransformFunctionDomain;
 	std::string m_LibrarySpec;
 };
 
