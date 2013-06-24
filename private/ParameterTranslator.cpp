@@ -19,6 +19,7 @@
 #include "ContainerToString.hpp"
 #include "DateTime.hpp"
 #include "UniqueIdGenerator.hpp"
+#include "LargeStringStream.hpp"
 #include <boost/regex.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/replace.hpp>
@@ -56,8 +57,8 @@ namespace
 
 	std::string EvalExpression( const std::string& i_rCommand, int i_Timeout )
 	{
-		std::stringstream standardOut;
-		std::stringstream standardErr;
+		std::large_stringstream standardOut;
+		std::large_stringstream standardErr;
 		ShellExecutor exe( i_rCommand );
 		int status = exe.Run( i_Timeout, standardOut, standardErr );
 

@@ -15,6 +15,7 @@
 #include "XMLUtilities.hpp"
 #include "MVLogger.hpp"
 #include "ShellExecutor.hpp"
+#include "LargeStringStream.hpp"
 #include <boost/lexical_cast.hpp>
 
 namespace
@@ -86,7 +87,7 @@ void ExecutionProxy::LoadImpl( const std::map<std::string,std::string>& i_rParam
 
 	std::string command = ProxyUtilities::GetVariableSubstitutedString( m_ReadCommand, i_rParameters );
 	ShellExecutor executor( command );
-	std::stringstream standardError;
+	std::large_stringstream standardError;
 	MVLOGGER( "root.lib.DataProxy.ExecutionProxy.Load.ExecutingCommand", "Executing command: '" << command << "'" );
 	int status = executor.Run( m_ReadTimeout, o_rData, standardError );
 	if( status != 0 )
@@ -109,8 +110,8 @@ void ExecutionProxy::StoreImpl( const std::map<std::string,std::string>& i_rPara
 
 	std::string command = ProxyUtilities::GetVariableSubstitutedString( m_WriteCommand, i_rParameters );
 	ShellExecutor executor( command );
-	std::stringstream standardOut;
-	std::stringstream standardError;
+	std::large_stringstream standardOut;
+	std::large_stringstream standardError;
 	MVLOGGER( "root.lib.DataProxy.ExecutionProxy.Store.ExecutingCommand", "Executing command: '" << command << "'" );
 	int status = executor.Run( m_WriteTimeout, i_rData, standardOut, standardError );
 	if( status != 0 )
@@ -138,8 +139,8 @@ void ExecutionProxy::DeleteImpl( const std::map<std::string,std::string>& i_rPar
 
 	std::string command = ProxyUtilities::GetVariableSubstitutedString( m_DeleteCommand, i_rParameters );
 	ShellExecutor executor( command );
-	std::stringstream standardOut; 
-	std::stringstream standardError;
+	std::large_stringstream standardOut; 
+	std::large_stringstream standardError;
 	MVLOGGER( "root.lib.DataProxy.ExecutionProxy.Delete.ExecutingCommand", "Executing command: '" << command << "'" );
 	int status = executor.Run( m_DeleteTimeout, standardOut, standardError );
 	if( status != 0 )

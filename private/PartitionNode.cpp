@@ -15,6 +15,7 @@
 #include "MVLogger.hpp"
 #include "ShellExecutor.hpp"
 #include "CSVReader.hpp"
+#include "LargeStringStream.hpp"
 #include <boost/algorithm/string/split.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/lexical_cast.hpp>
@@ -174,12 +175,12 @@ void PartitionNode::StoreImpl( const std::map<std::string,std::string>& i_rParam
 	GetPartitionKeyIndexAndCount( m_WritePartitionKey, header, partitionIndex, columnCount );
 
 	std::istream* pData = &i_rData;
-	boost::scoped_ptr< std::stringstream > pSortedInputStream;
+	boost::scoped_ptr< std::large_stringstream > pSortedInputStream;
 
 	if( !m_WriteSkipSort )
 	{
-		std::stringstream standardError;
-		pSortedInputStream.reset( new std::stringstream() );
+		std::large_stringstream standardError;
+		pSortedInputStream.reset( new std::large_stringstream() );
 		ShellExecutor executor( GetSortCommand( partitionIndex, m_WriteSortTempDir ) );
 		int status = executor.Run( m_WriteSortTimeout, i_rData, *pSortedInputStream, standardError );
 		pData = pSortedInputStream.get();
@@ -195,8 +196,8 @@ void PartitionNode::StoreImpl( const std::map<std::string,std::string>& i_rParam
 	}
 
 	// at this point, we have a sorted stream accessible by pData
-	boost::scoped_ptr< std::stringstream > pTempIOStream;
-	pTempIOStream.reset( new std::stringstream() );
+	boost::scoped_ptr< std::large_stringstream > pTempIOStream;
+	pTempIOStream.reset( new std::large_stringstream() );
 	*pTempIOStream << header << std::endl;
 	std::string currentPartitionId;
 	std::string previousPartitionId;
@@ -212,7 +213,7 @@ void PartitionNode::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			std::map< std::string, std::string > parameters( i_rParameters );
 			parameters[ m_WritePartitionKey ] = previousPartitionId;
 			m_rParent.Store( m_WriteRoute, parameters, *pTempIOStream );
-			pTempIOStream.reset( new std::stringstream() );
+			pTempIOStream.reset( new std::large_stringstream() );
 			*pTempIOStream << header << std::endl;
 		}
 		*pTempIOStream << reader.GetCurrentDataLine() << std::endl;

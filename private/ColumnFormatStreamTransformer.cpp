@@ -250,7 +250,7 @@ boost::shared_ptr< std::istream > ColumnFormatStreamTransformer::TransformInput(
 	}
 
 	// execute!
-	std::stringstream standardError;
+	std::large_stringstream standardError;
 	ShellExecutor executor( orderCommand );
 	MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.ColumnFormat.FormatColumns.ExecutingCommand", "Executing command: '" << orderCommand << "'" );
 	int status = executor.Run( timeout, *i_pInputStream, *pResult, standardError );

@@ -17,6 +17,7 @@
 #include "DPLCommon.hpp"
 #include "XMLUtilities.hpp"
 #include "MVLogger.hpp"
+#include "LargeStringStream.hpp"
 #include <boost/lexical_cast.hpp>
 
 namespace
@@ -224,8 +225,8 @@ void DatabaseConnectionManager::FetchConnectionsByTable( const std::string& i_rN
 {
 	// first load connections
 	std::map< std::string, std::string > parameters;
-	boost::scoped_ptr< std::stringstream > pTempStream;
-	pTempStream.reset( new std::stringstream() );
+	boost::scoped_ptr< std::large_stringstream > pTempStream;
+	pTempStream.reset( new std::large_stringstream() );
 	m_rDataProxyClient.Load( i_rConnectionsNode, parameters, *pTempStream );
 
 	boost::scoped_ptr< CSVReader > pReader;
@@ -269,7 +270,7 @@ void DatabaseConnectionManager::FetchConnectionsByTable( const std::string& i_rN
 	}
 
 	// now load the tables
-	pTempStream.reset( new std::stringstream() );
+	pTempStream.reset( new std::large_stringstream() );
 	m_rDataProxyClient.Load( i_rTablesNode, parameters, *pTempStream );
 	pReader.reset( new CSVReader( *pTempStream ) );
 	std::string tableName;

@@ -115,7 +115,7 @@ namespace
 
 		DataProxyClient client;
 		client.Initialize( i_rDplConfig );
-		std::stringstream blackoutDataStream;
+		std::large_stringstream blackoutDataStream;
 		client.Load( BLACKOUT_DATA_NODE, blackoutParameters, blackoutDataStream );
 
 		CSVReader reader( blackoutDataStream, ',', true );

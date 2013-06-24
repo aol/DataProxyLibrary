@@ -572,7 +572,7 @@ namespace
 		}
 
 		// execute!
-		std::stringstream standardError;
+		std::large_stringstream standardError;
 		ShellExecutor executor( command.str() );
 		MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.Aggregate.AggregateFields.ExecutingCommand", "Executing command: '" << command.str() << "'" );
 		int status = executor.Run( timeout, *i_pInputStream, *pResult, standardError );

@@ -17,6 +17,7 @@
 #include <boost/noncopyable.hpp>
 #include "MVCommon.hpp"
 #include "GDPUtility.hpp"
+#include "LargeStringStream.hpp"
 #include <sstream>
 #include "DataProxyClient.hpp"
 #include <map>
@@ -49,7 +50,7 @@ void GenericDPLDomain< T_DatumType, T_AggregatorType, T_BinderType >::Load( cons
 {
 	DataProxyClient dataProxyClient;
 	dataProxyClient.Initialize(i_rFileSpec);
-	std::stringstream data;
+	std::large_stringstream data;
 	dataProxyClient.Load(i_rDataNodeName, i_rParameters, data);
 	
 	ProcessGenericStream< T_DatumType, T_BinderType >(data, *this);

@@ -18,6 +18,7 @@
 #include "DateTime.hpp"
 #include "MVLogger.hpp"
 #include "GenericDataAssigner.hpp"
+#include "LargeStringStream.hpp"
 #include <fstream>
 #include <set>
 #include <netdb.h>
@@ -513,7 +514,7 @@ void RestDataProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 	// take a copy of the stored rest parameters so we can modify the copy
 	RESTParameters restParameters( m_WriteConfig.GetValue< Dpl::RestParameters >() );
 	builder.BuildRequest( uri, restParameters );
-	std::ostringstream responseBody;
+	std::large_ostringstream responseBody;
 
 	RESTClient().Execute( uri, i_rData, responseBody, restParameters );
 
@@ -525,7 +526,6 @@ void RestDataProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 
 void RestDataProxy::DeleteImpl( const std::map<std::string,std::string>& i_rParameters )
 {
-	std::stringstream result;
 	std::map< std::string, std::string > allParameters( i_rParameters );
 
 	// Create RestRequestBuilder
@@ -540,7 +540,7 @@ void RestDataProxy::DeleteImpl( const std::map<std::string,std::string>& i_rPara
 	// take a copy of the stored rest parameters so we can modify the copy
 	RESTParameters restParameters( m_DeleteConfig.GetValue< Dpl::RestParameters >() );
 	builder.BuildRequest( uri, restParameters );
-	std::ostringstream responseBody;
+	std::large_ostringstream responseBody;
 
 	RESTClient().Execute( uri, responseBody, restParameters );
 
@@ -625,7 +625,7 @@ void RestDataProxy::Ping( int i_Mode ) const
 	// now check for individual modes
 	if( i_Mode & DPL::READ && !m_ReadConfig.GetValue< Dpl::PingEndpoint >().empty() )
 	{
-		std::ostringstream result;
+		std::large_ostringstream result;
 		RESTParameters parameters;
 		parameters.SetMethod( m_ReadConfig.GetValue< Dpl::PingMethod >() );
 		try
@@ -640,7 +640,7 @@ void RestDataProxy::Ping( int i_Mode ) const
 	}
 	if( i_Mode & DPL::WRITE && !m_WriteConfig.GetValue< Dpl::PingEndpoint >().empty() )
 	{
-		std::ostringstream result;
+		std::large_ostringstream result;
 		RESTParameters parameters;
 		parameters.SetMethod( m_WriteConfig.GetValue< Dpl::PingMethod >() );
 		try
@@ -655,7 +655,7 @@ void RestDataProxy::Ping( int i_Mode ) const
 	}
 	if( i_Mode & DPL::DELETE && !m_DeleteConfig.GetValue< Dpl::PingEndpoint >().empty() )
 	{
-		std::ostringstream result;
+		std::large_ostringstream result;
 		RESTParameters parameters;
 		parameters.SetMethod( m_DeleteConfig.GetValue< Dpl::PingMethod >() );
 		try

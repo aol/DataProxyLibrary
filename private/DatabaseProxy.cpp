@@ -16,6 +16,7 @@
 #include "ProxyUtilities.hpp"
 #include "FileUtilities.hpp"
 #include "MVLogger.hpp"
+#include "LargeStringStream.hpp"
 #include "ContainerToString.hpp"
 #include "MVUtility.hpp"
 #include "StringUtilities.hpp"
@@ -367,7 +368,7 @@ namespace
 	std::string ReadFile( const std::string& i_rPath )
 	{
 		std::ifstream file( i_rPath.c_str() );
-		std::stringstream results;
+		std::large_stringstream results;
 		std::string line;
 		while( std::getline( file, line ) )
 		{

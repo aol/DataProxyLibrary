@@ -21,6 +21,7 @@
 #include "MVLogger.hpp"
 #include "MVUtility.hpp"
 #include "XercesString.hpp"
+#include "LargeStringStream.hpp"
 #include <boost/scoped_ptr.hpp>
 #include <string>
 #include <xercesc/dom/DOM.hpp>
@@ -118,7 +119,7 @@ namespace
 			pSerializer->setFeature(XMLUni::fgDOMWRTFormatPrettyPrint, false);
 			pSerializer->setFeature(XMLUni::fgDOMWRTDiscardDefaultContent, true);
 			pSerializer->writeNode( &target, *pDocument );
-			std::stringstream data;
+			std::large_stringstream data;
 			data << target.getRawBuffer();
 			return MVUtility::GetMD5( data.str() );
 		}

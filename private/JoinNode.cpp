@@ -18,6 +18,7 @@
 #include "FileUtilities.hpp"
 #include "ShellExecutor.hpp"
 #include "UniqueIdGenerator.hpp"
+#include "LargeStringStream.hpp"
 #include <boost/lexical_cast.hpp>
 #include <boost/iostreams/copy.hpp>
 #include <boost/algorithm/string/replace.hpp>
@@ -322,7 +323,7 @@ void JoinNode::LoadImpl( const std::map<std::string,std::string>& i_rParameters,
 	// otherwise we're going to join some data
 	if( m_ReadBehavior == COLUMN_JOIN )
 	{
-		std::stringstream tempStream;
+		std::large_stringstream tempStream;
 		m_rParent.Load( m_ReadEndpoint, i_rParameters, tempStream );
 		WriteHorizontalJoin( tempStream, o_rData, m_ReadKey, m_ReadColumns, i_rParameters, m_ReadJoins, m_ReadWorkingDir, m_ReadTimeout, m_ReadEndpoint );
 	}
@@ -332,7 +333,7 @@ void JoinNode::LoadImpl( const std::map<std::string,std::string>& i_rParameters,
 		std::vector< StreamConfig >::const_iterator iter = m_ReadJoins.begin();
 		for( ; iter != m_ReadJoins.end(); ++iter )
 		{
-			std::stringstream tempStream;
+			std::large_stringstream tempStream;
 			std::string tempLine;
 			m_rParent.Load( iter->GetValue< NodeName >(), i_rParameters, tempStream );
 			for( int i=0; i<iter->GetValue< SkipLines >(); ++i )
@@ -360,14 +361,14 @@ void JoinNode::StoreImpl( const std::map<std::string,std::string>& i_rParameters
 	}
 	else if( m_WriteBehavior == COLUMN_JOIN )
 	{
-		std::stringstream input;
+		std::large_stringstream input;
 		WriteHorizontalJoin( i_rData, input, m_WriteKey, m_WriteColumns, i_rParameters, m_WriteJoins, m_WriteWorkingDir, m_WriteTimeout, "Input" );
 		m_rParent.Store( m_WriteEndpoint, i_rParameters, input );
 	}
 	else if( m_WriteBehavior == APPEND )
 	{
-		std::stringstream input;
-		std::stringstream tempStream;
+		std::large_stringstream input;
+		std::large_stringstream tempStream;
 		boost::iostreams::copy( i_rData, input );
 		std::vector< StreamConfig >::const_iterator iter = m_WriteJoins.begin();
 		for( ; iter != m_WriteJoins.end(); ++iter )
@@ -619,14 +620,14 @@ void JoinNode::WriteHorizontalJoin( std::istream& i_rInput,
 	std::stringstream mainColumns;
 	bool multiKey( false );
 	std::vector< size_t > multiKeys;
-	boost::scoped_ptr< std::stringstream > pTempStream;
+	boost::scoped_ptr< std::large_stringstream > pTempStream;
 	std::istream* pInputStream( &i_rInput );
 
 	// step 0: determine if we are dealing with multi-key stream
 	if( i_rKey.find( ',' ) != std::string::npos )
 	{
 		multiKey = true;
-		pTempStream.reset( new std::stringstream() );
+		pTempStream.reset( new std::large_stringstream() );
 		pInputStream = pTempStream.get();
 	}
 
@@ -649,24 +650,24 @@ void JoinNode::WriteHorizontalJoin( std::istream& i_rInput,
 	mainColumns << GetColumnList( 1, mainHeader, mainKeyIndex, 1, true, mainIncludeColumns );
 	outHeader = mainIncludeColumns;
 
-	std::stringstream stdErr;
+	std::large_stringstream stdErr;
 	int status;
 
 	// step 2: loop through the streams we have to join
-	std::stringstream* pCurrentStream;
-	boost::scoped_ptr< std::stringstream > pNextTempStream;
+	std::large_stringstream* pCurrentStream;
+	boost::scoped_ptr< std::large_stringstream > pNextTempStream;
 	std::stringstream joinCommand;
 	joinCommand << GetSortCommand( mainKeyIndex, i_rWorkingDir );
 	std::vector< StreamConfig >::iterator iter = i_rJoins.begin();
 	for( int streamNum = 2; iter != i_rJoins.end(); ++iter, ++streamNum )
 	{
-		std::stringstream nextStream;
+		std::large_stringstream nextStream;
 		pCurrentStream = &nextStream;
 
 		// if we're dealing with multi-key stream, rewrite it
 		if( multiKey )
 		{
-			pNextTempStream.reset( new std::stringstream() );
+			pNextTempStream.reset( new std::large_stringstream() );
 			pCurrentStream = pNextTempStream.get();
 		}
 

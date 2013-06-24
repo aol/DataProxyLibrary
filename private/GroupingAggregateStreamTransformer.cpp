@@ -654,7 +654,7 @@ boost::shared_ptr< std::istream > GroupingAggregateStreamTransformer::TransformI
 	}
 
 	// execute!
-	std::stringstream standardError;
+	std::large_stringstream standardError;
 	ShellExecutor executor( command.str() );
 	MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.GroupingAggregator.AggregateFields.ExecutingCommand", "Executing command: '" << command.str() << "'" );
 	int status = executor.Run( timeout, *i_pInputStream, *pResult, standardError );

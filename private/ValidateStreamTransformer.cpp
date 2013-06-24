@@ -226,7 +226,7 @@ boost::shared_ptr< std::istream > ValidateStreamTransformer::TransformInput( boo
 	std::string command = GetFormatCommand( inputHeader, globals, headerFields, discardIfRules, modifyIfRules, failIfRules, verbose );
 	
 	// execute!
-	std::stringstream standardError;
+	std::large_stringstream standardError;
 	ShellExecutor executor( command );
 	MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.Validate.ExecutingCommand", "Executing command: '" << command << "'" );
 	int status = executor.Run( timeout, *i_pInputStream, *pRawResult, standardError );

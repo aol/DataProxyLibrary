@@ -13,6 +13,7 @@
 #include "StringUtilities.hpp"
 #include "DataProxyClient.hpp"
 #include "CSVReader.hpp"
+#include "LargeStringStream.hpp"
 #include <boost/algorithm/string/split.hpp>
 
 
@@ -33,7 +34,7 @@ void PropertyDomain::Load( DataProxyClient& i_rDPLClient, const std::string& i_r
 	std::vector< std::string > propertiesToAppend;
 	boost::iter_split ( propertiesToAppend, i_rPropertiesToAppend, boost::first_finder( "," ) );
 	
-	std::stringstream datastream;
+	std::large_stringstream datastream;
  	i_rDPLClient.Load( i_rPropertyNodeName, i_rParameters, datastream );
 
 	CSVReader reader( datastream, ',', true );
