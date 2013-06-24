@@ -30,6 +30,10 @@ private:
  	CPPUNIT_TEST( testValueSourceReplacement );
  	CPPUNIT_TEST( testValueSourceMultiReplacement );
 	CPPUNIT_TEST( testNULLReturnedStream );
+	CPPUNIT_TEST( testTransformerType );
+	CPPUNIT_TEST( testTransformerTypeReturningNull );
+	CPPUNIT_TEST( testTransformerTypeThrowingException );
+	CPPUNIT_TEST( testTransformerTypeAndFunctionNameSet );
 	CPPUNIT_TEST( testLibException );
 	CPPUNIT_TEST_SUITE_END();
 public:
@@ -47,6 +51,10 @@ public:
 	void testValueSourceReplacement();
 	void testValueSourceMultiReplacement();
 	void testNULLReturnedStream();
+	void testTransformerType();
+	void testTransformerTypeReturningNull();
+	void testTransformerTypeThrowingException();
+	void testTransformerTypeAndFunctionNameSet();
 	void testLibException();
 private:
 	boost::scoped_ptr< TempDirectory > m_pTempDir;

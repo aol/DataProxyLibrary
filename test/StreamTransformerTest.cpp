@@ -339,6 +339,98 @@ void StreamTransformerTest::testValueSourceMultiReplacement()
 		".*/ProxyUtilities.cpp:\\d+: The following parameters are referenced, but are not specified in the parameters: runtimeParam2" );
 }
 
+void StreamTransformerTest::testTransformerType()
+{
+	std::stringstream xmlContents;
+	std::vector<xercesc::DOMNode*> nodes;
+
+	xmlContents.str("");
+	xmlContents << "<StreamTransformer type=\"StandardTransformFunction\">"
+				<< "<Parameter name=\"name1\" value=\"value1\" />"
+				<< "</StreamTransformer>";
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "StreamTransformer", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	StreamTransformer transformer( *nodes[0] );
+
+	std::stringstream* pOriginalStream = new std::stringstream();
+	boost::shared_ptr<std::istream> pOriginalStreamAsIstream( pOriginalStream );
+	boost::shared_ptr<std::istream> transformedStream;
+	*pOriginalStream << " String Stream contents. ";
+	std::map< std::string, std::string > parameters;
+
+	parameters["runtimeParam1"] = "runtimeValue1";
+	parameters["runtimeParam2"] = "runtimeValue2";
+
+	transformedStream = transformer.TransformStream( parameters, pOriginalStreamAsIstream );
+	CPPUNIT_ASSERT_EQUAL( std::string("name1 : value1\n String Stream contents. "), StreamToString( transformedStream ) );
+}
+
+void StreamTransformerTest::testTransformerTypeReturningNull()
+{
+	std::stringstream xmlContents;
+	std::vector<xercesc::DOMNode*> nodes;
+
+	xmlContents.str("");
+	xmlContents << "<StreamTransformer type=\"NullTransformFunction\">"
+				<< "<Parameter name=\"name1\" value=\"value1\" />"
+				<< "</StreamTransformer>";
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "StreamTransformer", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	StreamTransformer transformer( *nodes[0] );
+
+	std::stringstream* pOriginalStream = new std::stringstream();
+	boost::shared_ptr<std::istream> pOriginalStreamAsIstream( pOriginalStream );
+	boost::shared_ptr<std::istream> transformedStream;
+	*pOriginalStream << " String Stream contents. ";
+	std::map< std::string, std::string > parameters;
+
+	parameters["runtimeParam1"] = "runtimeValue1";
+	parameters["runtimeParam2"] = "runtimeValue2";
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformStream( parameters, pOriginalStreamAsIstream ), StreamTransformerException, ".*.StreamTransformer.cpp:\\d+: NULL stream returned from transformer type: NullTransformFunction with parameters:" << " name1~value1 after .* milliseconds" );
+}
+
+void StreamTransformerTest::testTransformerTypeThrowingException()
+{
+	std::stringstream xmlContents;
+	std::vector<xercesc::DOMNode*> nodes;
+
+	xmlContents.str("");
+	xmlContents << "<StreamTransformer type=\"ThrowingTransformFunction\">"
+				<< "<Parameter name=\"name1\" value=\"value1\" />"
+				<< "</StreamTransformer>";
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "StreamTransformer", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	StreamTransformer transformer( *nodes[0] );
+
+	std::stringstream* pOriginalStream = new std::stringstream();
+	boost::shared_ptr<std::istream> pOriginalStreamAsIstream( pOriginalStream );
+	boost::shared_ptr<std::istream> transformedStream;
+	*pOriginalStream << " String Stream contents. ";
+	std::map< std::string, std::string > parameters;
+
+	parameters["runtimeParam1"] = "runtimeValue1";
+	parameters["runtimeParam2"] = "runtimeValue2";
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformStream( parameters, pOriginalStreamAsIstream ), StreamTransformerException, ".*.StreamTransformer.cpp:\\d+: Caught exception: an exception while executing transformer type: ThrowingTransformFunction with parameters:" << " name1~value1 after .* milliseconds" );
+}
+
+void StreamTransformerTest::testTransformerTypeAndFunctionNameSet()
+{
+	std::stringstream xmlContents;
+	std::vector<xercesc::DOMNode*> nodes;
+
+	xmlContents.str("");
+	xmlContents << "<StreamTransformer type=\"StandardTransformFunction\" path=\"" << m_LibrarySpec << "\"" << " functionName=\"TransformFunction\">"
+				<< "<Parameter name=\"name1\" value=\"value1\" />"
+				<< "</StreamTransformer>";
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "StreamTransformer", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	boost::scoped_ptr<StreamTransformer> pTransformer;
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pTransformer.reset( new StreamTransformer(*nodes[0]) ), StreamTransformerException, ".*.StreamTransformer.cpp:\\d+: StreamTransformer type attribute must not be set when path and functionName are set" );
+}
+
 void StreamTransformerTest::testNULLReturnedStream()
 {
 	std::stringstream xmlContents;
