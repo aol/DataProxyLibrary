@@ -39,8 +39,6 @@ ln -sfn libDataProxy.so.${MIN_VER} ${LIBDIR}/libDataProxy.so.${MAJ_VER}
 ln -sfn libDataProxy.so.${MAJ_VER} ${LIBDIR}/libDataProxy.so
 ln -sfn libDataProxy.so.3.1.10 ${LIBDIR}/libDataProxy.so.3.1
 ln -sfn libDataProxy.so.3.0.2 ${LIBDIR}/libDataProxy.so.3.0
-for lib in `find ${TOPDIR} -name lib*.so.*`; do ln -sfn $(basename $lib) ${LIBDIR}/$(basename $lib .${VERSION}); done
-mv ${TOPDIR}/lib* ${LIBDIR}
 
 echo "--> change user:group to adlearn:optimization"
 chown -R adlearn:optimization ${TOPDIR}
