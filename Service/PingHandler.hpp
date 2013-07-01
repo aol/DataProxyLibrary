@@ -13,12 +13,15 @@
 #define _PING_HANDLER_
 
 #include "AbstractHandler.hpp"
+#include "MVException.hpp"
 #include <boost/noncopyable.hpp>
 #include <string>
 
 class HTTPRequest;
 class HTTPResponse;
 class DataProxyClient;
+
+MV_MAKEEXCEPTIONCLASS( PingHandlerException, MVException );
 
 class PingHandler : public AbstractHandler
 {

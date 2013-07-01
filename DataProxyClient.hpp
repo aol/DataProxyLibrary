@@ -21,7 +21,7 @@
 #include <map>
 #include <vector>
 
-#ifdef BUILD_LIBDPL
+#ifdef LIBDPL_BUILD
 #define DLL_DPL_PUBLIC DLL_PUBLIC
 #else
 #define DLL_DPL_PUBLIC
