@@ -21,6 +21,12 @@
 #include <map>
 #include <vector>
 
+#ifdef BUILD_LIBDPL
+#define DLL_DPL_PUBLIC DLL_PUBLIC
+#else
+#define DLL_DPL_PUBLIC
+#endif
+
 MV_MAKEEXCEPTIONCLASS( DataProxyClientException, MVException );
 MV_MAKEEXCEPTIONCLASS( BadStreamException, DataProxyClientException );
 MV_MAKEEXCEPTIONCLASS( PartialCommitException, DataProxyClientException );
@@ -32,7 +38,7 @@ class AbstractNode;
 namespace xercesc_2_7 { class DOMNode; }
 namespace xercesc = xercesc_2_7;
 
-class DataProxyClient : public boost::noncopyable
+class DLL_DPL_PUBLIC DataProxyClient : public boost::noncopyable
 {
 public:
 	DataProxyClient( bool i_DoNotInitializeXerces = false );
