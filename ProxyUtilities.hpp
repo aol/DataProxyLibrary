@@ -11,6 +11,7 @@
 #ifndef _PROXY_UTILITIES_HPP_
 #define _PROXY_UTILITIES_HPP_
 
+#include "DPLCommon.hpp"
 #include "MVException.hpp"
 #include <map>
 #include <set>
@@ -26,8 +27,10 @@ class DatabaseConnectionManager;
 
 namespace ProxyUtilities
 {
-	void FillMap( const std::string& i_rInput, std::map< std::string, std::string >& o_rParameters );
-	std::string ToString( const std::map< std::string, std::string >& i_rParameters );
+	// the following functions are declared public so they're available to dplShell & dplService
+	void 		DLL_DPL_PUBLIC FillMap( const std::string& i_rInput, std::map< std::string, std::string >& o_rParameters );
+	std::string DLL_DPL_PUBLIC ToString( const std::map< std::string, std::string >& i_rParameters );
+	int 		DLL_DPL_PUBLIC GetMode( const std::string& i_rInput );
 
 	void ValidateCharacterSanity( const std::string& i_rValue, const std::string& i_rType );
 	void ValidateParameterSanity( const std::map< std::string, std::string >& i_rParameters );
@@ -47,8 +50,6 @@ namespace ProxyUtilities
 							   std::vector< std::string >* o_pBindColumns = NULL );
 
 	std::string GetVariableSubstitutedString( const std::string& i_rInput, const std::map< std::string, std::string >& i_rParameters );
-
-	int GetMode( const std::string& i_rInput );
 };
 
 #endif //_PROXY_UTILITIES_HPP_

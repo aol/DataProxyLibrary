@@ -12,6 +12,7 @@
 #define _DATA_PROXY_CLIENT_HPP_
 
 #include "MVCommon.hpp"
+#include "DPLCommon.hpp"
 #include "MVException.hpp"
 #include "DatabaseConnectionManager.hpp"
 #include "NodeFactory.hpp"
@@ -20,12 +21,6 @@
 #include <boost/thread/thread.hpp>
 #include <map>
 #include <vector>
-
-#ifdef LIBDPL_BUILD
-#define DLL_DPL_PUBLIC DLL_PUBLIC
-#else
-#define DLL_DPL_PUBLIC
-#endif
 
 MV_MAKEEXCEPTIONCLASS( DataProxyClientException, MVException );
 MV_MAKEEXCEPTIONCLASS( BadStreamException, DataProxyClientException );

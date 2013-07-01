@@ -22,11 +22,11 @@ MODULES=\
 	lib/cpp/Logger \
 	lib/cpp/Monitoring \
 	lib/cpp/DataProxy \
+	lib/cpp/Utility \
+	lib/cpp/Service \
 
 INCMODULES=\
-	lib/cpp/Utility \
 	lib/cpp/GDP \
-	lib/cpp/Service \
 	lib/cpp/Database \
 
 TESTMODULES=\
@@ -55,7 +55,7 @@ LIBLOC=\
 	$(TESTMODULES:%=-L$(ROOTDIR)/%) \
 
 # Libraries
-LIBS =	-lLogger -lMonitoring -llog4cxx -lcurl -lDataProxy\
+LIBS =	-lDataProxy -lService -lUtility -lLogger -lMonitoring -llog4cxx -lcurl \
 		-lboost_system -lboost_filesystem -lboost_program_options -lboost_regex -lclntsh -lodbc -lxerces-c -lboost_thread -lcrypto
 TESTLIBS = -lTestHelpers -lcppunit
 

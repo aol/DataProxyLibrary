@@ -10,6 +10,7 @@
 //
 
 #include "PingHandler.hpp"
+#include "ProxyUtilities.hpp"
 #include "DataProxyClient.hpp"
 #include "MVLogger.hpp"
 #include "HTTPRequest.hpp"
@@ -21,36 +22,6 @@ namespace
 {
 	const std::string MODE( "mode" );
 	const std::string MODE_DEFAULT( "x" );
-
-	int GetMode( const std::string& i_rInput )
-	{
-		if( i_rInput == "x" )
-		{
-			return 0;
-		}
-
-		int mode( 0 );
-		for( size_t i=0; i<i_rInput.length(); ++i )
-		{
-			switch( i_rInput[i] )
-			{
-			case 'r':
-				mode |= DPL::READ;
-				break;
-			case 'w':
-				mode |= DPL::WRITE;
-				break;
-			case 'd':
-				mode |= DPL::DELETE;
-				break;
-			default:
-				MV_THROW( PingHandlerException, "Unrecognized mode character: " << i_rInput[i] << " at position " << i << " in string: "
-					<< i_rInput << ". Legal values are: r,w,d for read, write, delete, respectively. Special string 'x' may be used to signify the null-mode 0" );
-				break;
-			}
-		}
-		return mode;
-	}
 }
 
 PingHandler::PingHandler( DataProxyClient& i_rDataProxyClient, const std::string& i_rDplConfig )
@@ -74,7 +45,7 @@ void PingHandler::Handle( HTTPRequest& i_rRequest, HTTPResponse& o_rResponse )
 
 	try
 	{
-		mode = GetMode( i_rRequest.GetQueryParam( MODE, MODE_DEFAULT ) );
+		mode = ProxyUtilities::GetMode( i_rRequest.GetQueryParam( MODE, MODE_DEFAULT ) );
 		AbstractHandler::GetDataProxyClient().Ping( name, mode );
 	}
 	catch( const std::exception& i_rEx )
