@@ -196,11 +196,11 @@ test_coverage: $(COVERAGEDIR)
 
 # if necessary, build libraries.
 extlibs:
-	$(MODULES:%=cd $(ROOTDIR)/%;make ${SUBTARGET};cd -;)
+	$(MODULES:%=(cd $(ROOTDIR)/% && $(MAKE) ${SUBTARGET}) && ) true
 
 testextlibs: extlibs
-	$(TESTMODULES:%=cd $(ROOTDIR)/%;make ${SUBTARGET};cd -;)
-	$(MOCKMODULES:%=cd $(ROOTDIR)/%;make mock;cd -;)
+	$(TESTMODULES:%=(cd $(ROOTDIR)/% && $(MAKE) ${SUBTARGET}) && ) true
+	$(MOCKMODULES:%=(cd $(ROOTDIR)/% && $(MAKE) mock) && ) true
 
 # Create links to the target dir
 $(PRIMARY_TARGET): % : $(TARGETDIR)/% $(TARGETDIR)
