@@ -38,7 +38,6 @@ ln -sfn libDataProxy.so.${VERSION} ${LIBDIR}/libDataProxy.so.${MIN_VER}
 ln -sfn libDataProxy.so.${MIN_VER} ${LIBDIR}/libDataProxy.so.${MAJ_VER}
 ln -sfn libDataProxy.so.${MAJ_VER} ${LIBDIR}/libDataProxy.so
 ln -sfn libDataProxy.so.3.1.10 ${LIBDIR}/libDataProxy.so.3.1
-ln -sfn libDataProxy.so.3.0.2 ${LIBDIR}/libDataProxy.so.3.0
 
 echo "--> change user:group to adlearn:optimization"
 chown -R adlearn:optimization ${TOPDIR}
