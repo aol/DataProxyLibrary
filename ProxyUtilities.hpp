@@ -11,7 +11,7 @@
 #ifndef _PROXY_UTILITIES_HPP_
 #define _PROXY_UTILITIES_HPP_
 
-#include "DPLCommon.hpp"
+#include "DPLVisibility.hpp"
 #include "MVException.hpp"
 #include <map>
 #include <set>

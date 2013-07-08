@@ -12,7 +12,7 @@
 #define _DATA_PROXY_CLIENT_HPP_
 
 #include "MVCommon.hpp"
-#include "DPLCommon.hpp"
+#include "DPLVisibility.hpp"
 #include "MVException.hpp"
 #include "DatabaseConnectionManager.hpp"
 #include "NodeFactory.hpp"

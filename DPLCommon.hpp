@@ -14,12 +14,6 @@
 #include "MVException.hpp"
 #include <string>
 
-#ifdef LIBDPL_BUILD
-#define DLL_DPL_PUBLIC DLL_PUBLIC
-#else
-#define DLL_DPL_PUBLIC
-#endif
-
 // common exceptions
 MV_MAKEEXCEPTIONCLASS( NotSupportedException, MVException );
 
