@@ -8,7 +8,7 @@
 #include <string>
 #include <map>
 #include <fstream>
-#include <boost/iostrems/copy.hpp>
+#include <boost/iostreams/copy.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/scoped_ptr.hpp>
 
