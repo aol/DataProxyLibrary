@@ -24,9 +24,6 @@
 #include <xercesc/sax/HandlerBase.hpp>
 #include <xercesc/framework/LocalFileFormatTarget.hpp>
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/thread/shared_mutex.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/assign.hpp>
 #include <sstream>
 
 namespace
@@ -45,7 +42,7 @@ boost::scoped_ptr< ITransformFunctionDomain > StreamTransformer::s_pTransformFun
 StreamTransformer::StreamTransformer( const xercesc::DOMNode& i_rNode )
 	: m_Parameters(),
 	  m_Description(),
-	  m_pSharedLibraryFunction( )
+	  m_pTransformFunction( )
 {
 
 	// try to validate the node attribute of StreamTransformer  
@@ -73,14 +70,14 @@ StreamTransformer::StreamTransformer( const xercesc::DOMNode& i_rNode )
 
 		std::string transformerType = XMLUtilities::XMLChToString(pTypeAttribute->getValue());
 		m_Description = std::string("transformer type: ") + transformerType;
-		m_pSharedLibraryFunction = s_pTransformFunctionDomain->GetFunction( transformerType );
+		m_pTransformFunction = s_pTransformFunctionDomain->GetFunction( transformerType );
 	}
 	else
 	{
-		std::string pathOfSharedLibrary = XMLUtilities::GetAttributeValue( &i_rNode, PATH_ATTRIBUTE );
+		std::string path = XMLUtilities::GetAttributeValue( &i_rNode, PATH_ATTRIBUTE );
 		std::string functionName = XMLUtilities::GetAttributeValue( &i_rNode, FUNCTION_NAME_ATTRIBUTE );
-		m_Description = std::string("library: ") + pathOfSharedLibrary + std::string(" function: ") + functionName;
-		m_pSharedLibraryFunction = s_pTransformFunctionDomain->GetFunction( pathOfSharedLibrary, functionName );
+		m_Description = std::string("deprecated attributes library: ") + path + std::string(" and function: ") + functionName;
+		m_pTransformFunction = s_pTransformFunctionDomain->GetFunction( path, functionName );
 	}
 
 	allowedAttributes.clear();
@@ -137,7 +134,7 @@ boost::shared_ptr< std::istream > StreamTransformer::TransformStream( const std:
 
 	try
 	{	
-		pStream = m_pSharedLibraryFunction->TransformInput( i_pStream, parameters );
+		pStream = m_pTransformFunction->TransformInput( i_pStream, parameters );
 	}
 	catch( const std::exception& e )
 	{
@@ -158,7 +155,7 @@ boost::shared_ptr< std::istream > StreamTransformer::TransformStream( const std:
 	return pStream;
 }
 
-void StreamTransformer::SetTransformFunctionDomain( boost::scoped_ptr< ITransformFunctionDomain >& i_pSwapDomain )
+void StreamTransformer::SwapTransformFunctionDomain( boost::scoped_ptr< ITransformFunctionDomain >& i_pSwapDomain )
 {
 	s_pTransformFunctionDomain.swap( i_pSwapDomain );
 }

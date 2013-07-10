@@ -17,23 +17,12 @@
 #include "TransformerTestHelpers.hpp"
 #include "MockTransformFunctionDomain.hpp"
 #include "StreamTransformer.hpp"
+#include "StringUtilities.hpp"
 #include <fstream>
 #include <boost/regex.hpp>
 
 CPPUNIT_TEST_SUITE_REGISTRATION( TransformerManagerTest );
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( TransformerManagerTest, "TransformerManagerTest");
-
-namespace
-{
-	std::string StreamToString(boost::shared_ptr<std::istream> i_pStream)
-	{
-		std::stringstream result;
-
-		result << i_pStream->rdbuf();
-
-		return result.str();
-	}
-}
 
 TransformerManagerTest::TransformerManagerTest()
 	: m_pTempDir(NULL),
@@ -51,14 +40,14 @@ void TransformerManagerTest::setUp()
 	XMLPlatformUtils::Initialize();
 	m_pTempDir.reset( new TempDirectory() );
 	TransformerTestHelpers::SetupLibraryFile( m_pTempDir->GetDirectoryName(), m_LibrarySpec );
-	StreamTransformer::SetTransformFunctionDomain( m_pMockTransformFunctionDomain );
+	StreamTransformer::SwapTransformFunctionDomain( m_pMockTransformFunctionDomain );
 }
 
 void TransformerManagerTest::tearDown()
 {
-	//XMLPlatformUtils::Terminate();
+	//Don't call XMLPlatformUtils::Terminate();
 	m_pTempDir.reset( NULL );
-	StreamTransformer::SetTransformFunctionDomain( m_pMockTransformFunctionDomain );
+	StreamTransformer::SwapTransformFunctionDomain( m_pMockTransformFunctionDomain );
 }
 
 void TransformerManagerTest::testGarbageNode()
@@ -139,11 +128,11 @@ void TransformerManagerTest::testTransformStream()
 	boost::shared_ptr< std::istream > pInputStreamAsIstream( pInputStream );
 	*pInputStream << "DATA FROM TEST JOB";
 
-	CPPUNIT_ASSERT_EQUAL( std::string("name3 : value3\nname2 : value2\nname1 : value1\nDATA FROM TEST JOB"), StreamToString( transformerManager.TransformStream( parameters1, pInputStreamAsIstream ) ) );
+	CPPUNIT_ASSERT_EQUAL( std::string("name3 : value3\nname2 : value2\nname1 : value1\nDATA FROM TEST JOB"), StreamToString( *(transformerManager.TransformStream( parameters1, pInputStreamAsIstream )) ) );
 		
 	// test if there is input stream is empty
     pInputStream->str("");
-	CPPUNIT_ASSERT_EQUAL( std::string("name3 : value3\nname2 : value2\nname1 : value1\n"), StreamToString( transformerManager.TransformStream( parameters1, pInputStreamAsIstream ) ) );
+	CPPUNIT_ASSERT_EQUAL( std::string("name3 : value3\nname2 : value2\nname1 : value1\n"), StreamToString( *transformerManager.TransformStream( parameters1, pInputStreamAsIstream ) ) );
 		 
 	// test if there is no streamtransformer
 	xmlContents.str("");
@@ -159,7 +148,7 @@ void TransformerManagerTest::testTransformStream()
 	boost::shared_ptr< std::istream > pInputStream1AsIstream( pInputStream1 );
 	*pInputStream1 << "DATA FROM TEST JOB";
 
-	CPPUNIT_ASSERT_EQUAL( std::string("DATA FROM TEST JOB"), StreamToString( transformerManager1.TransformStream( parameters1, pInputStream1AsIstream ) ) );
+	CPPUNIT_ASSERT_EQUAL( std::string("DATA FROM TEST JOB"), StreamToString( *transformerManager1.TransformStream( parameters1, pInputStream1AsIstream ) ) );
 	
 }
 

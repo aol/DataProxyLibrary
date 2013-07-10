@@ -39,7 +39,7 @@ namespace
 
 TransformFunctionDomain::TransformFunctionDomain()
  :	ITransformFunctionDomain(),
- 	m_FunctionsByPathAndName(),
+ 	m_TypeByPathAndName(),
 	m_FunctionsByType()
 {
 	static const std::pair< std::string, std::string > AGGREGATE_STREAM_TRANSFORMER_KEY_PAIR( "AggregateStreamTransformer", "AggregateFields" );
@@ -85,20 +85,20 @@ TransformFunctionDomain::TransformFunctionDomain()
 		( SHELL_STREAM_TRANSFORMER_KEY, SharedTransformFunction(new ShellStreamTransformer()) )
 		( VALIDATE_STREAM_TRANSFORMER_KEY, SharedTransformFunction(new ValidateStreamTransformer()) );
 
-	m_FunctionsByPathAndName = boost::assign::map_list_of
-		( AGGREGATE_STREAM_TRANSFORMER_KEY_PAIR, m_FunctionsByType[AGGREGATE_STREAM_TRANSFORMER_KEY] )
-		( ATOMIC_JSON_TO_CSV_STREAM_TRANSFORMER_KEY_PAIR, m_FunctionsByType[ATOMIC_JSON_TO_CSV_STREAM_TRANSFORMER_KEY] )
-		( BLACKOUT_STREAM_TRANSFORMER_KEY_PAIR, m_FunctionsByType[BLACKOUT_STREAM_TRANSFORMER_KEY] )
-		( CAMPAIGN_REFERENCE_GENERATOR_STREAM_TRANSFORMER_KEY_PAIR, m_FunctionsByType[CAMPAIGN_REFERENCE_GENERATOR_STREAM_TRANSFORMER_KEY] )
-		( CAMPAIGN_REVENUE_VECTOR_STREAM_TRANSFORMER_KEY_PAIR, m_FunctionsByType[CAMPAIGN_REVENUE_VECTOR_STREAM_TRANSFORMER_KEY] )
-		( COLUMN_APPENDER_STREAM_TRANSFORMER_KEY_PAIR, m_FunctionsByType[COLUMN_APPENDER_STREAM_TRANSFORMER_KEY] )
-		( COLUMN_FORMAT_STREAM_TRANSFORMER_KEY_PAIR, m_FunctionsByType[COLUMN_FORMAT_STREAM_TRANSFORMER_KEY] )
-		( EQUIVALENCE_CLASS_STREAM_TRANSFORMER_KEY_PAIR, m_FunctionsByType[EQUIVALENCE_CLASS_STREAM_TRANSFORMER_KEY] )
-		( GROUPING_AGGREGATE_STREAM_TRANSFORMER_KEY_PAIR, m_FunctionsByType[GROUPING_AGGREGATE_STREAM_TRANSFORMER_KEY] )
-		( ADD_SELF_DESCRIBING_STREAM_TRANSFORMER_KEY_PAIR, m_FunctionsByType[ADD_SELF_DESCRIBING_STREAM_TRANSFORMER_KEY] )
-		( REMOVE_SELF_DESCRIBING_STREAM_TRANSFORMER_KEY_PAIR, m_FunctionsByType[REMOVE_SELF_DESCRIBING_STREAM_TRANSFORMER_KEY] )
-		( SHELL_STREAM_TRANSFORMER_KEY_PAIR, m_FunctionsByType[SHELL_STREAM_TRANSFORMER_KEY] )
-		( VALIDATE_STREAM_TRANSFORMER_KEY_PAIR, m_FunctionsByType[VALIDATE_STREAM_TRANSFORMER_KEY] );
+	m_TypeByPathAndName = boost::assign::map_list_of
+		( AGGREGATE_STREAM_TRANSFORMER_KEY_PAIR, AGGREGATE_STREAM_TRANSFORMER_KEY )
+		( ATOMIC_JSON_TO_CSV_STREAM_TRANSFORMER_KEY_PAIR, ATOMIC_JSON_TO_CSV_STREAM_TRANSFORMER_KEY )
+		( BLACKOUT_STREAM_TRANSFORMER_KEY_PAIR, BLACKOUT_STREAM_TRANSFORMER_KEY )
+		( CAMPAIGN_REFERENCE_GENERATOR_STREAM_TRANSFORMER_KEY_PAIR, CAMPAIGN_REFERENCE_GENERATOR_STREAM_TRANSFORMER_KEY )
+		( CAMPAIGN_REVENUE_VECTOR_STREAM_TRANSFORMER_KEY_PAIR, CAMPAIGN_REVENUE_VECTOR_STREAM_TRANSFORMER_KEY )
+		( COLUMN_APPENDER_STREAM_TRANSFORMER_KEY_PAIR, COLUMN_APPENDER_STREAM_TRANSFORMER_KEY )
+		( COLUMN_FORMAT_STREAM_TRANSFORMER_KEY_PAIR, COLUMN_FORMAT_STREAM_TRANSFORMER_KEY )
+		( EQUIVALENCE_CLASS_STREAM_TRANSFORMER_KEY_PAIR, EQUIVALENCE_CLASS_STREAM_TRANSFORMER_KEY )
+		( GROUPING_AGGREGATE_STREAM_TRANSFORMER_KEY_PAIR, GROUPING_AGGREGATE_STREAM_TRANSFORMER_KEY )
+		( ADD_SELF_DESCRIBING_STREAM_TRANSFORMER_KEY_PAIR, ADD_SELF_DESCRIBING_STREAM_TRANSFORMER_KEY )
+		( REMOVE_SELF_DESCRIBING_STREAM_TRANSFORMER_KEY_PAIR, REMOVE_SELF_DESCRIBING_STREAM_TRANSFORMER_KEY )
+		( SHELL_STREAM_TRANSFORMER_KEY_PAIR, SHELL_STREAM_TRANSFORMER_KEY )
+		( VALIDATE_STREAM_TRANSFORMER_KEY_PAIR, VALIDATE_STREAM_TRANSFORMER_KEY );
 }
 
 TransformFunctionDomain::~TransformFunctionDomain()
@@ -128,15 +128,20 @@ boost::shared_ptr<ITransformFunction> TransformFunctionDomain::GetFunction( cons
 	std::string libraryName(libraryMatch[1].first, libraryMatch[1].second);
 
 	BackwardsCompatableTransformLookup::iterator itr =
-		m_FunctionsByPathAndName.find(std::pair< std::string, std::string >(libraryName, i_rFunctionName));
+		m_TypeByPathAndName.find(std::pair< std::string, std::string >(libraryName, i_rFunctionName));
 
-	if ( itr == m_FunctionsByPathAndName.end() )
+	if ( itr == m_TypeByPathAndName.end() )
 	{
 		MV_THROW( TransformFunctionDomainException, "Could not deduce stream transformation function from input path " << i_rPath
 			<< " and name " << i_rFunctionName );
 	}
 
-	return itr->second;
+	MVLOGGER( "root.lib.DataProxy.TransformFunctionDomain.GetFunction.BackwardsCompatabilityMode",
+		"Deprecated stream transformation node attributes with path " << i_rPath << " and functionName " << i_rFunctionName
+		<< " mapped type stream transformation type " << itr->second << ".  You should change your DPL configuration file"
+		<< " at the earliest opportunity." );
+
+	return GetFunction( itr->second );
 }
 
 boost::shared_ptr<ITransformFunction> TransformFunctionDomain::GetFunction( const std::string& i_rType )

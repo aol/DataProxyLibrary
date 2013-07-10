@@ -13,24 +13,13 @@
 #include "AwkUtilities.hpp"
 #include "TransformerUtilities.hpp"
 #include "AssertThrowWithMessage.hpp"
+#include "StringUtilities.hpp"
 #include <sstream>
 #include <boost/lexical_cast.hpp>
 #include <boost/shared_ptr.hpp>
 
 CPPUNIT_TEST_SUITE_REGISTRATION( AggregateStreamTransformerTest );
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( AggregateStreamTransformerTest, "AggregateStreamTransformerTest" );
-
-namespace
-{
-	std::string StreamToString( boost::shared_ptr< std::istream > i_pInput )
-	{
-		std::stringstream result;
-
-		result << i_pInput->rdbuf();
-
-		return result.str();
-	}
-}
 
 AggregateStreamTransformerTest::AggregateStreamTransformerTest()
 {
@@ -344,7 +333,7 @@ void AggregateStreamTransformerTest::testTransformTrivialStream()
 	
 	CPPUNIT_ASSERT_NO_THROW( pResult = transformer.TransformInput( pInputStreamAsIstream, parameters ) );
 	CPPUNIT_ASSERT( pResult.get() != NULL );
-	CPPUNIT_ASSERT_EQUAL( expected.str(), StreamToString( pResult ) );
+	CPPUNIT_ASSERT_EQUAL( expected.str(), StreamToString( *pResult ) );
 }
 
 void AggregateStreamTransformerTest::testAggregateFields()
@@ -388,7 +377,7 @@ void AggregateStreamTransformerTest::testAggregateFields()
 	
 	CPPUNIT_ASSERT_NO_THROW( pResult = transformer.TransformInput( pInputStreamAsIstream, parameters ) );
 	CPPUNIT_ASSERT( pResult != NULL );
-	CPPUNIT_ASSERT_EQUAL( expected.str(), StreamToString( pResult ) );
+	CPPUNIT_ASSERT_EQUAL( expected.str(), StreamToString( *pResult ) );
 }
 
 void AggregateStreamTransformerTest::testAggregateFieldsNoColumnManipulation()
@@ -433,7 +422,7 @@ void AggregateStreamTransformerTest::testAggregateFieldsNoColumnManipulation()
 	
 	CPPUNIT_ASSERT_NO_THROW( pResult = transformer.TransformInput( pInputStreamAsIstream, parameters ) );
 	CPPUNIT_ASSERT( pResult.get() != NULL );
-	CPPUNIT_ASSERT_EQUAL( expected.str(), StreamToString( pResult ) );
+	CPPUNIT_ASSERT_EQUAL( expected.str(), StreamToString( *pResult ) );
 }
 
 void AggregateStreamTransformerTest::testAggregateFieldsSortOptimization()
@@ -467,7 +456,7 @@ void AggregateStreamTransformerTest::testAggregateFieldsSortOptimization()
 	
 	CPPUNIT_ASSERT_NO_THROW( pResult = transformer.TransformInput( pInputStreamAsIstream, parameters ) );
 	CPPUNIT_ASSERT( pResult != NULL );
-	CPPUNIT_ASSERT_EQUAL( expected.str(), StreamToString( pResult ) );
+	CPPUNIT_ASSERT_EQUAL( expected.str(), StreamToString( *pResult ) );
 
 	pInputStream->clear();
 	pInputStream->seekg( 0 );
@@ -482,5 +471,5 @@ void AggregateStreamTransformerTest::testAggregateFieldsSortOptimization()
 			 << "2," << 24+25 << std::endl;
 	CPPUNIT_ASSERT_NO_THROW( pResult = transformer.TransformInput( pInputStreamAsIstream, parameters ) );
 	CPPUNIT_ASSERT( pResult != NULL );
-	CPPUNIT_ASSERT_EQUAL( expected.str(), StreamToString( pResult ) );
+	CPPUNIT_ASSERT_EQUAL( expected.str(), StreamToString( *pResult ) );
 }

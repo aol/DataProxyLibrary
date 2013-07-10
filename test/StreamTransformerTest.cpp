@@ -15,6 +15,7 @@
 #include "ProxyTestHelpers.hpp"
 #include "AssertThrowWithMessage.hpp"
 #include "StreamTransformer.hpp"
+#include "StringUtilities.hpp"
 #include "MockTransformFunctionDomain.hpp"
 #include <fstream>
 #include <boost/regex.hpp>
@@ -22,18 +23,6 @@
 
 CPPUNIT_TEST_SUITE_REGISTRATION( StreamTransformerTest );
 CPPUNIT_TEST_SUITE_NAMED_REGISTRATION( StreamTransformerTest, "StreamTransformerTest" );
-
-namespace
-{
-	std::string StreamToString( boost::shared_ptr< std::istream > i_pStream )
-	{
-		std::stringstream result;
-
-		result << i_pStream->rdbuf();
-
-		return result.str();
-	}
-}
 
 StreamTransformerTest::StreamTransformerTest()
  :	m_pTempDir(NULL),
@@ -51,7 +40,7 @@ void StreamTransformerTest::setUp()
 	XMLPlatformUtils::Initialize();
 	m_pTempDir.reset( new TempDirectory() );
 	// set up the mock transforms
-	StreamTransformer::SetTransformFunctionDomain( m_pMockTransformFunctionDomain );
+	StreamTransformer::SwapTransformFunctionDomain( m_pMockTransformFunctionDomain );
 	TransformerTestHelpers::SetupLibraryFile( m_pTempDir->GetDirectoryName(), m_LibrarySpec );
 }
 
@@ -60,7 +49,7 @@ void StreamTransformerTest::tearDown()
 	//XMLPlatformUtils::Terminate();
 	m_pTempDir.reset(NULL);
 	// reset the prior transforms
-	StreamTransformer::SetTransformFunctionDomain( m_pMockTransformFunctionDomain );
+	StreamTransformer::SwapTransformFunctionDomain( m_pMockTransformFunctionDomain );
 }
 
 void StreamTransformerTest::testGarbageNode()
@@ -183,9 +172,9 @@ void StreamTransformerTest::testStreamContent()
 	parameters["runtimeParam1"] = "runtimeValue1"; 
 	parameters["runtimeParam2"] = "runtimeValue2";
 	
-	transformedStream = transformer.TransformStream( parameters, pOriginalStreamAsIstream );
+	CPPUNIT_ASSERT_NO_THROW( transformedStream = transformer.TransformStream( parameters, pOriginalStreamAsIstream ) );
 	CPPUNIT_ASSERT( NULL != transformedStream.get() );
-	CPPUNIT_ASSERT_EQUAL( std::string("name1 : value1\n String Stream contents. "), StreamToString( transformedStream ) );
+	CPPUNIT_ASSERT_EQUAL( std::string("name1 : value1\n String Stream contents. "), StreamToString( *transformedStream ) );
 }
 
 void StreamTransformerTest::testValueSourceNotFound()
@@ -238,7 +227,7 @@ void StreamTransformerTest::testValueSourceSetup()
 	parameters["runtimeParam2"] = "runtimeValue2";
 
 	transformedStream = transformer.TransformStream( parameters, pOriginalStreamAsIstream );
-	CPPUNIT_ASSERT_EQUAL( std::string("name1 : value1\n String Stream contents. "), StreamToString( transformedStream ) );
+	CPPUNIT_ASSERT_EQUAL( std::string("name1 : value1\n String Stream contents. "), StreamToString( *transformedStream ) );
 }
 
 
@@ -266,7 +255,7 @@ void StreamTransformerTest::testValueSourceReplacement()
 	parameters["runtimeParam2"] = "runtimeValue2";
 
 	transformedStream = transformer.TransformStream( parameters, pOriginalStreamAsIstream );
-	CPPUNIT_ASSERT_EQUAL( std::string("name1 : value1runtimeValue1runtimeValue1\n String Stream contents. "), StreamToString( transformedStream ) );
+	CPPUNIT_ASSERT_EQUAL( std::string("name1 : value1runtimeValue1runtimeValue1\n String Stream contents. "), StreamToString( *transformedStream ) );
 	
 	// try another more complicated case for replacement
 	xmlContents.str("");
@@ -289,7 +278,7 @@ void StreamTransformerTest::testValueSourceReplacement()
 	parameters1["runtimeParam2"] = "runtimeValue2";
 
 	transformedStream1 = transformer1.TransformStream( parameters1, pOriginalStream1AsIstream );
-	CPPUNIT_ASSERT_EQUAL( std::string("name1 : value1runtimeValue1runtimeValue1\nname2 : runtimeValue2another\nname3 : runtimeValue1another\n String Stream contents. "), StreamToString( transformedStream1 ) );
+	CPPUNIT_ASSERT_EQUAL( std::string("name1 : value1runtimeValue1runtimeValue1\nname2 : runtimeValue2another\nname3 : runtimeValue1another\n String Stream contents. "), StreamToString( *transformedStream1 ) );
 
 }
 
@@ -317,7 +306,7 @@ void StreamTransformerTest::testValueSourceMultiReplacement()
 	parameters["runtimeParam2"] = "runtimeValue2";
 
 	transformedStream = transformer.TransformStream( parameters, pOriginalStreamAsIstream );
-	CPPUNIT_ASSERT_EQUAL( std::string("name1 : staticValue0;runtimeValue1;runtimeValue2\n String Stream contents. "), StreamToString( transformedStream ) );
+	CPPUNIT_ASSERT_EQUAL( std::string("name1 : staticValue0;runtimeValue1;runtimeValue2\n String Stream contents. "), StreamToString( *transformedStream ) );
 
 	// test if valuesource could be replaced by runtime parameter
 	xmlContents.str("");
@@ -362,7 +351,7 @@ void StreamTransformerTest::testTransformerType()
 	parameters["runtimeParam2"] = "runtimeValue2";
 
 	transformedStream = transformer.TransformStream( parameters, pOriginalStreamAsIstream );
-	CPPUNIT_ASSERT_EQUAL( std::string("name1 : value1\n String Stream contents. "), StreamToString( transformedStream ) );
+	CPPUNIT_ASSERT_EQUAL( std::string("name1 : value1\n String Stream contents. "), StreamToString( *transformedStream ) );
 }
 
 void StreamTransformerTest::testTransformerTypeReturningNull()
@@ -454,7 +443,7 @@ void StreamTransformerTest::testNULLReturnedStream()
 	parameters["runtimeParam2"] = "runtimeValue2";
 
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformStream( parameters, pOriginalStreamAsIstream ), StreamTransformerException, ".*.StreamTransformer.cpp:\\d+: NULL stream returned from library: " << m_pTempDir->GetDirectoryName() + "/testTransformer.so" << " function: TransformFunction_null" << " with parameters:" << " name1~value1 after .* milliseconds" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformStream( parameters, pOriginalStreamAsIstream ), StreamTransformerException, ".*.StreamTransformer.cpp:\\d+: NULL stream returned from deprecated attributes library: " << m_pTempDir->GetDirectoryName() + "/testTransformer.so" << " and function: TransformFunction_null" << " with parameters:" << " name1~value1 after .* milliseconds" );
 
 }
 
@@ -480,7 +469,7 @@ void StreamTransformerTest::testLibException()
 	parameters["runtimeParam1"] = "runtimeValue1";
 	parameters["runtimeParam2"] = "runtimeValue2";
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformStream( parameters, pOriginalStreamAsIstream ), StreamTransformerException, ".*.StreamTransformer.cpp:\\d+: Caught exception: an exception while executing library: " << m_pTempDir->GetDirectoryName() + "/testTransformer.so" << " function: TransformFunction_exception" << " with parameters:" << " name1~value1 after .* milliseconds" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformStream( parameters, pOriginalStreamAsIstream ), StreamTransformerException, ".*.StreamTransformer.cpp:\\d+: Caught exception: an exception while executing deprecated attributes library: " << m_pTempDir->GetDirectoryName() + "/testTransformer.so" << " and function: TransformFunction_exception" << " with parameters:" << " name1~value1 after .* milliseconds" );
 
 }
 

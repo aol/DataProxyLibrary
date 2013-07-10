@@ -39,7 +39,7 @@ public:
 	virtual boost::shared_ptr< std::istream > TransformStream( const std::map< std::string, std::string >& i_rParameters,
 																boost::shared_ptr< std::istream > i_pStream ) const;
 
-	static void SetTransformFunctionDomain( boost::scoped_ptr< ITransformFunctionDomain >& i_pSwapDomain );
+	static void SwapTransformFunctionDomain( boost::scoped_ptr< ITransformFunctionDomain >& i_pSwapDomain );
 
 private:
 	void EvaluateParameters(const std::map< std::string, std::string >& i_rParameters, std::map< std::string, std::string >& o_rParameters) const;
@@ -67,7 +67,7 @@ private:
 
 	TransformerParameterContainer m_Parameters;
 	std::string m_Description;
-	boost::shared_ptr<ITransformFunction> m_pSharedLibraryFunction;
+	boost::shared_ptr<ITransformFunction> m_pTransformFunction;
 
 	static boost::scoped_ptr< ITransformFunctionDomain > s_pTransformFunctionDomain;
 };

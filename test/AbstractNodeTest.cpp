@@ -51,14 +51,14 @@ void AbstractNodeTest::setUp()
 {
 	XMLPlatformUtils::Initialize();
 	m_pTempDir.reset( new TempDirectory() );
-	StreamTransformer::SetTransformFunctionDomain( m_pMockTransformFunctionDomain );
+	StreamTransformer::SwapTransformFunctionDomain( m_pMockTransformFunctionDomain );
 }
 
 void AbstractNodeTest::tearDown()
 {
 	::system( (std::string("chmod 777 ") + m_pTempDir->GetDirectoryName() + "/* >/dev/null 2>&1" ).c_str() );
 	m_pTempDir.reset( NULL );
-	StreamTransformer::SetTransformFunctionDomain( m_pMockTransformFunctionDomain );
+	StreamTransformer::SwapTransformFunctionDomain( m_pMockTransformFunctionDomain );
 	//XMLPlatformUtils::Terminate();
 }
 

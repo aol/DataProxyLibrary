@@ -30,10 +30,10 @@ public:
 	virtual boost::shared_ptr<ITransformFunction> GetFunction( const std::string& i_rType );
 
 private:
-	typedef std::map< std::pair< std::string, std::string >, boost::shared_ptr<ITransformFunction> > BackwardsCompatableTransformLookup;
+	typedef std::map< std::pair< std::string, std::string >, std::string > BackwardsCompatableTransformLookup;
 	typedef std::map< std::string, boost::shared_ptr<ITransformFunction> > TransformLookup;
 
-	BackwardsCompatableTransformLookup m_FunctionsByPathAndName;
+	BackwardsCompatableTransformLookup m_TypeByPathAndName;
 	TransformLookup m_FunctionsByType;
 };
 
