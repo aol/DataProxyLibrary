@@ -56,19 +56,19 @@ TransformFunctionDomain::TransformFunctionDomain()
 	static const std::pair< std::string, std::string > SHELL_STREAM_TRANSFORMER_KEY_PAIR( "ShellStreamTransformer", "TransformStream" );
 	static const std::pair< std::string, std::string > VALIDATE_STREAM_TRANSFORMER_KEY_PAIR( "ValidateStreamTransformer", "Validate" );
 
-	static const std::string AGGREGATE_STREAM_TRANSFORMER_KEY( "AggregateStreamTransformer" );
-	static const std::string ATOMIC_JSON_TO_CSV_STREAM_TRANSFORMER_KEY( "AtomicsJSONToCSVStreamTransformer" );
-	static const std::string BLACKOUT_STREAM_TRANSFORMER_KEY( "BlackoutStreamTransformer" );
-	static const std::string CAMPAIGN_REFERENCE_GENERATOR_STREAM_TRANSFORMER_KEY( "CampaignReferenceGeneratorStreamTransformer" );
-	static const std::string CAMPAIGN_REVENUE_VECTOR_STREAM_TRANSFORMER_KEY( "CampaignRevenueVectorStreamTransformer" );
-	static const std::string COLUMN_APPENDER_STREAM_TRANSFORMER_KEY( "ColumnAppenderStreamTransformer" );
-	static const std::string COLUMN_FORMAT_STREAM_TRANSFORMER_KEY( "ColumnFormatStreamTransformer" );
-	static const std::string EQUIVALENCE_CLASS_STREAM_TRANSFORMER_KEY( "EquivalenceClassStreamTransformer" );
-	static const std::string GROUPING_AGGREGATE_STREAM_TRANSFORMER_KEY( "GroupingAggregateStreamTransformer" );
-	static const std::string ADD_SELF_DESCRIBING_STREAM_TRANSFORMER_KEY( "AddSelfDescribingStreamHeaderTransformer" );
-	static const std::string REMOVE_SELF_DESCRIBING_STREAM_TRANSFORMER_KEY( "RemoveSelfDescribingStreamHeaderTransformer" );
-	static const std::string SHELL_STREAM_TRANSFORMER_KEY( "ShellStreamTransformer" );
-	static const std::string VALIDATE_STREAM_TRANSFORMER_KEY( "ValidateStreamTransformer" );
+	static const std::string AGGREGATE_STREAM_TRANSFORMER_KEY( "Aggregate" );
+	static const std::string ATOMIC_JSON_TO_CSV_STREAM_TRANSFORMER_KEY( "AtomicsJSONToCSV" );
+	static const std::string BLACKOUT_STREAM_TRANSFORMER_KEY( "Blackout" );
+	static const std::string CAMPAIGN_REFERENCE_GENERATOR_STREAM_TRANSFORMER_KEY( "CampaignReferenceGenerator" );
+	static const std::string CAMPAIGN_REVENUE_VECTOR_STREAM_TRANSFORMER_KEY( "CampaignRevenueVector" );
+	static const std::string COLUMN_APPENDER_STREAM_TRANSFORMER_KEY( "ColumnAppender" );
+	static const std::string COLUMN_FORMAT_STREAM_TRANSFORMER_KEY( "ColumnFormat" );
+	static const std::string EQUIVALENCE_CLASS_STREAM_TRANSFORMER_KEY( "EquivalenceClass" );
+	static const std::string GROUPING_AGGREGATE_STREAM_TRANSFORMER_KEY( "GroupingAggregate" );
+	static const std::string ADD_SELF_DESCRIBING_STREAM_TRANSFORMER_KEY( "AddSelfDescribingStreamHeader" );
+	static const std::string REMOVE_SELF_DESCRIBING_STREAM_TRANSFORMER_KEY( "RemoveSelfDescribingStreamHeader" );
+	static const std::string SHELL_STREAM_TRANSFORMER_KEY( "Shell" );
+	static const std::string VALIDATE_STREAM_TRANSFORMER_KEY( "Validate" );
 
 	m_FunctionsByType = boost::assign::map_list_of
 		( AGGREGATE_STREAM_TRANSFORMER_KEY, SharedTransformFunction(new AggregateStreamTransformer()) )

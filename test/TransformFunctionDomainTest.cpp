@@ -49,19 +49,19 @@ void TransformFunctionDomainTest::testAllKnownTransformTypes()
 {
 	TransformFunctionDomain domain;
 
-	CPPUNIT_ASSERT( NULL != dynamic_cast<AggregateStreamTransformer*>( domain.GetFunction("AggregateStreamTransformer").get() ) );
-	CPPUNIT_ASSERT( NULL != dynamic_cast<AtomicsJSONToCSVStreamTransformer*>( domain.GetFunction("AtomicsJSONToCSVStreamTransformer").get() ) );
-	CPPUNIT_ASSERT( NULL != dynamic_cast<BlackoutStreamTransformer*>( domain.GetFunction("BlackoutStreamTransformer").get() ) );
-	CPPUNIT_ASSERT( NULL != dynamic_cast<CampaignReferenceGeneratorStreamTransformer*>( domain.GetFunction("CampaignReferenceGeneratorStreamTransformer").get() ) );
-	CPPUNIT_ASSERT( NULL != dynamic_cast<CampaignRevenueVectorStreamTransformer*>( domain.GetFunction("CampaignRevenueVectorStreamTransformer").get() ) );
-	CPPUNIT_ASSERT( NULL != dynamic_cast<ColumnAppenderStreamTransformer*>( domain.GetFunction("ColumnAppenderStreamTransformer").get() ) );
-	CPPUNIT_ASSERT( NULL != dynamic_cast<ColumnFormatStreamTransformer*>( domain.GetFunction("ColumnFormatStreamTransformer").get() ) );
-	CPPUNIT_ASSERT( NULL != dynamic_cast<EquivalenceClassStreamTransformer*>( domain.GetFunction("EquivalenceClassStreamTransformer").get() ) );
-	CPPUNIT_ASSERT( NULL != dynamic_cast<GroupingAggregateStreamTransformer*>( domain.GetFunction("GroupingAggregateStreamTransformer").get() ) );
-	CPPUNIT_ASSERT( NULL != dynamic_cast<AddSelfDescribingStreamHeaderTransformer*>( domain.GetFunction("AddSelfDescribingStreamHeaderTransformer").get() ) );
-	CPPUNIT_ASSERT( NULL != dynamic_cast<RemoveSelfDescribingStreamHeaderTransformer*>( domain.GetFunction("RemoveSelfDescribingStreamHeaderTransformer").get() ) );
-	CPPUNIT_ASSERT( NULL != dynamic_cast<ShellStreamTransformer*>( domain.GetFunction("ShellStreamTransformer").get() ) );
-	CPPUNIT_ASSERT( NULL != dynamic_cast<ValidateStreamTransformer*>( domain.GetFunction("ValidateStreamTransformer").get() ) );
+	CPPUNIT_ASSERT( NULL != dynamic_cast<AggregateStreamTransformer*>( domain.GetFunction("Aggregate").get() ) );
+	CPPUNIT_ASSERT( NULL != dynamic_cast<AtomicsJSONToCSVStreamTransformer*>( domain.GetFunction("AtomicsJSONToCSV").get() ) );
+	CPPUNIT_ASSERT( NULL != dynamic_cast<BlackoutStreamTransformer*>( domain.GetFunction("Blackout").get() ) );
+	CPPUNIT_ASSERT( NULL != dynamic_cast<CampaignReferenceGeneratorStreamTransformer*>( domain.GetFunction("CampaignReferenceGenerator").get() ) );
+	CPPUNIT_ASSERT( NULL != dynamic_cast<CampaignRevenueVectorStreamTransformer*>( domain.GetFunction("CampaignRevenueVector").get() ) );
+	CPPUNIT_ASSERT( NULL != dynamic_cast<ColumnAppenderStreamTransformer*>( domain.GetFunction("ColumnAppender").get() ) );
+	CPPUNIT_ASSERT( NULL != dynamic_cast<ColumnFormatStreamTransformer*>( domain.GetFunction("ColumnFormat").get() ) );
+	CPPUNIT_ASSERT( NULL != dynamic_cast<EquivalenceClassStreamTransformer*>( domain.GetFunction("EquivalenceClass").get() ) );
+	CPPUNIT_ASSERT( NULL != dynamic_cast<GroupingAggregateStreamTransformer*>( domain.GetFunction("GroupingAggregate").get() ) );
+	CPPUNIT_ASSERT( NULL != dynamic_cast<AddSelfDescribingStreamHeaderTransformer*>( domain.GetFunction("AddSelfDescribingStreamHeader").get() ) );
+	CPPUNIT_ASSERT( NULL != dynamic_cast<RemoveSelfDescribingStreamHeaderTransformer*>( domain.GetFunction("RemoveSelfDescribingStreamHeader").get() ) );
+	CPPUNIT_ASSERT( NULL != dynamic_cast<ShellStreamTransformer*>( domain.GetFunction("Shell").get() ) );
+	CPPUNIT_ASSERT( NULL != dynamic_cast<ValidateStreamTransformer*>( domain.GetFunction("Validate").get() ) );
 }
 
 void TransformFunctionDomainTest::testBackwardsCompatability()
