@@ -4498,8 +4498,6 @@ void DatabaseProxyTest::testMySqlMultipleStore()
 
 	std::stringstream dataStreamTwo(secondStoreData);
 
-	CPPUNIT_ASSERT_NO_THROW( m_pMySQLObservationDB->Commit() );
-	CPPUNIT_ASSERT_NO_THROW( m_pMySQLAccessoryDB->Commit() );
 	CPPUNIT_ASSERT_NO_THROW(pProxy->Store(parameters, dataStreamTwo));
 	//we still have never called commit; no data should be stored
 	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );

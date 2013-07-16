@@ -1146,7 +1146,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 				}
 				else if( databaseType == MYSQL_DB_TYPE )
 				{
-					// if this isn't a dynamic staging table then it's a temporary table, so we don't need to truncate it
+					// MySQL databases now always creates temporary tables, so we don't need to do any truncating
 
 					std::stringstream sql;
 					// load the data into the table
