@@ -1648,7 +1648,7 @@ void DatabaseProxyTest::testOracleStore()
 	// insert some dummy data into the staging table to be cleared
 	std::string prefix = "INSERT INTO stg_kna (media_id, website_id, impressions, revenue, dummy, myConstant) VALUES ";
 	Database::Statement( *m_pOracleDB, prefix + "(12, 13, -1, -2, -3, -4)" ).Execute();
-	m_pOracleDB->Commit();
+	CPPUNIT_ASSERT_NO_THROW( m_pOracleDB->Commit() );
 
 	MockDatabaseConnectionManager dbManager;
 	dbManager.InsertConnection( "myOracleConnection", m_pOracleDB );
@@ -1790,7 +1790,7 @@ void DatabaseProxyTest::testOracleStagingTableSpecifiedByParameter()
 	// insert some dummy data into the staging table to be cleared
 	std::string prefix = "INSERT INTO stg_kna (media_id, website_id, impressions, revenue, dummy, myConstant) VALUES ";
 	Database::Statement( *m_pOracleDB, prefix + "(12, 13, -1, -2, -3, -4)" ).Execute();
-	m_pOracleDB->Commit();
+	CPPUNIT_ASSERT_NO_THROW( m_pOracleDB->Commit() );
 
 	MockDatabaseConnectionManager dbManager;
 	dbManager.InsertConnection( "myOracleConnection", m_pOracleDB );
@@ -1933,7 +1933,7 @@ void DatabaseProxyTest::testOracleStoreDifferentSchema()
 	// insert some dummy data into the staging table to be cleared
 	std::string prefix = "INSERT INTO stg_kna (media_id, website_id, impressions, revenue, dummy, myConstant) VALUES ";
 	Database::Statement( *m_pOracleDB, prefix + "(12, 13, -1, -2, -3, -4)" ).Execute();
-	m_pOracleDB->Commit();
+	CPPUNIT_ASSERT_NO_THROW( m_pOracleDB->Commit() );
 
 	MockDatabaseConnectionManager dbManager;
 	// create a db connection that is connected to username five0test, but attached to the unittestdb's SCHEMA
@@ -2116,7 +2116,7 @@ void DatabaseProxyTest::testMySqlStore()
 	// insert some dummy data into the staging table to be cleared
 	std::string prefix = "INSERT INTO stg_kna (media_id, website_id, impressions, revenue, dummy, myConstant) VALUES ";
 	Database::Statement( *m_pMySQLDB, prefix + "(12, 13, -1, -2, -3, -4)" ).Execute();
-	m_pMySQLDB->Commit();
+	CPPUNIT_ASSERT_NO_THROW( m_pMySQLDB->Commit() );
 
 	MockDatabaseConnectionManager dbManager;
 	dbManager.InsertConnection( "myMySqlConnection", m_pMySQLDB );
@@ -2165,10 +2165,9 @@ void DatabaseProxyTest::testMySqlStore()
 
 	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data ) );
 
-	//the mysql table will be truncated, which implicitly commits, in a dedicated db session
-	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pMySQLObservationDB, "stg_kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" )
 	// check table contents; it will be empty since we haven't committed yet
 	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" )
+	// MySQL staging table is no longer used except to define the temporary table, which can't be observed in the observation db
 
 	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
 	std::stringstream expected;
@@ -2190,6 +2189,8 @@ void DatabaseProxyTest::testMySqlStore()
 	CPPUNIT_ASSERT_MESSAGE( files[0], boost::regex_match( files[0], boost::regex("name\\.[0-9]+\\.[0-9]+\\.[0-9a-z]{8}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{12}\\.dat") ) );
 
 	// truncate & do it again with noCleanUp off
+	CPPUNIT_ASSERT_NO_THROW( m_pMySQLObservationDB->Commit() );
+	CPPUNIT_ASSERT_NO_THROW( m_pMySQLAccessoryDB->Commit() );
 	Database::Statement( *m_pMySQLDB, "TRUNCATE TABLE kna" ).Execute();
 	xmlContents.str("");
 	xmlContents << "<DataNode type = \"db\" >"
@@ -2246,7 +2247,7 @@ void DatabaseProxyTest::testMySqlStagingTableSpecifiedByParameter()
 	// insert some dummy data into the staging table to be cleared
 	std::string prefix = "INSERT INTO stg_kna (media_id, website_id, impressions, revenue, dummy, myConstant) VALUES ";
 	Database::Statement( *m_pMySQLDB, prefix + "(12, 13, -1, -2, -3, -4)" ).Execute();
-	m_pMySQLDB->Commit();
+	CPPUNIT_ASSERT_NO_THROW( m_pMySQLDB->Commit() );
 
 	MockDatabaseConnectionManager dbManager;
 	dbManager.InsertConnection( "myMySqlConnection", m_pMySQLDB );
@@ -2296,10 +2297,9 @@ void DatabaseProxyTest::testMySqlStagingTableSpecifiedByParameter()
 
 	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data ) );
 
-	//the mysql table will be truncated, which implicitly commits, in a dedicated db session
-	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pMySQLObservationDB, "stg_kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" )
 	// check table contents; it will be empty since we haven't committed yet
 	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" )
+	// MySQL staging table is no longer used except to define the temporary table, which can't be observed in the observation db
 
 	CPPUNIT_ASSERT_NO_THROW( proxy.Commit() );
 	std::stringstream expected;
@@ -2321,6 +2321,9 @@ void DatabaseProxyTest::testMySqlStagingTableSpecifiedByParameter()
 	CPPUNIT_ASSERT_MESSAGE( files[0], boost::regex_match( files[0], boost::regex("name\\.[0-9]+\\.[0-9]+\\.[0-9a-z]{8}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{4}-[0-9a-z]{12}\\.dat") ) );
 	
 	// truncate & do it again with noCleanUp off
+	CPPUNIT_ASSERT_NO_THROW( m_pMySQLObservationDB->Commit() );
+	CPPUNIT_ASSERT_NO_THROW( m_pMySQLAccessoryDB->Commit() );
+	CPPUNIT_ASSERT_NO_THROW( m_pMySQLDB->Commit() );
 	Database::Statement( *m_pMySQLDB, "TRUNCATE TABLE kna" ).Execute();
 	xmlContents.str("");
 	xmlContents << "<DataNode type = \"db\" >"
@@ -2431,6 +2434,8 @@ void DatabaseProxyTest::testMySqlStoreNoStaging()
 	// check table contents
 	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" )
 
+	CPPUNIT_ASSERT_NO_THROW( m_pMySQLObservationDB->Commit() );
+	CPPUNIT_ASSERT_NO_THROW( m_pMySQLAccessoryDB->Commit() );
 	CPPUNIT_ASSERT_NO_THROW( Database::Statement( *m_pMySQLDB, "TRUNCATE TABLE kna" ).Execute() );
 	expected.str("");
 	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" )
@@ -2598,6 +2603,8 @@ void DatabaseProxyTest::testStoreColumnParameterCollisionBehaviors()
 	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" )
 
 	// CASE 3: use parameter over column
+	CPPUNIT_ASSERT_NO_THROW( m_pMySQLObservationDB->Commit() );
+	CPPUNIT_ASSERT_NO_THROW( m_pMySQLAccessoryDB->Commit() );
 	Database::Statement( *m_pMySQLDB, "TRUNCATE TABLE kna" ).Execute();
 
 	xmlContents.str("");
@@ -2779,6 +2786,8 @@ void DatabaseProxyTest::testStoreColumnParameterCollisionBehaviorsNoStaging()
 	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" )
 
 	// CASE 3: use parameter over column
+	CPPUNIT_ASSERT_NO_THROW( m_pMySQLObservationDB->Commit() );
+	CPPUNIT_ASSERT_NO_THROW( m_pMySQLAccessoryDB->Commit() );
 	Database::Statement( *m_pMySQLDB, "TRUNCATE TABLE kna" ).Execute();
 
 	xmlContents.str("");
@@ -4489,6 +4498,8 @@ void DatabaseProxyTest::testMySqlMultipleStore()
 
 	std::stringstream dataStreamTwo(secondStoreData);
 
+	CPPUNIT_ASSERT_NO_THROW( m_pMySQLObservationDB->Commit() );
+	CPPUNIT_ASSERT_NO_THROW( m_pMySQLAccessoryDB->Commit() );
 	CPPUNIT_ASSERT_NO_THROW(pProxy->Store(parameters, dataStreamTwo));
 	//we still have never called commit; no data should be stored
 	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( std::string(""), *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" );

@@ -1,12 +1,12 @@
 //
-// FILE NAME:       $HeadURL$
+// FILE NAME:	   $HeadURL$
 //
-// REVISION:        $Revision$
+// REVISION:		$Revision$
 //
-// COPYRIGHT:       (c) 2006 Advertising.com All Rights Reserved.
+// COPYRIGHT:	   (c) 2006 Advertising.com All Rights Reserved.
 //
-// LAST UPDATED:    $Date$
-// UPDATED BY:      $Author$
+// LAST UPDATED:	$Date$
+// UPDATED BY:	  $Author$
 
 #ifndef _DATABASE_PROXY_HPP_
 #define _DATABASE_PROXY_HPP_
@@ -15,6 +15,7 @@
 #include "MVException.hpp"
 #include "Nullable.hpp"
 #include <boost/thread/thread.hpp>
+#include <boost/shared_ptr.hpp>
 #include <map>
 #include <set>
 
@@ -55,6 +56,22 @@ private:
 	private:
 		Database& m_rDatabase;
 		const std::string m_TempTableName;
+		const std::string m_DatabaseType;
+	};
+
+	class PendingDropInserter
+	{
+	public:
+		typedef boost::shared_ptr< ScopedTempTable > TableType;
+		typedef std::vector< boost::shared_ptr< ScopedTempTable > > ContainerType;
+
+		PendingDropInserter(TableType& i_rTable, ContainerType& i_rDropContainer, boost::shared_mutex& i_rMutex);
+		virtual ~PendingDropInserter();
+
+	private:
+		TableType m_Table;
+		ContainerType& m_rDropContainer;
+		boost::shared_mutex& m_rLockable;
 	};
 
 	// read settings

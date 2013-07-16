@@ -34,6 +34,7 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/scoped_ptr.hpp>
 
 namespace
 {
@@ -382,12 +383,34 @@ namespace
 	}
 }
 
+DatabaseProxy::PendingDropInserter::PendingDropInserter(DatabaseProxy::PendingDropInserter::TableType& i_rTable, DatabaseProxy::PendingDropInserter::ContainerType& i_rDropContainer, boost::shared_mutex& i_rMutex)
+ :	m_Table(i_rTable),
+ 	m_rDropContainer(i_rDropContainer),
+	m_rLockable(i_rMutex)
+{
+}
+
+DatabaseProxy::PendingDropInserter::~PendingDropInserter()
+{
+	boost::unique_lock< boost::shared_mutex > lock(m_rLockable);
+	m_rDropContainer.push_back( m_Table );
+}
+
 DatabaseProxy::ScopedTempTable::ScopedTempTable( Database& i_rDatabase, const std::string& i_rDatabaseType, const std::string& i_rTable, const std::string& i_rStagingTable )
 :	m_rDatabase( i_rDatabase ),
-	m_TempTableName( i_rStagingTable )
+	m_TempTableName( i_rStagingTable ),
+	m_DatabaseType( i_rDatabaseType )
 {
 	std::stringstream sql;
-	sql << "CREATE TABLE " << m_TempTableName << ( i_rDatabaseType == MYSQL_DB_TYPE ? " " : " AS " ) << "( SELECT * FROM " << i_rTable << " WHERE 1 = 0 )";
+
+	if (m_DatabaseType == MYSQL_DB_TYPE)
+	{
+		sql << "CREATE TEMPORARY TABLE " << m_TempTableName << " LIKE " << i_rTable;
+	}
+	else
+	{
+		sql << "CREATE TABLE " << m_TempTableName << " AS ( SELECT * FROM " << i_rTable << " WHERE 1 = 0 )";
+	}
 	MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.CreatingStagingTable", "Creating staging table: " << m_TempTableName << " with statement: " << sql.str() );
 	Database::Statement( m_rDatabase, sql.str() ).Execute();
 }
@@ -395,7 +418,15 @@ DatabaseProxy::ScopedTempTable::ScopedTempTable( Database& i_rDatabase, const st
 DatabaseProxy::ScopedTempTable::~ScopedTempTable()
 {
 	std::stringstream sql;
-	sql << "DROP TABLE " << m_TempTableName;
+
+	if (m_DatabaseType == MYSQL_DB_TYPE)
+	{
+		sql << "DROP TEMPORARY TABLE " << m_TempTableName;
+	}
+	else
+	{
+		sql << "DROP TABLE " << m_TempTableName;
+	}
 	MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.DroppingStagingTable", "Dropping staging table: " << m_TempTableName << " with statement: " << sql.str() );
 	Database::Statement( m_rDatabase, sql.str() ).Execute();
 }
@@ -1011,6 +1042,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 		else
 		{
 			// get the database connections needed
+			boost::scoped_ptr< PendingDropInserter > pPendingInsert;
 			boost::shared_ptr< ScopedTempTable > pTempTable;
 			boost::shared_ptr< Database > pDataDefinitionDatabase = GetDataDefinitionConnection( m_WriteConnectionName, m_WriteConnectionByTable, m_rDatabaseConnectionManager, i_rParameters );
 			std::string stagingTable = ProxyUtilities::GetVariableSubstitutedString( m_WriteStagingTable, i_rParameters );
@@ -1032,13 +1064,15 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			if( m_WriteDynamicStagingTable )
 			{
 				stagingTable = GetDynamicStagingTable( stagingTable, m_WriteMaxTableNameLength );
-				pTempTable.reset( new ScopedTempTable( *pDataDefinitionDatabase, databaseType, table, stagingTable ) );
-
-				// lock the drop-table vector and insert it
-				{
-					boost::unique_lock< boost::shared_mutex > lock( m_PendingDropsMutex );
-					m_PendingDrops.push_back( pTempTable );
-				}
+				pTempTable.reset( new ScopedTempTable( (databaseType == MYSQL_DB_TYPE) ? *pTransactionDatabase : *pDataDefinitionDatabase, databaseType, table, stagingTable ) );
+				pPendingInsert.reset( new PendingDropInserter( pTempTable, m_PendingDrops, m_PendingDropsMutex ) );
+			}
+			else if ( databaseType == MYSQL_DB_TYPE )
+			{
+				std::string temporaryStagingTable = GetDynamicStagingTable( stagingTable, m_WriteMaxTableNameLength );
+				pTempTable.reset( new ScopedTempTable( *pTransactionDatabase, databaseType, stagingTable, temporaryStagingTable ) );
+				stagingTable = temporaryStagingTable;
+				pPendingInsert.reset( new PendingDropInserter( pTempTable, m_PendingDrops, m_PendingDropsMutex ) );
 			}
 
 			std::string mysqlMergeQuery = GetAllSubstitutions( m_WriteMySqlMergeQuery, i_rParameters, table, stagingTable );
@@ -1112,14 +1146,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 				}
 				else if( databaseType == MYSQL_DB_TYPE )
 				{
-					// if this isn't a dynamic staging table, we need to truncate it
-					if( !m_WriteDynamicStagingTable )
-					{
-						std::stringstream sql;
-						sql << "TRUNCATE TABLE " << stagingTable;
-						MVLOGGER( "root.lib.DataProxy.DatabaseProxy.TruncateStagingTable", "Truncating staging table: " << stagingTable << " using the ddl connection with statement: " << sql.str() );
-						Database::Statement( *pDataDefinitionDatabase, sql.str() ).Execute();
-					}
+					// if this isn't a dynamic staging table then it's a temporary table, so we don't need to truncate it
 
 					std::stringstream sql;
 					// load the data into the table
