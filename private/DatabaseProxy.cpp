@@ -744,37 +744,48 @@ void DatabaseProxy::LoadImpl( const std::map<std::string,std::string>& i_rParame
 	boost::iter_split( headerTokens, m_ReadHeader, boost::first_finder(m_ReadFieldSeparator) );
 	int numColumns = headerTokens.size();
 
-	//bind to the necessary number of columns where
-	std::vector< Nullable<std::string> > columnsVector(numColumns);
-	for (int i = 0; i < numColumns; ++i)
-	{
-		stmt.BindCol(columnsVector[i], m_ReadMaxBindSize);
-	}
-	stmt.CompleteBinding();
 	//write the header
 	o_rData << m_ReadHeader << m_ReadRecordSeparator;
 
-	//now iterate over the results, writing them into the stream in csv format
-	Stopwatch stopwatch;
-	std::vector< Nullable<std::string> >::iterator colIter;
 	size_t rowCount = 0;
-	for (; stmt.NextRow(); ++rowCount)
+	Stopwatch stopwatch;
+
+	if( m_rDatabaseConnectionManager.GetDatabaseType( m_ReadConnectionName ) == VERTICA_DB_TYPE )
 	{
-		colIter = columnsVector.begin();
-		for (; colIter != columnsVector.end(); ++colIter)
-		{
-			if (colIter == columnsVector.begin())
-			{
-				o_rData << *colIter;
-			}
-			else
-			{
-				o_rData << m_ReadFieldSeparator << *colIter;
-			}
-		}
-		o_rData << m_ReadRecordSeparator;
+		stmt.DoInternalBinding( numColumns );
+		stmt.Execute();
+		rowCount = stmt.Load( o_rData, m_ReadFieldSeparator, m_ReadRecordSeparator );
 	}
-	o_rData << std::flush;
+	else
+	{
+		//bind to the necessary number of columns where
+		std::vector< Nullable<std::string> > columnsVector(numColumns);
+		for (int i = 0; i < numColumns; ++i)
+		{
+			stmt.BindCol(columnsVector[i], m_ReadMaxBindSize);
+		}
+		stmt.CompleteBinding();
+
+		//now iterate over the results, writing them into the stream in csv format
+		std::vector< Nullable<std::string> >::iterator colIter;
+		for (; stmt.NextRow(); ++rowCount)
+		{
+			colIter = columnsVector.begin();
+			for (; colIter != columnsVector.end(); ++colIter)
+			{
+				if (colIter == columnsVector.begin())
+				{
+					o_rData << *colIter;
+				}
+				else
+				{
+					o_rData << m_ReadFieldSeparator << *colIter;
+				}
+			}
+			o_rData << m_ReadRecordSeparator;
+		}	
+		o_rData << std::flush;
+	}
 
 	MVLOGGER("root.lib.DataProxy.DatabaseProxy.Load.ExecutingStmt.Finished", 
 			  "Finished Processing SQL results. Processed " << rowCount << " Rows. Memory usage: - " << MVUtility::MemCheck()
