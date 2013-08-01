@@ -77,6 +77,7 @@ private:
 	// read settings
 	bool m_ReadEnabled;
 	int m_ReadMaxBindSize;
+	int m_RowsBuffered;
 	std::string m_ReadConnectionName;
 	std::string m_ReadQuery;
 	std::string m_ReadHeader;

@@ -58,6 +58,7 @@ namespace
 	const std::string DYNAMIC_STAGING_TABLE_ATTRIBUTE( "dynamicStagingTable" );
 	const std::string MAX_TABLE_NAME_LENGTH_ATTRIBUTE( "maxTableNameLength" );
 	const std::string MAX_BIND_SIZE_ATTRIBUTE( "maxBindSize" );
+	const std::string ROWS_BUFFERED_ATTRIBUTE( "rowsBuffered" );
 	const std::string ON_COLUMN_PARAMETER_COLLISION_ATTRIBUTE( "onColumnParameterCollision" );
 	const std::string IF_NEW_ATTRIBUTE( "ifNew" );
 	const std::string IF_MATCHED_ATTRIBUTE( "ifMatched" );
@@ -82,6 +83,7 @@ namespace
 	const uint MAX_FILES( 1024 );
 
 	const int DEFAULT_MAX_BIND_SIZE ( 256 );
+	const int DEFAULT_ROWS_BUFFERED( 100000 );
 
 	std::string GetAllSubstitutions( const std::string& i_rStatement, const std::map< std::string, std::string >& i_rParameters, const std::string& i_rTable, const std::string& i_rStagingTable )
 	{
@@ -435,6 +437,7 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 :	AbstractNode( i_rName, i_rParent, i_rNode ),
 	m_ReadEnabled( false ),
 	m_ReadMaxBindSize( DEFAULT_MAX_BIND_SIZE ),
+	m_RowsBuffered( DEFAULT_ROWS_BUFFERED ),
 	m_ReadConnectionName(),
 	m_ReadQuery(),
 	m_ReadHeader(),
@@ -486,6 +489,7 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 	allowedReadAttributes.insert(QUERY_ATTRIBUTE);
 	allowedReadAttributes.insert(MAX_BIND_SIZE_ATTRIBUTE);
 	allowedReadAttributes.insert(HEADER_ATTRIBUTE);
+	allowedReadAttributes.insert(ROWS_BUFFERED_ATTRIBUTE);
 	allowedReadAttributes.insert(FIELD_SEPARATOR_ATTRIBUTE);
 	allowedReadAttributes.insert(RECORD_SEPARATOR_ATTRIBUTE);
 	allowedWriteAttributes.insert( CONNECTION_ATTRIBUTE );
@@ -524,6 +528,11 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 		if( pAttribute != NULL )
 		{
 			m_ReadMaxBindSize = boost::lexical_cast< int >( XMLUtilities::XMLChToString(pAttribute->getValue()) );
+		}
+		pAttribute = XMLUtilities::GetAttribute( pNode, ROWS_BUFFERED_ATTRIBUTE);
+		if( pAttribute != NULL )
+		{
+			m_RowsBuffered = boost::lexical_cast< int >( XMLUtilities::XMLChToString(pAttribute->getValue()) );
 		}
 		pAttribute = XMLUtilities::GetAttribute( pNode, RECORD_SEPARATOR_ATTRIBUTE );
 		if( pAttribute != NULL )
@@ -752,7 +761,7 @@ void DatabaseProxy::LoadImpl( const std::map<std::string,std::string>& i_rParame
 
 	if( m_rDatabaseConnectionManager.GetDatabaseType( m_ReadConnectionName ) == VERTICA_DB_TYPE )
 	{
-		stmt.DoInternalBinding( numColumns );
+		stmt.DoInternalBinding( numColumns, m_RowsBuffered );
 		stmt.Execute();
 		rowCount = stmt.Load( o_rData, m_ReadFieldSeparator, m_ReadRecordSeparator );
 	}
