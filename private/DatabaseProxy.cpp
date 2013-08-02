@@ -773,7 +773,7 @@ void DatabaseProxy::LoadImpl( const std::map<std::string,std::string>& i_rParame
 		{
 			stmt.BindCol(columnsVector[i], m_ReadMaxBindSize);
 		}
-		stmt.CompleteBinding();
+		stmt.CompleteBinding( m_RowsBuffered );
 
 		//now iterate over the results, writing them into the stream in csv format
 		std::vector< Nullable<std::string> >::iterator colIter;
