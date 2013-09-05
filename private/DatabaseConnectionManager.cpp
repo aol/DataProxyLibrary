@@ -34,6 +34,8 @@ namespace
 	const std::string DATABASE_SCHEMA_ATTRIBUTE("schema");
 	const std::string DISABLE_CACHE_ATTRIBUTE("disableCache");
 	const std::string RECONNECT_TIMEOUT_ATTRIBUTE("reconnectTimeout");
+	const std::string MIN_POOL_SIZE_ATTRIBUTE("minPoolSize");
+	const std::string MAX_POOL_SIZE_ATTRIBUTE("maxPoolSize");
 	
 	const std::string CONNECTION_NAME_ATTRIBUTE("connection");
 
@@ -47,6 +49,24 @@ namespace
 	std::string GetConnectionName( const std::string& i_rNodeId, const std::string& i_rShardNode )
 	{
 		return NODE_NAME_PREFIX + "_" + i_rShardNode + "_" + i_rNodeId;
+	}
+
+	size_t GetPoolSize( xercesc::DOMNode* i_pNode, const std::string& i_rName, size_t i_Default )
+	{
+		xercesc::DOMAttr* pAttribute = XMLUtilities::GetAttribute( i_pNode, i_rName );
+		if( pAttribute != NULL )
+		{
+			std::string poolSizeString = XMLUtilities::XMLChToString( pAttribute->getValue() );
+			try
+			{
+				return boost::lexical_cast< size_t >( poolSizeString );
+			}
+			catch( const boost::bad_lexical_cast& i_rException )
+			{
+				MV_THROW( DatabaseConnectionManagerException, "Error parsing " << RECONNECT_TIMEOUT_ATTRIBUTE << " attribute: " << poolSizeString << " as int" );
+			}
+		}
+		return i_Default;
 	}
 
 	double GetTimeout( xercesc::DOMNode* i_pNode, double i_Default )
@@ -67,21 +87,185 @@ namespace
 		return i_Default;
 	}
 
-	void ReconnectIfNecessary( DatabaseConnectionDatum& i_rDatum, bool i_InsideTransaction )
+	void ReconnectIfNecessary( const std::string& i_rConnectionName, const DatabaseConfigDatum& i_rConfig, DatabaseInstanceDatum& i_rInstance )
 	{
-		if( i_InsideTransaction )
+		double secondsElapsed = i_rInstance.GetReference< ConnectionTimer >()->GetElapsedSeconds();
+		if( secondsElapsed > i_rConfig.GetValue< ConnectionReconnect >() )
+		{
+			if( !i_rInstance.GetValue< DatabaseHandle >().unique() )
+			{
+				MVLOGGER( "root.lib.DataProxy.DatabaseConnectionManager.CannotReconnect",
+					 "Connection #" << i_rInstance.GetValue< ConnectionNumber >() << " for name: " << i_rConnectionName << " has been active for: "
+					 << secondsElapsed << " seconds. Reconnect timeout is set to: " << i_rConfig.GetValue< ConnectionReconnect >()
+					 << ", but there are active handles to it. Skipping reconnect."  );
+				return;
+			}
+			MVLOGGER( "root.lib.DataProxy.DatabaseConnectionManager.Reconnecting",
+				 "Connection #" << i_rInstance.GetValue< ConnectionNumber >() << " for name: " << i_rConnectionName << " has been active for: "
+				 << secondsElapsed << " seconds. Reconnect timeout is set to: " << i_rConfig.GetValue< ConnectionReconnect >() << ". Reconnecting."  );
+			i_rInstance.GetReference< DatabaseHandle >().reset( new Database( *i_rInstance.GetReference< DatabaseHandle >() ) );
+			i_rInstance.GetReference< ConnectionTimer >()->Reset();
+		}
+	}
+
+	void TryReducePool( DatabaseConnectionDatum& i_rDatum )
+	{
+		int itemsToRemove = 0;
+		{
+			boost::shared_lock< boost::shared_mutex > lock( *i_rDatum.GetReference< Mutex >() );
+			itemsToRemove = i_rDatum.GetValue< DatabasePool >().size() - i_rDatum.GetValue< DatabaseConfig >().GetValue< MinPoolSize >();
+		}
+		if( itemsToRemove <= 0 )
 		{
 			return;
 		}
-		double secondsElapsed = i_rDatum.GetReference< ConnectionTimer >()->GetElapsedSeconds();
-		if( secondsElapsed > i_rDatum.GetValue< ConnectionReconnect >() )
+
 		{
-			MVLOGGER( "root.lib.DataProxy.DatabaseConnectionManager.Reconnecting",
-				 "Connection named: " << i_rDatum.GetValue< ConnectionName >() << " has been active for: " << secondsElapsed << " seconds. "
-				 << "Reconnect timeout is set to: " << i_rDatum.GetValue< ConnectionReconnect >() << ". Reconnecting."  );
-			i_rDatum.GetReference< DatabaseConnection >().reset( new Database( *i_rDatum.GetReference< DatabaseConnection >() ) );
-			i_rDatum.GetReference< ConnectionTimer >()->Reset();
+			// if we get here, we have to obtain a lock and check again...
+			boost::unique_lock< boost::shared_mutex > lock( *i_rDatum.GetReference< Mutex >() );
+			itemsToRemove = i_rDatum.GetValue< DatabasePool >().size() - i_rDatum.GetValue< DatabaseConfig >().GetValue< MinPoolSize >();
+
+			// iterate and remove any unique connections, until we've removed enough
+			int itemsRemoved( 0 );
+			std::vector< DatabaseInstanceDatum >::iterator iter = i_rDatum.GetReference< DatabasePool >().begin();
+			for( int i=0; itemsRemoved < itemsToRemove && iter != i_rDatum.GetReference< DatabasePool >().end(); ++i )
+			{
+				if( iter->GetValue< DatabaseHandle >().unique() )
+				{
+					MVLOGGER( "root.lib.DataProxy.DatabaseConnectionManager.ClosingConnection",
+						 "Connection #" << i << " under name: " << i_rDatum.GetValue< ConnectionName >() << " is being closed to diminish the pool size" );
+					iter = i_rDatum.GetReference< DatabasePool >().erase( iter );
+					++itemsRemoved;
+				}
+				else
+				{
+					iter->GetReference< ConnectionNumber >() -= itemsRemoved;
+					++iter;
+				}
+			}
+			if( itemsRemoved > 0 )
+			{
+				MVLOGGER( "root.lib.DataProxy.DatabaseConnectionManager.ReducedPool",
+					 "Connection pool under name: " << i_rDatum.GetValue< ConnectionName >()
+					 << " had " << itemsToRemove << " connections to reduce to get to minPoolSize,"
+					 << " and " << itemsRemoved << " connections were destroyed" );
+			}
 		}
+	}
+
+	boost::shared_ptr< Database > CreateConnection( const std::string& i_rConnectionName, const DatabaseConfigDatum& i_rConfig, size_t i_CurrentSize )
+	{
+		std::string connectionType = i_rConfig.GetValue<DatabaseConnectionType>();
+		if (connectionType == ORACLE_DB_TYPE)
+		{
+			MVLOGGER("root.lib.DataProxy.DatabaseConnectionManager.Connect.CreatingOracleDatabaseConnection",
+					 "Creating oracle database connection #" << i_CurrentSize+1 << " for name: " << i_rConnectionName );
+			return boost::shared_ptr< Database >( new Database( Database::DBCONN_OCI_THREADSAFE_ORACLE,
+																"",
+																i_rConfig.GetValue<DatabaseName>(),
+																i_rConfig.GetValue<DatabaseUserName>(),
+																i_rConfig.GetValue<DatabasePassword>(),
+																false,
+																i_rConfig.GetValue<DatabaseSchema>() ) );
+		}
+		else if (connectionType == MYSQL_DB_TYPE)
+		{
+			MVLOGGER("root.lib.DataProxy.DatabaseConnectionManager.Connect.CreatingMySQLDatabaseConnection",
+					 "Creating mysql database connection #" << i_CurrentSize+1 << " for name: " << i_rConnectionName );
+			
+			return boost::shared_ptr< Database >( new Database( Database::DBCONN_ODBC_MYSQL,
+																i_rConfig.GetValue<DatabaseServer>(),
+																"",
+																i_rConfig.GetValue<DatabaseUserName>(),
+																i_rConfig.GetValue<DatabasePassword>(),
+																i_rConfig.GetValue<DisableCache>(),
+																i_rConfig.GetValue<DatabaseName>() ) );
+		}
+		else if (connectionType == VERTICA_DB_TYPE)
+		{
+			MVLOGGER("root.lib.DataProxy.DatabaseConnectionManager.Connect.CreatingVerticaDatabaseConnection",
+					 "Creating vertica database connection #" << i_CurrentSize+1 << " for name: " << i_rConnectionName );
+			
+			return boost::shared_ptr< Database >( new Database( Database::DBCONN_ODBC_VERTICA,
+																i_rConfig.GetValue<DatabaseServer>(),
+																"",
+																i_rConfig.GetValue<DatabaseUserName>(),
+																i_rConfig.GetValue<DatabasePassword>(),
+																false,
+																i_rConfig.GetValue<DatabaseName>() ) );
+		}
+		else
+		{
+			MV_THROW(DatabaseConnectionManagerException, "Invalid Database type: " << connectionType);
+		}
+	}
+
+	size_t FindLowestUseCount( const std::vector< DatabaseInstanceDatum >& i_rInstances )
+	{
+		std::vector< DatabaseInstanceDatum >::const_iterator iter = i_rInstances.begin();
+		if( iter == i_rInstances.end() )
+		{
+			MV_THROW( DatabaseConnectionManagerException, "Tried to find the lowest use-count of an empty vector of instances" );
+		}
+
+		size_t i=0;
+		size_t lowestUseCountIndex=0;
+		long lowestUseCount = iter->GetValue< DatabaseHandle >().use_count();
+		++iter;
+		++i;
+		for( ; iter != i_rInstances.end(); ++i, ++iter )
+		{
+			long useCount = iter->GetValue< DatabaseHandle >().use_count();
+			if( useCount < lowestUseCount )
+			{
+				lowestUseCount = useCount;
+				lowestUseCountIndex = i;
+			}
+		}
+		return lowestUseCountIndex;
+	}
+
+	DatabaseInstanceDatum* GetDatabase( DatabaseConnectionDatum& i_rDatabaseConnectionDatum, bool i_CreateIfNeeded )
+	{
+		if( i_rDatabaseConnectionDatum.GetValue< DatabaseConfig >().GetValue< MaxPoolSize >() == 0 )
+		{
+			MV_THROW(DatabaseConnectionManagerException, "Connection: " << i_rDatabaseConnectionDatum.GetValue< ConnectionName >() << " has a max pool size of 0" );
+		}
+
+		std::vector< DatabaseInstanceDatum >::iterator iter = i_rDatabaseConnectionDatum.GetReference< DatabasePool >().begin();
+		for( int i=0; iter != i_rDatabaseConnectionDatum.GetReference< DatabasePool >().end(); ++i, ++iter )
+		{
+			// if no one has a handle on this db already, return it!
+			if( iter->GetValue< DatabaseHandle >().unique() )
+			{
+				return &*iter;
+			}
+		}
+
+		// if we can create one, do it!
+		if( i_CreateIfNeeded )
+		{
+			if( i_rDatabaseConnectionDatum.GetValue< DatabasePool >().size() < i_rDatabaseConnectionDatum.GetValue< DatabaseConfig >().GetValue< MaxPoolSize >() )
+			{
+				boost::shared_ptr< Database > pNewDatabase = CreateConnection( i_rDatabaseConnectionDatum.GetValue< ConnectionName >(),
+																			   i_rDatabaseConnectionDatum.GetValue< DatabaseConfig >(),
+																			   i_rDatabaseConnectionDatum.GetValue< DatabasePool >().size()	);
+				boost::shared_ptr< Stopwatch > pNewStopwatch( new Stopwatch() );
+				DatabaseInstanceDatum instance;
+				instance.SetValue< ConnectionNumber >( i_rDatabaseConnectionDatum.GetReference< DatabasePool >().size() + 1 );
+				instance.SetValue< DatabaseHandle >( pNewDatabase );
+				instance.SetValue< ConnectionTimer >( boost::shared_ptr< Stopwatch >( new Stopwatch() ) );
+				i_rDatabaseConnectionDatum.GetReference< DatabasePool >().push_back( instance );
+				return &i_rDatabaseConnectionDatum.GetReference< DatabasePool >().back();
+			}
+
+			// return the one with the least use_count
+			size_t lowestUseCountIndex = FindLowestUseCount( i_rDatabaseConnectionDatum.GetValue< DatabasePool >() );
+			return &i_rDatabaseConnectionDatum.GetReference< DatabasePool >()[lowestUseCountIndex];
+		}
+
+		// we're out of options...
+		return NULL;
 	}
 }
 
@@ -92,8 +276,7 @@ DatabaseConnectionManager::DatabaseConnectionManager( DataProxyClient& i_rDataPr
 	m_ConnectionsByTableName(),
 	m_rDataProxyClient( i_rDataProxyClient ),
 	m_ConfigVersion(),
-	m_ShardVersion(),
-	m_ConnectMutex()
+	m_ShardVersion()
 {
 }
 
@@ -148,11 +331,13 @@ void DatabaseConnectionManager::Parse( const xercesc::DOMNode& i_rDatabaseConnec
 		std::string databasePassword = XMLUtilities::GetAttributeValue( *iter, DATABASE_PASSWORD_ATTRIBUTE );
 		std::string connectionName = XMLUtilities::GetAttributeValue( *iter, CONNECTION_NAME_ATTRIBUTE );
 		double reconnectTimeout = GetTimeout( *iter, 3600 );	// by default, reconnect every hour
+		int minPoolSize = GetPoolSize( *iter, MIN_POOL_SIZE_ATTRIBUTE, 1 );
+		int maxPoolSize = GetPoolSize( *iter, MAX_POOL_SIZE_ATTRIBUTE, 1 );
 
 		databaseConfig.SetValue<DatabaseUserName>(databaseUserName);
 		databaseConfig.SetValue<DatabasePassword>(databasePassword);
+		databaseConfig.SetValue<DatabaseConnectionType>(type);
 
-		datum.SetValue<DatabaseConnectionType>(type);
 		datum.SetValue<ConnectionName>(connectionName);
 
 		if (type == ORACLE_DB_TYPE)
@@ -208,8 +393,12 @@ void DatabaseConnectionManager::Parse( const xercesc::DOMNode& i_rDatabaseConnec
 			MV_THROW(DatabaseConnectionManagerException, "Duplicate Connections named '" << datum.GetValue<ConnectionName>() << "' in the DatabaseConnections node");
 		}
 
+		databaseConfig.SetValue< ConnectionReconnect >( reconnectTimeout );
+		databaseConfig.SetValue< MinPoolSize >( minPoolSize );
+		databaseConfig.SetValue< MaxPoolSize >( maxPoolSize );
 		datum.SetValue< DatabaseConfig >( databaseConfig );
-		datum.SetValue< ConnectionReconnect >( reconnectTimeout );
+		datum.GetReference< DatabasePool >().reserve( maxPoolSize );
+		datum.GetReference< Mutex >().reset( new boost::shared_mutex() );
 		m_DatabaseConnectionContainer.InsertUpdate(datum);
 
 		// also add a connection for ddl operations
@@ -249,7 +438,7 @@ void DatabaseConnectionManager::FetchConnectionsByTable( const std::string& i_rN
 
 		std::string connectionName = GetConnectionName( node, i_rName );
 		DatabaseConnectionDatum connectionDatum;
-		connectionDatum.SetValue< ConnectionReconnect >( i_ConnectionReconnect );
+		configDatum.SetValue< ConnectionReconnect >( i_ConnectionReconnect );
 		connectionDatum.SetValue< ConnectionName >( connectionName );
 		if( m_DatabaseConnectionContainer.find( connectionDatum ) != m_DatabaseConnectionContainer.end() )
 		{
@@ -259,9 +448,12 @@ void DatabaseConnectionManager::FetchConnectionsByTable( const std::string& i_rN
 		{
 			MV_THROW( DatabaseConnectionManagerException, "Duplicate node id: " << node << " loaded from connections node: " << i_rConnectionsNode << " (conflicts with shard connection)" );
 		}
-		connectionDatum.SetValue< DatabaseConnectionType >( type );
+		configDatum.SetValue< DatabaseConnectionType >( type );
 		configDatum.SetValue< DisableCache >( disableCache.IsNull() ? false : boost::lexical_cast< bool >( disableCache ) );
+		configDatum.SetValue< MinPoolSize >( 1 );
+		configDatum.SetValue< MaxPoolSize >( 1 );
 		connectionDatum.SetValue< DatabaseConfig >( configDatum );
+		connectionDatum.GetReference< Mutex >().reset( new boost::shared_mutex() );
 		m_ShardDatabaseConnectionContainer.InsertUpdate( connectionDatum );
 
 		// also add a connection for ddl operations
@@ -389,92 +581,49 @@ boost::shared_ptr< Database > DatabaseConnectionManager::GetDataDefinitionConnec
 boost::shared_ptr< Database > DatabaseConnectionManager::GetConnection(const std::string& i_ConnectionName)
 {
 	DatabaseConnectionDatum& rDatum = PrivateGetConnection(i_ConnectionName);
-	boost::shared_ptr<Database>& rDatabase = rDatum.GetReference<DatabaseConnection>();
-	if (rDatabase.get() != NULL)
-	{
-		ReconnectIfNecessary( rDatum, m_rDataProxyClient.InsideTransaction() );
-		return rDatabase;
-	}
-	// obtain a unique lock and re-check
-	{
-		boost::unique_lock< boost::shared_mutex > lock( m_ConnectMutex );
-		rDatabase = rDatum.GetReference<DatabaseConnection>();
-		if (rDatabase.get() != NULL)
-		{
-			ReconnectIfNecessary( rDatum, m_rDataProxyClient.InsideTransaction() );
-			return rDatabase;
-		}
+	DatabaseInstanceDatum* pInstance;
+	boost::shared_ptr< Database > pResult;
 
-		//the Connection hasn't been created yet, create it now and return it.
-		std::string connectionType = rDatum.GetValue<DatabaseConnectionType>();
-		if (connectionType == ORACLE_DB_TYPE)
+	// try to get one of the connections that has been established
+	{
+		boost::shared_lock< boost::shared_mutex > lock( *rDatum.GetValue< Mutex >() );
+		pInstance = GetDatabase( rDatum, false );
+		if( pInstance != NULL )
 		{
-			MVLOGGER("root.lib.DataProxy.DatabaseConnectionManager.Connect.CreatingOracleDatabaseConnection",
-					 "Creating oracle database connection named " << rDatum.GetValue<ConnectionName>() << ".");
-			DatabaseConfigDatum datum = rDatum.GetValue<DatabaseConfig>();
-			Database *pDatabase = new Database( Database::DBCONN_OCI_THREADSAFE_ORACLE,
-												"",
-												datum.GetValue<DatabaseName>(),
-												datum.GetValue<DatabaseUserName>(),
-												datum.GetValue<DatabasePassword>(),
-												false,
-												datum.GetValue<DatabaseSchema>());
-			
-			boost::shared_ptr<Database>& rDatabaseHandle = rDatum.GetReference<DatabaseConnection>();
-			rDatabaseHandle.reset(pDatabase);
-			rDatum.GetReference< ConnectionTimer >().reset( new Stopwatch() );
-			return rDatabaseHandle;
-		}
-		else if (connectionType == MYSQL_DB_TYPE)
-		{
-			MVLOGGER("root.lib.DataProxy.DatabaseConnectionManager.Connect.CreatingMySQLDatabaseConnection",
-					 "Creating mysql database connection named " << rDatum.GetValue<ConnectionName>() << ".");
-			
-			DatabaseConfigDatum datum = rDatum.GetValue<DatabaseConfig>();
-			Database *pDatabase = new Database( Database::DBCONN_ODBC_MYSQL,
-												datum.GetValue<DatabaseServer>(),
-												"",
-												datum.GetValue<DatabaseUserName>(),
-												datum.GetValue<DatabasePassword>(),
-												datum.GetValue<DisableCache>(),
-												datum.GetValue<DatabaseName>());
-			
-			boost::shared_ptr<Database>& rDatabaseHandle = rDatum.GetReference<DatabaseConnection>();
-			rDatabaseHandle.reset(pDatabase);
-			rDatum.GetReference< ConnectionTimer >().reset( new Stopwatch() );
-			return rDatabaseHandle;
-		}
-		else if (connectionType == VERTICA_DB_TYPE)
-		{
-			MVLOGGER("root.lib.DataProxy.DatabaseConnectionManager.Connect.CreatingVerticaDatabaseConnection",
-					 "Creating vertica database connection named " << rDatum.GetValue<ConnectionName>() << ".");
-			
-			DatabaseConfigDatum datum = rDatum.GetValue<DatabaseConfig>();
-			Database *pDatabase = new Database( Database::DBCONN_ODBC_VERTICA,
-												datum.GetValue<DatabaseServer>(),
-												"",
-												datum.GetValue<DatabaseUserName>(),
-												datum.GetValue<DatabasePassword>(),
-												false,
-												datum.GetValue<DatabaseName>());
-			
-			boost::shared_ptr<Database>& rDatabaseHandle = rDatum.GetReference<DatabaseConnection>();
-			rDatabaseHandle.reset(pDatabase);
-			rDatum.GetReference< ConnectionTimer >().reset( new Stopwatch() );
-			return rDatabaseHandle;
-		}
-		else
-		{
-			MV_THROW(DatabaseConnectionManagerException,
-					 "Invalid Database type: " << connectionType);
+			ReconnectIfNecessary( i_ConnectionName, rDatum.GetValue< DatabaseConfig >(), *pInstance );
+			pResult = pInstance->GetValue< DatabaseHandle >();
 		}
 	}
+	// otherwise, we have to create one
+	{
+		boost::unique_lock< boost::shared_mutex > lock( *rDatum.GetValue< Mutex >() );
+		// double-check getting one for free
+		pInstance = GetDatabase( rDatum, false );
+		if( pInstance != NULL )
+		{
+			ReconnectIfNecessary( i_ConnectionName, rDatum.GetValue< DatabaseConfig >(), *pInstance );
+			pResult = pInstance->GetValue< DatabaseHandle >();
+		}
+		pInstance = GetDatabase( rDatum, true );
+		// this should never happen
+		if( pInstance == NULL )
+		{
+			MV_THROW( DatabaseConnectionManagerException, "Unable to create a database for connection: " << i_ConnectionName );
+		}
+		pResult = pInstance->GetValue< DatabaseHandle >();
+	}
+
+	// try to reduce the pool size before returning
+	// note that the reducing process will NOT kill our handle, because we have
+	// another shared pointer to it at this point
+	TryReducePool( rDatum );
+	return pResult;
 }
 
 std::string DatabaseConnectionManager::GetDatabaseType(const std::string& i_ConnectionName) const
 {
 	boost::shared_lock< boost::shared_mutex > lock( m_ConfigVersion );
-	return PrivateGetConnection(i_ConnectionName).GetValue< DatabaseConnectionType >();
+	return PrivateGetConnection(i_ConnectionName).GetValue< DatabaseConfig >().GetValue< DatabaseConnectionType >();
 }
 
 std::string DatabaseConnectionManager::GetDatabaseTypeByTable( const std::string& i_rTableName ) const

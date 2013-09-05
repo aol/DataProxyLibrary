@@ -28,60 +28,70 @@ namespace xercesc = xercesc_2_7;
 
 MV_MAKEEXCEPTIONCLASS(DatabaseConnectionManagerException, MVException);
 
-	DATUMINFO( ConnectionName, std::string);
-	DATUMINFO( DatabaseConnectionType, std::string);
-	DATUMINFO( DatabaseUserName, std::string);
-	DATUMINFO( DatabasePassword, std::string);
-	DATUMINFO( DatabaseSchema, std::string);
-	DATUMINFO( DatabaseName, std::string);
-	DATUMINFO( DatabaseServer, std::string);
-	DATUMINFO( DisableCache, bool);
-
-	DATUMINFO( IsConnectionUsed, bool);
-	DATUMINFO( DatabaseConnection, boost::shared_ptr<Database>);
+	// DB CONFIG ELEMENTS
+	DATUMINFO( ConnectionName, std::string );
+	DATUMINFO( DatabaseConnectionType, std::string );
+	DATUMINFO( DatabaseUserName, std::string );
+	DATUMINFO( DatabasePassword, std::string );
+	DATUMINFO( DatabaseSchema, std::string );
+	DATUMINFO( DatabaseName, std::string );
+	DATUMINFO( DatabaseServer, std::string );
+	DATUMINFO( DisableCache, bool );
+	DATUMINFO( ConnectionReconnect, double  );
+	DATUMINFO( MinPoolSize, size_t );
+	DATUMINFO( MaxPoolSize, size_t );
 
 	typedef
+		GenericDatum< DatabaseConnectionType,
 	    GenericDatum< DatabaseServer,
 		GenericDatum< DatabaseName,
 		GenericDatum< DatabaseUserName,
 		GenericDatum< DatabasePassword,
 		GenericDatum< DatabaseSchema,
 		GenericDatum< DisableCache,
-		RowEnd > > > > > >
+		GenericDatum< ConnectionReconnect,
+		GenericDatum< MinPoolSize,
+		GenericDatum< MaxPoolSize,
+		RowEnd > > > > > > > > > >
 	DatabaseConfigDatum;
 
 	DATUMINFO( DatabaseConfig, DatabaseConfigDatum );
+
+	// DB CONNECTION ELEMENTS
+	DATUMINFO( ConnectionNumber, int );
+	DATUMINFO( DatabaseHandle, boost::shared_ptr< Database > );
 	DATUMINFO( ConnectionTimer, boost::shared_ptr< Stopwatch > );
-	DATUMINFO( ConnectionReconnect, double );
-	DATUMINFO( NodeId, int );
+	DATUMINFO( Mutex, boost::shared_ptr< boost::shared_mutex > );
+
+	typedef
+		GenericDatum< ConnectionNumber,
+		GenericDatum< DatabaseHandle,
+		GenericDatum< ConnectionTimer,
+					  RowEnd > > >
+	DatabaseInstanceDatum;
+
+	DATUMINFO( DatabasePool, std::vector< DatabaseInstanceDatum > );
 
 	typedef
 		GenericDatum< ConnectionName,
-		GenericDatum< ConnectionTimer,
-		GenericDatum< ConnectionReconnect,
-		GenericDatum< DatabaseConnectionType,
 		GenericDatum< DatabaseConfig,
-		GenericDatum< IsConnectionUsed,
-		GenericDatum< DatabaseConnection,
-					  RowEnd > > > > > > >
+		GenericDatum< DatabasePool,
+		GenericDatum< Mutex,
+					  RowEnd > > > >
 	DatabaseConnectionDatum;
 
 	typedef
 		GenericDataContainerDescriptor< ConnectionName, KeyDatum,
-		GenericDataContainerDescriptor< ConnectionTimer, RetainFirstDatum,
-		GenericDataContainerDescriptor< ConnectionReconnect, RetainFirstDatum,
-		GenericDataContainerDescriptor< DatabaseConnectionType, RetainFirstDatum,
 		GenericDataContainerDescriptor< DatabaseConfig, RetainFirstDatum,
-		GenericDataContainerDescriptor< IsConnectionUsed, RetainFirstDatum,
-		GenericDataContainerDescriptor< DatabaseConnection, RetainFirstDatum,
-		RowEnd > > > > > > >
+		GenericDataContainerDescriptor< DatabasePool, RetainFirstDatum,
+		RowEnd > > >
 	DatabaseConnectionContainerDescription;
 
 	typedef GenericOrderedDataContainer< DatabaseConnectionDatum, DatabaseConnectionContainerDescription > DatabaseConnectionContainer;
 
-	DATUMINFO( ShardCollectionName, std::string);
-	DATUMINFO( ConnectionNodeName, std::string);
-	DATUMINFO( TablesNodeName, std::string);
+	DATUMINFO( ShardCollectionName, std::string );
+	DATUMINFO( ConnectionNodeName, std::string );
+	DATUMINFO( TablesNodeName, std::string );
 
 	typedef
 		GenericDatum< ShardCollectionName,
@@ -137,7 +147,6 @@ private:
 
 	mutable boost::shared_mutex m_ConfigVersion;
 	mutable boost::shared_mutex m_ShardVersion;
-	mutable boost::shared_mutex m_ConnectMutex;
 };
 
 #endif //_DATABASE_CONNECTION_MANAGER_HPP_

@@ -14,6 +14,7 @@
 #include "ProxyTestHelpers.hpp"
 #include "AssertThrowWithMessage.hpp"
 #include "MockDataProxyClient.hpp"
+#include <boost/algorithm/string.hpp>
 #include <sstream>
 
 CPPUNIT_TEST_SUITE_REGISTRATION( DatabaseConnectionManagerTest );
@@ -47,6 +48,19 @@ namespace
 		databaseStream << std::endl;
 		
 		return databaseStream.str();
+	}
+
+	int GetNumConnections( Database& i_rDatabase )
+	{
+		std::stringstream sql;
+		std::string lowercaseUser = boost::algorithm::to_lower_copy( i_rDatabase.GetUserName() );
+		sql << "SELECT COUNT(*) FROM v$session s WHERE LOWER(s.username)='" << lowercaseUser << "' AND s.process = " << ::getpid();
+		Database::Statement stmt( i_rDatabase, sql.str() );
+		int numConn( 0 );
+		CPPUNIT_ASSERT_NO_THROW( stmt.BindCol( numConn ) );
+		CPPUNIT_ASSERT_NO_THROW( stmt.CompleteBinding() );
+		CPPUNIT_ASSERT( stmt.NextRow() );
+		return numConn;
 	}
 
 	DataProxyClient DEFAULT_DATA_PROXY_CLIENT( true );
@@ -106,25 +120,49 @@ void DatabaseConnectionManagerTest::testNormal()
 	CPPUNIT_ASSERT_NO_THROW (dbConnectionManager->ValidateConnectionName("name2"));
 
 	std::stringstream expected;	
-	Database* pDatabase;
-	Database* pDataDefinitionDatabase;
+	Database* pDatabase1;
+	Database* pDatabase2;
+	Database* pDataDefinitionDatabase1;
+	Database* pDataDefinitionDatabase2;
 
 	expected << "ADLAPPD, , five0test, five0test, five0test, 0" << std::endl;
 	// ensure we can get two cloned copies of the database, but they are not the same object (connection)
-	pDatabase = dbConnectionManager->GetConnection("name1").get();
-	pDataDefinitionDatabase = dbConnectionManager->GetDataDefinitionConnection("name1").get();
-	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase)));
-	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDataDefinitionDatabase)));
-	CPPUNIT_ASSERT(pDataDefinitionDatabase != pDatabase);
+	pDatabase1 = dbConnectionManager->GetConnection("name1").get();
+	CPPUNIT_ASSERT( pDatabase1 );
+	pDatabase2 = dbConnectionManager->GetConnection("name1").get();
+	CPPUNIT_ASSERT( pDatabase2 );
+	pDataDefinitionDatabase1 = dbConnectionManager->GetDataDefinitionConnection("name1").get();
+	CPPUNIT_ASSERT( pDataDefinitionDatabase1 );
+	pDataDefinitionDatabase2 = dbConnectionManager->GetDataDefinitionConnection("name1").get();
+	CPPUNIT_ASSERT( pDataDefinitionDatabase2 );
+	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase1)));
+	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase2)));
+	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDataDefinitionDatabase1)));
+	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDataDefinitionDatabase2)));
+	CPPUNIT_ASSERT(pDataDefinitionDatabase1 != pDatabase1);
+	CPPUNIT_ASSERT(pDataDefinitionDatabase2 != pDatabase2);
+	CPPUNIT_ASSERT( pDatabase1 == pDatabase2 );
+	CPPUNIT_ASSERT( pDataDefinitionDatabase1 == pDataDefinitionDatabase2 );
 
 	expected.str("");
 	expected << ", localhost, adlearn, adlearn, Adv.commv, 0" << std::endl;
 	// ensure we can get two cloned copies of the database, but they are not the same object (connection)
-	pDatabase = dbConnectionManager->GetConnection("name2").get();
-	pDataDefinitionDatabase = dbConnectionManager->GetDataDefinitionConnection("name2").get();
-	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase)));
-	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDataDefinitionDatabase)));
-	CPPUNIT_ASSERT(pDataDefinitionDatabase != pDatabase);
+	pDatabase1 = dbConnectionManager->GetConnection("name2").get();
+	CPPUNIT_ASSERT( pDatabase1 );
+	pDatabase2 = dbConnectionManager->GetConnection("name2").get();
+	CPPUNIT_ASSERT( pDatabase2 );
+	pDataDefinitionDatabase1 = dbConnectionManager->GetDataDefinitionConnection("name2").get();
+	CPPUNIT_ASSERT( pDataDefinitionDatabase1 );
+	pDataDefinitionDatabase2 = dbConnectionManager->GetDataDefinitionConnection("name2").get();
+	CPPUNIT_ASSERT( pDataDefinitionDatabase2 );
+	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase1)));
+	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase2)));
+	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDataDefinitionDatabase1)));
+	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDataDefinitionDatabase2)));
+	CPPUNIT_ASSERT(pDataDefinitionDatabase1 != pDatabase1);
+	CPPUNIT_ASSERT(pDataDefinitionDatabase2 != pDatabase2);
+	CPPUNIT_ASSERT( pDatabase1 == pDatabase2 );
+	CPPUNIT_ASSERT( pDataDefinitionDatabase1 == pDataDefinitionDatabase2 );
 
 	// check clear functionality
 	CPPUNIT_ASSERT_NO_THROW (dbConnectionManager->ValidateConnectionName("name2"));
@@ -146,15 +184,6 @@ void DatabaseConnectionManagerTest::testNormalReconnect()
 	xmlContents << "  password = \"five0test\""   << std::endl;
 	xmlContents << "  reconnectTimeout = \"0.0\""   << std::endl;
 	xmlContents << "  schema = \"\" />"   << std::endl;
-
-	xmlContents << " <Database type = \"mysql\""<< std::endl;
-	xmlContents << "  connection = \"name2\""  << std::endl;
-	xmlContents << "  server = \"localhost\""  << std::endl;
-	xmlContents << "  user = \"adlearn\""  << std::endl;
-	xmlContents << "  password = \"Adv.commv\""  << std::endl;
-	xmlContents << "  name = \"\""  << std::endl;
-	xmlContents << "  disableCache = \"false\" />"   << std::endl;
-	xmlContents << "  reconnectTimeout = \"0.0\""   << std::endl;
 	xmlContents << "</DatabaseConnections>" << std::endl;
 
 	std::vector<xercesc::DOMNode*> nodes;
@@ -164,42 +193,19 @@ void DatabaseConnectionManagerTest::testNormalReconnect()
 	dbConnectionManager.reset(new DatabaseConnectionManager( DEFAULT_DATA_PROXY_CLIENT ));
 	dbConnectionManager->Parse(*nodes[0]);
 
-	CPPUNIT_ASSERT_NO_THROW (dbConnectionManager->GetConnection("name1"));
-	CPPUNIT_ASSERT_NO_THROW (dbConnectionManager->GetConnection("name2"));
-	CPPUNIT_ASSERT_NO_THROW (dbConnectionManager->GetDataDefinitionConnection("name2"));
-	CPPUNIT_ASSERT_NO_THROW (dbConnectionManager->GetConnection("name1"));
-	CPPUNIT_ASSERT_NO_THROW (dbConnectionManager->GetConnection("name2"));
-	CPPUNIT_ASSERT_NO_THROW (dbConnectionManager->GetDataDefinitionConnection("name2"));
-	CPPUNIT_ASSERT_NO_THROW (dbConnectionManager->GetConnection("name1"));
-	CPPUNIT_ASSERT_NO_THROW (dbConnectionManager->GetConnection("name2"));
-	CPPUNIT_ASSERT_NO_THROW (dbConnectionManager->GetDataDefinitionConnection("name2"));
-
 	std::stringstream expected;	
-	Database* pDatabase;
-	Database* pDataDefinitionDatabase;
+	Database* pDatabase1;
+	Database* pDatabase2;
 
 	expected << "ADLAPPD, , five0test, five0test, five0test, 0" << std::endl;
 	// ensure we can get two cloned copies of the database, but they are not the same object (connection)
-	pDatabase = dbConnectionManager->GetConnection("name1").get();
-	pDataDefinitionDatabase = dbConnectionManager->GetDataDefinitionConnection("name1").get();
-	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase)));
-	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDataDefinitionDatabase)));
-	CPPUNIT_ASSERT(pDataDefinitionDatabase != pDatabase);
-
-	expected.str("");
-	expected << ", localhost, adlearn, adlearn, Adv.commv, 0" << std::endl;
-	// ensure we can get two cloned copies of the database, but they are not the same object (connection)
-	pDatabase = dbConnectionManager->GetConnection("name2").get();
-	pDataDefinitionDatabase = dbConnectionManager->GetDataDefinitionConnection("name2").get();
-	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase)));
-	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDataDefinitionDatabase)));
-	CPPUNIT_ASSERT(pDataDefinitionDatabase != pDatabase);
-
-	// check clear functionality
-	CPPUNIT_ASSERT_NO_THROW (dbConnectionManager->ValidateConnectionName("name2"));
-	CPPUNIT_ASSERT_NO_THROW( dbConnectionManager->ClearConnections() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE (dbConnectionManager->ValidateConnectionName("name2"), DatabaseConnectionManagerException,
-									   ".*:\\d+: DatabaseConnection 'name2' was not found\\. Make sure the dpl config's 'DatabaseConnections' node is configured correctly\\.");
+	pDatabase1 = dbConnectionManager->GetConnection("name1").get();
+	CPPUNIT_ASSERT( pDatabase1 );
+	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase1)));
+	pDatabase2 = dbConnectionManager->GetConnection("name1").get();
+	CPPUNIT_ASSERT( pDatabase2 );
+	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase2)));
+	CPPUNIT_ASSERT( pDatabase1 != pDatabase2 );
 }
 
 void DatabaseConnectionManagerTest::testParseMissingAttributes()
@@ -482,11 +488,13 @@ void DatabaseConnectionManagerTest::testConnectionOnlyHappensOnGetConnection()
 	
 	Database* pDatabase;
 	CPPUNIT_ASSERT_NO_THROW(pDatabase = dbConnectionManager->GetConnection("OracleConnectionTwo").get());
+	CPPUNIT_ASSERT( pDatabase );
 	expected << "ADLAPPD, , five0test, five0test, five0test, 0" << std::endl;
 	CPPUNIT_ASSERT_EQUAL(expected.str(), PrettyPrintDatabaseConnection(*pDatabase));
 
 	expected.str("");
 	CPPUNIT_ASSERT_NO_THROW(pDatabase = dbConnectionManager->GetConnection("MySQLConnectionTwo").get());
+	CPPUNIT_ASSERT( pDatabase );
 	expected << ", localhost, adlearn, adlearn, Adv.commv, 0" << std::endl;
 	CPPUNIT_ASSERT_EQUAL(expected.str(), PrettyPrintDatabaseConnection(*pDatabase));
 
@@ -571,6 +579,14 @@ void DatabaseConnectionManagerTest::testFetchShardNodes()
 
 	CPPUNIT_ASSERT_NO_THROW( manager.ParseConnectionsByTable( *nodes[0] ) );
 
+	CPPUNIT_ASSERT( manager.GetConnectionByTable("shard_12345") );
+	CPPUNIT_ASSERT( manager.GetConnectionByTable("shard_54321") );
+	CPPUNIT_ASSERT( manager.GetConnectionByTable("shard_22222") );
+	CPPUNIT_ASSERT( manager.GetConnectionByTable("shard_33333") );
+	CPPUNIT_ASSERT( manager.GetDataDefinitionConnectionByTable("shard_12345") );
+	CPPUNIT_ASSERT( manager.GetDataDefinitionConnectionByTable("shard_54321") );
+	CPPUNIT_ASSERT( manager.GetDataDefinitionConnectionByTable("shard_22222") );
+	CPPUNIT_ASSERT( manager.GetDataDefinitionConnectionByTable("shard_33333") );
 	CPPUNIT_ASSERT_EQUAL(std::string(", localhost, adlearn, adlearn, Adv.commv, 0\n"), PrettyPrintDatabaseConnection(*manager.GetConnectionByTable("shard_12345")));
 	CPPUNIT_ASSERT_EQUAL(std::string(", localhost, adlearn, adlearn, Adv.commv, 0\n"), PrettyPrintDatabaseConnection(*manager.GetConnectionByTable("shard_54321")));
 	CPPUNIT_ASSERT_EQUAL(std::string(", localhost, adlearn, adlearn, Adv.commv, 1\n"), PrettyPrintDatabaseConnection(*manager.GetConnectionByTable("shard_22222")));
@@ -644,4 +660,115 @@ void DatabaseConnectionManagerTest::testFetchShardNodesException()
 	CPPUNIT_ASSERT_NO_THROW( pManager->ParseConnectionsByTable( *nodes[0] ) );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pManager->GetConnectionByTable( "blah" ), DatabaseConnectionManagerException,
 		".*:\\d+: Table: shard_22222 loaded from node: tables is reported to be located in unknown node id: 4" );
+}
+
+void DatabaseConnectionManagerTest::testPooling()
+{
+	std::stringstream xmlContents;
+	boost::scoped_ptr<DatabaseConnectionManager> dbConnectionManager;
+
+	xmlContents << "<DatabaseConnections>" << std::endl;
+	xmlContents << " <Database type = \"oracle\"" << std::endl;
+	xmlContents << "  connection = \"name1\""   << std::endl;
+	xmlContents << "  name = \"ADLAPPD\""   << std::endl;
+	xmlContents << "  user = \"five0test\""   << std::endl;
+	xmlContents << "  password = \"five0test\""   << std::endl;
+	xmlContents << "  minPoolSize = \"2\""   << std::endl;
+	xmlContents << "  maxPoolSize = \"4\""   << std::endl;
+	xmlContents << "  schema = \"\" />"   << std::endl;
+	xmlContents << "</DatabaseConnections>" << std::endl;
+
+	Database observerDB( Database::DBCONN_OCI_THREADSAFE_ORACLE, "", "ADLAPPD", "five0test", "five0test", false );
+	CPPUNIT_ASSERT_EQUAL( 1, GetNumConnections( observerDB ) );
+
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes(m_pTempDirectory->GetDirectoryName(), xmlContents.str(), "DatabaseConnections", nodes);
+
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	dbConnectionManager.reset(new DatabaseConnectionManager( DEFAULT_DATA_PROXY_CLIENT ));
+	dbConnectionManager->Parse(*nodes[0]);
+
+	std::stringstream expected;	
+	boost::shared_ptr< Database > pDatabase1;
+	boost::shared_ptr< Database > pDatabase2;
+	boost::shared_ptr< Database > pDatabase3;
+	boost::shared_ptr< Database > pDatabase4;
+	boost::shared_ptr< Database > pDatabase5;
+	boost::shared_ptr< Database > pDatabase6;
+
+	expected << "ADLAPPD, , five0test, five0test, five0test, 0" << std::endl;
+	pDatabase1 = dbConnectionManager->GetConnection("name1");
+	CPPUNIT_ASSERT_EQUAL( 1+1, GetNumConnections( observerDB ) );
+	pDatabase2 = dbConnectionManager->GetConnection("name1");
+	CPPUNIT_ASSERT_EQUAL( 1+2, GetNumConnections( observerDB ) );
+	pDatabase3 = dbConnectionManager->GetConnection("name1");
+	CPPUNIT_ASSERT_EQUAL( 1+3, GetNumConnections( observerDB ) );
+	pDatabase4 = dbConnectionManager->GetConnection("name1");
+	CPPUNIT_ASSERT_EQUAL( 1+4, GetNumConnections( observerDB ) );
+	CPPUNIT_ASSERT( pDatabase1 );
+	CPPUNIT_ASSERT( pDatabase2 );
+	CPPUNIT_ASSERT( pDatabase3 );
+	CPPUNIT_ASSERT( pDatabase4 );
+	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase1)));
+	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase2)));
+	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase3)));
+	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase4)));
+
+	// at this point, all dbs are unique because the pool size was able to grow to 4
+	CPPUNIT_ASSERT_EQUAL( long( 2 ), pDatabase1.use_count() );
+	CPPUNIT_ASSERT_EQUAL( long( 2 ), pDatabase2.use_count() );
+	CPPUNIT_ASSERT_EQUAL( long( 2 ), pDatabase3.use_count() );
+	CPPUNIT_ASSERT_EQUAL( long( 2 ), pDatabase4.use_count() );
+
+	// we're out of dbs; we will start to reuse (lowest use count gets new connections, favoring in-order)
+	pDatabase5 = dbConnectionManager->GetConnection("name1");
+	CPPUNIT_ASSERT_EQUAL( 1+4, GetNumConnections( observerDB ) );
+	CPPUNIT_ASSERT_EQUAL( long( 3 ), pDatabase1.use_count() );
+	CPPUNIT_ASSERT_EQUAL( long( 2 ), pDatabase2.use_count() );
+	CPPUNIT_ASSERT_EQUAL( long( 2 ), pDatabase3.use_count() );
+	CPPUNIT_ASSERT_EQUAL( long( 2 ), pDatabase4.use_count() );
+	CPPUNIT_ASSERT_EQUAL( long( 3 ), pDatabase5.use_count() );
+	pDatabase6 = dbConnectionManager->GetConnection("name1");
+	CPPUNIT_ASSERT_EQUAL( 1+4, GetNumConnections( observerDB ) );
+	CPPUNIT_ASSERT_EQUAL( long( 3 ), pDatabase1.use_count() );
+	CPPUNIT_ASSERT_EQUAL( long( 3 ), pDatabase2.use_count() );
+	CPPUNIT_ASSERT_EQUAL( long( 2 ), pDatabase3.use_count() );
+	CPPUNIT_ASSERT_EQUAL( long( 2 ), pDatabase4.use_count() );
+	CPPUNIT_ASSERT_EQUAL( long( 3 ), pDatabase5.use_count() );
+	CPPUNIT_ASSERT_EQUAL( long( 3 ), pDatabase6.use_count() );
+
+	// kill db1; now db5's use count drops to 2
+	pDatabase1.reset();
+	CPPUNIT_ASSERT_EQUAL( 1+4, GetNumConnections( observerDB ) );
+	CPPUNIT_ASSERT_EQUAL( long( 3 ), pDatabase2.use_count() );
+	CPPUNIT_ASSERT_EQUAL( long( 2 ), pDatabase3.use_count() );
+	CPPUNIT_ASSERT_EQUAL( long( 2 ), pDatabase4.use_count() );
+	CPPUNIT_ASSERT_EQUAL( long( 2 ), pDatabase5.use_count() );
+	CPPUNIT_ASSERT_EQUAL( long( 3 ), pDatabase6.use_count() );
+
+	// kill off 3, 5 & 6
+	pDatabase3.reset();
+	pDatabase5.reset();
+	pDatabase6.reset();
+	// we're still at 5 connections (1 observer + 4 pools)...
+	CPPUNIT_ASSERT_EQUAL( 1+4, GetNumConnections( observerDB ) );
+	// UNTIL we request another db, at which point we will drop down to 4 (1 observer + 3 pools)
+	// because pDatabase2,3,4 are still holding connections
+	pDatabase1 = dbConnectionManager->GetConnection("name1");
+	CPPUNIT_ASSERT_EQUAL( 1+3, GetNumConnections( observerDB ) );
+
+	// now kill all the dbs
+	pDatabase1.reset();
+	pDatabase2.reset();
+	pDatabase3.reset();
+	pDatabase4.reset();
+	pDatabase5.reset();
+	pDatabase6.reset();
+	// we're still at 4 connections...
+	CPPUNIT_ASSERT_EQUAL( 1+3, GetNumConnections( observerDB ) );
+	// UNTIL we request another db, at which point we will drop down to pool minimum (1 observer + 2 pools)
+	// because pDatabase2,3,4 are still holding connections
+	pDatabase1 = dbConnectionManager->GetConnection("name1");
+	pDatabase1.reset();
+	CPPUNIT_ASSERT_EQUAL( 1+2, GetNumConnections( observerDB ) );
 }
