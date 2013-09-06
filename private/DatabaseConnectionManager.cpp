@@ -59,11 +59,16 @@ namespace
 			std::string poolSizeString = XMLUtilities::XMLChToString( pAttribute->getValue() );
 			try
 			{
-				return boost::lexical_cast< size_t >( poolSizeString );
+				int result = boost::lexical_cast< int >( poolSizeString );
+				if( result <= 0 )
+				{
+					MV_THROW( DatabaseConnectionManagerException, "Illegal value provided: " << result << " for attribute: " << i_rName << "; must be strictly positive" );
+				}
+				return size_t( result );
 			}
 			catch( const boost::bad_lexical_cast& i_rException )
 			{
-				MV_THROW( DatabaseConnectionManagerException, "Error parsing " << RECONNECT_TIMEOUT_ATTRIBUTE << " attribute: " << poolSizeString << " as int" );
+				MV_THROW( DatabaseConnectionManagerException, "Error parsing " << i_rName << " attribute: " << poolSizeString << " as int" );
 			}
 		}
 		return i_Default;

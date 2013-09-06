@@ -408,7 +408,98 @@ void DatabaseConnectionManagerTest::testParseExceptionInvalidValues()
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(dbConnectionManager->Parse(*nodes[0]),
 									  DatabaseConnectionManagerException,
 									  MATCH_FILE_AND_LINE_NUMBER + "Unrecognized type in DatabaseNode: invalid_type_value");
-	
+
+	xmlContents.str("");
+	xmlContents << "<DatabaseConnections>" << std::endl;
+	xmlContents << " <Database type = \"mysql\""<< std::endl;
+	xmlContents << "  connection = \"name2\""  << std::endl;
+	xmlContents << "  server = \"localhost\""  << std::endl;
+	xmlContents << "  user = \"adlearn\""  << std::endl;
+	xmlContents << "  password = \"Adv.commv\""  << std::endl;
+	xmlContents << "  name = \"\""  << std::endl;
+	xmlContents << "  minPoolSize = \"0\""  << std::endl;
+	xmlContents << "  maxPoolSize = \"5\""  << std::endl;
+	xmlContents << "  disableCache = \"false\" />"   << std::endl;
+	xmlContents << "</DatabaseConnections>" << std::endl;
+
+	nodes.clear();
+	ProxyTestHelpers::GetDataNodes(m_pTempDirectory->GetDirectoryName(), xmlContents.str(), "DatabaseConnections", nodes);
+
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	dbConnectionManager.reset(new DatabaseConnectionManager( DEFAULT_DATA_PROXY_CLIENT ));
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(dbConnectionManager->Parse(*nodes[0]),
+									  DatabaseConnectionManagerException,
+									  MATCH_FILE_AND_LINE_NUMBER + "Illegal value provided: 0 for attribute: minPoolSize; must be strictly positive");
+
+	xmlContents.str("");
+	xmlContents << "<DatabaseConnections>" << std::endl;
+	xmlContents << " <Database type = \"mysql\""<< std::endl;
+	xmlContents << "  connection = \"name2\""  << std::endl;
+	xmlContents << "  server = \"localhost\""  << std::endl;
+	xmlContents << "  user = \"adlearn\""  << std::endl;
+	xmlContents << "  password = \"Adv.commv\""  << std::endl;
+	xmlContents << "  name = \"\""  << std::endl;
+	xmlContents << "  minPoolSize = \"-2\""  << std::endl;
+	xmlContents << "  maxPoolSize = \"5\""  << std::endl;
+	xmlContents << "  disableCache = \"false\" />"   << std::endl;
+	xmlContents << "</DatabaseConnections>" << std::endl;
+
+	nodes.clear();
+	ProxyTestHelpers::GetDataNodes(m_pTempDirectory->GetDirectoryName(), xmlContents.str(), "DatabaseConnections", nodes);
+
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	dbConnectionManager.reset(new DatabaseConnectionManager( DEFAULT_DATA_PROXY_CLIENT ));
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(dbConnectionManager->Parse(*nodes[0]),
+									  DatabaseConnectionManagerException,
+									  MATCH_FILE_AND_LINE_NUMBER + "Illegal value provided: -2 for attribute: minPoolSize; must be strictly positive");
+
+	xmlContents.str("");
+	xmlContents << "<DatabaseConnections>" << std::endl;
+	xmlContents << " <Database type = \"mysql\""<< std::endl;
+	xmlContents << "  connection = \"name2\""  << std::endl;
+	xmlContents << "  server = \"localhost\""  << std::endl;
+	xmlContents << "  user = \"adlearn\""  << std::endl;
+	xmlContents << "  password = \"Adv.commv\""  << std::endl;
+	xmlContents << "  name = \"\""  << std::endl;
+	xmlContents << "  minPoolSize = \"5\""  << std::endl;
+	xmlContents << "  maxPoolSize = \"0\""  << std::endl;
+	xmlContents << "  disableCache = \"false\" />"   << std::endl;
+	xmlContents << "</DatabaseConnections>" << std::endl;
+
+	nodes.clear();
+	ProxyTestHelpers::GetDataNodes(m_pTempDirectory->GetDirectoryName(), xmlContents.str(), "DatabaseConnections", nodes);
+
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	dbConnectionManager.reset(new DatabaseConnectionManager( DEFAULT_DATA_PROXY_CLIENT ));
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(dbConnectionManager->Parse(*nodes[0]),
+									  DatabaseConnectionManagerException,
+									  MATCH_FILE_AND_LINE_NUMBER + "Illegal value provided: 0 for attribute: maxPoolSize; must be strictly positive");
+
+	xmlContents.str("");
+	xmlContents << "<DatabaseConnections>" << std::endl;
+	xmlContents << " <Database type = \"mysql\""<< std::endl;
+	xmlContents << "  connection = \"name2\""  << std::endl;
+	xmlContents << "  server = \"localhost\""  << std::endl;
+	xmlContents << "  user = \"adlearn\""  << std::endl;
+	xmlContents << "  password = \"Adv.commv\""  << std::endl;
+	xmlContents << "  name = \"\""  << std::endl;
+	xmlContents << "  minPoolSize = \"2\""  << std::endl;
+	xmlContents << "  maxPoolSize = \"-5\""  << std::endl;
+	xmlContents << "  disableCache = \"false\" />"   << std::endl;
+	xmlContents << "</DatabaseConnections>" << std::endl;
+
+	nodes.clear();
+	ProxyTestHelpers::GetDataNodes(m_pTempDirectory->GetDirectoryName(), xmlContents.str(), "DatabaseConnections", nodes);
+
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	dbConnectionManager.reset(new DatabaseConnectionManager( DEFAULT_DATA_PROXY_CLIENT ));
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(dbConnectionManager->Parse(*nodes[0]),
+									  DatabaseConnectionManagerException,
+									  MATCH_FILE_AND_LINE_NUMBER + "Illegal value provided: -5 for attribute: maxPoolSize; must be strictly positive");
 }
 
 void DatabaseConnectionManagerTest::testParseEmptyNode()
