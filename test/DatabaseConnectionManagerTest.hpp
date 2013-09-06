@@ -30,7 +30,7 @@ private:
 	CPPUNIT_TEST( testParseExceptionDuplicateConnectionNames );
 	CPPUNIT_TEST( testFetchShardNodes );
 	CPPUNIT_TEST( testFetchShardNodesException );
-	CPPUNIT_TEST( testPooling );
+	CPPUNIT_TEST( testPoolingAutoReduce );
 	
 	CPPUNIT_TEST_SUITE_END();
 
@@ -43,7 +43,7 @@ private:
 	void testParseExceptionDuplicateConnectionNames();
 	void testFetchShardNodes();
 	void testFetchShardNodesException();
-	void testPooling();
+	void testPoolingAutoReduce();
 
 public:
 	DatabaseConnectionManagerTest();

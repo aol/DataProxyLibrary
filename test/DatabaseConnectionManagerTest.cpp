@@ -753,7 +753,7 @@ void DatabaseConnectionManagerTest::testFetchShardNodesException()
 		".*:\\d+: Table: shard_22222 loaded from node: tables is reported to be located in unknown node id: 4" );
 }
 
-void DatabaseConnectionManagerTest::testPooling()
+void DatabaseConnectionManagerTest::testPoolingAutoReduce()
 {
 	std::stringstream xmlContents;
 	boost::scoped_ptr<DatabaseConnectionManager> dbConnectionManager;
@@ -765,7 +765,8 @@ void DatabaseConnectionManagerTest::testPooling()
 	xmlContents << "  user = \"five0test\""   << std::endl;
 	xmlContents << "  password = \"five0test\""   << std::endl;
 	xmlContents << "  minPoolSize = \"2\""   << std::endl;
-	xmlContents << "  maxPoolSize = \"4\""   << std::endl;
+	xmlContents << "  maxPoolSize = \"5\""   << std::endl;
+	xmlContents << "  poolRefreshPeriod = \"1\""   << std::endl;
 	xmlContents << "  schema = \"\" />"   << std::endl;
 	xmlContents << "</DatabaseConnections>" << std::endl;
 
@@ -779,7 +780,6 @@ void DatabaseConnectionManagerTest::testPooling()
 	dbConnectionManager.reset(new DatabaseConnectionManager( DEFAULT_DATA_PROXY_CLIENT ));
 	dbConnectionManager->Parse(*nodes[0]);
 
-	std::stringstream expected;	
 	boost::shared_ptr< Database > pDatabase1;
 	boost::shared_ptr< Database > pDatabase2;
 	boost::shared_ptr< Database > pDatabase3;
@@ -787,79 +787,28 @@ void DatabaseConnectionManagerTest::testPooling()
 	boost::shared_ptr< Database > pDatabase5;
 	boost::shared_ptr< Database > pDatabase6;
 
-	expected << "ADLAPPD, , five0test, five0test, five0test, 0" << std::endl;
 	pDatabase1 = dbConnectionManager->GetConnection("name1");
-	CPPUNIT_ASSERT_EQUAL( 1+1, GetNumConnections( observerDB ) );
 	pDatabase2 = dbConnectionManager->GetConnection("name1");
-	CPPUNIT_ASSERT_EQUAL( 1+2, GetNumConnections( observerDB ) );
 	pDatabase3 = dbConnectionManager->GetConnection("name1");
-	CPPUNIT_ASSERT_EQUAL( 1+3, GetNumConnections( observerDB ) );
 	pDatabase4 = dbConnectionManager->GetConnection("name1");
-	CPPUNIT_ASSERT_EQUAL( 1+4, GetNumConnections( observerDB ) );
+	pDatabase5 = dbConnectionManager->GetConnection("name1");
+	pDatabase6 = dbConnectionManager->GetConnection("name1");
 	CPPUNIT_ASSERT( pDatabase1 );
 	CPPUNIT_ASSERT( pDatabase2 );
 	CPPUNIT_ASSERT( pDatabase3 );
 	CPPUNIT_ASSERT( pDatabase4 );
-	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase1)));
-	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase2)));
-	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase3)));
-	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase4)));
-
-	// at this point, all dbs are unique because the pool size was able to grow to 4
-	CPPUNIT_ASSERT_EQUAL( long( 2 ), pDatabase1.use_count() );
-	CPPUNIT_ASSERT_EQUAL( long( 2 ), pDatabase2.use_count() );
-	CPPUNIT_ASSERT_EQUAL( long( 2 ), pDatabase3.use_count() );
-	CPPUNIT_ASSERT_EQUAL( long( 2 ), pDatabase4.use_count() );
-
-	// we're out of dbs; we will start to reuse (lowest use count gets new connections, favoring in-order)
-	pDatabase5 = dbConnectionManager->GetConnection("name1");
-	CPPUNIT_ASSERT_EQUAL( 1+4, GetNumConnections( observerDB ) );
-	CPPUNIT_ASSERT_EQUAL( long( 3 ), pDatabase1.use_count() );
-	CPPUNIT_ASSERT_EQUAL( long( 2 ), pDatabase2.use_count() );
-	CPPUNIT_ASSERT_EQUAL( long( 2 ), pDatabase3.use_count() );
-	CPPUNIT_ASSERT_EQUAL( long( 2 ), pDatabase4.use_count() );
-	CPPUNIT_ASSERT_EQUAL( long( 3 ), pDatabase5.use_count() );
-	pDatabase6 = dbConnectionManager->GetConnection("name1");
-	CPPUNIT_ASSERT_EQUAL( 1+4, GetNumConnections( observerDB ) );
-	CPPUNIT_ASSERT_EQUAL( long( 3 ), pDatabase1.use_count() );
-	CPPUNIT_ASSERT_EQUAL( long( 3 ), pDatabase2.use_count() );
-	CPPUNIT_ASSERT_EQUAL( long( 2 ), pDatabase3.use_count() );
-	CPPUNIT_ASSERT_EQUAL( long( 2 ), pDatabase4.use_count() );
-	CPPUNIT_ASSERT_EQUAL( long( 3 ), pDatabase5.use_count() );
-	CPPUNIT_ASSERT_EQUAL( long( 3 ), pDatabase6.use_count() );
-
-	// kill db1; now db5's use count drops to 2
-	pDatabase1.reset();
-	CPPUNIT_ASSERT_EQUAL( 1+4, GetNumConnections( observerDB ) );
-	CPPUNIT_ASSERT_EQUAL( long( 3 ), pDatabase2.use_count() );
-	CPPUNIT_ASSERT_EQUAL( long( 2 ), pDatabase3.use_count() );
-	CPPUNIT_ASSERT_EQUAL( long( 2 ), pDatabase4.use_count() );
-	CPPUNIT_ASSERT_EQUAL( long( 2 ), pDatabase5.use_count() );
-	CPPUNIT_ASSERT_EQUAL( long( 3 ), pDatabase6.use_count() );
-
-	// kill off 3, 5 & 6
-	pDatabase3.reset();
-	pDatabase5.reset();
-	pDatabase6.reset();
-	// we're still at 5 connections (1 observer + 4 pools)...
-	CPPUNIT_ASSERT_EQUAL( 1+4, GetNumConnections( observerDB ) );
-	// UNTIL we request another db, at which point we will drop down to 4 (1 observer + 3 pools)
-	// because pDatabase2,3,4 are still holding connections
-	pDatabase1 = dbConnectionManager->GetConnection("name1");
-	CPPUNIT_ASSERT_EQUAL( 1+3, GetNumConnections( observerDB ) );
-
-	// now kill all the dbs
+	CPPUNIT_ASSERT( pDatabase5 );
+	CPPUNIT_ASSERT( pDatabase6 );
+	CPPUNIT_ASSERT_EQUAL( 1+5, GetNumConnections( observerDB ) );
 	pDatabase1.reset();
 	pDatabase2.reset();
 	pDatabase3.reset();
 	pDatabase4.reset();
 	pDatabase5.reset();
 	pDatabase6.reset();
-	// we're still at 4 connections...
-	CPPUNIT_ASSERT_EQUAL( 1+3, GetNumConnections( observerDB ) );
-	// UNTIL we request another db, at which point we will drop down to pool minimum (1 observer + 2 pools)
-	// because pDatabase2,3,4 are still holding connections
-	pDatabase1 = dbConnectionManager->GetConnection("name1");
-	pDatabase1.reset();
+	CPPUNIT_ASSERT_EQUAL( 1+5, GetNumConnections( observerDB ) );
+
+	// after sleeping for a second, though, connections should drop to minimum
+	::sleep( 2 );
 	CPPUNIT_ASSERT_EQUAL( 1+2, GetNumConnections( observerDB ) );
 }

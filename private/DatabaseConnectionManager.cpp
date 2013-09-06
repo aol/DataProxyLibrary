@@ -18,6 +18,7 @@
 #include "XMLUtilities.hpp"
 #include "MVLogger.hpp"
 #include "LargeStringStream.hpp"
+#include <boost/math/common_factor.hpp>
 #include <boost/lexical_cast.hpp>
 
 namespace
@@ -36,6 +37,7 @@ namespace
 	const std::string RECONNECT_TIMEOUT_ATTRIBUTE("reconnectTimeout");
 	const std::string MIN_POOL_SIZE_ATTRIBUTE("minPoolSize");
 	const std::string MAX_POOL_SIZE_ATTRIBUTE("maxPoolSize");
+	const std::string POOL_REFRESH_PERIOD_ATTRIBUTE("poolRefreshPeriod");
 	
 	const std::string CONNECTION_NAME_ATTRIBUTE("connection");
 
@@ -74,9 +76,10 @@ namespace
 		return i_Default;
 	}
 
-	double GetTimeout( xercesc::DOMNode* i_pNode, double i_Default )
+	template< typename T_Data >
+	T_Data GetOptional( xercesc::DOMNode* i_pNode, const std::string& i_rName, T_Data i_Default, const std::string& i_rType )
 	{
-		xercesc::DOMAttr* pAttribute = XMLUtilities::GetAttribute( i_pNode, RECONNECT_TIMEOUT_ATTRIBUTE );
+		xercesc::DOMAttr* pAttribute = XMLUtilities::GetAttribute( i_pNode, i_rName );
 		if( pAttribute != NULL )
 		{
 			std::string reconnectString = XMLUtilities::XMLChToString( pAttribute->getValue() );
@@ -86,7 +89,7 @@ namespace
 			}
 			catch( const boost::bad_lexical_cast& i_rException )
 			{
-				MV_THROW( DatabaseConnectionManagerException, "Error parsing " << RECONNECT_TIMEOUT_ATTRIBUTE << " attribute: " << reconnectString << " as double" );
+				MV_THROW( DatabaseConnectionManagerException, "Error parsing " << i_rName << " attribute: " << reconnectString << " as " << i_rType );
 			}
 		}
 		return i_Default;
@@ -113,16 +116,31 @@ namespace
 		}
 	}
 
-	void TryReducePool( DatabaseConnectionDatum& i_rDatum )
+	int TryReducePool( DatabaseConnectionDatum& i_rDatum )
 	{
+		int poolRefreshPeriod = 0;
 		int itemsToRemove = 0;
 		{
 			boost::shared_lock< boost::shared_mutex > lock( *i_rDatum.GetReference< Mutex >() );
+			poolRefreshPeriod = i_rDatum.GetValue< DatabaseConfig >().GetValue< PoolRefreshPeriod >();
+			Stopwatch& rStopwatch = *i_rDatum.GetReference< PoolRefreshTimer >();
+			int elapsedSeconds = rStopwatch.GetElapsedSeconds();
+			// if this connection doesn't have to refresh, return
+			if( poolRefreshPeriod < 0 )
+			{
+				return -1;
+			}
+			// if we don't have to refresh yet, return...
+			if( elapsedSeconds < poolRefreshPeriod )
+			{
+				return poolRefreshPeriod - elapsedSeconds;;
+			}
+			rStopwatch.Reset();
 			itemsToRemove = i_rDatum.GetValue< DatabasePool >().size() - i_rDatum.GetValue< DatabaseConfig >().GetValue< MinPoolSize >();
-		}
-		if( itemsToRemove <= 0 )
-		{
-			return;
+			if( itemsToRemove <= 0 )
+			{
+				return poolRefreshPeriod;
+			}
 		}
 
 		{
@@ -156,15 +174,14 @@ namespace
 					 << " and " << itemsRemoved << " connections were destroyed" );
 			}
 		}
+		return poolRefreshPeriod;
 	}
 
-	boost::shared_ptr< Database > CreateConnection( const std::string& i_rConnectionName, const DatabaseConfigDatum& i_rConfig, size_t i_CurrentSize )
+	boost::shared_ptr< Database > CreateConnection( const std::string& i_rConnectionName, const DatabaseConfigDatum& i_rConfig )
 	{
 		std::string connectionType = i_rConfig.GetValue<DatabaseConnectionType>();
 		if (connectionType == ORACLE_DB_TYPE)
 		{
-			MVLOGGER("root.lib.DataProxy.DatabaseConnectionManager.Connect.CreatingOracleDatabaseConnection",
-					 "Creating oracle database connection #" << i_CurrentSize+1 << " for name: " << i_rConnectionName );
 			return boost::shared_ptr< Database >( new Database( Database::DBCONN_OCI_THREADSAFE_ORACLE,
 																"",
 																i_rConfig.GetValue<DatabaseName>(),
@@ -175,9 +192,6 @@ namespace
 		}
 		else if (connectionType == MYSQL_DB_TYPE)
 		{
-			MVLOGGER("root.lib.DataProxy.DatabaseConnectionManager.Connect.CreatingMySQLDatabaseConnection",
-					 "Creating mysql database connection #" << i_CurrentSize+1 << " for name: " << i_rConnectionName );
-			
 			return boost::shared_ptr< Database >( new Database( Database::DBCONN_ODBC_MYSQL,
 																i_rConfig.GetValue<DatabaseServer>(),
 																"",
@@ -188,9 +202,6 @@ namespace
 		}
 		else if (connectionType == VERTICA_DB_TYPE)
 		{
-			MVLOGGER("root.lib.DataProxy.DatabaseConnectionManager.Connect.CreatingVerticaDatabaseConnection",
-					 "Creating vertica database connection #" << i_CurrentSize+1 << " for name: " << i_rConnectionName );
-			
 			return boost::shared_ptr< Database >( new Database( Database::DBCONN_ODBC_VERTICA,
 																i_rConfig.GetValue<DatabaseServer>(),
 																"",
@@ -253,14 +264,16 @@ namespace
 			if( i_rDatabaseConnectionDatum.GetValue< DatabasePool >().size() < i_rDatabaseConnectionDatum.GetValue< DatabaseConfig >().GetValue< MaxPoolSize >() )
 			{
 				boost::shared_ptr< Database > pNewDatabase = CreateConnection( i_rDatabaseConnectionDatum.GetValue< ConnectionName >(),
-																			   i_rDatabaseConnectionDatum.GetValue< DatabaseConfig >(),
-																			   i_rDatabaseConnectionDatum.GetValue< DatabasePool >().size()	);
+																			   i_rDatabaseConnectionDatum.GetValue< DatabaseConfig >() );
 				boost::shared_ptr< Stopwatch > pNewStopwatch( new Stopwatch() );
 				DatabaseInstanceDatum instance;
 				instance.SetValue< ConnectionNumber >( i_rDatabaseConnectionDatum.GetReference< DatabasePool >().size() + 1 );
 				instance.SetValue< DatabaseHandle >( pNewDatabase );
 				instance.SetValue< ConnectionTimer >( boost::shared_ptr< Stopwatch >( new Stopwatch() ) );
 				i_rDatabaseConnectionDatum.GetReference< DatabasePool >().push_back( instance );
+				MVLOGGER("root.lib.DataProxy.DatabaseConnectionManager.Connect.CreatedDatabaseConnection",
+						 "Created db connection #" << instance.GetValue< ConnectionNumber >()
+						 << " for name: " << i_rDatabaseConnectionDatum.GetValue< ConnectionName >() );
 				return &i_rDatabaseConnectionDatum.GetReference< DatabasePool >().back();
 			}
 
@@ -281,12 +294,18 @@ DatabaseConnectionManager::DatabaseConnectionManager( DataProxyClient& i_rDataPr
 	m_ConnectionsByTableName(),
 	m_rDataProxyClient( i_rDataProxyClient ),
 	m_ConfigVersion(),
-	m_ShardVersion()
+	m_ShardVersion(),
+	m_pRefreshThread( NULL )
 {
 }
 
 DatabaseConnectionManager::~DatabaseConnectionManager()
 {
+	if( m_pRefreshThread )
+	{
+		m_pRefreshThread->interrupt();
+		m_pRefreshThread->join();
+	}
 }
 
 void DatabaseConnectionManager::ParseConnectionsByTable( const xercesc::DOMNode& i_rDatabaseConnectionNode )
@@ -309,7 +328,7 @@ void DatabaseConnectionManager::ParseConnectionsByTable( const xercesc::DOMNode&
 		datum.SetValue< ShardCollectionName >( XMLUtilities::GetAttributeValue(*iter, NAME_ATTRIBUTE) );
 		datum.SetValue< ConnectionNodeName >( XMLUtilities::GetAttributeValue(*iter, CONNECTIONS_NODE_NAME_ATTRIBUTE) );
 		datum.SetValue< TablesNodeName >( XMLUtilities::GetAttributeValue(*iter, TABLES_NODE_NAME_ATTRIBUTE) );
-		datum.SetValue< ConnectionReconnect >( GetTimeout( *iter, 3600 ) );
+		datum.SetValue< ConnectionReconnect >( GetOptional< double >( *iter, RECONNECT_TIMEOUT_ATTRIBUTE, 3600, "double" ) );
 		m_ShardCollections.InsertUpdate( datum );
 	}
 }
@@ -335,9 +354,18 @@ void DatabaseConnectionManager::Parse( const xercesc::DOMNode& i_rDatabaseConnec
 		std::string databaseUserName = XMLUtilities::GetAttributeValue( *iter, DATABASE_USERNAME_ATTRIBUTE );
 		std::string databasePassword = XMLUtilities::GetAttributeValue( *iter, DATABASE_PASSWORD_ATTRIBUTE );
 		std::string connectionName = XMLUtilities::GetAttributeValue( *iter, CONNECTION_NAME_ATTRIBUTE );
-		double reconnectTimeout = GetTimeout( *iter, 3600 );	// by default, reconnect every hour
-		int minPoolSize = GetPoolSize( *iter, MIN_POOL_SIZE_ATTRIBUTE, 1 );
-		int maxPoolSize = GetPoolSize( *iter, MAX_POOL_SIZE_ATTRIBUTE, 1 );
+		double reconnectTimeout = GetOptional< double >( *iter, RECONNECT_TIMEOUT_ATTRIBUTE, 3600, "double" );	// by default, reconnect every hour
+		size_t minPoolSize = GetPoolSize( *iter, MIN_POOL_SIZE_ATTRIBUTE, 1 );
+		size_t maxPoolSize = GetPoolSize( *iter, MAX_POOL_SIZE_ATTRIBUTE, 1 );
+		int poolRefreshPeriod = GetOptional< int >( *iter, POOL_REFRESH_PERIOD_ATTRIBUTE, 60, "int" );
+		if( maxPoolSize < minPoolSize )
+		{
+			MV_THROW( DatabaseConnectionManagerException, "maxPoolSize: " << maxPoolSize << " must be greater than or equal to minPoolSize: " << minPoolSize );
+		}
+		if( minPoolSize == maxPoolSize )
+		{
+			poolRefreshPeriod = -1;
+		}
 
 		databaseConfig.SetValue<DatabaseUserName>(databaseUserName);
 		databaseConfig.SetValue<DatabasePassword>(databasePassword);
@@ -401,14 +429,23 @@ void DatabaseConnectionManager::Parse( const xercesc::DOMNode& i_rDatabaseConnec
 		databaseConfig.SetValue< ConnectionReconnect >( reconnectTimeout );
 		databaseConfig.SetValue< MinPoolSize >( minPoolSize );
 		databaseConfig.SetValue< MaxPoolSize >( maxPoolSize );
+		databaseConfig.SetValue< PoolRefreshPeriod >( poolRefreshPeriod );
 		datum.SetValue< DatabaseConfig >( databaseConfig );
 		datum.GetReference< DatabasePool >().reserve( maxPoolSize );
 		datum.GetReference< Mutex >().reset( new boost::shared_mutex() );
+		datum.GetReference< PoolRefreshTimer >().reset( new Stopwatch() );
 		m_DatabaseConnectionContainer.InsertUpdate(datum);
 
 		// also add a connection for ddl operations
 		datum.SetValue<ConnectionName>(DATA_DEFINITION_CONNECTION_PREFIX + datum.GetValue<ConnectionName>());
+		datum.GetReference< Mutex >().reset( new boost::shared_mutex() );
+		datum.GetReference< PoolRefreshTimer >().reset( new Stopwatch() );
 		m_DatabaseConnectionContainer.InsertUpdate(datum);
+	}
+
+	if( !m_pRefreshThread )
+	{
+		m_pRefreshThread.reset( new boost::thread( boost::bind( boost::mem_fn( &DatabaseConnectionManager::WatchPools ), this ) ) );
 	}
 }
 
@@ -457,8 +494,10 @@ void DatabaseConnectionManager::FetchConnectionsByTable( const std::string& i_rN
 		configDatum.SetValue< DisableCache >( disableCache.IsNull() ? false : boost::lexical_cast< bool >( disableCache ) );
 		configDatum.SetValue< MinPoolSize >( 1 );
 		configDatum.SetValue< MaxPoolSize >( 1 );
+		configDatum.SetValue< PoolRefreshPeriod >( -1 );
 		connectionDatum.SetValue< DatabaseConfig >( configDatum );
 		connectionDatum.GetReference< Mutex >().reset( new boost::shared_mutex() );
+		connectionDatum.GetReference< PoolRefreshTimer >().reset( new Stopwatch() );
 		m_ShardDatabaseConnectionContainer.InsertUpdate( connectionDatum );
 
 		// also add a connection for ddl operations
@@ -618,10 +657,11 @@ boost::shared_ptr< Database > DatabaseConnectionManager::GetConnection(const std
 		pResult = pInstance->GetValue< DatabaseHandle >();
 	}
 
-	// try to reduce the pool size before returning
-	// note that the reducing process will NOT kill our handle, because we have
-	// another shared pointer to it at this point
-	TryReducePool( rDatum );
+	// before returning the result, reset the refresh timer
+	{
+		boost::unique_lock< boost::shared_mutex > lock( *rDatum.GetValue< Mutex >() );
+		rDatum.GetReference< PoolRefreshTimer >()->Reset();
+	}
 	return pResult;
 }
 
@@ -645,4 +685,48 @@ void DatabaseConnectionManager::ClearConnections()
 	m_ShardDatabaseConnectionContainer.clear();
 	m_ShardCollections.clear();
 	m_ConnectionsByTableName.clear();
+}
+
+void DatabaseConnectionManager::WatchPools()
+{
+	try
+	{
+		Stopwatch stopwatch;
+		int sleepPeriod = 0;
+		while( true )
+		{
+			// check to see if we've been told to stop
+			boost::this_thread::interruption_point();
+
+			// sleep with interrupts
+			Stopwatch sleepStopwatch;
+			while( sleepStopwatch.GetElapsedSeconds() < sleepPeriod )
+			{
+				usleep( 100000 );
+				boost::this_thread::interruption_point();
+			}
+
+			int minSleepPeriod = 60;	// sleep 60 seconds if nothing gives us anything to sleep for (also minimum)
+			// at this point, we have to refresh
+			{
+				// obtain a shared lock on the config because we are going to be reading the connection container
+				boost::shared_lock< boost::shared_mutex > lock( m_ConfigVersion );
+				DatabaseConnectionContainer::iterator iter = m_DatabaseConnectionContainer.begin();
+				for( ; iter != m_DatabaseConnectionContainer.end(); ++iter )
+				{
+					DatabaseConnectionDatum& rDatum = iter->second;
+					int sleepPeriod = TryReducePool( rDatum );
+					if( sleepPeriod > 0 )
+					{
+						minSleepPeriod = std::min( minSleepPeriod, sleepPeriod );
+					}
+				}
+			}
+			sleepPeriod = minSleepPeriod;
+		}
+	}
+	catch( const boost::thread_interrupted& i_rInterrupt )
+	{
+		// do nothing
+	}
 }

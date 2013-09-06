@@ -17,6 +17,7 @@
 #include "GenericDataContainer.hpp"
 #include "GenericDataObject.hpp"
 #include <boost/shared_ptr.hpp>
+#include <boost/scoped_ptr.hpp>
 #include <boost/thread/thread.hpp>
 #include <map>
 
@@ -40,6 +41,7 @@ MV_MAKEEXCEPTIONCLASS(DatabaseConnectionManagerException, MVException);
 	DATUMINFO( ConnectionReconnect, double  );
 	DATUMINFO( MinPoolSize, size_t );
 	DATUMINFO( MaxPoolSize, size_t );
+	DATUMINFO( PoolRefreshPeriod, int );
 
 	typedef
 		GenericDatum< DatabaseConnectionType,
@@ -52,7 +54,8 @@ MV_MAKEEXCEPTIONCLASS(DatabaseConnectionManagerException, MVException);
 		GenericDatum< ConnectionReconnect,
 		GenericDatum< MinPoolSize,
 		GenericDatum< MaxPoolSize,
-		RowEnd > > > > > > > > > >
+		GenericDatum< PoolRefreshPeriod,
+		RowEnd > > > > > > > > > > >
 	DatabaseConfigDatum;
 
 	DATUMINFO( DatabaseConfig, DatabaseConfigDatum );
@@ -71,13 +74,15 @@ MV_MAKEEXCEPTIONCLASS(DatabaseConnectionManagerException, MVException);
 	DatabaseInstanceDatum;
 
 	DATUMINFO( DatabasePool, std::vector< DatabaseInstanceDatum > );
+	DATUMINFO( PoolRefreshTimer, boost::shared_ptr< Stopwatch > );
 
 	typedef
 		GenericDatum< ConnectionName,
 		GenericDatum< DatabaseConfig,
 		GenericDatum< DatabasePool,
+		GenericDatum< PoolRefreshTimer,
 		GenericDatum< Mutex,
-					  RowEnd > > > >
+					  RowEnd > > > > >
 	DatabaseConnectionDatum;
 
 	typedef
@@ -144,9 +149,11 @@ private:
 	DatabaseConnectionDatum& PrivateGetConnection(const std::string& i_rConnectionName );
 	const DatabaseConnectionDatum& PrivateGetConnection(const std::string& i_rConnectionName ) const;
 	std::string PrivateGetConnectionNameByTable(const std::string& i_rTableName ) const;
+	void WatchPools();
 
 	mutable boost::shared_mutex m_ConfigVersion;
 	mutable boost::shared_mutex m_ShardVersion;
+	boost::scoped_ptr< boost::thread > m_pRefreshThread;
 };
 
 #endif //_DATABASE_CONNECTION_MANAGER_HPP_
