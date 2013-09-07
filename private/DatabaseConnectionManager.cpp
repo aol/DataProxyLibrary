@@ -356,7 +356,7 @@ void DatabaseConnectionManager::Parse( const xercesc::DOMNode& i_rDatabaseConnec
 		std::string connectionName = XMLUtilities::GetAttributeValue( *iter, CONNECTION_NAME_ATTRIBUTE );
 		double reconnectTimeout = GetOptional< double >( *iter, RECONNECT_TIMEOUT_ATTRIBUTE, 3600, "double" );	// by default, reconnect every hour
 		size_t minPoolSize = GetPoolSize( *iter, MIN_POOL_SIZE_ATTRIBUTE, 1 );
-		size_t maxPoolSize = GetPoolSize( *iter, MAX_POOL_SIZE_ATTRIBUTE, 1 );
+		size_t maxPoolSize = GetPoolSize( *iter, MAX_POOL_SIZE_ATTRIBUTE, minPoolSize );
 		int poolRefreshPeriod = GetOptional< int >( *iter, POOL_REFRESH_PERIOD_ATTRIBUTE, 60, "int" );
 		if( maxPoolSize < minPoolSize )
 		{
