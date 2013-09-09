@@ -151,12 +151,13 @@ namespace
 			// iterate and remove any unique connections, until we've removed enough
 			int itemsRemoved( 0 );
 			std::vector< DatabaseInstanceDatum >::iterator iter = i_rDatum.GetReference< DatabasePool >().begin();
-			for( int i=0; itemsRemoved < itemsToRemove && iter != i_rDatum.GetReference< DatabasePool >().end(); ++i )
+			while( iter != i_rDatum.GetReference< DatabasePool >().end() )
 			{
-				if( iter->GetValue< DatabaseHandle >().unique() )
+				if( itemsRemoved < itemsToRemove && iter->GetValue< DatabaseHandle >().unique() )
 				{
 					MVLOGGER( "root.lib.DataProxy.DatabaseConnectionManager.ClosingConnection",
-						 "Connection #" << i << " under name: " << i_rDatum.GetValue< ConnectionName >() << " is being closed to diminish the pool size" );
+						 "Connection #" << iter->GetValue< ConnectionNumber >() << " under name: "
+						 << i_rDatum.GetValue< ConnectionName >() << " is being closed to diminish the pool size" );
 					iter = i_rDatum.GetReference< DatabasePool >().erase( iter );
 					++itemsRemoved;
 				}
