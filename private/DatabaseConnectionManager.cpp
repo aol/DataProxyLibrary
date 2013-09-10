@@ -286,6 +286,26 @@ namespace
 		// we're out of options...
 		return NULL;
 	}
+
+	void ResetTimerIfConnectionsPegged( Stopwatch& o_rTimer, boost::shared_mutex& i_rMutex, const std::vector< DatabaseInstanceDatum >& i_rPool )
+	{
+		{
+			boost::shared_lock< boost::shared_mutex > lock( i_rMutex );
+			std::vector< DatabaseInstanceDatum >::const_iterator iter = i_rPool.begin();
+			for( ; iter != i_rPool.end(); ++iter )
+			{
+				if( iter->GetValue< DatabaseHandle >().unique() )
+				{
+					return;
+				}
+			}
+		}
+
+		{
+			boost::unique_lock< boost::shared_mutex > lock( i_rMutex );
+			o_rTimer.Reset();
+		}
+	}
 }
 
 DatabaseConnectionManager::DatabaseConnectionManager( DataProxyClient& i_rDataProxyClient )
@@ -658,11 +678,8 @@ boost::shared_ptr< Database > DatabaseConnectionManager::GetConnection(const std
 		pResult = pInstance->GetValue< DatabaseHandle >();
 	}
 
-	// before returning the result, reset the refresh timer
-	{
-		boost::unique_lock< boost::shared_mutex > lock( *rDatum.GetValue< Mutex >() );
-		rDatum.GetReference< PoolRefreshTimer >()->Reset();
-	}
+	ResetTimerIfConnectionsPegged( *rDatum.GetReference< PoolRefreshTimer >(), *rDatum.GetReference< Mutex >(), rDatum.GetReference< DatabasePool >() );
+
 	return pResult;
 }
 
