@@ -194,17 +194,23 @@ void DatabaseConnectionManagerTest::testNormalReconnect()
 	dbConnectionManager->Parse(*nodes[0]);
 
 	std::stringstream expected;	
+	boost::shared_ptr< Database > pDatabase;
 	Database* pDatabase1;
 	Database* pDatabase2;
 
 	expected << "ADLAPPD, , five0test, five0test, five0test, 0" << std::endl;
 	// ensure we can get two cloned copies of the database, but they are not the same object (connection)
-	pDatabase1 = dbConnectionManager->GetConnection("name1").get();
-	CPPUNIT_ASSERT( pDatabase1 );
-	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase1)));
-	pDatabase2 = dbConnectionManager->GetConnection("name1").get();
-	CPPUNIT_ASSERT( pDatabase2 );
-	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase2)));
+	pDatabase = dbConnectionManager->GetConnection("name1");
+	CPPUNIT_ASSERT( pDatabase );
+	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase)));
+	pDatabase1 = pDatabase.get();
+	CPPUNIT_ASSERT_EQUAL( 1, GetNumConnections( *pDatabase ) );
+	pDatabase.reset();
+	pDatabase = dbConnectionManager->GetConnection("name1");
+	CPPUNIT_ASSERT( pDatabase );
+	CPPUNIT_ASSERT_EQUAL(WrapString(expected.str()), WrapString(PrettyPrintDatabaseConnection(*pDatabase)));
+	CPPUNIT_ASSERT_EQUAL( 1, GetNumConnections( *pDatabase ) );
+	pDatabase2 = pDatabase.get();
 	CPPUNIT_ASSERT( pDatabase1 != pDatabase2 );
 }
 
@@ -500,6 +506,29 @@ void DatabaseConnectionManagerTest::testParseExceptionInvalidValues()
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(dbConnectionManager->Parse(*nodes[0]),
 									  DatabaseConnectionManagerException,
 									  MATCH_FILE_AND_LINE_NUMBER + "Illegal value provided: -5 for attribute: maxPoolSize; must be strictly positive");
+
+	xmlContents.str("");
+	xmlContents << "<DatabaseConnections>" << std::endl;
+	xmlContents << " <Database type = \"mysql\""<< std::endl;
+	xmlContents << "  connection = \"name2\""  << std::endl;
+	xmlContents << "  server = \"localhost\""  << std::endl;
+	xmlContents << "  user = \"adlearn\""  << std::endl;
+	xmlContents << "  password = \"Adv.commv\""  << std::endl;
+	xmlContents << "  name = \"\""  << std::endl;
+	xmlContents << "  minPoolSize = \"6\""  << std::endl;
+	xmlContents << "  maxPoolSize = \"5\""  << std::endl;
+	xmlContents << "  disableCache = \"false\" />"   << std::endl;
+	xmlContents << "</DatabaseConnections>" << std::endl;
+
+	nodes.clear();
+	ProxyTestHelpers::GetDataNodes(m_pTempDirectory->GetDirectoryName(), xmlContents.str(), "DatabaseConnections", nodes);
+
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	dbConnectionManager.reset(new DatabaseConnectionManager( DEFAULT_DATA_PROXY_CLIENT ));
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(dbConnectionManager->Parse(*nodes[0]),
+									  DatabaseConnectionManagerException,
+									  MATCH_FILE_AND_LINE_NUMBER + "maxPoolSize: 5 must be greater than or equal to minPoolSize: 6");
 }
 
 void DatabaseConnectionManagerTest::testParseEmptyNode()

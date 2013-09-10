@@ -18,7 +18,7 @@
 #include "XMLUtilities.hpp"
 #include "MVLogger.hpp"
 #include "LargeStringStream.hpp"
-#include <boost/math/common_factor.hpp>
+#include "ContainerToString.hpp"
 #include <boost/lexical_cast.hpp>
 
 namespace
@@ -133,7 +133,7 @@ namespace
 			// if we don't have to refresh yet, return...
 			if( elapsedSeconds < poolRefreshPeriod )
 			{
-				return poolRefreshPeriod - elapsedSeconds;;
+				return poolRefreshPeriod - elapsedSeconds;
 			}
 			rStopwatch.Reset();
 			itemsToRemove = i_rDatum.GetValue< DatabasePool >().size() - i_rDatum.GetValue< DatabaseConfig >().GetValue< MinPoolSize >();
@@ -149,21 +149,29 @@ namespace
 			itemsToRemove = i_rDatum.GetValue< DatabasePool >().size() - i_rDatum.GetValue< DatabaseConfig >().GetValue< MinPoolSize >();
 
 			// iterate and remove any unique connections, until we've removed enough
+			std::vector< int > closedConnections;
+			std::stringstream details;
 			int itemsRemoved( 0 );
 			std::vector< DatabaseInstanceDatum >::iterator iter = i_rDatum.GetReference< DatabasePool >().begin();
 			while( iter != i_rDatum.GetReference< DatabasePool >().end() )
 			{
 				if( itemsRemoved < itemsToRemove && iter->GetValue< DatabaseHandle >().unique() )
 				{
-					MVLOGGER( "root.lib.DataProxy.DatabaseConnectionManager.ClosingConnection",
-						 "Connection #" << iter->GetValue< ConnectionNumber >() << " under name: "
-						 << i_rDatum.GetValue< ConnectionName >() << " is being closed to diminish the pool size" );
+					closedConnections.push_back( iter->GetValue< ConnectionNumber >() );
 					iter = i_rDatum.GetReference< DatabasePool >().erase( iter );
 					++itemsRemoved;
 				}
 				else
 				{
-					iter->GetReference< ConnectionNumber >() -= itemsRemoved;
+					if( itemsRemoved > 0 )
+					{
+						if( details.tellp() > 0 )
+						{
+							details << "; ";
+						}
+						details << "connection #" << iter->GetValue< ConnectionNumber >() << " renumbered to ";
+					   	details << ( iter->GetReference< ConnectionNumber >() -= itemsRemoved );
+					}
 					++iter;
 				}
 			}
@@ -172,7 +180,8 @@ namespace
 				MVLOGGER( "root.lib.DataProxy.DatabaseConnectionManager.ReducedPool",
 					 "Connection pool under name: " << i_rDatum.GetValue< ConnectionName >()
 					 << " had " << itemsToRemove << " connections to reduce to get to minPoolSize,"
-					 << " and " << itemsRemoved << " connections were destroyed" );
+					 << " and " << itemsRemoved << " connections were destroyed: numbers " << ContainerToString( closedConnections, "," )
+					 << "; " << details.str() );
 			}
 		}
 		return poolRefreshPeriod;
@@ -225,11 +234,10 @@ namespace
 			MV_THROW( DatabaseConnectionManagerException, "Tried to find the lowest use-count of an empty vector of instances" );
 		}
 
-		size_t i=0;
+		size_t i=1;
 		size_t lowestUseCountIndex=0;
 		long lowestUseCount = iter->GetValue< DatabaseHandle >().use_count();
 		++iter;
-		++i;
 		for( ; iter != i_rInstances.end(); ++i, ++iter )
 		{
 			long useCount = iter->GetValue< DatabaseHandle >().use_count();
@@ -242,7 +250,7 @@ namespace
 		return lowestUseCountIndex;
 	}
 
-	DatabaseInstanceDatum* GetDatabase( DatabaseConnectionDatum& i_rDatabaseConnectionDatum, bool i_CreateIfNeeded )
+	DatabaseInstanceDatum* GetDatabase( DatabaseConnectionDatum& i_rDatabaseConnectionDatum, bool i_CreateIfNeeded, bool* o_pCreated = NULL )
 	{
 		if( i_rDatabaseConnectionDatum.GetValue< DatabaseConfig >().GetValue< MaxPoolSize >() == 0 )
 		{
@@ -255,6 +263,10 @@ namespace
 			// if no one has a handle on this db already, return it!
 			if( iter->GetValue< DatabaseHandle >().unique() )
 			{
+				if( o_pCreated != NULL )
+				{
+					*o_pCreated = false;
+				}
 				return &*iter;
 			}
 		}
@@ -266,7 +278,6 @@ namespace
 			{
 				boost::shared_ptr< Database > pNewDatabase = CreateConnection( i_rDatabaseConnectionDatum.GetValue< ConnectionName >(),
 																			   i_rDatabaseConnectionDatum.GetValue< DatabaseConfig >() );
-				boost::shared_ptr< Stopwatch > pNewStopwatch( new Stopwatch() );
 				DatabaseInstanceDatum instance;
 				instance.SetValue< ConnectionNumber >( i_rDatabaseConnectionDatum.GetReference< DatabasePool >().size() + 1 );
 				instance.SetValue< DatabaseHandle >( pNewDatabase );
@@ -275,11 +286,19 @@ namespace
 				MVLOGGER("root.lib.DataProxy.DatabaseConnectionManager.Connect.CreatedDatabaseConnection",
 						 "Created db connection #" << instance.GetValue< ConnectionNumber >()
 						 << " for name: " << i_rDatabaseConnectionDatum.GetValue< ConnectionName >() );
+				if( o_pCreated != NULL )
+				{
+					*o_pCreated = true;
+				}
 				return &i_rDatabaseConnectionDatum.GetReference< DatabasePool >().back();
 			}
 
 			// return the one with the least use_count
 			size_t lowestUseCountIndex = FindLowestUseCount( i_rDatabaseConnectionDatum.GetValue< DatabasePool >() );
+			if( o_pCreated != NULL )
+			{
+				*o_pCreated = false;
+			}
 			return &i_rDatabaseConnectionDatum.GetReference< DatabasePool >()[lowestUseCountIndex];
 		}
 
@@ -646,20 +665,23 @@ boost::shared_ptr< Database > DatabaseConnectionManager::GetDataDefinitionConnec
 boost::shared_ptr< Database > DatabaseConnectionManager::GetConnection(const std::string& i_ConnectionName)
 {
 	DatabaseConnectionDatum& rDatum = PrivateGetConnection(i_ConnectionName);
-	DatabaseInstanceDatum* pInstance;
+	DatabaseInstanceDatum* pInstance = NULL;
 	boost::shared_ptr< Database > pResult;
 
 	// try to get one of the connections that has been established
 	{
 		boost::shared_lock< boost::shared_mutex > lock( *rDatum.GetValue< Mutex >() );
 		pInstance = GetDatabase( rDatum, false );
-		if( pInstance != NULL )
-		{
-			ReconnectIfNecessary( i_ConnectionName, rDatum.GetValue< DatabaseConfig >(), *pInstance );
-			pResult = pInstance->GetValue< DatabaseHandle >();
-		}
+	}
+	// if we were successful, we may have to reconnect
+	if( pInstance != NULL )
+	{
+		boost::unique_lock< boost::shared_mutex > lock( *rDatum.GetValue< Mutex >() );
+		ReconnectIfNecessary( i_ConnectionName, rDatum.GetValue< DatabaseConfig >(), *pInstance );
+		pResult = pInstance->GetValue< DatabaseHandle >();
 	}
 	// otherwise, we have to create one
+	else
 	{
 		boost::unique_lock< boost::shared_mutex > lock( *rDatum.GetValue< Mutex >() );
 		// double-check getting one for free
@@ -669,13 +691,16 @@ boost::shared_ptr< Database > DatabaseConnectionManager::GetConnection(const std
 			ReconnectIfNecessary( i_ConnectionName, rDatum.GetValue< DatabaseConfig >(), *pInstance );
 			pResult = pInstance->GetValue< DatabaseHandle >();
 		}
-		pInstance = GetDatabase( rDatum, true );
-		// this should never happen
-		if( pInstance == NULL )
+		else
 		{
-			MV_THROW( DatabaseConnectionManagerException, "Unable to create a database for connection: " << i_ConnectionName );
+			pInstance = GetDatabase( rDatum, true );
+			// this should never happen
+			if( pInstance == NULL )
+			{
+				MV_THROW( DatabaseConnectionManagerException, "Unable to create a database for connection: " << i_ConnectionName );
+			}
+			pResult = pInstance->GetValue< DatabaseHandle >();
 		}
-		pResult = pInstance->GetValue< DatabaseHandle >();
 	}
 
 	ResetTimerIfConnectionsPegged( *rDatum.GetReference< PoolRefreshTimer >(), *rDatum.GetReference< Mutex >(), rDatum.GetReference< DatabasePool >() );
