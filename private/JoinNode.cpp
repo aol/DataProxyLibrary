@@ -325,6 +325,7 @@ void JoinNode::LoadImpl( const std::map<std::string,std::string>& i_rParameters,
 	{
 		std::large_stringstream tempStream;
 		m_rParent.Load( m_ReadEndpoint, i_rParameters, tempStream );
+		tempStream.flush();
 		WriteHorizontalJoin( tempStream, o_rData, m_ReadKey, m_ReadColumns, i_rParameters, m_ReadJoins, m_ReadWorkingDir, m_ReadTimeout, m_ReadEndpoint );
 	}
 	else if( m_ReadBehavior == APPEND )
@@ -336,6 +337,7 @@ void JoinNode::LoadImpl( const std::map<std::string,std::string>& i_rParameters,
 			std::large_stringstream tempStream;
 			std::string tempLine;
 			m_rParent.Load( iter->GetValue< NodeName >(), i_rParameters, tempStream );
+			tempStream.flush();
 			for( int i=0; i<iter->GetValue< SkipLines >(); ++i )
 			{
 				std::getline( tempStream, tempLine );
@@ -363,6 +365,7 @@ void JoinNode::StoreImpl( const std::map<std::string,std::string>& i_rParameters
 	{
 		std::large_stringstream input;
 		WriteHorizontalJoin( i_rData, input, m_WriteKey, m_WriteColumns, i_rParameters, m_WriteJoins, m_WriteWorkingDir, m_WriteTimeout, "Input" );
+		input.flush();
 		m_rParent.Store( m_WriteEndpoint, i_rParameters, input );
 	}
 	else if( m_WriteBehavior == APPEND )
@@ -370,16 +373,19 @@ void JoinNode::StoreImpl( const std::map<std::string,std::string>& i_rParameters
 		std::large_stringstream input;
 		std::large_stringstream tempStream;
 		boost::iostreams::copy( i_rData, input );
+		input.flush();
 		std::vector< StreamConfig >::const_iterator iter = m_WriteJoins.begin();
 		for( ; iter != m_WriteJoins.end(); ++iter )
 		{
 			std::string tempLine;
 			m_rParent.Load( iter->GetValue< NodeName >(), i_rParameters, tempStream );
+			tempStream.flush();
 			for( int i=0; i<iter->GetValue< SkipLines >(); ++i )
 			{
 				std::getline( tempStream, tempLine );
 			}
 			boost::iostreams::copy( tempStream, input );
+			input.flush();
 		}
 		m_rParent.Store( m_WriteEndpoint, i_rParameters, input );
 	}
@@ -641,6 +647,7 @@ void JoinNode::WriteHorizontalJoin( std::istream& i_rInput,
 	if( multiKey )
 	{
 		WriteMultiKeyStream( headerLine, i_rKey, i_rInput, *pTempStream );
+		pTempStream->flush();
 	}
 
 	// figure out header information
@@ -673,6 +680,7 @@ void JoinNode::WriteHorizontalJoin( std::istream& i_rInput,
 
 		// load the next stream & extract the header
 		m_rParent.Load( iter->GetValue< NodeName >(), i_rParameters, *pCurrentStream );
+		pCurrentStream->flush();
 		if( !getline( *pCurrentStream, headerLine ) )
 		{
 			MV_THROW( JoinNodeException, "Unable to fetch csv header from stream number " << streamNum );
@@ -681,6 +689,7 @@ void JoinNode::WriteHorizontalJoin( std::istream& i_rInput,
 		if( multiKey )
 		{
 			WriteMultiKeyStream( headerLine, iter->GetReference< JoinKey >(), *pCurrentStream, nextStream );
+			nextStream.flush();
 		}
 		Tokenize( nextHeader, headerLine, "," );
 		size_t nextKeyIndex = GetKeyIndex( nextHeader, iter->GetValue< JoinKey >() );
@@ -692,6 +701,7 @@ void JoinNode::WriteHorizontalJoin( std::istream& i_rInput,
 		ShellExecutor sortExe( GetSortCommand( nextKeyIndex, i_rWorkingDir ) );
 		if( ( status = sortExe.Run( i_Timeout, nextStream, file, stdErr ) ) != 0 )
 		{
+			stdErr.flush();
 			MV_THROW( JoinNodeException, "Error executing sort command for stream number " << streamNum << ". Standard error: " << stdErr.str() << " Return code: " << status );
 		}
 		file.close();

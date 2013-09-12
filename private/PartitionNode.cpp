@@ -183,6 +183,7 @@ void PartitionNode::StoreImpl( const std::map<std::string,std::string>& i_rParam
 		pSortedInputStream.reset( new std::large_stringstream() );
 		ShellExecutor executor( GetSortCommand( partitionIndex, m_WriteSortTempDir ) );
 		int status = executor.Run( m_WriteSortTimeout, i_rData, *pSortedInputStream, standardError );
+		pSortedInputStream->flush();
 		pData = pSortedInputStream.get();
 
 		if( status != 0 )
@@ -212,6 +213,7 @@ void PartitionNode::StoreImpl( const std::map<std::string,std::string>& i_rParam
 		{
 			std::map< std::string, std::string > parameters( i_rParameters );
 			parameters[ m_WritePartitionKey ] = previousPartitionId;
+			pTempIOStream->flush();
 			m_rParent.Store( m_WriteRoute, parameters, *pTempIOStream );
 			pTempIOStream.reset( new std::large_stringstream() );
 			*pTempIOStream << header << std::endl;
@@ -225,6 +227,7 @@ void PartitionNode::StoreImpl( const std::map<std::string,std::string>& i_rParam
 	{
 		std::map< std::string, std::string > parameters( i_rParameters );
 		parameters[ m_WritePartitionKey ] = previousPartitionId;
+		pTempIOStream->flush();
 		m_rParent.Store( m_WriteRoute, parameters, *pTempIOStream );
 		pTempIOStream.reset( NULL );
 	}

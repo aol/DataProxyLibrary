@@ -90,6 +90,7 @@ void ExecutionProxy::LoadImpl( const std::map<std::string,std::string>& i_rParam
 	std::large_stringstream standardError;
 	MVLOGGER( "root.lib.DataProxy.ExecutionProxy.Load.ExecutingCommand", "Executing command: '" << command << "'" );
 	int status = executor.Run( m_ReadTimeout, o_rData, standardError );
+	standardError.flush();
 	if( status != 0 )
 	{
 		MV_THROW( ExecutionProxyException, "Command: '" << command << "' returned non-zero status: " << status << ". Standard error: " << standardError.rdbuf() );
@@ -114,6 +115,8 @@ void ExecutionProxy::StoreImpl( const std::map<std::string,std::string>& i_rPara
 	std::large_stringstream standardError;
 	MVLOGGER( "root.lib.DataProxy.ExecutionProxy.Store.ExecutingCommand", "Executing command: '" << command << "'" );
 	int status = executor.Run( m_WriteTimeout, i_rData, standardOut, standardError );
+	standardOut.flush();
+	standardError.flush();
 	if( status != 0 )
 	{
 		MV_THROW( ExecutionProxyException, "Command: '" << command << "' returned non-zero status: " << status << ". Standard error: " << standardError.rdbuf() );
@@ -143,6 +146,8 @@ void ExecutionProxy::DeleteImpl( const std::map<std::string,std::string>& i_rPar
 	std::large_stringstream standardError;
 	MVLOGGER( "root.lib.DataProxy.ExecutionProxy.Delete.ExecutingCommand", "Executing command: '" << command << "'" );
 	int status = executor.Run( m_DeleteTimeout, standardOut, standardError );
+	standardOut.flush();
+	standardError.flush();
 	if( status != 0 )
 	{
 		MV_THROW( ExecutionProxyException, "Command: '" << command << "' returned non-zero status: " << status << ". Standard error: " << standardError.rdbuf() );

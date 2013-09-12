@@ -36,6 +36,7 @@ void PropertyDomain::Load( DataProxyClient& i_rDPLClient, const std::string& i_r
 	
 	std::large_stringstream datastream;
  	i_rDPLClient.Load( i_rPropertyNodeName, i_rParameters, datastream );
+	datastream.flush();
 
 	CSVReader reader( datastream, ',', true );
 	

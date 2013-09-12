@@ -100,5 +100,6 @@ boost::shared_ptr< std::istream > AtomicsJSONToCSVStreamTransformer::TransformIn
 
 	}
 
+	pRawResult->flush();
 	return pResult;
 }

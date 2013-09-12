@@ -177,6 +177,7 @@ boost::shared_ptr< std::istream > AddSelfDescribingStreamHeaderTransformer::Tran
 	i_pInputStream->seekg( std::ios_base::beg );
 	*pResult << i_pInputStream->rdbuf();
 	
+	pResult->flush();
 	return boost::shared_ptr< std::istream >( pResult );
 }
 
@@ -200,5 +201,6 @@ boost::shared_ptr< std::istream > RemoveSelfDescribingStreamHeaderTransformer::T
 	// Output the data without the self describing header
 	*pResult << i_pInputStream->rdbuf();
 	
+	pResult->flush();
 	return boost::shared_ptr< std::istream >( pResult );
 }

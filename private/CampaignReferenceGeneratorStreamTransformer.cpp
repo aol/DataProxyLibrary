@@ -118,5 +118,6 @@ boost::shared_ptr< std::istream > CampaignReferenceGeneratorStreamTransformer::T
 		
 	}
 
+	pRawResult->flush();
 	return pResult;
 }

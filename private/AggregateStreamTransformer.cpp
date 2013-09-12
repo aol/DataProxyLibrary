@@ -576,6 +576,7 @@ namespace
 		ShellExecutor executor( command.str() );
 		MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.Aggregate.AggregateFields.ExecutingCommand", "Executing command: '" << command.str() << "'" );
 		int status = executor.Run( timeout, *i_pInputStream, *pResult, standardError );
+		standardError.flush();
 		if( status != 0 )
 		{
 			MV_THROW( AggregateStreamTransformerException, "Aggregator returned non-zero status: " << status << ". Standard error: " << standardError.rdbuf() );
@@ -585,6 +586,7 @@ namespace
 			MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.Aggregate.AggregateFields.StandardError",
 				"Aggregator generated standard error output: " << standardError.rdbuf() );
 		}
+		pResult->flush();
 		return pResultAsIstream;
 	}
 }

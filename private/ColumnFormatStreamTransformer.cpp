@@ -237,6 +237,7 @@ boost::shared_ptr< std::istream > ColumnFormatStreamTransformer::TransformInput(
 	// short circuit if we're done
 	if( i_pInputStream->peek() == EOF )
 	{
+		pResult->flush();
 		return boost::shared_ptr< std::istream >(pResult);
 	}
 
@@ -246,6 +247,7 @@ boost::shared_ptr< std::istream > ColumnFormatStreamTransformer::TransformInput(
 		MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.ColumnFormat.FormatColumns.NoTransform",
 			"No transformation of data is necessary, as the input columns match the output columns" );
 		*pResult << i_pInputStream->rdbuf();
+		pResult->flush();
 		return boost::shared_ptr< std::istream >(pResult);
 	}
 
@@ -254,6 +256,7 @@ boost::shared_ptr< std::istream > ColumnFormatStreamTransformer::TransformInput(
 	ShellExecutor executor( orderCommand );
 	MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.ColumnFormat.FormatColumns.ExecutingCommand", "Executing command: '" << orderCommand << "'" );
 	int status = executor.Run( timeout, *i_pInputStream, *pResult, standardError );
+	standardError.flush();
 	if( status != 0 )
 	{
 		MV_THROW( ColumnFormatStreamTransformerException, "Column Formatter returned non-zero status: " << status << ". Standard error: " << standardError.rdbuf() );
@@ -263,5 +266,6 @@ boost::shared_ptr< std::istream > ColumnFormatStreamTransformer::TransformInput(
 		MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.ColumnFormat.FormatColumns.StandardError",
 			"Column Formatter generated standard error output: " << standardError.rdbuf() );
 	}
+	pResult->flush();
 	return boost::shared_ptr< std::istream >(pResult);
 }

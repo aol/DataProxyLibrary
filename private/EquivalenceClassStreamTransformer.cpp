@@ -163,5 +163,6 @@ boost::shared_ptr< std::istream > EquivalenceClassStreamTransformer::TransformIn
 	}
 
 	
+	pResult->flush();
 	return boost::shared_ptr< std::istream >(pResult);
 }

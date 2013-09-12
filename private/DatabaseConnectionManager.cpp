@@ -499,6 +499,7 @@ void DatabaseConnectionManager::FetchConnectionsByTable( const std::string& i_rN
 	boost::scoped_ptr< std::large_stringstream > pTempStream;
 	pTempStream.reset( new std::large_stringstream() );
 	m_rDataProxyClient.Load( i_rConnectionsNode, parameters, *pTempStream );
+	pTempStream->flush();
 
 	boost::scoped_ptr< CSVReader > pReader;
 	pReader.reset( new CSVReader( *pTempStream ) );
@@ -548,6 +549,7 @@ void DatabaseConnectionManager::FetchConnectionsByTable( const std::string& i_rN
 	// now load the tables
 	pTempStream.reset( new std::large_stringstream() );
 	m_rDataProxyClient.Load( i_rTablesNode, parameters, *pTempStream );
+	pTempStream->flush();
 	pReader.reset( new CSVReader( *pTempStream ) );
 	std::string tableName;
 	pReader->BindCol( TABLE_NAME_COLUMN, tableName );

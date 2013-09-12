@@ -52,6 +52,7 @@ void GenericDPLDomain< T_DatumType, T_AggregatorType, T_BinderType >::Load( cons
 	dataProxyClient.Initialize(i_rFileSpec);
 	std::large_stringstream data;
 	dataProxyClient.Load(i_rDataNodeName, i_rParameters, data);
+	data.flush();
 	
 	ProcessGenericStream< T_DatumType, T_BinderType >(data, *this);
 }

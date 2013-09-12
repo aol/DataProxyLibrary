@@ -320,5 +320,6 @@ boost::shared_ptr< std::istream > CampaignRevenueVectorStreamTransformer::Transf
 		}
 	}
 	
+	pRawResult->flush();
 	return pResult;
 }

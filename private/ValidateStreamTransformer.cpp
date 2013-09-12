@@ -230,6 +230,7 @@ boost::shared_ptr< std::istream > ValidateStreamTransformer::TransformInput( boo
 	ShellExecutor executor( command );
 	MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.Validate.ExecutingCommand", "Executing command: '" << command << "'" );
 	int status = executor.Run( timeout, *i_pInputStream, *pRawResult, standardError );
+	standardError.flush();
 	if( status != 0 )
 	{
 		MV_THROW( ValidationFailedException, "Validation failed. Return code: " << status << ":" << std::endl << standardError.rdbuf() );
@@ -240,5 +241,6 @@ boost::shared_ptr< std::istream > ValidateStreamTransformer::TransformInput( boo
 			"Validate generated standard error output:" << std::endl << standardError.rdbuf() );
 	}
 
+	pRawResult->flush();
 	return pResult;
 }

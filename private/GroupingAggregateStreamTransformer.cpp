@@ -658,6 +658,7 @@ boost::shared_ptr< std::istream > GroupingAggregateStreamTransformer::TransformI
 	ShellExecutor executor( command.str() );
 	MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.GroupingAggregator.AggregateFields.ExecutingCommand", "Executing command: '" << command.str() << "'" );
 	int status = executor.Run( timeout, *i_pInputStream, *pResult, standardError );
+	standardError.flush();
 	if( status != 0 )
 	{
 		MV_THROW( GroupingAggregateStreamTransformerException, "Aggregator returned non-zero status: " << status << ". Standard error: " << standardError.rdbuf() );
@@ -667,5 +668,6 @@ boost::shared_ptr< std::istream > GroupingAggregateStreamTransformer::TransformI
 		MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.GroupingAggregator.AggregateFields.StandardError",
 			"Aggregator generated standard error output: " << standardError.rdbuf() );
 	}
+	pResult->flush();
 	return boost::shared_ptr< std::istream >( pResult );
 }

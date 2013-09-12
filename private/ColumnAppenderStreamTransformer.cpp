@@ -125,5 +125,6 @@ boost::shared_ptr< std::istream > ColumnAppenderStreamTransformer::TransformInpu
 			"Rows with the following keys have been discarded from the input stream: " << discardedColumnString
 			<< " because properties could not be located for their values and " << ON_MISSING_PROPERTY << " was set to " << ON_MISSING_PROPERTY_DISCARD );
 	}
+	pResult->flush();
 	return pResultAsIstream;
 }

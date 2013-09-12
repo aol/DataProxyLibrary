@@ -117,6 +117,7 @@ namespace
 		client.Initialize( i_rDplConfig );
 		std::large_stringstream blackoutDataStream;
 		client.Load( BLACKOUT_DATA_NODE, blackoutParameters, blackoutDataStream );
+		blackoutDataStream.flush();
 
 		CSVReader reader( blackoutDataStream, ',', true );
 

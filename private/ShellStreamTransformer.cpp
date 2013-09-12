@@ -40,6 +40,7 @@ boost::shared_ptr< std::istream > ShellStreamTransformer::TransformInput( boost:
 	ShellExecutor executor( command );
 	MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.Shell.TransformStream.ExecutingCommand", "Executing command: '" << command << "'" );
 	int status = executor.Run( timeout, *i_pInputStream, *pResult, standardError );
+	standardError.flush();
 	if( status != 0 )
 	{
 		MV_THROW( ShellStreamTransformerException, "Command: '" << command << "' returned non-zero status: " << status << ". Standard error: " << standardError.rdbuf() );
@@ -49,5 +50,6 @@ boost::shared_ptr< std::istream > ShellStreamTransformer::TransformInput( boost:
 		MVLOGGER( "root.lib.DataProxy.DataProxyClient.StreamTransformers.Shell.TransformStream.StandardError",
 			"Command: '" << command << "' generated standard error output: " << standardError.rdbuf() );
 	}
+	pResult->flush();
 	return boost::shared_ptr< std::istream >( pResult );
 }
