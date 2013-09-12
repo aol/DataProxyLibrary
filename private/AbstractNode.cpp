@@ -19,58 +19,13 @@
 #include "MVLogger.hpp"
 #include <fstream>
 #include <boost/lexical_cast.hpp>
+#include "Counters.hpp"
 #include "MonitoringTracker.hpp"
 #include <boost/iostreams/categories.hpp>
-#include <boost/iostreams/filter/counter.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/copy.hpp>
 #include <boost/ref.hpp>
 #include <boost/iostreams/filtering_streambuf.hpp>
-
-namespace boost { namespace iostreams
-{
-	class input_counter
-	{
-	public:
-		typedef char char_type;
-		struct category : input_seekable, filter_tag, multichar_tag, optimally_buffered_tag { };
-		explicit input_counter( int first_line = 0, int first_char = 0 ) : lines_(first_line), chars_(first_char) { }
-		int lines() const { return lines_; }
-		int characters() const { return chars_; }
-
-		std::streamsize optimal_buffer_size() const { return 0; }
-
-		boost::iostreams::stream_offset seek(boost::iostreams::detail::linked_streambuf<char, std::char_traits<char> >& link, boost::iostreams::stream_offset off, std::ios_base::seekdir way)
-		{
-			if( way == std::ios_base::beg )
-			{
-				chars_ = off;
-				lines_ = 0;
-			}
-			else if( way == std::ios_base::cur )
-			{
-				chars_ += off;
-			}
-			boost::iostreams::seek( link, off, way, std::ios_base::in );
-			return chars_;
-		}
-
-		template<typename Source>
-		std::streamsize read(Source& src, char_type* s, std::streamsize n)
-		{
-			std::streamsize result = iostreams::read(src, s, n);
-			if (result == -1)
-				return -1;
-			lines_ += std::count(s, s + result, char_traits<char>::newline());
-			chars_ += result;
-			return result;
-		}
-
-	private:
-		int lines_;
-		int chars_;
-	};
-} }
 
 namespace
 {
@@ -267,13 +222,18 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 			pUseData = pTempIOStream;
 		}
 
+		boost::scoped_ptr< boost::iostreams::filtering_ostream > output( new boost::iostreams::filtering_ostream() );
+		boost::iostreams::buffered_counter cnt;
+		output->push( boost::ref( cnt) );
+		output->push( *pUseData );
+
 		// try the maximum # of retries to issue a load request
 		for( uint i=0; i<m_ReadConfig.GetValue< RetryCount >()+1; ++i )
 		{
 			try
 			{
-				LoadImpl( *pUseParameters, *pUseData );
-				pUseData->flush();
+				LoadImpl( *pUseParameters, *output );
+				output->flush();
 				break;
 			}
 			catch( const std::exception& ex )
@@ -300,6 +260,7 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 				}
 			}
 		}
+		output.reset( NULL );
 		// finally, if we need to transform, then we know we used the pTempIOStream; transform it
 
 		if ( needToTransform )
@@ -332,6 +293,7 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 			pTempIOStream = pNewTempIOStream;
 			pUseData = pTempIOStream;
 			pTempIOStreamAsIstream.reset( pTempIOStream );
+
 			*pNewTempIOStream << pTransformedStream->rdbuf();
 			pNewTempIOStream->flush();
 		}
@@ -345,11 +307,17 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 		}
 
 		// at this point, if we didn't write directly to the output stream, push it out from the temp
+		boost::scoped_ptr< boost::iostreams::filtering_ostream > tfStreamOutput( new boost::iostreams::filtering_ostream() );
+		boost::iostreams::buffered_counter cntWithTransform;
+		tfStreamOutput->push( boost::ref( cntWithTransform ) );
+		tfStreamOutput->push( o_rData );
+
 		if( pUseData != &o_rData )
 		{
-			pUseData->flush();
-			boost::iostreams::copy( *pUseData->rdbuf(), o_rData );
+			boost::iostreams::copy( *pUseData->rdbuf(), *tfStreamOutput );
+			tfStreamOutput->flush();
 		}
+		tfStreamOutput.reset( NULL );
 		
 		if( !o_rData.good() )
 		{
@@ -360,7 +328,6 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 		// Monitoring report
 		tracker.AddChild( CHILD_RESULT, CHILD_RESULT_SUCCESS );
 
-#if 0
 		if( needToTransform )
 		{
 			tracker.Report( METRIC_PAYLOAD_BYTES_PRE_TRANSFORM, cnt.characters() );
@@ -373,7 +340,6 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 			tracker.Report( METRIC_PAYLOAD_BYTES, cnt.characters() );
 			tracker.Report( METRIC_PAYLOAD_LINES, cnt.lines() );
 		}
-#endif
 	}
 	catch( const BadStreamException& e )
 	{
@@ -466,7 +432,9 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 		bool needTransform = m_WriteConfig.GetValue< Transformers >() != NULL && m_WriteConfig.GetValue< Transformers >()->HasStreamTransformers();
 
 		boost::iostreams::filtering_istream* pPreTransformInput = new boost::iostreams::filtering_istream();
-		boost::shared_ptr< std::istream > pPreTransformInputAsIstream( pPreTransformInput );
+		boost::shared_ptr< std::istream > pPreTransformInputAsIstream(pPreTransformInput);
+		boost::iostreams::buffered_counter cntPreTransform;
+		pPreTransformInput->push( boost::ref( cntPreTransform ) );
 		pPreTransformInput->push( i_rData );
 
 		if ( needTransform )
@@ -483,18 +451,20 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 				pUseData->clear();
 				pUseData->seekg( retryPos );
 
-				StoreImpl( *pUseParameters, *pUseData );
+				boost::iostreams::filtering_stream<boost::iostreams::input_seekable> input;
+				input.push( boost::iostreams::buffered_input_counter() );
+				input.push( *pUseData );
+
+				StoreImpl( *pUseParameters, input );
 
 				tracker.AddChild( CHILD_RESULT, CHILD_RESULT_SUCCESS );
-#if 0
 				if( needTransform )
 				{
 					tracker.Report( METRIC_PAYLOAD_BYTES_PRE_TRANSFORM, cntPreTransform.characters() );
 		            tracker.Report( METRIC_PAYLOAD_LINES_PRE_TRANSFORM, cntPreTransform.lines() );
 				}
-		        tracker.Report( METRIC_PAYLOAD_BYTES, input.component< 0, boost::iostreams::input_counter >()->characters() );
-		        tracker.Report( METRIC_PAYLOAD_LINES, input.component< 0, boost::iostreams::input_counter >()->lines() );
-#endif
+		        tracker.Report( METRIC_PAYLOAD_BYTES, input.component< 0, boost::iostreams::buffered_input_counter >()->characters() );
+		        tracker.Report( METRIC_PAYLOAD_LINES, input.component< 0, boost::iostreams::buffered_input_counter >()->lines() );
 
 				return true;
 			}
