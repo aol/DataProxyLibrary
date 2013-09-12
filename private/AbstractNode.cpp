@@ -267,17 +267,13 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 			pUseData = pTempIOStream;
 		}
 
-		boost::scoped_ptr< boost::iostreams::filtering_ostream > output( new boost::iostreams::filtering_ostream() );
-		boost::iostreams::counter cnt;
-		output->push( boost::ref( cnt) );
-		output->push( *pUseData );
-
 		// try the maximum # of retries to issue a load request
 		for( uint i=0; i<m_ReadConfig.GetValue< RetryCount >()+1; ++i )
 		{
 			try
 			{
-				LoadImpl( *pUseParameters, *output );
+				LoadImpl( *pUseParameters, *pUseData );
+				pUseData->flush();
 				break;
 			}
 			catch( const std::exception& ex )
@@ -304,7 +300,6 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 				}
 			}
 		}
-		output.reset( NULL );
 		// finally, if we need to transform, then we know we used the pTempIOStream; transform it
 
 		if ( needToTransform )
@@ -334,12 +329,11 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 			}
 
 			std::large_stringstream* pNewTempIOStream = new std::large_stringstream();
-
-			*pNewTempIOStream << pTransformedStream->rdbuf();
-
 			pTempIOStream = pNewTempIOStream;
 			pUseData = pTempIOStream;
 			pTempIOStreamAsIstream.reset( pTempIOStream );
+			*pNewTempIOStream << pTransformedStream->rdbuf();
+			pNewTempIOStream->flush();
 		}
 		// tee the data if we need to
 		else if( !m_TeeConfig.GetValue< ForwardNodeName >().IsNull() )
@@ -351,16 +345,11 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 		}
 
 		// at this point, if we didn't write directly to the output stream, push it out from the temp
-		boost::scoped_ptr< boost::iostreams::filtering_ostream > tfStreamOutput( new boost::iostreams::filtering_ostream() );
-		boost::iostreams::counter cntWithTransform;
-		tfStreamOutput->push( boost::ref( cntWithTransform ) );
-		tfStreamOutput->push( o_rData );
-
 		if( pUseData != &o_rData )
 		{
-			boost::iostreams::copy( *pUseData->rdbuf(), *tfStreamOutput );
+			pUseData->flush();
+			boost::iostreams::copy( *pUseData->rdbuf(), o_rData );
 		}
-		tfStreamOutput.reset( NULL );
 		
 		if( !o_rData.good() )
 		{
@@ -371,6 +360,7 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 		// Monitoring report
 		tracker.AddChild( CHILD_RESULT, CHILD_RESULT_SUCCESS );
 
+#if 0
 		if( needToTransform )
 		{
 			tracker.Report( METRIC_PAYLOAD_BYTES_PRE_TRANSFORM, cnt.characters() );
@@ -383,6 +373,7 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 			tracker.Report( METRIC_PAYLOAD_BYTES, cnt.characters() );
 			tracker.Report( METRIC_PAYLOAD_LINES, cnt.lines() );
 		}
+#endif
 	}
 	catch( const BadStreamException& e )
 	{
@@ -475,9 +466,7 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 		bool needTransform = m_WriteConfig.GetValue< Transformers >() != NULL && m_WriteConfig.GetValue< Transformers >()->HasStreamTransformers();
 
 		boost::iostreams::filtering_istream* pPreTransformInput = new boost::iostreams::filtering_istream();
-		boost::shared_ptr< std::istream > pPreTransformInputAsIstream(pPreTransformInput);
-		boost::iostreams::counter cntPreTransform;
-		pPreTransformInput->push( boost::ref( cntPreTransform ) );
+		boost::shared_ptr< std::istream > pPreTransformInputAsIstream( pPreTransformInput );
 		pPreTransformInput->push( i_rData );
 
 		if ( needTransform )
@@ -494,13 +483,10 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 				pUseData->clear();
 				pUseData->seekg( retryPos );
 
-				boost::iostreams::filtering_stream<boost::iostreams::input_seekable> input;
-				input.push( boost::iostreams::input_counter() );
-				input.push( *pUseData );
-
-				StoreImpl( *pUseParameters, input );
+				StoreImpl( *pUseParameters, *pUseData );
 
 				tracker.AddChild( CHILD_RESULT, CHILD_RESULT_SUCCESS );
+#if 0
 				if( needTransform )
 				{
 					tracker.Report( METRIC_PAYLOAD_BYTES_PRE_TRANSFORM, cntPreTransform.characters() );
@@ -508,6 +494,7 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 				}
 		        tracker.Report( METRIC_PAYLOAD_BYTES, input.component< 0, boost::iostreams::input_counter >()->characters() );
 		        tracker.Report( METRIC_PAYLOAD_LINES, input.component< 0, boost::iostreams::input_counter >()->lines() );
+#endif
 
 				return true;
 			}
