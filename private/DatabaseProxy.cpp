@@ -66,7 +66,6 @@ namespace
 	const std::string POST_STATEMENT_ATTRIBUTE( "post-statement" );
 
 	// statement placeholders
-	const std::string TABLE_PLACEHOLDER( "&table;" );
 	const std::string STAGING_TABLE_PLACEHOLDER( "&staging;" );
 
 	// values
@@ -85,10 +84,9 @@ namespace
 	const int DEFAULT_MAX_BIND_SIZE ( 256 );
 	const int DEFAULT_ROWS_BUFFERED( 100000 );
 
-	std::string GetAllSubstitutions( const std::string& i_rStatement, const std::map< std::string, std::string >& i_rParameters, const std::string& i_rTable, const std::string& i_rStagingTable )
+	std::string GetAllSubstitutions( const std::string& i_rStatement, const std::map< std::string, std::string >& i_rParameters, const std::string& i_rStagingTable )
 	{
 		std::string result = i_rStatement;
-		boost::replace_all( result, TABLE_PLACEHOLDER, i_rTable );
 		boost::replace_all( result, STAGING_TABLE_PLACEHOLDER, i_rStagingTable );
 		return ProxyUtilities::GetVariableSubstitutedString( result, i_rParameters );
 	}
@@ -661,7 +659,7 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 		{
 			std::string dbType = m_rDatabaseConnectionManager.GetDatabaseType( m_WriteConnectionName );
 			std::string query = ProxyUtilities::GetMergeQuery( m_rDatabaseConnectionManager, m_WriteConnectionName,
-															   dbType, TABLE_PLACEHOLDER, stagingTablePlaceholder,
+															   dbType, m_WriteTable, stagingTablePlaceholder,
 															   *XMLUtilities::GetSingletonChildByName( pNode, COLUMNS_NODE ),
 															   insertOnly, m_WriteRequiredColumns, m_WriteNodeColumnLengths, &m_WriteBindColumns );
 			if( dbType == MYSQL_DB_TYPE )
@@ -680,15 +678,15 @@ DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rPa
 		else
 		{
 			m_WriteMySqlMergeQuery = ProxyUtilities::GetMergeQuery( m_rDatabaseConnectionManager, m_WriteConnectionName,
-																	MYSQL_DB_TYPE, TABLE_PLACEHOLDER, stagingTablePlaceholder,
+																	MYSQL_DB_TYPE, m_WriteTable, stagingTablePlaceholder,
 																	*XMLUtilities::GetSingletonChildByName( pNode, COLUMNS_NODE ),
 																	insertOnly, m_WriteRequiredColumns, m_WriteNodeColumnLengths, &m_WriteBindColumns );
 			m_WriteOracleMergeQuery = ProxyUtilities::GetMergeQuery( m_rDatabaseConnectionManager, m_WriteConnectionName,
-																	 ORACLE_DB_TYPE, TABLE_PLACEHOLDER, stagingTablePlaceholder,
+																	 ORACLE_DB_TYPE, m_WriteTable, stagingTablePlaceholder,
 																	 *XMLUtilities::GetSingletonChildByName( pNode, COLUMNS_NODE ),
 																	 insertOnly, m_WriteRequiredColumns, m_WriteNodeColumnLengths );
 			m_WriteVerticaMergeQuery = ProxyUtilities::GetMergeQuery( m_rDatabaseConnectionManager, m_WriteConnectionName,
-																	  VERTICA_DB_TYPE, TABLE_PLACEHOLDER, stagingTablePlaceholder,
+																	  VERTICA_DB_TYPE, m_WriteTable, stagingTablePlaceholder,
 																	  *XMLUtilities::GetSingletonChildByName( pNode, COLUMNS_NODE ),
 																	  insertOnly, m_WriteRequiredColumns, m_WriteNodeColumnLengths );
 		}
@@ -918,13 +916,13 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 		}
 		else
 		{
-			table = ProxyUtilities::GetVariableSubstitutedString( m_WriteTable, i_rParameters );
+			table = m_WriteTable;
 			databaseType = m_rDatabaseConnectionManager.GetDatabaseType( m_WriteConnectionName );
 		}
 
-		std::string mysqlMergeQuery = GetAllSubstitutions( m_WriteMySqlMergeQuery, i_rParameters, table, m_WriteStagingTable );
-		std::string oracleMergeQuery = GetAllSubstitutions( m_WriteOracleMergeQuery, i_rParameters, table, m_WriteStagingTable );
-		std::string verticaMergeQuery = GetAllSubstitutions( m_WriteVerticaMergeQuery, i_rParameters, table, m_WriteStagingTable );
+		std::string mysqlMergeQuery = GetAllSubstitutions( m_WriteMySqlMergeQuery, i_rParameters, m_WriteStagingTable );
+		std::string oracleMergeQuery = GetAllSubstitutions( m_WriteOracleMergeQuery, i_rParameters, m_WriteStagingTable );
+		std::string verticaMergeQuery = GetAllSubstitutions( m_WriteVerticaMergeQuery, i_rParameters, m_WriteStagingTable );
 		if( databaseType == VERTICA_DB_TYPE )
 		{
 			MV_THROW( DatabaseProxyException, "Writing to vertica without a staging table is currently unsupported" );
@@ -1076,7 +1074,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			}
 			else
 			{
-				table = ProxyUtilities::GetVariableSubstitutedString( m_WriteTable, i_rParameters );
+				table = m_WriteTable;
 				databaseType = m_rDatabaseConnectionManager.GetDatabaseType( m_WriteConnectionName );
 			}
 
@@ -1095,9 +1093,9 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 				pPendingInsert.reset( new PendingDropInserter( pTempTable, m_PendingDrops, m_PendingDropsMutex ) );
 			}
 
-			std::string mysqlMergeQuery = GetAllSubstitutions( m_WriteMySqlMergeQuery, i_rParameters, table, stagingTable );
-			std::string oracleMergeQuery = GetAllSubstitutions( m_WriteOracleMergeQuery, i_rParameters, table, stagingTable );
-			std::string verticaMergeQuery = GetAllSubstitutions( m_WriteVerticaMergeQuery, i_rParameters, table, stagingTable );
+			std::string mysqlMergeQuery = GetAllSubstitutions( m_WriteMySqlMergeQuery, i_rParameters, stagingTable );
+			std::string oracleMergeQuery = GetAllSubstitutions( m_WriteOracleMergeQuery, i_rParameters, stagingTable );
+			std::string verticaMergeQuery = GetAllSubstitutions( m_WriteVerticaMergeQuery, i_rParameters, stagingTable );
 						
 			// obtain a write-lock for entire manipulation
 			{
