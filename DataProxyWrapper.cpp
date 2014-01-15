@@ -231,8 +231,6 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 			MatlabString dataSource( mxArrayToString( prhs[1] ) );
 			MatlabString dataToStore( mxArrayToString( prhs[3] ) );
 			
-			char* pDataToStore = mxArrayToString(prhs[3]);
-			
 			std::large_istringstream data( dataToStore );
 
 			s_pDataProxyClient->Store( dataSource, parameters, data );
