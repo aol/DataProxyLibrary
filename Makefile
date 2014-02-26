@@ -67,11 +67,11 @@ INCS=\
 	$(INCMODULESPEC:%=-I%) \
 	$(TRANSFORMERS:%=-I%) \
 	-I${ROOTDIR}/lib/cpp/Database/private \
-	-I${MYSQLHOME}/include \
-	-I${ORACLE_HOME}/rdbms/demo \
-	-I${ORACLE_HOME}/network/public \
-	-I${ORACLE_HOME}/rdbms/public \
-	-I$(MATLABDIR)/extern/include \
+	-isystem ${MYSQLHOME}/include \
+	-isystem ${ORACLE_HOME}/rdbms/demo \
+	-isystem ${ORACLE_HOME}/network/public \
+	-isystem ${ORACLE_HOME}/rdbms/public \
+	-isystem $(MATLABDIR)/extern/include \
 
 TESTINCS=\
 	$(INCS) \
