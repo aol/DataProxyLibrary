@@ -32,7 +32,9 @@ cp -r ${TOPDIR}/sample/ ${TOPDIR}/service && rm -rf ${TOPDIR}/sample
 
 echo "--> Installing core libs to $LIBDIR"
 mkdir -p $LIBDIR
-mv ${TOPDIR}/DataProxy.mexa64 ${LIBDIR}
+if [ -e ${TOPDIR}/DataProxy.mexa64 ]; then
+	mv ${TOPDIR}/DataProxy.mexa64 ${LIBDIR}
+fi
 mv ${TOPDIR}/libDataProxy.so.* ${LIBDIR}
 ln -sfn libDataProxy.so.${VERSION} ${LIBDIR}/libDataProxy.so.${MIN_VER}
 ln -sfn libDataProxy.so.${MIN_VER} ${LIBDIR}/libDataProxy.so.${MAJ_VER}
