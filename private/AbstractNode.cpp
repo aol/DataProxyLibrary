@@ -315,7 +315,6 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 		if( pUseData != &o_rData )
 		{
 			boost::iostreams::copy( *pUseData->rdbuf(), *tfStreamOutput );
-			tfStreamOutput->flush();
 		}
 		tfStreamOutput.reset( NULL );
 		
