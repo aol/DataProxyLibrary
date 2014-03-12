@@ -1206,7 +1206,7 @@ void DataProxyClientTest::testBadXml()
 
 	// make sure the bad xml throws a descriptive exception
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( client.Initialize( configFileSpec ), DataProxyClientException,
-		".*:\\d+: Error parsing file: .*: Invalid character in internal subset.*" );
+		".*:\\d+: Error parsing file: .*: [Ii]nvalid character.*" );
 
 	file.open( configFileSpec.c_str() );
 	file << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" << std::endl
@@ -1217,5 +1217,5 @@ void DataProxyClientTest::testBadXml()
 
 	// make sure the bad xml throws a descriptive exception
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( client.Initialize( configFileSpec ), DataProxyClientException,
-		".*:\\d+: Error parsing file: .*: A '<' character cannot be used in attribute.*" );
+		".*:\\d+: Error parsing file: .*: '<' character cannot be used in attribute.*" );
 }

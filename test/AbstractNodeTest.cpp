@@ -1048,7 +1048,7 @@ void AbstractNodeTest::testLoadFailedMonitoring()
 	TestableNode node( "name", client, *nodes[0] );
 	std::stringstream results;
 	node.SetLoadException( true );
-	CPPUNIT_ASSERT_THROW( node.Load( std::map< std::string, std::string >(), results ), std::exception );
+	CPPUNIT_ASSERT_THROW( node.Load( std::map< std::string, std::string >(), results ), MVException );
 	std::string str( "original node data" );
 	node.SetDataToReturn( str );
 
@@ -1640,7 +1640,7 @@ void AbstractNodeTest::testStoreFailedMonitoring()
 	std::stringstream data;
 	data << "this is some data";
 	node.SetStoreException( true );
-	CPPUNIT_ASSERT_THROW( node.Store( std::map< std::string, std::string >(), data ), std::exception );
+	CPPUNIT_ASSERT_THROW( node.Store( std::map< std::string, std::string >(), data ), MVException );
 
 	const std::vector< std::pair< std::string, MonitoringMetric > >& rReports = pMonitoringInstance->GetReports();
 	CPPUNIT_ASSERT_EQUAL( size_t(3), rReports.size() );
@@ -2010,7 +2010,7 @@ void AbstractNodeTest::testDeleteFailedMonitoring()
 
 	TestableNode node( "name", client, *nodes[0] );
 	node.SetDeleteException( true );
-	CPPUNIT_ASSERT_THROW( node.Delete( std::map< std::string, std::string >() ) , std::exception );
+	CPPUNIT_ASSERT_THROW( node.Delete( std::map< std::string, std::string >() ) , MVException );
 
 	const std::vector< std::pair< std::string, MonitoringMetric > >& rReports = pMonitoringInstance->GetReports();
 	CPPUNIT_ASSERT_EQUAL( size_t(3), rReports.size() );

@@ -11,13 +11,12 @@
 #ifndef _INODE_FACTORY_HPP_
 #define _INODE_FACTORY_HPP_
 
+#include <xercesc/dom/DOM.hpp>
 #include <boost/noncopyable.hpp>
 #include <string>
 
 class AbstractNode;
 class DatabaseConnectionManager;
-namespace xercesc_2_7 { class DOMNode; }
-namespace xercesc = xercesc_2_7;
 
 class INodeFactory : public boost::noncopyable
 {

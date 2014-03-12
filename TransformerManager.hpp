@@ -12,6 +12,7 @@
 #define _TRANSFORMER_MANAGER_HPP_
 
 #include "MVException.hpp"
+#include <xercesc/dom/DOM.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/noncopyable.hpp>
 #include <map>
@@ -20,8 +21,6 @@
 MV_MAKEEXCEPTIONCLASS( TransformerManagerException, MVException );
 
 class StreamTransformer;
-namespace xercesc_2_7 { class DOMNode; }
-namespace xercesc = xercesc_2_7;
 
 class TransformerManager : public boost::noncopyable
 {

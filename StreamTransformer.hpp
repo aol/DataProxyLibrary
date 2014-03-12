@@ -16,6 +16,7 @@
 #include "Nullable.hpp"
 #include "MVCommon.hpp"
 #include "MVException.hpp"
+#include <xercesc/dom/DOM.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/scoped_ptr.hpp>
@@ -23,9 +24,6 @@
 #include <iostream>
 
 MV_MAKEEXCEPTIONCLASS( StreamTransformerException, MVException );
-
-namespace xercesc_2_7 { class DOMNode; }
-namespace xercesc = xercesc_2_7;
 
 class ITransformFunctionDomain;
 class ITransformFunction;

@@ -14,6 +14,7 @@
 #include "AbstractNode.hpp"
 #include "MVException.hpp"
 #include "Nullable.hpp"
+#include <xercesc/dom/DOM.hpp>
 #include <boost/thread/thread.hpp>
 #include <boost/shared_ptr.hpp>
 #include <map>
@@ -23,8 +24,6 @@ MV_MAKEEXCEPTIONCLASS( DatabaseProxyException, MVException );
 
 class Database;
 class DatabaseConnectionManager;
-namespace xercesc_2_7 { class DOMNode; }
-namespace xercesc = xercesc_2_7;
 
 class DatabaseProxy : public AbstractNode
 {

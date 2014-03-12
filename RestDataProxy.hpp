@@ -17,14 +17,12 @@
 #include "Nullable.hpp"
 #include "GenericDataObject.hpp"
 #include "GenericDataContainer.hpp"
+#include <xercesc/dom/DOM.hpp>
 #include <vector>
 #include <map>
 
 MV_MAKEEXCEPTIONCLASS( RestDataProxyException, MVException );
 MV_MAKEEXCEPTIONCLASS( UnrecognizedParameterException, MVException );
-
-namespace xercesc_2_7 { class DOMNode; }
-namespace xercesc = xercesc_2_7;
 
 class RestDataProxy : public AbstractNode
 {

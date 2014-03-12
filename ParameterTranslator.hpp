@@ -16,12 +16,10 @@
 #include "Nullable.hpp"
 #include "MVCommon.hpp"
 #include "MVException.hpp"
+#include <xercesc/dom/DOM.hpp>
 #include <boost/noncopyable.hpp>
 
 MV_MAKEEXCEPTIONCLASS( ParameterTranslatorException, MVException );
-
-namespace xercesc_2_7 { class DOMNode; }
-namespace xercesc = xercesc_2_7;
 
 class ParameterTranslator : public boost::noncopyable
 {

@@ -16,6 +16,7 @@
 #include "MVException.hpp"
 #include "DatabaseConnectionManager.hpp"
 #include "NodeFactory.hpp"
+#include <xercesc/dom/DOM.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/thread/thread.hpp>
@@ -30,8 +31,6 @@ class ParameterTranslator;
 class TransformerManager;
 class Database;
 class AbstractNode;
-namespace xercesc_2_7 { class DOMNode; }
-namespace xercesc = xercesc_2_7;
 
 class DLL_DPL_PUBLIC DataProxyClient : public boost::noncopyable
 {

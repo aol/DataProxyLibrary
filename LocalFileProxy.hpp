@@ -14,15 +14,13 @@
 #include "AbstractNode.hpp"
 #include "MVException.hpp"
 #include "Nullable.hpp"
+#include <xercesc/dom/DOM.hpp>
 #include <boost/thread/thread.hpp>
 #include <map>
 #include <vector>
 
 MV_MAKEEXCEPTIONCLASS( LocalFileProxyException, MVException );
 MV_MAKEEXCEPTIONCLASS( LocalFileMissingException, LocalFileProxyException );
-
-namespace xercesc_2_7 { class DOMNode; }
-namespace xercesc = xercesc_2_7;
 
 class UniqueIdGenerator;
 

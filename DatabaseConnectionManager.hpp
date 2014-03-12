@@ -16,6 +16,7 @@
 #include "IncludeHashMap.hpp"
 #include "GenericDataContainer.hpp"
 #include "GenericDataObject.hpp"
+#include <xercesc/dom/DOM.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/thread/thread.hpp>
@@ -24,8 +25,6 @@
 class Stopwatch;
 class DataProxyClient;
 class Database;
-namespace xercesc_2_7 { class DOMNode; }
-namespace xercesc = xercesc_2_7;
 
 MV_MAKEEXCEPTIONCLASS(DatabaseConnectionManagerException, MVException);
 

@@ -14,6 +14,7 @@
 #include <boost/regex.hpp>
 #include "DateTime.hpp"
 #include "TransformerUtilities.hpp"
+#include <boost/iostreams/copy.hpp>
 #include <iomanip>
 
 namespace
@@ -144,13 +145,16 @@ AddSelfDescribingStreamHeaderTransformer::~AddSelfDescribingStreamHeaderTransfor
 // Adds a self describing header to the beginning
 boost::shared_ptr< std::istream > AddSelfDescribingStreamHeaderTransformer::TransformInput( boost::shared_ptr< std::istream > i_pInputStream, const std::map< std::string, std::string >& i_rParameters )
 {
-	std::large_stringstream* pResult( new std::large_stringstream() );
+	std::large_stringstream* pRawResult( new std::large_stringstream() );
+	boost::shared_ptr< std::istream > pResult( pRawResult );
+	std::large_stringstream body;
 	
 	std::string inputRow;
 	int nNumRecords = 0;
 
 	// Grab the regular (non-self describing) csv header row
 	std::getline( *i_pInputStream, inputRow );
+	body << inputRow << std::endl;
 	
 	// Process each row of real data
 	while( i_pInputStream->peek() != EOF )
@@ -158,6 +162,7 @@ boost::shared_ptr< std::istream > AddSelfDescribingStreamHeaderTransformer::Tran
 		std::string inputRow;
 		std::getline( *i_pInputStream, inputRow );
 		nNumRecords++;
+		body << inputRow << std::endl;
 	}
 	
 	// get nNumRecords value as a string
@@ -166,19 +171,18 @@ boost::shared_ptr< std::istream > AddSelfDescribingStreamHeaderTransformer::Tran
 	std::string strHeaderXML = CreateSelfDescribingHeaderXML( strRecordCount, strRecordType );
 	
 	uint64_t nHeaderXMLLength = strHeaderXML.length();
-	uint64_t nDataLength = i_pInputStream->tellg(); // we are at the end of the stream, so the position should be the length
+	uint64_t nDataLength = body.tellp();
 	
 	// write out the total and header sizes followed by the self describing header and then the data
 	// the +1 below is to account for the newline that is added after strHeaderXML
-	*pResult << CreateZeroPaddedInteger( nHeaderXMLLength+nDataLength+1, 19 ) << std::endl;
-	*pResult << CreateZeroPaddedInteger( nHeaderXMLLength, 19 ) << std::endl;
-	*pResult << strHeaderXML << std::endl;
+	*pRawResult << CreateZeroPaddedInteger( nHeaderXMLLength+nDataLength+1, 19 ) << std::endl;
+	*pRawResult << CreateZeroPaddedInteger( nHeaderXMLLength, 19 ) << std::endl;
+	*pRawResult << strHeaderXML << std::endl;
 	
-	i_pInputStream->seekg( std::ios_base::beg );
-	*pResult << i_pInputStream->rdbuf();
+	boost::iostreams::copy( body, *pRawResult );
 	
-	pResult->flush();
-	return boost::shared_ptr< std::istream >( pResult );
+	pRawResult->flush();
+	return pResult;
 }
 
 RemoveSelfDescribingStreamHeaderTransformer::RemoveSelfDescribingStreamHeaderTransformer()

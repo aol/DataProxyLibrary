@@ -30,6 +30,7 @@
 #include <xercesc/sax/HandlerBase.hpp>
 #include <xercesc/framework/LocalFileFormatTarget.hpp>
 #include <xercesc/framework/MemBufFormatTarget.hpp>
+#include <xercesc/util/XercesVersion.hpp>
 
 namespace
 {
@@ -113,14 +114,22 @@ namespace
 			pDocument = parser.getDocument();
 			pConfig = pDocument->getDocumentElement();
 
+			std::large_stringstream data;
 			xercesc::DOMImplementation* pImpl = DOMImplementationRegistry::getDOMImplementation( XercesString( "LS" ) );
 			xercesc::MemBufFormatTarget target;
+			#if XERCES_VERSION_MAJOR < 3
 			ScopedReleasePtr< DOMWriter > pSerializer( ((DOMImplementationLS*)pImpl)->createDOMWriter() );
 			pSerializer->setFeature(XMLUni::fgDOMWRTFormatPrettyPrint, false);
 			pSerializer->setFeature(XMLUni::fgDOMWRTDiscardDefaultContent, true);
 			pSerializer->writeNode( &target, *pDocument );
-			std::large_stringstream data;
 			data << target.getRawBuffer();
+			#else
+			ScopedReleasePtr< DOMLSSerializer > pSerializer( ((DOMImplementationLS*)pImpl)->createLSSerializer() );
+			DOMConfiguration* pWriterConf = pSerializer->getDomConfig();
+			pWriterConf->setParameter(XMLUni::fgDOMWRTFormatPrettyPrint, false);
+			pWriterConf->setParameter(XMLUni::fgDOMWRTDiscardDefaultContent, true);
+			data << XMLUtilities::XMLChToString( pSerializer->writeToString( pConfig ) );
+			#endif
 			return MVUtility::GetMD5( data.str() );
 		}
 		catch( ... )

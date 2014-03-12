@@ -59,7 +59,7 @@ public:
 	virtual void InsertImplDeleteForwards( std::set< std::string >& o_rForwards ) const;
 
 private:
-	mutable std::ostream& m_rLog;
+	std::ostream& m_rLog;
 	std::string m_Name;
 	bool m_SupportsTransactions;
 	bool m_PingException;

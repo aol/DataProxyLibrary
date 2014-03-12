@@ -13,15 +13,13 @@
 
 #include "DPLVisibility.hpp"
 #include "MVException.hpp"
+#include <xercesc/dom/DOM.hpp>
 #include <map>
 #include <set>
 #include <string>
 
 MV_MAKEEXCEPTIONCLASS( ProxyUtilitiesException, MVException );
 MV_MAKEEXCEPTIONCLASS( IllegalCharacterException, ProxyUtilitiesException );
-
-namespace xercesc_2_7 { class DOMNode; }
-namespace xercesc = xercesc_2_7;
 
 class DatabaseConnectionManager;
 

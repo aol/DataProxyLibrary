@@ -562,7 +562,7 @@ void ExecutionProxyTest::testStoreTimeout()
 
 	ExecutionProxy proxy( std::string("name"), client, *nodes[0] );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Store( parameters, data ), TimeoutException,
-		".*:\\d+: The command 'sleep 1' failed to finish after 0 seconds. Wrote 0 bytes to standard input. Read 0 bytes from standard output. Read 0 bytes from standard error." );
+		".*:\\d+: The command 'sleep 1' failed to finish after 0 seconds. Wrote .* bytes to standard input. Read 0 bytes from standard output. Read 0 bytes from standard error." );
 }
 
 void ExecutionProxyTest::testStoreNotSupported()

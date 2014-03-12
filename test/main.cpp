@@ -58,32 +58,24 @@ int main(int argc, char** argv)
 		CppUnit::BriefTestProgressListener progress;
 		controller.addListener( &progress ); 
 
-		bool xmlOutput = false;
 		bool useDefaultRegistry = true;
 
 		CppUnit::TestRunner runner;
 
 		for(int i = 1; i < argc; ++i)
 		{
-			if (strcmp(argv[i], "-xml") == 0)
+			useDefaultRegistry = false;
+																																  
+			CppUnit::TestFactoryRegistry& registry = CppUnit::TestFactoryRegistry::getRegistry(argv[i]);
+			CppUnit::Test* pTests = registry.makeTest();
+																																																    
+			if (pTests->getChildTestCount() == 0)
 			{
-				xmlOutput = true;
+				std::cerr << "Can't find registry " << argv[i] << std::endl;
 			}
 			else
 			{
-				useDefaultRegistry = false;
-																																	  
-				CppUnit::TestFactoryRegistry& registry = CppUnit::TestFactoryRegistry::getRegistry(argv[i]);
-				CppUnit::Test* pTests = registry.makeTest();
-																																																	    
-				if (pTests->getChildTestCount() == 0)
-				{
-					std::cerr << "Can't find registry " << argv[i] << std::endl;
-				}
-				else
-				{
-					runner.addTest(pTests);
-				}
+				runner.addTest(pTests);
 			}
 		}
 				  

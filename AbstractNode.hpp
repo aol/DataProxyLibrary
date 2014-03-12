@@ -15,6 +15,7 @@
 #include "GenericDataObject.hpp"
 #include "MVCommon.hpp"
 #include "MVException.hpp"
+#include <xercesc/dom/DOM.hpp>
 #include <boost/noncopyable.hpp>
 #include <boost/shared_ptr.hpp>
 #include <string>
@@ -24,8 +25,6 @@
 class DataProxyClient;
 class ParameterTranslator;
 class TransformerManager;
-namespace xercesc_2_7 { class DOMNode; }
-namespace xercesc = xercesc_2_7;
 
 MV_MAKEEXCEPTIONCLASS( NodeConfigException, MVException );
 MV_MAKEEXCEPTIONCLASS( ParameterValidationException, MVException );
