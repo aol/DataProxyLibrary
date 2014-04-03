@@ -12,7 +12,6 @@
 #define _MOCK_DATA_PROXY_CLIENT_HPP_
 
 #include "DataProxyClient.hpp"
-#include <set>
 
 class MockDataProxyClient : public DataProxyClient
 {
@@ -34,13 +33,14 @@ public:
 	void ClearExceptions();
 	void ClearLog();
 	void SetExceptionForName( const std::string& i_rName );
+	void SetExceptionForName( const std::string& i_rName, const std::map<std::string,std::string>& i_rSpecificParameters );
 	void SetDataToReturn( const std::string& i_rName, const std::string& i_rData );
 	void SetDataToReturn( const std::string& i_rName, const std::map<std::string, std::string>& i_rParameters, const std::string& i_rData );
 
 private:
 	mutable std::stringstream m_Log;
 	std::ostream& m_rLog;
-	std::set< std::string > m_ExceptionNames;
+	std::map< std::string, std::map< std::string, std::string > > m_ExceptionNameAndParameters;
 	std::map< std::string, std::string > m_DataForNodeParameterAgnostic;
 	typedef std::pair<std::string, std::map<std::string, std::string> > DataNodeAndParameters;
 	typedef std::map<DataNodeAndParameters, std::string > DataNodeAndParametersToResultMap;

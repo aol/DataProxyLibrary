@@ -546,7 +546,7 @@ void RouterNodeTest::testStoreExceptions()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	client.SetExceptionForName( "name1" );
+	client.SetExceptionForName( "name1", std::map<std::string, std::string>() );
 
 	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
 
@@ -576,9 +576,9 @@ void RouterNodeTest::testStoreExceptions()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	client.SetExceptionForName( "name1" );
-	client.SetExceptionForName( "name2" );
+	client.SetExceptionForName( "name2", std::map<std::string, std::string>() );
 	client.SetExceptionForName( "name3" );
-	client.SetExceptionForName( "name4" );
+	client.SetExceptionForName( "name4", std::map<std::string, std::string>() );
 
 	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
 
@@ -646,7 +646,7 @@ void RouterNodeTest::testStoreExceptions()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	client.SetExceptionForName( "name1" );
+	client.SetExceptionForName( "name1", std::map<std::string, std::string>() );
 
 	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
 
@@ -679,7 +679,7 @@ void RouterNodeTest::testStoreExceptions()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	client.SetExceptionForName( "name1" );
-	client.SetExceptionForName( "name2" );
+	client.SetExceptionForName( "name2", std::map<std::string, std::string>() );
 
 	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
 
@@ -829,7 +829,7 @@ void RouterNodeTest::testDeleteExceptions()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	client.SetExceptionForName( "name1" );
+	client.SetExceptionForName( "name1", std::map<std::string, std::string>() );
 
 	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
 
@@ -857,9 +857,9 @@ void RouterNodeTest::testDeleteExceptions()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	client.SetExceptionForName( "name1" );
-	client.SetExceptionForName( "name2" );
+	client.SetExceptionForName( "name2", std::map<std::string, std::string>() );
 	client.SetExceptionForName( "name3" );
-	client.SetExceptionForName( "name4" );
+	client.SetExceptionForName( "name4", std::map<std::string, std::string>() );
 
 	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
 
@@ -924,7 +924,7 @@ void RouterNodeTest::testDeleteExceptions()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	client.SetExceptionForName( "name1" );
+	client.SetExceptionForName( "name1", std::map<std::string, std::string>() );
 
 	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
 
@@ -956,7 +956,7 @@ void RouterNodeTest::testDeleteExceptions()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	client.SetExceptionForName( "name1" );
-	client.SetExceptionForName( "name2" );
+	client.SetExceptionForName( "name2", std::map<std::string, std::string>() );
 
 	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
 

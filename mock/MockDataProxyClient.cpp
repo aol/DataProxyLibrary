@@ -43,13 +43,30 @@ namespace
 	
 		return result;
 	}
+
+	bool AllSpecificParametersMatch( const std::map<std::string,std::string>& i_rInputParameters, const std::map<std::string,std::string>& i_rSpecificParameters )
+	{
+		std::map<std::string,std::string>::const_iterator itr = i_rSpecificParameters.begin();
+
+		for(; itr != i_rSpecificParameters.end(); ++itr)
+		{
+			std::map<std::string,std::string>::const_iterator found = i_rInputParameters.find( itr->first );
+
+			if (found == i_rInputParameters.end() || itr->second != found->second)
+			{
+				return false;
+			}
+		}
+
+		return true;
+	}
 }
 
 MockDataProxyClient::MockDataProxyClient()
 :	DataProxyClient( true ),
 	m_Log(),
 	m_rLog( m_Log ),
-	m_ExceptionNames(),
+	m_ExceptionNameAndParameters(),
 	m_DataForNodeParameterAgnostic(),
 	m_DataForNodeAndParameters()
 {
@@ -59,7 +76,7 @@ MockDataProxyClient::MockDataProxyClient( std::ostream& o_rLog )
 :	DataProxyClient( true ),
 	m_Log(),
 	m_rLog( o_rLog ),
-	m_ExceptionNames(),
+	m_ExceptionNameAndParameters(),
 	m_DataForNodeParameterAgnostic(),
 	m_DataForNodeAndParameters()
 {
@@ -74,21 +91,23 @@ void MockDataProxyClient::Initialize( const std::string& i_rConfigFileSpec )
 	m_rLog << "Initialize called with ConfigFileSpec: " << i_rConfigFileSpec << std::endl;
 }
 
-//Mock Load first checks if the tester configured a particular response for the given data node AND parameters.
-//If not, then it checks if there is a response configured for just the data node.
 void MockDataProxyClient::Ping( const std::string& i_rName, int i_Mode ) const
 {
 	m_Log << "Ping called with Name: " << i_rName << " Mode: " << i_Mode << std::endl;
-	if( m_ExceptionNames.find( i_rName ) != m_ExceptionNames.end() )
+	std::map< std::string, std::map< std::string, std::string > >::const_iterator exceptionEntry = m_ExceptionNameAndParameters.find( i_rName );
+	if( exceptionEntry != m_ExceptionNameAndParameters.end() )
 	{
 		MV_THROW( DataProxyClientException, "Set to throw an exception for name: " << i_rName );
 	}
 }
 
+//Mock Load first checks if the tester configured a particular response for the given data node AND parameters.
+//If not, then it checks if there is a response configured for just the data node.
 void MockDataProxyClient::Load( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData ) const
 {
 	m_rLog << "Load called with Name: " << i_rName << " Parameters: " << ToString( i_rParameters ) << std::endl;
-	if( m_ExceptionNames.find( i_rName ) != m_ExceptionNames.end() )
+	std::map< std::string, std::map< std::string, std::string > >::const_iterator exceptionEntry = m_ExceptionNameAndParameters.find( i_rName );
+	if( exceptionEntry != m_ExceptionNameAndParameters.end() && AllSpecificParametersMatch( i_rParameters, exceptionEntry->second ) )
 	{
 		MV_THROW( DataProxyClientException, "Set to throw an exception for name: " << i_rName );
 	}
@@ -117,7 +136,8 @@ void MockDataProxyClient::Store( const std::string& i_rName, const std::map<std:
 	std::stringstream data;
 	data << i_rData.rdbuf();
 	m_rLog << "Store called with Name: " << i_rName << " Parameters: " << ToString( i_rParameters ) << " Data: " << data.str() << std::endl;
-	if( m_ExceptionNames.find( i_rName ) != m_ExceptionNames.end() )
+	std::map< std::string, std::map< std::string, std::string > >::const_iterator exceptionEntry = m_ExceptionNameAndParameters.find( i_rName );
+	if( exceptionEntry != m_ExceptionNameAndParameters.end() && AllSpecificParametersMatch( i_rParameters, exceptionEntry->second ) )
 	{
 		MV_THROW( DataProxyClientException, "Set to throw an exception for name: " << i_rName );
 	}
@@ -126,7 +146,8 @@ void MockDataProxyClient::Store( const std::string& i_rName, const std::map<std:
 void MockDataProxyClient::Delete( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters ) const
 {
 	m_rLog << "Delete called with Name: " << i_rName << " Parameters: " << ToString( i_rParameters ) << std::endl;
-	if( m_ExceptionNames.find( i_rName ) != m_ExceptionNames.end() )
+	std::map< std::string, std::map< std::string, std::string > >::const_iterator exceptionEntry = m_ExceptionNameAndParameters.find( i_rName );
+	if( exceptionEntry != m_ExceptionNameAndParameters.end() && AllSpecificParametersMatch( i_rParameters, exceptionEntry->second ) )
 	{
 		MV_THROW( DataProxyClientException, "Set to throw an exception for name: " << i_rName );
 	}
@@ -160,12 +181,17 @@ void MockDataProxyClient::ClearLog()
 
 void MockDataProxyClient::ClearExceptions()
 {
-	m_ExceptionNames.clear();
+	m_ExceptionNameAndParameters.clear();
 }
 
 void MockDataProxyClient::SetExceptionForName( const std::string& i_rName )
 {
-	m_ExceptionNames.insert( i_rName );
+	SetExceptionForName( i_rName, std::map<std::string, std::string>() );
+}
+
+void MockDataProxyClient::SetExceptionForName( const std::string& i_rName, const std::map< std::string, std::string >& i_SpecificParameters )
+{
+	m_ExceptionNameAndParameters.insert( DataNodeAndParameters(i_rName, i_SpecificParameters) );
 }
 
 void MockDataProxyClient::SetDataToReturn( const std::string& i_rName, const std::string& i_rData )
