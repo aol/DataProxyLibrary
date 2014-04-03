@@ -95,7 +95,7 @@ LIBLOC=\
 LIBS		=  -lLogger -lMonitoring \
 			   -lboost_iostreams -lboost_regex -lboost_filesystem -lboost_program_options -lboost_thread -lboost_system \
 			   -lclntsh -lodbc -lxerces-c -lpthread -llog4cxx -lcurl -lssl -luuid -lnnz10 -lcrypto -ldl -lagent++ -lsnmp++
-TESTLIBS	= -lcppunit -lTestHelpers -lMockDatabase -lMockService -lMockUtility -lMockMonitoring $(LIBS)
+TESTLIBS	= -lcppunit -lTestHelpers -lMockDatabase -lMockService -lMockUtility -lMockMonitoring -lboost_date_time $(LIBS)
 MATLABLIBS	= -lMatlab -leng -lmx -lut -lmat
 
 ifeq ($(ARCH), x86_64)
