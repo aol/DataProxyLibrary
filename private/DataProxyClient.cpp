@@ -143,12 +143,12 @@ namespace
 		std::stringstream result;
 		bool foundOne( false );
 		result << i_Mode << ": ";
-		if( i_Mode | DPL::READ )
+		if( i_Mode & DPL::READ )
 		{
 			result << "read";
 			foundOne = true;
 		}
-		if( i_Mode | DPL::WRITE )
+		if( i_Mode & DPL::WRITE )
 		{
 			if( foundOne )
 			{
@@ -157,7 +157,7 @@ namespace
 			result << "write";
 			foundOne = true;
 		}
-		if( i_Mode | DPL::DELETE )
+		if( i_Mode & DPL::DELETE )
 		{
 			if( foundOne )
 			{
