@@ -120,9 +120,11 @@ CXXC = $(CXX) $(TARGETOPTS) -c $(INCS) $(DEFINE_FLAGS)		# compiling object files
 CXXT = $(CXX) $(TARGETOPTS) -c $(TESTINCS) $(DEFINE_FLAGS)	# compiling object files
 CXXL = $(CXX) $(TARGETOPTS) $(LIBLOC)						# linking executables
 CXXD = $(CXX) -MM $(TESTINCS) $(DEFINE_FLAGS)				# generating dependencies
-CXXS = $(CXX) -shared -Wl,-soname,$(MINOR_VERSION_TARGET)
+CXXS = $(CXX) -shared
 MEX ?= mex
 MEXC = $(MEX) CXXFLAGS='-std=c++0x -fPIC -fno-omit-frame-pointer -pthread'
+SWIG ?= swig
+SWIGC = $(SWIG) -c++
 
 # Source Directories
 PRIVATEDIR		= private
@@ -135,7 +137,11 @@ OPTIMIZEDIR	= opt.obj
 OPTDEBUGDIR	= optd.obj
 PROFILEDIR	= prof.obj
 COVERAGEDIR	= cov.obj
-ALLTARGETDIRS = $(DEBUGDIR) $(OPTIMIZEDIR) $(OPTDEBUGDIR) $(PROFILEDIR) $(COVERAGEDIR)
+SWIGGENDIR	= gen-$(lang)
+ALLTARGETDIRS = $(DEBUGDIR) $(OPTIMIZEDIR) $(OPTDEBUGDIR) $(PROFILEDIR) $(COVERAGEDIR) $(SWIGGENDIR)
+
+SWIGFILES=\
+	LibDataProxy.i
 
 MATLABWRAPPERFILE=\
 	DataProxyWrapper.cpp \
@@ -287,6 +293,11 @@ DATABASEFILES=\
 	LargeScaleSelectStatement.cpp \
 	Statement.cpp \
 
+# swig-specific files & objects
+GENCPPSWIGFILES		= $(SWIGFILES:%.i=%_wrap.$(lang).cpp)
+DIRGENSWIGFILES		= $(GENCPPSWIGFILES:%=$(PRIVATEDIR)/%)
+SWIGOBJECTFILES		= $(GENCPPSWIGFILES:%.cpp=$(TARGETDIR)/%.o)
+
 # Creating explicit paths to sets of source files
 PRIVATEFILESPEC			= $(PRIVATEFILES:%=$(PRIVATEDIR)/%)
 UTILITYFILESPEC			= $(UTILITYFILES:%=$(UTILITYDIR)/$(PRIVATEDIR)/%)
@@ -327,6 +338,7 @@ FULL_VERSION_TARGET			= $(MINOR_VERSION_TARGET).1
 PRIMARY_TARGET				= $(FULL_VERSION_TARGET)
 MOCK_TARGET				= libMockDataProxy.a
 MATLAB_TARGET				= DataProxy.mexa64
+SWIG_TARGET				= _DataProxy.so
 TEST_TARGET				= data_proxy_tests
 THREADTEST_TARGET			= multithread_data_proxy_test
 MATLAB_TEST_TARGET			= matlab_wrapper_tests
@@ -343,51 +355,51 @@ LN = ln -sf
 .PHONY: extlibs matlablibs default check-syntax debug prof opt opt_debug coverage tests test_coverage mock \
 	depend localdepend clean localclean nodepend $(ALL_TARGETS)
 
-debug: $(DEBUGDIR) extlibs
+debug: $(DEBUGDIR)
 	$(MAKE) TARGETDIR='$(DEBUGDIR)' TARGETOPTS='$(DEBUGOPTS)' \
 	SUBTARGET=$@ $(PRIMARY_TARGET)
 
-prof: $(PROFILEDIR) extlibs
+prof: $(PROFILEDIR)
 	$(MAKE) TARGETDIR='$(PROFILEDIR)' TARGETOPTS='$(PROFILEOPTS)' \
 	SUBTARGET=$@ $(PRIMARY_TARGET)
 
-opt: $(OPTIMIZEDIR) extlibs
+opt: $(OPTIMIZEDIR)
 	$(MAKE) TARGETDIR='$(OPTIMIZEDIR)' TARGETOPTS='$(OPTIMIZEOPTS)' \
 	SUBTARGET=$@ $(PRIMARY_TARGET)
 
-opt_debug: $(OPTDEBUGDIR) extlibs
+opt_debug: $(OPTDEBUGDIR)
 	$(MAKE) TARGETDIR='$(OPTDEBUGDIR)' TARGETOPTS='$(OPTIMIZEOPTS) $(DEBUGOPTS)' \
 	SUBTARGET=$@ $(PRIMARY_TARGET)
 
-coverage: $(COVERAGEDIR) extlibs
+coverage: $(COVERAGEDIR)
 	$(MAKE) TARGETDIR='$(COVERAGEDIR)' TARGETOPTS='$(COVERAGEOPTS)' \
 	SUBTARGET=$@ $(PRIMARY_TARGET)
 
-thread_test: $(TARGETDIR) testextlibs
+thread_test: $(TARGETDIR)
 	$(MAKE) SUBTARGET=debug $(THREADTEST_TARGET)
 	cd $(ROOTDIR)/lib/cpp/TestHelpers && $(MAKE) java-server
 
-tests: $(TARGETDIR) testextlibs
+tests: $(TARGETDIR)
 	$(MAKE) SUBTARGET=debug $(TEST_TARGET)
 	cd $(ROOTDIR)/lib/cpp/TestHelpers && $(MAKE) java-server
 
-matlab_tests: $(TARGETDIR) testextlibs matlablibs
+matlab_tests: $(TARGETDIR)
 	$(MAKE) SUBTARGET=debug $(MATLAB_TEST_TARGET)
 	cd $(ROOTDIR)/lib/Logger && $(MAKE) matlab_log_wrapper
 	$(MAKE) matlab_wrapper
 
-test_coverage: $(COVERAGEDIR) testextlibs
+test_coverage: $(COVERAGEDIR)
 	$(MAKE) TARGETDIR='$(COVERAGEDIR)' TARGETOPTS='$(COVERAGEOPTS)' \
 	SUBTARGET=coverage $(TEST_TARGET) \
 
-mock: $(TARGETDIR) testextlibs
+mock: $(TARGETDIR)
 	$(MAKE) SUBTARGET=debug $(MOCK_TARGET) TARGETOPTS='${DEBUGOPTS}'\
 
-opt_pic: $(OPTIMIZEDIR) extlibs
+opt_pic: $(OPTIMIZEDIR)
 	$(MAKE) TARGETDIR='$(OPTIMIZEDIR)' TARGETOPTS='$(OPTIMIZEOPTS)' \
 	SUBTARGET=$@ $(PRIMARY_TARGET)
 
-matlab_wrapper: $(OPTIMIZEDIR) extlibs
+matlab_wrapper: $(OPTIMIZEDIR)
 	$(MAKE) TARGETDIR='$(OPTIMIZEDIR)' TARGETOPTS='$(OPTIMIZEOPTS)' \
 	SUBTARGET=opt_pic $(MATLAB_TARGET)
 
@@ -406,21 +418,40 @@ $(TARGETDIR)/$(MOCK_TARGET): ${MOCKOBJSPEC}
 	ranlib $@
 
 # Building tests
-$(TEST_TARGET:%=$(TARGETDIR)/%): $(PRIVATEOBJSPEC) $(TESTOBJSPEC) $(MOCKOBJSPEC)
+$(TEST_TARGET:%=$(TARGETDIR)/%): $(PRIVATEOBJSPEC) $(TESTOBJSPEC) $(MOCKOBJSPEC) testextlibs
 	$(CXXL) -o $@ $(PRIVATEOBJSPEC) $(TESTOBJSPEC) $(MOCKOBJSPEC) $(TESTLIBS)
 
-$(THREADTEST_TARGET:%=$(TARGETDIR)/%): $(PRIVATEOBJSPEC) $(THREADTESTOBJSPEC) $(MOCKOBJSPEC)
+$(THREADTEST_TARGET:%=$(TARGETDIR)/%): $(PRIVATEOBJSPEC) $(THREADTESTOBJSPEC) $(MOCKOBJSPEC) testextlibs
 	$(CXXL) -o $@ $(PRIVATEOBJSPEC) $(THREADTESTOBJSPEC) $(MOCKOBJSPEC) $(TESTLIBS)
 
-$(MATLAB_TEST_TARGET:%=$(TARGETDIR)/%): $(MATLAB_TARGET) $(MATLABTESTOBJSPEC)
+$(MATLAB_TEST_TARGET:%=$(TARGETDIR)/%): $(MATLAB_TARGET) $(MATLABTESTOBJSPEC) testextlibs matlabextlibs
 	$(CXXL) -o $@ $(PRIVATEOBJSPEC) $(HELPEROBJSPEC) $(MATLABTESTOBJSPEC) $(MATLABLIBS) $(TESTLIBS)
 
 # Building libraries & primary targets
-$(TARGETDIR)/$(PRIMARY_TARGET): $(PRIVATEOBJSPEC)
-	$(CXXS) -o $@ $^ $(LIBLOC) $(LIBS)
+$(TARGETDIR)/$(PRIMARY_TARGET): $(PRIVATEOBJSPEC) extlibs
+	$(CXXS) -Wl,-soname,$(MINOR_VERSION_TARGET) -o $@ $(PRIVATEOBJSPEC) $(LIBLOC) $(LIBS)
 
-$(TARGETDIR)/$(MATLAB_TARGET): $(MATLABWRAPPERFILE) $(PRIMARY_TARGET)
+$(TARGETDIR)/$(MATLAB_TARGET): $(MATLABWRAPPERFILE) $(PRIMARY_TARGET) extlibs matlabextlibs
 	$(MEXC) $(MATLABWRAPPERFILE) -DMV_OPTIMIZE $(INCS) $(LIBLOC) -L. -lDataProxy $(LIBS) -o $(TARGETDIR)/$(MATLAB_TARGET)
+
+# swig targets
+swig:
+	@test "$(lang)" || (echo "lang must be defined for $@ (run 'swig -help' for a list of supported languages)" && false)
+	$(MAKE) TARGETDIR='$(OPTIMIZEDIR)' SUBTARGET='opt' swig-build 
+
+swig-build: opt $(SWIGGENDIR)
+	$(MAKE) TARGETDIR='$(OPTIMIZEDIR)' SUBTARGET='opt' $(SWIG_TARGET)
+
+$(SWIG_TARGET): $(SWIGOBJECTFILES)
+	$(CXXS) -o $(SWIGGENDIR)/$@ $^ -L. -lDataProxy
+
+# normally, we wouldn't need this (as the default object file target would catch it),
+# but it seems the auto-generated perl file has an unused variable that we need to ignore
+$(SWIGOBJECTFILES): $(DIRGENSWIGFILES)
+	$(CXXC) $< -Wno-unused-variable -o $@
+
+$(DIRGENSWIGFILES): $(SWIGFILES)
+	$(SWIGC) -o $@ -$(lang) -outdir $(SWIGGENDIR) $<
 
 # if necessary, build external libraries.
 extlibs: $(MODULESPEC)
@@ -505,6 +536,8 @@ clean: localclean
 localclean:
 	- rm -f $(ALL_TARGETS) \
 			$(THPP2HPPFILES) \
+			$(SWIGFILES:%.i=$(PRIVATEDIR)/%_wrap.*.cpp) \
+			gen-* \
 			Makefile.depend \
 			cppunit_Logger_log.txt \
 	- rm -rf $(ALLTARGETDIRS)
