@@ -141,7 +141,7 @@ SWIGGENDIR	= gen-$(lang)
 ALLTARGETDIRS = $(DEBUGDIR) $(OPTIMIZEDIR) $(OPTDEBUGDIR) $(PROFILEDIR) $(COVERAGEDIR) $(SWIGGENDIR)
 
 SWIGFILES=\
-	LibDataProxy.i
+	SwigDataProxy.i
 
 MATLABWRAPPERFILE=\
 	DataProxyWrapper.cpp \
@@ -331,19 +331,32 @@ COVERAGEOPTS		= -D LIBDPL_BUILD -fprofile-arcs -ftest-coverage -Wall -Werror -fn
 
 # Executable targets
 BASE_NAME				= DataProxy
-FRIENDLY_TARGET				= lib$(BASE_NAME).so
-MAJOR_VERSION_TARGET			= $(FRIENDLY_TARGET).3
-MINOR_VERSION_TARGET			= $(MAJOR_VERSION_TARGET).2
-FULL_VERSION_TARGET			= $(MINOR_VERSION_TARGET).1
-PRIMARY_TARGET				= $(FULL_VERSION_TARGET)
+FRIENDLY_TARGET			= lib$(BASE_NAME).so
+MAJOR_VERSION_TARGET	= $(FRIENDLY_TARGET).3
+MINOR_VERSION_TARGET	= $(MAJOR_VERSION_TARGET).2
+FULL_VERSION_TARGET		= $(MINOR_VERSION_TARGET).1
+PRIMARY_TARGET			= $(FULL_VERSION_TARGET)
 MOCK_TARGET				= libMockDataProxy.a
-MATLAB_TARGET				= DataProxy.mexa64
-SWIG_TARGET				= _DataProxy.so
+MATLAB_TARGET			= DataProxy.mexa64
 TEST_TARGET				= data_proxy_tests
-THREADTEST_TARGET			= multithread_data_proxy_test
-MATLAB_TEST_TARGET			= matlab_wrapper_tests
+THREADTEST_TARGET		= multithread_data_proxy_test
+MATLAB_TEST_TARGET		= matlab_wrapper_tests
 OTHER_TARGETS = $(MATLAB_TARGET) $(TEST_TARGET) $(THREADTEST_TARGET) $(MATLAB_TEST_TARGET) $(MOCK_TARGET)
 ALL_TARGETS = $(PRIMARY_TARGET) $(MAJOR_VERSION_TARGET) $(FRIENDLY_TARGET) $(OTHER_TARGETS)
+
+# each swig target language has a different target (damnit)
+SWIG_TARGET_csharp	= libSwigDataProxy.so
+SWIG_TARGET_java	= libSwigDataProxy.so
+SWIG_TARGET_octave	= SwigDataProxy.c
+SWIG_TARGET_perl	= SwigDataProxy.so
+SWIG_TARGET_php		= SwigDataProxy.so
+SWIG_TARGET_python	= _SwigDataProxy.so
+SWIG_TARGET_ruby	= SwigDataProxy.so
+SWIG_TARGET_r		= SwigDataProxy.so
+
+# some swig targets require special parameters when compiling wrappers to object files
+SWIGOPTS_perl	= -Dbool=char
+SWIGOPTS_php	= `php-config --includes`
 
 # Defaults for target dir and options
 TARGETDIR	?= $(DEBUGDIR)
@@ -436,19 +449,38 @@ $(TARGETDIR)/$(MATLAB_TARGET): $(MATLABWRAPPERFILE) $(PRIMARY_TARGET) extlibs ma
 
 # swig targets
 swig:
-	@test "$(lang)" || (echo "lang must be defined for $@ (run 'swig -help' for a list of supported languages)" && false)
+	@test "$(lang)" || (echo "lang must be defined for $@ (currently supported: csharp, java, octave, perl, php, python, ruby, r)" && false)
 	$(MAKE) TARGETDIR='$(OPTIMIZEDIR)' SUBTARGET='opt' swig-build 
 
 swig-build: opt $(SWIGGENDIR)
-	$(MAKE) TARGETDIR='$(OPTIMIZEDIR)' SUBTARGET='opt' $(SWIG_TARGET)
+	$(MAKE) TARGETDIR='$(OPTIMIZEDIR)' SUBTARGET='opt' OPTS='$(SWIGOPTS_$(lang))' SWIG_TARGET_$(lang)
 
-$(SWIG_TARGET): $(SWIGOBJECTFILES)
-	$(CXXS) -o $(SWIGGENDIR)/$@ $^ -L. -lDataProxy
+SWIG_TARGET_csharp: $(SWIGOBJECTFILES)
+	$(CXXS) -o $(SWIGGENDIR)/$($@) $^ -L. -lDataProxy
 
-# normally, we wouldn't need this (as the default object file target would catch it),
-# but it seems the auto-generated perl file has an unused variable that we need to ignore
+SWIG_TARGET_java: $(SWIGOBJECTFILES)
+	$(CXXS) -o $(SWIGGENDIR)/$($@) $^ -L. -lDataProxy
+
+SWIG_TARGET_octave: $(DIRGENSWIGFILES)
+	mkoctfile $^ $(SWIGGENDIR)/$($@)
+
+SWIG_TARGET_perl: $(SWIGOBJECTFILES)
+	$(CXXS) -o $(SWIGGENDIR)/$($@) $^ -L. -lDataProxy
+
+SWIG_TARGET_php: $(SWIGOBJECTFILES)
+	$(CXXS) -o $(SWIGGENDIR)/$($@) $^ -L. -lDataProxy
+
+SWIG_TARGET_python: $(SWIGOBJECTFILES)
+	$(CXXS) -o $(SWIGGENDIR)/$($@) $^ -L. -lDataProxy
+
+SWIG_TARGET_ruby: $(SWIGOBJECTFILES)
+	$(CXXS) -o $(SWIGGENDIR)/$($@) $^ -L. -lDataProxy
+
+SWIG_TARGET_r: $(DIRGENSWIGFILES)
+	PKG_LIBS="$($@:%.so=%.cxx)" R CMD SHLIB $@
+
 $(SWIGOBJECTFILES): $(DIRGENSWIGFILES)
-	$(CXXC) $< -Wno-unused-variable -o $@
+	$(CXXC) $(OPTS) $< -Wno-unused-variable -o $@
 
 $(DIRGENSWIGFILES): $(SWIGFILES)
 	$(SWIGC) -o $@ -$(lang) -outdir $(SWIGGENDIR) $<

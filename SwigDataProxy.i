@@ -1,4 +1,4 @@
-%module DataProxy
+%module SwigDataProxy
 
 %{
 #include <cstddef>
