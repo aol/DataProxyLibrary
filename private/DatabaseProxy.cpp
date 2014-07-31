@@ -1074,7 +1074,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			}
 			else
 			{
-				table = m_WriteTable;
+				table = ProxyUtilities::GetVariableSubstitutedString( m_WriteTable, i_rParameters );
 				databaseType = m_rDatabaseConnectionManager.GetDatabaseType( m_WriteConnectionName );
 			}
 

@@ -58,6 +58,7 @@ private:
 	CPPUNIT_TEST( testDynamicTableNameLength );
 	CPPUNIT_TEST( testStoreParameterOnly );
 	CPPUNIT_TEST( testStoreParameterOnlyNoStaging );
+	CPPUNIT_TEST( testStoreParameterWithTableParameter );
 	CPPUNIT_TEST( testStoreColumnParameterCollisionBehaviors );
 	CPPUNIT_TEST( testStoreColumnParameterCollisionBehaviorsNoStaging );
 	
@@ -129,6 +130,7 @@ public:
 	void testDynamicTableNameLength();
 	void testStoreParameterOnly();
 	void testStoreParameterOnlyNoStaging();
+	void testStoreParameterWithTableParameter();
 	void testStoreColumnParameterCollisionBehaviors();
 	void testStoreColumnParameterCollisionBehaviorsNoStaging();
 

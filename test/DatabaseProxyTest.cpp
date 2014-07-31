@@ -2889,6 +2889,64 @@ void DatabaseProxyTest::testStoreParameterOnly()
 	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pMySQLObservationDB, "kna", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" )
 }
 
+void DatabaseProxyTest::testStoreParameterWithTableParameter()
+{
+	MockDataProxyClient client;
+	// create primary & staging tables
+	Database::Statement(*m_pMySQLDB, GetMySqlTableDDL("kna_foo")).Execute();
+	Database::Statement(*m_pMySQLDB, GetMySqlTableDDL("stg_kna")).Execute();
+
+	MockDatabaseConnectionManager dbManager;
+	dbManager.InsertConnection( "myMySqlConnection", m_pMySQLDB );
+
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode type = \"db\" >"
+				<< " <Write connection = \"myMySqlConnection\""
+				<< "  table = \"kna_${instance}\" "
+				<< "  stagingTable = \"stg_kna\" "
+				<< "  workingDir = \"" << m_pTempDir->GetDirectoryName() << "\""
+				<< "  noCleanUp = \"true\" "
+				<< "  insertOnly = \"true\" >"
+				<< "	<Columns>"
+				<< "      <Column name=\"media_id\" type=\"key\" />"
+				<< "      <Column name=\"website_id\" type=\"key\" />"
+				<< "      <Column name=\"impressions\" type=\"data\" ifNew=\"%v\" />"
+				<< "      <Column name=\"revenue\" type=\"data\" ifNew=\"%v\" />"
+				<< "      <Column name=\"dummy\" type=\"data\" ifNew=\"17\" />"
+				<< "      <Column name=\"myConstant\" type=\"data\" ifNew=\"%v\" />"
+				<< "	</Columns>"
+				<< " </Write>"
+				<< "</DataNode>";
+	
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	boost::scoped_ptr< DatabaseProxy > pProxy;
+	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+
+	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
+
+	std::stringstream data;
+	
+	std::map< std::string, std::string > parameters;
+	parameters[ "media_id" ] = "12";
+	parameters[ "website_id" ] = "13";
+	parameters[ "impressions" ] = "14";
+	parameters[ "revenue" ] = "15.5";
+	parameters[ "myConstant" ] = "24";
+	parameters[ "instance" ] = "foo";
+
+	CPPUNIT_ASSERT_NO_THROW( pProxy->Store( parameters, data ) );
+	CPPUNIT_ASSERT_NO_THROW( pProxy->Commit() );
+
+	std::stringstream expected;
+	expected << "12,13,14,15.5,17,24" << std::endl;
+
+	// check table contents
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( expected.str(), *m_pMySQLObservationDB, "kna_foo", "media_id,website_id,impressions,revenue,dummy,myConstant", "media_id" )
+}
+
 void DatabaseProxyTest::testStoreParameterOnlyNoStaging()
 {
 	MockDataProxyClient client;
