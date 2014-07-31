@@ -2903,6 +2903,7 @@ void DatabaseProxyTest::testStoreParameterWithTableParameter()
 	xmlContents << "<DataNode type = \"db\" >"
 				<< " <Write connection = \"myMySqlConnection\""
 				<< "  table = \"kna_${instance}\" "
+				<< "  dynamicStagingTable=\"true\" "
 				<< "  stagingTable = \"stg_kna\" "
 				<< "  workingDir = \"" << m_pTempDir->GetDirectoryName() << "\""
 				<< "  noCleanUp = \"true\" "
