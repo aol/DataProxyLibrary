@@ -357,6 +357,7 @@ SWIG_TARGET_r		= SwigDataProxy.so
 # some swig targets require special parameters when compiling wrappers to object files
 SWIGOPTS_perl	= -Dbool=char
 SWIGOPTS_php	= `php-config --includes`
+SWIGOPTS_python	= -Wno-write-strings
 
 # Defaults for target dir and options
 TARGETDIR	?= $(DEBUGDIR)
