@@ -27,17 +27,6 @@
 #include "MVException.hpp"
 
 const char * LOGGER_FILENAME = "cppunit_Logger_log.txt";
-const char*  CPPUNIT_OUTPUT_FILENAME = "DataProxyTests.xml";
-const char*  TRANSFORM_FILENAME = "cppUnitToJUnit.xsl";
-
-void CleanUp( void )
-{
-	system("rm -f /tmp/GenWeightsTestLPFilename* 2>>/dev/null");
-	system("rm -f /tmp/LPWrapper* 2>>/dev/null");
-	system("rm -rf /tmp/AlphaLPTest* 2>>/dev/null");
-	system("rm -rf /tmp/ReapportionmentLPTest* 2>>/dev/null");
-	system("rm -rf /tmp/future 2>>/dev/null");
-}
 
 int main(int argc, char** argv)
 {
@@ -87,10 +76,9 @@ int main(int argc, char** argv)
 
 		runner.run(controller, "");
 	
-			CppUnit::TextOutputter textOut(&result, std::cerr);
-			textOut.printFailures();
+		CppUnit::TextOutputter textOut(&result, std::cerr);
+		textOut.printFailures();
 	
-		CleanUp();
 		return result.wasSuccessful() ? 0 : 1;
     }
     catch(MVException &mve)
