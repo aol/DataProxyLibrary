@@ -377,7 +377,7 @@ void LocalFileProxyTest::testLoadNameFormat()
 	// now ensure that a missing key throws an exception
 	parameters.erase( "key3" );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Load( parameters, results ), ProxyUtilitiesException,
-		"private/ProxyUtilities.cpp:\\d+: The following parameters are referenced, but are not specified in the parameters: key3" );
+		".*:\\d+: The following parameters are referenced, but are not specified in the parameters: key3" );
 	parameters["key3"] = "value3";
 
 	// now create an unreadable directory alongside
@@ -593,7 +593,7 @@ void LocalFileProxyTest::testStoreNameFormat()
 	// now ensure that a missing key throws an exception
 	parameters.erase( "key3" );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Store( parameters, data ), ProxyUtilitiesException,
-		"private/ProxyUtilities.cpp:\\d+: The following parameters are referenced, but are not specified in the parameters: key3" );
+		".*:\\d+: The following parameters are referenced, but are not specified in the parameters: key3" );
 	parameters["key3"] = "value3";
 
 	// now create an unwritable directory alongside
@@ -1148,7 +1148,7 @@ void LocalFileProxyTest::testDeleteNameFormat()
 	// now ensure that a missing key throws an exception
 	parameters.erase( "key3" );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Delete( parameters ), ProxyUtilitiesException,
-		"private/ProxyUtilities.cpp:\\d+: The following parameters are referenced, but are not specified in the parameters: key3" );
+		".*:\\d+: The following parameters are referenced, but are not specified in the parameters: key3" );
 	parameters["key3"] = "value3";
 
 	// now disallow writes to the directory alongside

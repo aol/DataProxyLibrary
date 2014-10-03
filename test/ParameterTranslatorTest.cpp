@@ -376,7 +376,7 @@ void ParameterTranslatorTest::testBadEvalCommand()
 	std::map< std::string, std::string > translatedParameters;
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( translator.Translate( inputParameters, translatedParameters ), ParameterTranslatorException,
-		"private/ParameterTranslator\\.cpp:\\d+: Evaluation command returned non-zero return code: 127\\. Command was: this_command_better_not_exist. Standard Error: .*" );
+		".*:\\d+: Evaluation command returned non-zero return code: 127\\. Command was: this_command_better_not_exist. Standard Error: .*" );
 	
 	// case 2: timeout
 	xmlContents.str("");
@@ -408,7 +408,7 @@ void ParameterTranslatorTest::testIllegalConfig()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Whatever", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ParameterTranslator translator( *nodes[0] ), ParameterTranslatorException,
-		"private/ParameterTranslator\\.cpp:\\d+: If translating the name of a parameter, cannot also provide a value manipulator.*" );
+		".*:\\d+: If translating the name of a parameter, cannot also provide a value manipulator.*" );
 
 	xmlContents.str("");
 	xmlContents << "<Whatever>"
@@ -419,7 +419,7 @@ void ParameterTranslatorTest::testIllegalConfig()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Whatever", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ParameterTranslator translator( *nodes[0] ), ParameterTranslatorException,
-		"private/ParameterTranslator\\.cpp:\\d+: If translating the name of a parameter, cannot also provide a value manipulator.*" );
+		".*:\\d+: If translating the name of a parameter, cannot also provide a value manipulator.*" );
 
 	xmlContents.str("");
 	xmlContents << "<Whatever>"
@@ -430,7 +430,7 @@ void ParameterTranslatorTest::testIllegalConfig()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Whatever", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ParameterTranslator translator( *nodes[0] ), ParameterTranslatorException,
-		"private/ParameterTranslator\\.cpp:\\d+: If translating the name of a parameter, cannot also provide a value manipulator.*" );
+		".*:\\d+: If translating the name of a parameter, cannot also provide a value manipulator.*" );
 
 	// case 2: Cannot provide value translator & value override on the same node
 	xmlContents.str("");
@@ -442,7 +442,7 @@ void ParameterTranslatorTest::testIllegalConfig()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Whatever", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ParameterTranslator translator( *nodes[0] ), ParameterTranslatorException,
-		"private/ParameterTranslator\\.cpp:\\d+: Cannot provide a value override and a value translator\\. Violating parameter: param1" );
+		".*:\\d+: Cannot provide a value override and a value translator\\. Violating parameter: param1" );
 
 	// case 3: Cannot provide value default & value override on the same node
 	xmlContents.str("");
@@ -454,7 +454,7 @@ void ParameterTranslatorTest::testIllegalConfig()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Whatever", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ParameterTranslator translator( *nodes[0] ), ParameterTranslatorException,
-		"private/ParameterTranslator\\.cpp:\\d+: Cannot provide a value override and a value default\\. Violating parameter: param1" );
+		".*:\\d+: Cannot provide a value override and a value default\\. Violating parameter: param1" );
 
 	// case 4: Cannot provide name translation with more than one jump
 	xmlContents.str("");
@@ -467,7 +467,7 @@ void ParameterTranslatorTest::testIllegalConfig()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Whatever", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ParameterTranslator translator( *nodes[0] ), ParameterTranslatorException,
-		"private/ParameterTranslator\\.cpp:\\d+: Parameter name translations must not be chained. Violating chain: param1->param2->param3" );
+		".*:\\d+: Parameter name translations must not be chained. Violating chain: param1->param2->param3" );
 
 	// case 5: Cannot provide same Parameter name on two lines
 	xmlContents.str("");
@@ -480,7 +480,7 @@ void ParameterTranslatorTest::testIllegalConfig()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Whatever", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ParameterTranslator translator( *nodes[0] ), ParameterTranslatorException,
-		"private/ParameterTranslator\\.cpp:\\d+: Translation of parameter 'param1' is ambiguous" );
+		".*:\\d+: Translation of parameter 'param1' is ambiguous" );
 
 	xmlContents.str("");
 	xmlContents << "<Whatever>"
@@ -492,7 +492,7 @@ void ParameterTranslatorTest::testIllegalConfig()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Whatever", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ParameterTranslator translator( *nodes[0] ), ParameterTranslatorException,
-		"private/ParameterTranslator\\.cpp:\\d+: Translation of parameter 'param1' is ambiguous" );
+		".*:\\d+: Translation of parameter 'param1' is ambiguous" );
 
 	xmlContents.str("");
 	xmlContents << "<Whatever>"
@@ -504,7 +504,7 @@ void ParameterTranslatorTest::testIllegalConfig()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Whatever", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ParameterTranslator translator( *nodes[0] ), ParameterTranslatorException,
-		"private/ParameterTranslator\\.cpp:\\d+: Translation of parameter 'param1' is ambiguous" );
+		".*:\\d+: Translation of parameter 'param1' is ambiguous" );
 
 	// case 6: Cannot provide valueSource alone
 	xmlContents.str("");
@@ -516,7 +516,7 @@ void ParameterTranslatorTest::testIllegalConfig()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Whatever", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ParameterTranslator translator( *nodes[0] ), ParameterTranslatorException,
-		"private/ParameterTranslator\\.cpp:\\d+: Parameters with a value source must have an override or translator supplied\\. Violating parameter: param1" );
+		".*:\\d+: Parameters with a value source must have an override or translator supplied\\. Violating parameter: param1" );
 
 	// case 7: Cannot provide valueSource with a name translator
 	xmlContents.str("");
@@ -528,7 +528,7 @@ void ParameterTranslatorTest::testIllegalConfig()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Whatever", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ParameterTranslator translator( *nodes[0] ), ParameterTranslatorException,
-		"private/ParameterTranslator\\.cpp:\\d+: Cannot provide a value source when translating a parameter name\\. Violating parameter: param1" );
+		".*:\\d+: Cannot provide a value source when translating a parameter name\\. Violating parameter: param1" );
 
 	// case 8: Cannot provide valueSource with a value default
 	xmlContents.str("");
@@ -540,7 +540,7 @@ void ParameterTranslatorTest::testIllegalConfig()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Whatever", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ParameterTranslator translator( *nodes[0] ), ParameterTranslatorException,
-		"private/ParameterTranslator\\.cpp:\\d+: Cannot provide a value source and a value default\\. Violating parameter: param1" );
+		".*:\\d+: Cannot provide a value source and a value default\\. Violating parameter: param1" );
 
 	// case 9: Cannot make derived values derive from other derived values
 	xmlContents.str("");
@@ -553,7 +553,7 @@ void ParameterTranslatorTest::testIllegalConfig()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Whatever", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ParameterTranslator translator( *nodes[0] ), ParameterTranslatorException,
-		"private/ParameterTranslator\\.cpp:\\d+: Cannot make values derive from other derived values. Violating parameters: param2 derives from param1, which derives from param3" );
+		".*:\\d+: Cannot make values derive from other derived values. Violating parameters: param2 derives from param1, which derives from param3" );
 
 	// case 9b: same, but with multiple-sources flag
 	xmlContents.str("");
@@ -566,7 +566,7 @@ void ParameterTranslatorTest::testIllegalConfig()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Whatever", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ParameterTranslator translator( *nodes[0] ), ParameterTranslatorException,
-		"private/ParameterTranslator\\.cpp:\\d+: Cannot make values derive from other derived values. Violating parameters: param1 derives from param2, which derives from param1, param3, param4" );
+		".*:\\d+: Cannot make values derive from other derived values. Violating parameters: param1 derives from param2, which derives from param1, param3, param4" );
 
 	// case 9c: same, but both are derived from multiple sources
 	xmlContents.str("");
@@ -579,7 +579,7 @@ void ParameterTranslatorTest::testIllegalConfig()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "Whatever", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( ParameterTranslator translator( *nodes[0] ), ParameterTranslatorException,
-		"private/ParameterTranslator\\.cpp:\\d+: Cannot make values derive from other derived values. Violating parameters: param1 derives from param2, which derives from param1, param3" );
+		".*:\\d+: Cannot make values derive from other derived values. Violating parameters: param1 derives from param2, which derives from param1, param3" );
 }
 
 void ParameterTranslatorTest::testTranslateBuiltIn()

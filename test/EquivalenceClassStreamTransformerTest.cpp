@@ -53,7 +53,7 @@ void EquivalenceClassStreamTransformerTest::testMissingColumn()
 
 	std::map<std::string, std::string > parameters;
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), EquivalenceClassStreamTransformerException,
-			"private/EquivalenceClassStreamTransformer\\.cpp:\\d+: Incoming Seeds_Transfer Stream is missing the following column headers: "
+			".*:\\d+: Incoming Seeds_Transfer Stream is missing the following column headers: "
 			<< "id_type, new_id" );
 }
 

@@ -100,7 +100,7 @@ void BlackoutStreamTransformerTest::testCorruptStreamHeader()
 		        << "200,300,1000" << std::endl;
 
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), BlackoutTransformerException,
-				"private/BlackoutStreamTransformer\\.cpp:\\d+: Incoming KNA Stream is missing the following column headers: "
+				".*:\\d+: Incoming KNA Stream is missing the following column headers: "
 								<< CAMPAIGN_ID << ", " << MEDIA_ID << ", " << WEBSITE_ID );
 	}
 
@@ -112,14 +112,14 @@ void BlackoutStreamTransformerTest::testCorruptStreamHeader()
 		*pInputStream << CAMPAIGN_ID << "," << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << std::endl
 		            << "100,200,300,1000" << std::endl;
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), BlackoutTransformerException, 
-				"private/BlackoutStreamTransformer\\.cpp:\\d+: Incoming blackout data is missing the following column headers: "
+				".*:\\d+: Incoming blackout data is missing the following column headers: "
 								<< CAMPAIGN_ID << ", " << MEDIA_ID << ", " << START_TIME_PERIOD );
 		std::stringstream* pInputStreamOne = new std::stringstream();
 		boost::shared_ptr< std::istream > pInputStreamOneAsIstream( pInputStreamOne );
 		*pInputStreamOne << CAMPAIGN_ID << "," << MEDIA_ID << ",," << "colum\\,column," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << "\r\n"
 					   << "100,200,300,1000" << std::endl;
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamOneAsIstream, parameters ), BlackoutTransformerException,
-				"private/BlackoutStreamTransformer\\.cpp:\\d+: Incoming blackout data is missing the following column headers: "
+				".*:\\d+: Incoming blackout data is missing the following column headers: "
 								<< CAMPAIGN_ID << ", " << MEDIA_ID << ", " << START_TIME_PERIOD );
 	}
 }
@@ -133,7 +133,7 @@ void BlackoutStreamTransformerTest::testInputParameters()
 	*pInputStream << MEDIA_ID << "," << WEBSITE_ID << "," << SOURCED_TIME_PERIOD << std::endl 
 				<< "200,300,1000" << std::endl;
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), TransformerUtilitiesException,
-			"private/TransformerUtilities\\.cpp:\\d+: Attempted to fetch missing required parameter: '" << DPL_CONFIG << "'" );
+			".*:\\d+: Attempted to fetch missing required parameter: '" << DPL_CONFIG << "'" );
 
 }
 
@@ -165,7 +165,7 @@ void BlackoutStreamTransformerTest::testStreamTransformerParameters()
 				<< "100,200,300,1000" << std::endl;
 	
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( transformer.TransformInput( pInputStreamAsIstream, parameters ), BlackoutTransformerException, 
-		"private/BlackoutStreamTransformer\\.cpp:\\d+: Incoming KNA Stream is missing the following column headers: "
+		".*:\\d+: Incoming KNA Stream is missing the following column headers: "
 									<< "camp_id, med_id, src_hourperiod, web_id" );
 
 	std::stringstream* pInputStreamOne = new std::stringstream();

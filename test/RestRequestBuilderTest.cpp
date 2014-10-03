@@ -68,13 +68,13 @@ void RestRequestBuilderTest::testBuild()
 
 	// adding an undefined type of parameter will throw
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( requestBuilder.AddParameter( UNDEFINED, "", "", "", null ), RestRequestBuilderException,
-		"private/RestRequestBuilder.cpp:\\d+: Attempted to add UNDEFINED type of parameter" );
+		".*:\\d+: Attempted to add UNDEFINED type of parameter" );
 	// adding a query parameter to an unregistered group will throw
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( requestBuilder.AddParameter( QUERY, "bad1", "bValue1", "%v", std::string("unRegisteredGroup") ), RestRequestBuilderException,
-		"private/RestRequestBuilder.cpp:\\d+: Attempted to add query parameter: 'bad1' to unknown group: 'unRegisteredGroup'" );
+		".*:\\d+: Attempted to add query parameter: 'bad1' to unknown group: 'unRegisteredGroup'" );
 	// adding a path segment parameter to an unregistered path segment will throw (we MUST know the order of path segments!)
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( requestBuilder.AddParameter( PATH_SEGMENT, "bad2", "bValue2", "%v", null ), RestRequestBuilderException,
-		"private/RestRequestBuilder.cpp:\\d+: Attempted to add path segment parameter: 'bad2',"
+		".*:\\d+: Attempted to add path segment parameter: 'bad2',"
 		<< " but it was not part of the configured path segment order" );
 
 	CPPUNIT_ASSERT_NO_THROW( requestBuilder.AddParameter( PATH_SEGMENT, "path3", "pValue3", "key(%k)_value(%v)", null ) );	// group doesn't matter

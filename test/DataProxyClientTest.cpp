@@ -1217,5 +1217,5 @@ void DataProxyClientTest::testBadXml()
 
 	// make sure the bad xml throws a descriptive exception
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( client.Initialize( configFileSpec ), DataProxyClientException,
-		".*:\\d+: Error parsing file: .*: A '<' character cannot be used in attribute.*" );
+		".*:\\d+: Error parsing file: .*: .*'<' character cannot be used in attribute.*" );
 }

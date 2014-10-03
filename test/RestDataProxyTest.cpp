@@ -119,9 +119,9 @@ void RestDataProxyTest::setUp()
 void RestDataProxyTest::tearDown()
 {
 	//XMLPlatformUtils::Terminate();
-	m_pTempDir.reset( NULL );
 	m_pService->Stop();
 	m_pService.reset( NULL );
+	m_pTempDir.reset( NULL );
 }
 
 void RestDataProxyTest::testMissingLocation()
@@ -694,7 +694,7 @@ void RestDataProxyTest::testLoadMethodOverride()
 
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode location=\"" << m_pService->GetEndpoint() + m_pTempDir->GetDirectoryName() << "\" >"
-				<< "	<Read methodOverride=\"BLAH\" />"
+				<< "	<Read methodOverride=\"HEAD\" />"
 				<< "</DataNode>";
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
@@ -711,7 +711,7 @@ void RestDataProxyTest::testLoadMethodOverride()
 
 	std::vector< std::string > expectedHeaders;
 
-	VerifyServiceGetRequest( *m_pService, m_pTempDir->GetDirectoryName(), "", expectedHeaders, "BLAH" );
+	VerifyServiceGetRequest( *m_pService, m_pTempDir->GetDirectoryName(), "", expectedHeaders, "HEAD" );
 	CPPUNIT_ASSERT_EQUAL( data, results.str() );
 }
 
@@ -955,7 +955,7 @@ void RestDataProxyTest::testLoadComplex()
 {
 	MockDataProxyClient client;
 	std::string data = "This data should be returned\n";
-	std::string realPath( m_pTempDir->GetDirectoryName() + "/uriPathSegment1(segOne)/uriPathSegment3/segThree/myReadSuffix/" );
+	std::string realPath( m_pTempDir->GetDirectoryName() + "/uriPathSegment1(segOne)/uriPathSegment3/segThree/myReadSuffix" );
 	std::string dirPath( realPath );
 	// boost create dir doesn't like parentheses so we change them to underscores in the mock service
 	boost::replace_all( dirPath, "(", "_" );
@@ -1029,11 +1029,11 @@ void RestDataProxyTest::testLoadComplex()
 	expectedHeaders.push_back( "httpHeader2: customHeaderTwo" );
 	expectedHeaders.push_back( "httpHeader3: customHeaderThree" );
 
-	VerifyServiceGetRequest( *m_pService, realPath, "readGroupProps=_someKey1::someValue1_@AND@_someKey2::someValue2_@AND@_someKey3::someValue3_@AND@_someKey4::someValue4_"
+	VerifyServiceGetRequest( *m_pService, realPath, "group1=query4~queryFour^query5~queryFive"
 													"&group3=default1"
-													"&group1=query4~queryFour^query5~queryFive"
 													"&query1=queryOne"
-													"&query2=queryTwo", expectedHeaders );
+													"&query2=queryTwo"
+													"&readGroupProps=_someKey1::someValue1_@AND@_someKey2::someValue2_@AND@_someKey3::someValue3_@AND@_someKey4::someValue4_", expectedHeaders );
 	CPPUNIT_ASSERT_EQUAL( data, results.str() );
 }
 
@@ -1063,7 +1063,7 @@ void RestDataProxyTest::testStoreBasic()
 	MockDataProxyClient client;
 	std::stringstream data;
 	data << "This data should be posted";
-	std::string path = "/some/path/to/nowhere/";
+	std::string path = "/some/path/to/nowhere";
 
 	std::map< std::string, std::string > parameters;
 	parameters[ "ignoredParam" ] = "ignoredValue";
@@ -1086,7 +1086,7 @@ void RestDataProxyTest::testStoreMethodOverride()
 	MockDataProxyClient client;
 	std::stringstream data;
 	data << "This data should be posted";
-	std::string path = "/some/path/to/nowhere/";
+	std::string path = "/some/path/to/nowhere";
 
 	std::map< std::string, std::string > parameters;
 	parameters[ "ignoredParam" ] = "ignoredValue";
@@ -1111,7 +1111,7 @@ void RestDataProxyTest::testStoreComplex()
 	MockDataProxyClient client;
 	std::stringstream data;
 	data << "This data should be posted";
-	std::string realPath( m_pTempDir->GetDirectoryName() + "/uriPathSegment1(segOne)/uriPathSegment3(segThree)/myWriteSuffix/" );
+	std::string realPath( m_pTempDir->GetDirectoryName() + "/uriPathSegment1(segOne)/uriPathSegment3(segThree)/myWriteSuffix" );
 
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode location=\"" << m_pService->GetEndpoint() + m_pTempDir->GetDirectoryName() << "\" >" << std::endl
@@ -1161,8 +1161,8 @@ void RestDataProxyTest::testStoreComplex()
 	expectedHeaders.push_back( "httpHeader2: customHeaderTwo" );
 	expectedHeaders.push_back( "httpHeader3: customHeaderThree" );
 
-	VerifyServicePostRequest( *m_pService, realPath, "postGroupProps=someKey1~someValue1^someKey2~someValue2"
-													 "&group3=default1"
+	VerifyServicePostRequest( *m_pService, realPath, "group3=default1"
+													 "&postGroupProps=someKey1~someValue1^someKey2~someValue2"
 													 "&query1=queryOne"
 													 "&query2=queryTwo", data.str(), expectedHeaders );
 }
@@ -1212,7 +1212,7 @@ void RestDataProxyTest::testDeleteMethodOverride()
 
 	std::stringstream xmlContents;
 	xmlContents << "<DataNode location=\"" << m_pService->GetEndpoint() + m_pTempDir->GetDirectoryName() << "\" >"
-				<< "	<Delete methodOverride=\"BLAH\" />"
+				<< "	<Delete methodOverride=\"OPTIONS\" />"
 				<< "</DataNode>";
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
@@ -1227,7 +1227,7 @@ void RestDataProxyTest::testDeleteMethodOverride()
 
 	std::vector< std::string > expectedHeaders;
 
-	VerifyServiceGetRequest( *m_pService, m_pTempDir->GetDirectoryName(), "", expectedHeaders, "BLAH" );
+	VerifyServiceGetRequest( *m_pService, m_pTempDir->GetDirectoryName(), "", expectedHeaders, "OPTIONS" );
 }
 
 void RestDataProxyTest::testDeleteTimeout()
@@ -1254,7 +1254,7 @@ void RestDataProxyTest::testDeleteComplex()
 {
 	MockDataProxyClient client;
 	std::string data = "This data should be returned\n";
-	std::string realPath( m_pTempDir->GetDirectoryName() + "/uriPathSegment1(segOne)/uriPathSegment3/segThree/myDeleteSuffix/" );
+	std::string realPath( m_pTempDir->GetDirectoryName() + "/uriPathSegment1(segOne)/uriPathSegment3/segThree/myDeleteSuffix" );
 	std::string dirPath( realPath );
 	// boost create dir doesn't like parentheses so we change them to underscores in the mock service
 	boost::replace_all( dirPath, "(", "_" );
@@ -1327,8 +1327,8 @@ void RestDataProxyTest::testDeleteComplex()
 	expectedHeaders.push_back( "httpHeader3: customHeaderThree" );
 
 	VerifyServiceDeleteRequest( *m_pService, realPath, "deleteGroupProps=_someKey1::someValue1_@AND@_someKey2::someValue2_@AND@_someKey3::someValue3_@AND@_someKey4::someValue4_"
-													"&group3=default1"
 													"&group1=query4~queryFour^query5~queryFive"
+													"&group3=default1"
 													"&query1=queryOne"
 													"&query2=queryTwo", expectedHeaders );
 
