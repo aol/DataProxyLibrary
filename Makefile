@@ -16,10 +16,6 @@ PROJECT_PATH = lib/DataProxy
 
 # Directories for common components
 ARCH=$(shell uname -m)
-MATLABDIR	?= /data/app/matlab
-MYSQLHOME	?= /usr/local/mysql
-ORACLE_HOME	?= /usr/oracle
-
 # folders that contain files we need to manually compile
 # in order to build a self-contained dynamic library
 UTILITYDIR		= ${ROOTDIR}/lib/cpp/Utility
@@ -67,11 +63,6 @@ INCS=\
 	$(INCMODULESPEC:%=-I%) \
 	$(TRANSFORMERS:%=-I%) \
 	-I${ROOTDIR}/lib/cpp/Database/private \
-	-isystem ${MYSQLHOME}/include \
-	-isystem ${ORACLE_HOME}/rdbms/demo \
-	-isystem ${ORACLE_HOME}/network/public \
-	-isystem ${ORACLE_HOME}/rdbms/public \
-	-isystem $(MATLABDIR)/extern/include \
 
 TESTINCS=\
 	$(INCS) \
@@ -80,13 +71,11 @@ TESTINCS=\
 	$(INCMODULESPEC:%=-I%/mock) \
 	$(MATLABMODULESPEC:%=-I%) \
 	$(TRANSFORMERS:%=-I%/test) \
-	-I$(MATLABDIR)/extern/include \
 	-I$(TESTDIR) \
 	-I$(MOCKDIR) \
 
 # Library locations
 LIBLOC=\
-	-L${ORACLE_HOME}/lib \
 	$(MODULESPEC:%=-L%) \
 	${TESTMODULESPEC:%=-L%} \
 	${MATLABMODULESPEC:%=-L%} \
@@ -97,12 +86,6 @@ LIBS		=  -lLogger -lMonitoring \
 			   -lclntsh -lodbc -lxerces-c -lpthread -llog4cxx -lcurl -lssl -luuid -lnnz10 -lcrypto -ldl -lagent++ -lsnmp++
 TESTLIBS	= -lcppunit -lTestHelpers -lMockDatabase -lMockService -lMockUtility -lMockMonitoring -lboost_date_time $(LIBS)
 MATLABLIBS	= -lMatlab -leng -lmx -lut -lmat
-
-ifeq ($(ARCH), x86_64)
-	LIBLOC += -L${MATLABDIR}/bin/glnxa64
-else
-	LIBLOC += -L${MATLABDIR}/bin/glnx86
-endif
 
 # This is required on the 32 bit platform to prevent recursive
 # variable definition errors for DEFINE_FLAGS
