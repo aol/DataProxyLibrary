@@ -97,6 +97,7 @@ namespace
 
 	void ReconnectIfNecessary( const std::string& i_rConnectionName, const DatabaseConfigDatum& i_rConfig, DatabaseInstanceDatum& i_rInstance )
 	{
+		// if we need to reconnect based on time, do it
 		double secondsElapsed = i_rInstance.GetReference< ConnectionTimer >()->GetElapsedSeconds();
 		if( secondsElapsed > i_rConfig.GetValue< ConnectionReconnect >() )
 		{
@@ -113,6 +114,13 @@ namespace
 				 << secondsElapsed << " seconds. Reconnect timeout is set to: " << i_rConfig.GetValue< ConnectionReconnect >() << ". Reconnecting."  );
 			i_rInstance.GetReference< DatabaseHandle >().reset( new Database( *i_rInstance.GetReference< DatabaseHandle >() ) );
 			i_rInstance.GetReference< ConnectionTimer >()->Reset();
+		}
+		else // otherwise, ping the database to be sure it's still alive
+		{
+			if( i_rInstance.GetReference< DatabaseHandle >() )
+			{
+				i_rInstance.GetReference< DatabaseHandle >()->Ping( true );
+			}
 		}
 	}
 
