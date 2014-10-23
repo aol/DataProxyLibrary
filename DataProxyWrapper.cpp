@@ -210,6 +210,12 @@ void mexFunction( int nlhs, mxArray* plhs[], int nrhs, const mxArray* prhs[])
 			std::ofstream result( fileName.c_str() );
 			
 			boost::iostreams::copy( output, result );
+			if( result.fail() )
+			{
+				MV_THROW( DataProxyException, "After a successful dpl load, error writing data to file: " << fileName
+					<< ", most likely due to a disk issue (disk full, unmounted, etc.). "
+					<< "fail(): " << result.fail() << ", bad(): " << result.bad() );
+			}
 			result.close();
 		}
 		else if( functionName == STORE )

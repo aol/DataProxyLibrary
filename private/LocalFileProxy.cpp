@@ -185,6 +185,18 @@ void LocalFileProxy::LoadImpl( const std::map<std::string,std::string>& i_rParam
 	MVLOGGER( "root.lib.DataProxy.LocalFileProxy.Load.ReadFile", msg.str() );
 	std::ifstream file( fileSpec.c_str() );
 	boost::iostreams::copy( file, o_rData );
+	if( file.fail() )
+	{
+		MV_THROW( LocalFileProxyException, "Error reading data from source: " << fileSpec
+			<< ", most likely due to a disk issue (disk full, unmounted, etc.). "
+			<< "fail(): " << file.fail() << ", bad(): " << file.bad() );
+	}
+	if( o_rData.fail() )
+	{
+		MV_THROW( LocalFileProxyException, "Error writing data from source: " << fileSpec << " to output stream"
+			<< ", most likely due to a disk issue (disk full, unmounted, etc.). "
+			<< "fail(): " << file.fail() << ", bad(): " << file.bad() );
+	}
 	file.close();
 }
 
@@ -214,11 +226,17 @@ void LocalFileProxy::StoreImpl( const std::map<std::string,std::string>& i_rPara
 
 	// now write data that was given to us
 	boost::iostreams::copy( i_rData, file );
+	if( i_rData.fail() )
+	{
+		MV_THROW( LocalFileProxyException, "Writing to pre-commit file: " << pendingFileSpec << " caused a stream failure on source, "
+			<< "most likely due to a disk issue (disk full, unmounted, etc.). "
+			<< "fail(): " << i_rData.fail() << ", bad(): " << i_rData.bad() );
+	}
 	if( file.fail() )
 	{
-		MV_THROW( LocalFileProxyException, "Writing to pre-commit file: " << pendingFileSpec << " caused a stream failure, "
+		MV_THROW( LocalFileProxyException, "Writing to pre-commit file: " << pendingFileSpec << " caused a stream failure on destination, "
 			<< "most likely due to a disk issue (disk full, unmounted, etc.). "
-			<< "eof(): " << file.eof() << ", fail(): " << file.fail() << ", bad(): " << file.bad() );
+			<< "fail(): " << file.fail() << ", bad(): " << file.bad() );
 	}
 	file.close();
 
