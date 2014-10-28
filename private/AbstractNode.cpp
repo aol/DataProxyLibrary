@@ -177,12 +177,12 @@ AbstractNode::~AbstractNode()
 {
 }
 
-void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData )
+bool AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData )
 {
 	if( m_ReadConfig.GetValue< Operation >() == OPERATION_IGNORE )
 	{
 		MVLOGGER( "root.lib.DataProxy.DataProxyClient.Load", "Read node operation mode set to ignore, so ignoring." );
-		return;
+		return true;
 	}
 
 	MonitoringTracker tracker( LOAD_SCOPE_ID );
@@ -339,6 +339,7 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 			tracker.Report( METRIC_PAYLOAD_BYTES, cnt.characters() );
 			tracker.Report( METRIC_PAYLOAD_LINES, cnt.lines() );
 		}
+		return true;
 	}
 	catch( const BadStreamException& e )
 	{
@@ -378,6 +379,7 @@ void AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 			<< " parameters" << (m_ReadConfig.GetValue< IncludeNodeNameAsParameter >().IsNull() ? "" : " (with failed name added)") );
 		m_rParent.Load( static_cast<std::string>( forwardName ), forwardedParams, o_rData );
 	}
+	return false;
 }
 
 bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData )

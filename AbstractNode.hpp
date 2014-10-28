@@ -38,7 +38,7 @@ public:
 
 	// top-level loading & storing. handles all common operations like
 	// parameter translation, stream translation, failure forwarding, etc.
-	MV_VIRTUAL void Load( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData );
+	MV_VIRTUAL bool Load( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData );
 	MV_VIRTUAL bool Store( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData );
 	MV_VIRTUAL bool Delete( const std::map<std::string, std::string>& i_rParameters );
 

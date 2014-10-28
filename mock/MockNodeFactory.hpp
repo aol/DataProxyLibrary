@@ -32,6 +32,7 @@ public:
 	void SetLoadException( const std::string& i_rName, bool i_Value );
 	void SetStoreException( const std::string& i_rName, bool i_Value );
 	void SetDeleteException( const std::string& i_rName, bool i_Value );
+	void SetLoadResult( const std::string& i_rName, bool i_Value );
 	void SetStoreResult( const std::string& i_rName, bool i_Value );
 	void SetDeleteResult( const std::string& i_rName, bool i_Value );
 	void SetCommitException( const std::string& i_rName, bool i_Value );
@@ -50,6 +51,7 @@ private:
 	std::map< std::string, bool > m_LoadExceptions;
 	std::map< std::string, bool > m_StoreExceptions;
 	std::map< std::string, bool > m_DeleteExceptions;
+	std::map< std::string, bool > m_LoadResults;
 	std::map< std::string, bool > m_StoreResults;
 	std::map< std::string, bool > m_DeleteResults;
 	std::map< std::string, bool > m_CommitExceptions;

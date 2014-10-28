@@ -62,9 +62,9 @@ namespace
 			try
 			{
 				int result = boost::lexical_cast< int >( poolSizeString );
-				if( result <= 0 )
+				if( result < 0 )
 				{
-					MV_THROW( DatabaseConnectionManagerException, "Illegal value provided: " << result << " for attribute: " << i_rName << "; must be strictly positive" );
+					MV_THROW( DatabaseConnectionManagerException, "Illegal value provided: " << result << " for attribute: " << i_rName << "; must be non-negative" );
 				}
 				return size_t( result );
 			}
@@ -409,6 +409,10 @@ void DatabaseConnectionManager::Parse( const xercesc::DOMNode& i_rDatabaseConnec
 		if( maxPoolSize < minPoolSize )
 		{
 			MV_THROW( DatabaseConnectionManagerException, "maxPoolSize: " << maxPoolSize << " must be greater than or equal to minPoolSize: " << minPoolSize );
+		}
+		else if( maxPoolSize == 0 )
+		{
+			MV_THROW( DatabaseConnectionManagerException, "maxPoolSize must be greater than 0" );
 		}
 		if( minPoolSize == maxPoolSize )
 		{

@@ -25,6 +25,7 @@ MockNode::MockNode( std::ostream& i_rLog,
 					bool i_LoadException,
 					bool i_StoreException,
 					bool i_DeleteException,
+					bool i_LoadResult,
 					bool i_StoreResult,
 					bool i_DeleteResult,
 					bool i_CommitException,
@@ -42,6 +43,7 @@ MockNode::MockNode( std::ostream& i_rLog,
 	m_LoadException( i_LoadException ),
 	m_StoreException( i_StoreException ),
 	m_DeleteException( i_DeleteException ),
+	m_LoadResult( i_LoadResult ),
 	m_StoreResult( i_StoreResult ),
 	m_DeleteResult( i_DeleteResult ),
 	m_CommitException( i_CommitException ),
@@ -57,7 +59,7 @@ MockNode::~MockNode()
 {
 }
 
-void MockNode::Load( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData )
+bool MockNode::Load( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData )
 {
 	m_rLog << "Load called on: " << m_Name << " with parameters: " << ProxyUtilities::ToString( i_rParameters ) << std::endl;
 	if( m_LoadException )
@@ -65,6 +67,7 @@ void MockNode::Load( const std::map<std::string,std::string>& i_rParameters, std
 		MV_THROW( MVException, "Set to throw exception" );
 	}
 	o_rData << m_DataToReturn;
+	return m_LoadResult;
 }
 
 bool MockNode::Store( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData )

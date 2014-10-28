@@ -740,6 +740,7 @@ void DatabaseProxy::LoadImpl( const std::map<std::string,std::string>& i_rParame
 	
 	std::string readQuery = ProxyUtilities::GetVariableSubstitutedString( m_ReadQuery, i_rParameters );
 	
+	std::string dbType = m_rDatabaseConnectionManager.GetDatabaseType( m_ReadConnectionName );
 	boost::shared_ptr< Database > pSharedDatabase = GetConnection( m_ReadConnectionName, m_ReadConnectionByTable, m_rDatabaseConnectionManager, i_rParameters );
 	
 	MVLOGGER("root.lib.DataProxy.DatabaseProxy.Load.ExecutingStmt.Started", 
@@ -757,7 +758,7 @@ void DatabaseProxy::LoadImpl( const std::map<std::string,std::string>& i_rParame
 	size_t rowCount = 0;
 	Stopwatch stopwatch;
 
-	if( m_rDatabaseConnectionManager.GetDatabaseType( m_ReadConnectionName ) == VERTICA_DB_TYPE )
+	if( dbType == VERTICA_DB_TYPE )
 	{
 		stmt.DoInternalBinding( numColumns, m_RowsBuffered );
 		stmt.Execute();
@@ -797,6 +798,11 @@ void DatabaseProxy::LoadImpl( const std::map<std::string,std::string>& i_rParame
 	MVLOGGER("root.lib.DataProxy.DatabaseProxy.Load.ExecutingStmt.Finished", 
 			  "Finished Processing SQL results. Processed " << rowCount << " Rows. Memory usage: - " << MVUtility::MemCheck()
 			  << ". Elapsed time: " << stopwatch.GetElapsedSeconds() << " seconds" );
+
+	if( dbType == MYSQL_DB_TYPE )
+	{
+		m_PendingCommits.insert( pSharedDatabase );
+	}
 }
 
 void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData )

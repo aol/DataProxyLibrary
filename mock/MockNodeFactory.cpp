@@ -46,6 +46,7 @@ AbstractNode* MockNodeFactory::CreateNode( const std::string& i_rName, const std
 						 GetValue< bool >( i_rName, m_LoadExceptions, false ),
 						 GetValue< bool >( i_rName, m_StoreExceptions, false ),
 						 GetValue< bool >( i_rName, m_DeleteExceptions, false ),
+						 GetValue< bool >( i_rName, m_LoadResults, true ),
 						 GetValue< bool >( i_rName, m_StoreResults, true ),
 						 GetValue< bool >( i_rName, m_DeleteResults, true ),
 						 GetValue< bool >( i_rName, m_CommitExceptions, false ),
@@ -85,6 +86,11 @@ void MockNodeFactory::SetStoreException( const std::string& i_rName, bool i_Valu
 void MockNodeFactory::SetDeleteException( const std::string& i_rName, bool i_Value )
 {
 	m_DeleteExceptions[ i_rName ] = i_Value;
+}
+
+void MockNodeFactory::SetLoadResult( const std::string& i_rName, bool i_Value )
+{
+	m_LoadResults[ i_rName ] = i_Value;
 }
 
 void MockNodeFactory::SetStoreResult( const std::string& i_rName, bool i_Value )

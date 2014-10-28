@@ -25,6 +25,7 @@ public:
 			  bool i_LoadException,
 			  bool i_StoreException,
 			  bool i_DeleteException,
+			  bool i_LoadResult,
 			  bool i_StoreResult,
 			  bool i_DeleteResult,
 			  bool i_CommitException,
@@ -37,7 +38,7 @@ public:
 	virtual ~MockNode();
 	
 	// load & store
-	virtual void Load( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData );
+	virtual bool Load( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData );
 	virtual bool Store( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData );
 	virtual bool Delete( const std::map<std::string,std::string>& i_rParameters );
 	virtual void LoadImpl( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData );
@@ -66,6 +67,7 @@ private:
 	bool m_LoadException;
 	bool m_StoreException;
 	bool m_DeleteException;
+	bool m_LoadResult;
 	bool m_StoreResult;
 	bool m_DeleteResult;
 	bool m_CommitException;

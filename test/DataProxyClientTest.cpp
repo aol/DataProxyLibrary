@@ -214,6 +214,8 @@ void DataProxyClientTest::testStoreDeleteUnsuccessfulRollback()
 	file << "  <DataNode name=\"name4\" type=\"dummy\" />" << std::endl;
 	file << "  <DataNode name=\"name5\" type=\"dummy\" />" << std::endl;
 	file << "  <DataNode name=\"name6\" type=\"dummy\" />" << std::endl;
+	file << "  <DataNode name=\"name7\" type=\"dummy\" />" << std::endl;
+	file << "  <DataNode name=\"name8\" type=\"dummy\" />" << std::endl;
 	file << "</DPLConfig>" << std::endl;
 	file.close();
 
@@ -224,6 +226,8 @@ void DataProxyClientTest::testStoreDeleteUnsuccessfulRollback()
 	factory.SetDeleteResult( "name4", false );
 	factory.SetStoreResult( "name5", true );
 	factory.SetDeleteResult( "name6", true );
+	factory.SetLoadResult( "name7", true );
+	factory.SetLoadResult( "name8", false );
 
 	std::map< std::string, std::string > parameters;
 	parameters["param1"] = "value1";
@@ -246,6 +250,9 @@ void DataProxyClientTest::testStoreDeleteUnsuccessfulRollback()
 	CPPUNIT_ASSERT_NO_THROW( client.Store( "name5", parameters, data ) );
 	data.clear(); data.seekg(0);
 	CPPUNIT_ASSERT_NO_THROW( client.Delete( "name6", parameters ) );
+	std::stringstream tmp;
+	CPPUNIT_ASSERT_NO_THROW( client.Load( "name7", parameters, tmp ) );
+	CPPUNIT_ASSERT_NO_THROW( client.Load( "name8", parameters, tmp ) );
 
 	std::stringstream expected;
 	expected << "RegisterDatabaseConnections called" << std::endl;
@@ -255,6 +262,8 @@ void DataProxyClientTest::testStoreDeleteUnsuccessfulRollback()
 	expected << "CreateNode called with Name: name4 NodeType: DataNode" << std::endl;
 	expected << "CreateNode called with Name: name5 NodeType: DataNode" << std::endl;
 	expected << "CreateNode called with Name: name6 NodeType: DataNode" << std::endl;
+	expected << "CreateNode called with Name: name7 NodeType: DataNode" << std::endl;
+	expected << "CreateNode called with Name: name8 NodeType: DataNode" << std::endl;
 	expected << "Store called on: name1 with parameters: " << ProxyUtilities::ToString( parameters ) << " with data: " << data.str() << std::endl;
 	expected << "Rollback called on: name1" << std::endl;
 	expected << "Delete called on: name2 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
@@ -267,6 +276,10 @@ void DataProxyClientTest::testStoreDeleteUnsuccessfulRollback()
 	expected << "Commit called on: name5" << std::endl;
 	expected << "Delete called on: name6 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
 	expected << "Commit called on: name6" << std::endl;
+	expected << "Load called on: name7 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	expected << "Commit called on: name7" << std::endl;
+	expected << "Load called on: name8 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl;
+	expected << "Rollback called on: name8" << std::endl;
 	CPPUNIT_ASSERT_EQUAL( expected.str(), factory.GetLog() );
 }
 
@@ -447,6 +460,7 @@ void DataProxyClientTest::testCommit()
 			 << "Delete called on: name4 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
 			 << "Delete called on: name7 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
 			 << "Delete called on: name3 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
+			 << "Commit called on: name2" << std::endl
 			 << "Commit called on: name4" << std::endl
 			 << "Commit called on: name1" << std::endl
 			 << "Commit called on: name5" << std::endl
@@ -533,11 +547,11 @@ void DataProxyClientTest::testCommitPartial()
 			 << "Delete called on: name6 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
 			 << "Delete called on: name2 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
 			 << "Delete called on: name7 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
+			 << "Commit called on: name2" << std::endl
 			 << "Commit called on: name4" << std::endl
 			 << "Commit called on: name1" << std::endl
 			 << "Commit called on: name5" << std::endl
 			 << "Commit called on: name6" << std::endl
-			 << "Commit called on: name2" << std::endl
 			 << "Commit called on: name7" << std::endl;
 
 	CPPUNIT_ASSERT_EQUAL( expected.str(), factory.GetLog() );
@@ -615,6 +629,7 @@ void DataProxyClientTest::testRollback()
 			 << "Delete called on: name4 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
 			 << "Delete called on: name7 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
 			 << "Delete called on: name3 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
+			 << "Rollback called on: name2" << std::endl
 			 << "Rollback called on: name4" << std::endl
 			 << "Rollback called on: name1" << std::endl
 			 << "Rollback called on: name5" << std::endl
@@ -697,6 +712,7 @@ void DataProxyClientTest::testRollbackImpliedByBeginTransaction()
 			 << "Delete called on: name4 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
 			 << "Delete called on: name7 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
 			 << "Delete called on: name3 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
+			 << "Rollback called on: name2" << std::endl
 			 << "Rollback called on: name4" << std::endl
 			 << "Rollback called on: name1" << std::endl
 			 << "Rollback called on: name5" << std::endl
@@ -782,6 +798,7 @@ void DataProxyClientTest::testRollbackException()
 			 << "Delete called on: name7 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
 			 << "Delete called on: name6 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
 			 << "Delete called on: name3 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
+			 << "Rollback called on: name2" << std::endl
 			 << "Rollback called on: name4" << std::endl
 			 << "Rollback called on: name1" << std::endl
 			 << "Rollback called on: name5" << std::endl
@@ -859,11 +876,11 @@ void DataProxyClientTest::testAutoRollback()
 			 << "Delete called on: name2 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
 			 << "Delete called on: name3 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
 			 << "Delete called on: name4 with parameters: " << ProxyUtilities::ToString( parameters ) << std::endl
+			 << "Rollback called on: name2" << std::endl
 			 << "Rollback called on: name4" << std::endl
 			 << "Rollback called on: name1" << std::endl
 			 << "Rollback called on: name5" << std::endl
-			 << "Rollback called on: name3" << std::endl
-			 << "Rollback called on: name2" << std::endl;
+			 << "Rollback called on: name3" << std::endl;
 
 	CPPUNIT_ASSERT_EQUAL( expected.str(), factory.GetLog() );
 }

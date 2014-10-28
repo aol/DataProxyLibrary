@@ -35,6 +35,7 @@
 namespace
 {
 	const std::string DATABASE_CONNECTIONS_NODE( "DatabaseConnections" );
+	const std::string LOAD_OP( "Load" );
 	const std::string STORE_OP( "Store" );
 	const std::string DELETE_OP( "Delete" );
 	const std::string BAD_MD5( "bad-md5" );
@@ -502,7 +503,9 @@ void DataProxyClient::Load( const std::string& i_rName, const std::map<std::stri
 		MV_THROW( DataProxyClientException, "Attempted to issue Load request on unknown data node '" << i_rName << "'. Check XML configuration." );
 	}
 
-	iter->second->Load( i_rParameters, o_rData );
+	bool success = iter->second->Load( i_rParameters, o_rData );
+
+	HandleResult( i_rName, iter, success, LOAD_OP );
 }
 
 
