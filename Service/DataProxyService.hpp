@@ -21,7 +21,7 @@
 #define MV_VIRTUAL virtual
 #endif
 
-#define DATA_PROXY_SERVICE_VERSION "Data Proxy Service v3.2.3"
+#define DATA_PROXY_SERVICE_VERSION "Data Proxy Service v3.2.4"
 
 const std::string SERVER( "Server" );
 const std::string X_FORWARDED_FOR( "X-Forwarded-For" );
