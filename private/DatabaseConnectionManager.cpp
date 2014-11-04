@@ -115,13 +115,6 @@ namespace
 			i_rInstance.GetReference< DatabaseHandle >().reset( new Database( *i_rInstance.GetReference< DatabaseHandle >() ) );
 			i_rInstance.GetReference< ConnectionTimer >()->Reset();
 		}
-		else // otherwise, ping the database to be sure it's still alive
-		{
-			if( i_rInstance.GetReference< DatabaseHandle >() )
-			{
-				i_rInstance.GetReference< DatabaseHandle >()->Ping( true );
-			}
-		}
 	}
 
 	int TryReducePool( DatabaseConnectionDatum& i_rDatum )
@@ -264,6 +257,7 @@ namespace
 		{
 			MV_THROW(DatabaseConnectionManagerException, "Connection: " << i_rDatabaseConnectionDatum.GetValue< ConnectionName >() << " has a max pool size of 0" );
 		}
+		DatabaseInstanceDatum* pResult = NULL;
 
 		std::vector< DatabaseInstanceDatum >::iterator iter = i_rDatabaseConnectionDatum.GetReference< DatabasePool >().begin();
 		for( int i=0; iter != i_rDatabaseConnectionDatum.GetReference< DatabasePool >().end(); ++i, ++iter )
@@ -275,7 +269,9 @@ namespace
 				{
 					*o_pCreated = false;
 				}
-				return &*iter;
+				pResult = &*iter;
+				pResult->GetReference< DatabaseHandle >()->Ping( true );
+				return pResult;
 			}
 		}
 
@@ -298,16 +294,25 @@ namespace
 				{
 					*o_pCreated = true;
 				}
-				return &i_rDatabaseConnectionDatum.GetReference< DatabasePool >().back();
+				pResult = &i_rDatabaseConnectionDatum.GetReference< DatabasePool >().back();
+				pResult->GetReference< DatabaseHandle >()->Ping( true );
+				return pResult;
 			}
 
-			// return the one with the least use_count
+			// return the one with the least use_count (we can ping it, but not reconnect if it fails!)
 			size_t lowestUseCountIndex = FindLowestUseCount( i_rDatabaseConnectionDatum.GetValue< DatabasePool >() );
 			if( o_pCreated != NULL )
 			{
 				*o_pCreated = false;
 			}
-			return &i_rDatabaseConnectionDatum.GetReference< DatabasePool >()[lowestUseCountIndex];
+			pResult = &i_rDatabaseConnectionDatum.GetReference< DatabasePool >()[lowestUseCountIndex];
+			if( !pResult->GetReference< DatabaseHandle >()->Ping( false ) )
+			{
+				MVLOGGER( "root.lib.DataProxy.DatabaseConnectionManager.CannotReconnect",
+					"Connection #" << pResult->GetValue< ConnectionNumber >() << " for name: " << i_rDatabaseConnectionDatum.GetValue< ConnectionName >()
+					 << " failed ping operation, but there are active handles to it. Skipping reconnect."  );
+			}
+			return pResult;
 		}
 
 		// we're out of options...
