@@ -689,18 +689,18 @@ boost::shared_ptr< Database > DatabaseConnectionManager::GetConnection(const std
 
 	// try to get one of the connections that has been established
 	{
-		boost::shared_lock< boost::shared_mutex > lock( *rDatum.GetValue< Mutex >() );
-		pInstance = GetDatabase( rDatum, false );
-	}
-	// if we were successful, we may have to reconnect
-	if( pInstance != NULL )
-	{
 		boost::unique_lock< boost::shared_mutex > lock( *rDatum.GetValue< Mutex >() );
-		ReconnectIfNecessary( i_ConnectionName, rDatum.GetValue< DatabaseConfig >(), *pInstance );
-		pResult = pInstance->GetValue< DatabaseHandle >();
+		pInstance = GetDatabase( rDatum, false );
+		// if we were successful, we may have to reconnect
+		if( pInstance != NULL )
+		{
+			ReconnectIfNecessary( i_ConnectionName, rDatum.GetValue< DatabaseConfig >(), *pInstance );
+			pResult = pInstance->GetValue< DatabaseHandle >();
+		}
 	}
+
 	// otherwise, we have to create one
-	else
+	if( pInstance == NULL )
 	{
 		boost::unique_lock< boost::shared_mutex > lock( *rDatum.GetValue< Mutex >() );
 		// double-check getting one for free
