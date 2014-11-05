@@ -54,7 +54,7 @@ namespace
 	{
 		std::stringstream sql;
 		std::string lowercaseUser = boost::algorithm::to_lower_copy( i_rDatabase.GetUserName() );
-		sql << "SELECT COUNT(*) FROM v$session s WHERE LOWER(s.username)='" << lowercaseUser << "' AND s.process = " << ::getpid();
+		sql << "SELECT COUNT(*) FROM v$session s WHERE LOWER(s.username)='" << lowercaseUser << "' AND s.process = '" << ::getpid() << "'";
 		Database::Statement stmt( i_rDatabase, sql.str() );
 		int numConn( 0 );
 		CPPUNIT_ASSERT_NO_THROW( stmt.BindCol( numConn ) );
