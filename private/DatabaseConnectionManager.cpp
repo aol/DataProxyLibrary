@@ -251,7 +251,7 @@ namespace
 		return lowestUseCountIndex;
 	}
 
-	DatabaseInstanceDatum* GetDatabase( DatabaseConnectionDatum& i_rDatabaseConnectionDatum, bool i_CreateIfNeeded, bool* o_pCreated = NULL )
+	DatabaseInstanceDatum* GetDatabase( DatabaseConnectionDatum& i_rDatabaseConnectionDatum, bool i_InsideTransaction, bool i_CreateIfNeeded, bool* o_pCreated = NULL )
 	{
 		if( i_rDatabaseConnectionDatum.GetValue< DatabaseConfig >().GetValue< MaxPoolSize >() == 0 )
 		{
@@ -299,18 +299,28 @@ namespace
 				return pResult;
 			}
 
-			// return the one with the least use_count (we can ping it, but not reconnect if it fails!)
+			// return the one with the least use_count
 			size_t lowestUseCountIndex = FindLowestUseCount( i_rDatabaseConnectionDatum.GetValue< DatabasePool >() );
 			if( o_pCreated != NULL )
 			{
 				*o_pCreated = false;
 			}
 			pResult = &i_rDatabaseConnectionDatum.GetReference< DatabasePool >()[lowestUseCountIndex];
+
+			// try to soft-ping the database...
+			// if we fail and we're inside a transaction, we have to throw so clients can do whatever rollbacks they need
+			// otherwise, we can assume that the pending data loss is not critical, so we log an error & force-ping
 			if( !pResult->GetReference< DatabaseHandle >()->Ping( false ) )
 			{
-				MVLOGGER( "root.lib.DataProxy.DatabaseConnectionManager.CannotReconnect",
-					"Connection #" << pResult->GetValue< ConnectionNumber >() << " for name: " << i_rDatabaseConnectionDatum.GetValue< ConnectionName >()
-					 << " failed ping operation, but there are active handles to it. Skipping reconnect."  );
+				std::stringstream message;
+				message << "Connection #" << pResult->GetValue< ConnectionNumber >() << " for name: " << i_rDatabaseConnectionDatum.GetValue< ConnectionName >()
+					 << " failed ping operation, and there are active handles to it so a safe reconnect is impossible. Any pending data on this transaction has been lost.";
+				if( i_InsideTransaction )
+				{
+					MV_THROW( DatabaseConnectionManagerException, message.str() );
+				}
+				MVLOGGER( "root.lib.DataProxy.DatabaseConnectionManager.BusyConnectionLost", message.str() );
+				pResult->GetReference< DatabaseHandle >()->Ping( true );
 			}
 			return pResult;
 		}
@@ -690,7 +700,7 @@ boost::shared_ptr< Database > DatabaseConnectionManager::GetConnection(const std
 	// try to get one of the connections that has been established
 	{
 		boost::unique_lock< boost::shared_mutex > lock( *rDatum.GetValue< Mutex >() );
-		pInstance = GetDatabase( rDatum, false );
+		pInstance = GetDatabase( rDatum, m_rDataProxyClient.InsideTransaction(), false );
 		// if we were successful, we may have to reconnect
 		if( pInstance != NULL )
 		{
@@ -704,7 +714,7 @@ boost::shared_ptr< Database > DatabaseConnectionManager::GetConnection(const std
 	{
 		boost::unique_lock< boost::shared_mutex > lock( *rDatum.GetValue< Mutex >() );
 		// double-check getting one for free
-		pInstance = GetDatabase( rDatum, false );
+		pInstance = GetDatabase( rDatum, m_rDataProxyClient.InsideTransaction(), false );
 		if( pInstance != NULL )
 		{
 			ReconnectIfNecessary( i_ConnectionName, rDatum.GetValue< DatabaseConfig >(), *pInstance );
@@ -712,7 +722,7 @@ boost::shared_ptr< Database > DatabaseConnectionManager::GetConnection(const std
 		}
 		else
 		{
-			pInstance = GetDatabase( rDatum, true );
+			pInstance = GetDatabase( rDatum, m_rDataProxyClient.InsideTransaction(), true );
 			// this should never happen
 			if( pInstance == NULL )
 			{
