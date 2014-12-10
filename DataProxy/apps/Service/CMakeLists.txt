@@ -108,6 +108,18 @@ SET( EXE_NAME ${LINK_NAME}_v${VERSION} )
 SET_PROPERTY( TARGET DataProxyService PROPERTY OUTPUT_NAME ${EXE_NAME} )
 
 #################################################
+###################  INSTALL  ###################
+#################################################
+
+SET( APPLICATION_DIRECTORY "app/dpl/service" CACHE INTERNAL "${PROJECT_NAME} application directory" FORCE )
+INSTALL( DIRECTORY DESTINATION ${APPLICATION_DIRECTORY} )
+INSTALL( DIRECTORY DESTINATION ${APPLICATION_DIRECTORY}/bin )
+INSTALL( TARGETS DataProxyService DESTINATION ${APPLICATION_DIRECTORY}/bin
+	PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE )
+INSTALL( FILES ${CMAKE_CURRENT_BINARY_DIR}/${LINK_NAME} DESTINATION ${APPLICATION_DIRECTORY}/bin
+	PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE )
+
+#################################################
 ####################  TESTS  ####################
 #################################################
 

@@ -96,6 +96,21 @@ SET( LINK_NAME dplShell )
 SET( EXE_NAME ${LINK_NAME}_v${VERSION} )
 SET_PROPERTY( TARGET DataProxyShell PROPERTY OUTPUT_NAME ${EXE_NAME} )
 
+# add a target to link to the full dplShell version
+ADD_CUSTOM_COMMAND( TARGET DataProxyShell POST_BUILD COMMAND ln -sfn ${EXE_NAME} ${LINK_NAME} )
+
+#################################################
+###################  INSTALL  ###################
+#################################################
+
+SET( APPLICATION_DIRECTORY "app/dpl/shell" CACHE INTERNAL "${PROJECT_NAME} application directory" FORCE )
+INSTALL( DIRECTORY DESTINATION ${APPLICATION_DIRECTORY} )
+INSTALL( DIRECTORY DESTINATION ${APPLICATION_DIRECTORY}/bin )
+INSTALL( TARGETS DataProxyShell DESTINATION ${APPLICATION_DIRECTORY}/bin
+	PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE )
+INSTALL( FILES ${CMAKE_CURRENT_BINARY_DIR}/${LINK_NAME} DESTINATION ${APPLICATION_DIRECTORY}/bin
+	PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE )
+
 #################################################
 ####################  TESTS  ####################
 #################################################
@@ -193,14 +208,11 @@ IF( BUILD_TESTS )
 		${CPPUNIT_INCLUDE_DIR}
 	)
 
-	# add a target to link to the full dplShell version
-	ADD_CUSTOM_TARGET( DataProxyShellLink COMMAND ln -sfn ${EXE_NAME} ${LINK_NAME} )
-	
 	# add test executable target, but exclude it from "all" target
 	ADD_EXECUTABLE( DataProxyShellSystest EXCLUDE_FROM_ALL systemtest/system-main.cpp ${DataProxyShellSystest_Src} )
 	
 	# add dependencies for test target so they will be built first
-	ADD_DEPENDENCIES( DataProxyShellSystest Logger Utility TestHelpers DataProxyShell DataProxyShellLink )
+	ADD_DEPENDENCIES( DataProxyShellSystest Logger Utility TestHelpers DataProxyShell )
 	
 	# link test library to dependent libs
 	TARGET_LINK_LIBRARIES( DataProxyShellSystest 
