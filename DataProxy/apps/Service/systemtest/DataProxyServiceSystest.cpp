@@ -77,8 +77,12 @@ void DataProxyServiceSystest::testHappyPath( void )
 
 	uint port = NetworkUtilities::FindEmptyPort();
 
+	std::stringstream procPath;
+	procPath << "/proc/" << ::getpid() << "/exe";
+	std::string dirSpec( FileUtilities::GetDirName( FileUtilities::GetActualPath( procPath.str() ) ) );
+
 	std::stringstream cmd;
-	cmd << "./dplService "
+	cmd << dirSpec << "/dplService "
 		<< " --dpl_config " << dplConfigFileSpec
 		<< " --port " << port
 		<< " --instance_id systemtest_instance"

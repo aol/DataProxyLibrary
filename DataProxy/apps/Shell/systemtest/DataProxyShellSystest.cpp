@@ -50,9 +50,13 @@ void DataProxyShellSystest::testHappyPath( void )
 		 << "</DplConfig>" << std::endl;
 	file.close();
 
+	std::stringstream procPath;
+	procPath << "/proc/" << ::getpid() << "/exe";
+	std::string dirSpec( FileUtilities::GetDirName( FileUtilities::GetActualPath( procPath.str() ) ) );
+
 	// first ping the node to be sure it's there and ready
 	std::stringstream cmd;
-	cmd << "./dplShell"
+	cmd << dirSpec << "/dplShell"
 		<< " --init " << dplConfigFileSpec
 		<< " --name my_node"
 		<< " --Ping rwd";
@@ -76,7 +80,7 @@ void DataProxyShellSystest::testHappyPath( void )
 
 	// store some data
 	cmd.str("");
-	cmd << "./dplShell"
+	cmd << dirSpec << "/dplShell"
 		<< " --init " << dplConfigFileSpec
 		<< " --name my_node"
 		<< " --data -"						// data from stdin
@@ -94,7 +98,7 @@ void DataProxyShellSystest::testHappyPath( void )
 	cmd.str("");
 	out.str("");
 	err.str("");
-	cmd << "./dplShell"
+	cmd << dirSpec << "/dplShell"
 		<< " --init " << dplConfigFileSpec
 		<< " --name my_node"
 		<< " --params p1~v1^p3~v3^p2~v2";
@@ -109,7 +113,7 @@ void DataProxyShellSystest::testHappyPath( void )
 	cmd.str("");
 	out.str("");
 	err.str("");
-	cmd << "./dplShell"
+	cmd << dirSpec << "/dplShell"
 		<< " --init " << dplConfigFileSpec
 		<< " --name my_node"
 		<< " --params p3~v3^p2~v2^p1~v1"
@@ -160,9 +164,13 @@ void DataProxyShellSystest::testTransactions( void )
 	std::stringstream data;
 	data << "This is some data";
 
+	std::stringstream procPath;
+	procPath << "/proc/" << ::getpid() << "/exe";
+	std::string dirSpec( FileUtilities::GetDirName( FileUtilities::GetActualPath( procPath.str() ) ) );
+
 	// try storing some data
 	std::stringstream cmd;
-	cmd << "./dplShell"
+	cmd << dirSpec << "/dplShell"
 		<< " --init " << dplConfigFileSpec
 		<< " --name all"
 		<< " --data " << data.str()

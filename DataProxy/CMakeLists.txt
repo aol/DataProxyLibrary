@@ -217,6 +217,7 @@ ENDIF()
 #################################################
 ####################  APPS  #####################
 #################################################
+ADD_SUBDIRECTORY( ${CMAKE_CURRENT_SOURCE_DIR}/apps/Shell )
 ADD_SUBDIRECTORY( ${CMAKE_CURRENT_SOURCE_DIR}/apps/Service ) 
 
 #################################################

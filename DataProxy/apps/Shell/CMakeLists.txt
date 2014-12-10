@@ -1,6 +1,6 @@
 CMAKE_MINIMUM_REQUIRED( VERSION 2.8 )
 
-PROJECT( DataProxyService )
+PROJECT( DataProxyShell )
 FILE( STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/../../Version.txt VERSION )
 
 #################################################
@@ -17,8 +17,6 @@ INCLUDE( "${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/adl-cmake/Common.cmake" )
 # define the libs needed for this build
 ADD_LIB_ONCE( ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/adl-liblogger Logger )
 ADD_LIB_ONCE( ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/adl-libcore Utility )
-ADD_LIB_ONCE( ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/adl-libcore Service )
-ADD_LIB_ONCE( ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/adl-libmon Monitoring )
 
 # set c++ standard
 SET_PROPERTY( DIRECTORY PROPERTY COMPILE_OPTIONS "-std=c++0x" )
@@ -33,7 +31,7 @@ FIND_PACKAGE( Threads REQUIRED )
 FIND_PACKAGE( XercesC REQUIRED )
 
 # set libs based on external package dependencies above
-SET( DataProxyService_Libs
+SET( DataProxyShell_Libs
 	${Boost_LIBRARIES}
 	${LOG4CXX_LIBRARIES}
 	${OPENSSL_LIBRARIES}
@@ -45,27 +43,20 @@ SET( DataProxyService_Libs
 )
 
 # main source files
-SET( DataProxyService_Src
-	src/AbstractHandler.cpp
-	src/DataProxyServiceConfig.cpp
-	src/DeleteHandler.cpp
-	src/LoadHandler.cpp
-	src/PingHandler.cpp
-	src/StoreHandler.cpp
+SET( DataProxyShell_Src
+	src/DataProxyShellConfig.cpp
 )
 
-SET( DataProxyService_Main src/DataProxyService.cpp )
+SET( DataProxyShell_Main src/DataProxyShell.cpp )
 
 # define includes for this build
-SET( DataProxyService_Incs ${CMAKE_CURRENT_SOURCE_DIR}/include )
+SET( DataProxyShell_Incs ${CMAKE_CURRENT_SOURCE_DIR}/include )
 
 # include the directories for this build
-INCLUDE_DIRECTORIES( ${DataProxyService_Incs} )
+INCLUDE_DIRECTORIES( ${DataProxyShell_Incs} )
 # include all the dependent libs' include folders
 INCLUDE_DIRECTORIES( ${Logger_Incs} )
 INCLUDE_DIRECTORIES( ${Utility_Incs} )
-INCLUDE_DIRECTORIES( ${Service_Incs} )
-INCLUDE_DIRECTORIES( ${Monitoring_Incs} )
 INCLUDE_DIRECTORIES( ${DataProxy_Incs} )
 # include the external dependencies
 INCLUDE_DIRECTORIES( SYSTEM
@@ -81,31 +72,29 @@ INCLUDE_DIRECTORIES( SYSTEM
 LINK_DIRECTORIES( ${Boost_LIBRARY_DIRS} )
 
 # define object files which will be used for tests AND src
-ADD_LIBRARY( DataProxyServiceObjects OBJECT ${DataProxyService_Src} )
+ADD_LIBRARY( DataProxyShellObjects OBJECT ${DataProxyShell_Src} )
 
 # define primary executable
-ADD_EXECUTABLE( DataProxyService ${DataProxyService_Main} $<TARGET_OBJECTS:DataProxyServiceObjects> )
+ADD_EXECUTABLE( DataProxyShell ${DataProxyShell_Main} $<TARGET_OBJECTS:DataProxyShellObjects> )
 
 # add dependencies for this target so they will be built first
-ADD_DEPENDENCIES( DataProxyService Logger Utility Monitoring DataProxy Service )
+ADD_DEPENDENCIES( DataProxyShell Logger Utility DataProxy )
 
 # link target against external libs
-TARGET_LINK_LIBRARIES( DataProxyService
-	${DataProxyService_Libs}
+TARGET_LINK_LIBRARIES( DataProxyShell
+	${DataProxyShell_Libs}
 	$<TARGET_SONAME_FILE:DataProxy>
-	$<TARGET_SONAME_FILE:Monitoring>
-	$<TARGET_FILE:Service>
 	$<TARGET_FILE:Utility>
 	$<TARGET_SONAME_FILE:Logger>
 )
 
 # set position-independent-code so this static lib can be linked to by dynamic libs
-SET_PROPERTY( TARGET DataProxyService PROPERTY POSITION_INDEPENDENT_CODE ON )
+SET_PROPERTY( TARGET DataProxyShell PROPERTY POSITION_INDEPENDENT_CODE ON )
 
 # set the executable name
-SET( LINK_NAME dplService )
+SET( LINK_NAME dplShell )
 SET( EXE_NAME ${LINK_NAME}_v${VERSION} )
-SET_PROPERTY( TARGET DataProxyService PROPERTY OUTPUT_NAME ${EXE_NAME} )
+SET_PROPERTY( TARGET DataProxyShell PROPERTY OUTPUT_NAME ${EXE_NAME} )
 
 #################################################
 ####################  TESTS  ####################
@@ -117,38 +106,25 @@ IF( BUILD_TESTS )
 	FIND_PACKAGE( Cppunit REQUIRED )
 	
 	# set test libs based on external package dependencies above
-	SET( DataProxyServiceTest_Libs
-		${DataProxyService_Libs}
+	SET( DataProxyShellTest_Libs
+		${DataProxyShell_Libs}
 		${CPPUNIT_LIBRARIES}
 	)
 	
 	# test source files
-	SET( DataProxyServiceTest_Src
-		test/AbstractHandlerTest.cpp
-		test/DataProxyServiceConfigTest.cpp
-		test/DeleteHandlerTest.cpp
-		test/LoadHandlerTest.cpp
-		test/PingHandlerTest.cpp
-		test/StoreHandlerTest.cpp
-	)
-	
-	# mock source files
-	SET( MockDataProxyService_Src
-		mock/TestableHandler.cpp
+	SET( DataProxyShellTest_Src
+		test/DataProxyShellConfigTest.cpp
 	)
 	
 	# define includes for test exe
-	SET( DataProxyServiceTest_Incs
+	SET( DataProxyShellTest_Incs
 		${CMAKE_CURRENT_SOURCE_DIR}/test
-		${CMAKE_CURRENT_SOURCE_DIR}/mock
 	)
 	
 	# include test directories for this build
-	INCLUDE_DIRECTORIES( ${DataProxyServiceTest_Incs} )
+	INCLUDE_DIRECTORIES( ${DataProxyShellTest_Incs} )
 	# include all the test dependent libs' include folders
 	INCLUDE_DIRECTORIES( ${TestHelpers_Incs} )
-	# include all the test dependent mock libs' include folders
-	INCLUDE_DIRECTORIES( ${MockService_Incs} )
 	# include all the external libs' include folders
 	INCLUDE_DIRECTORIES( SYSTEM
 		${Boost_INCLUDE_DIRS}
@@ -160,18 +136,15 @@ IF( BUILD_TESTS )
 	)
 	
 	# add test executable target, but exclude it from "all" target
-	ADD_EXECUTABLE( DataProxyServiceTest EXCLUDE_FROM_ALL test/test-main.cpp ${DataProxyServiceTest_Src} ${MockDataProxyService_Src} $<TARGET_OBJECTS:DataProxyServiceObjects> )
+	ADD_EXECUTABLE( DataProxyShellTest EXCLUDE_FROM_ALL test/test-main.cpp ${DataProxyShellTest_Src} $<TARGET_OBJECTS:DataProxyShellObjects> )
 	
 	# add dependencies for test target so they will be built first
-	ADD_DEPENDENCIES( DataProxyServiceTest Logger Utility TestHelpers Service MockService Monitoring DataProxy )
+	ADD_DEPENDENCIES( DataProxyShellTest Logger Utility TestHelpers DataProxy )
 	
 	# link test library to dependent libs
-	TARGET_LINK_LIBRARIES( DataProxyServiceTest 
-		${DataProxyServiceTest_Libs}
+	TARGET_LINK_LIBRARIES( DataProxyShellTest 
+		${DataProxyShellTest_Libs}
 		$<TARGET_SONAME_FILE:DataProxy>
-		$<TARGET_SONAME_FILE:Monitoring>
-		$<TARGET_FILE:Service>
-		$<TARGET_FILE:MockService>
 		$<TARGET_FILE:TestHelpers>
 		$<TARGET_FILE:Utility>
 		$<TARGET_SONAME_FILE:Logger>
@@ -190,24 +163,24 @@ IF( BUILD_TESTS )
 	FIND_PACKAGE( CURL REQUIRED )
 	
 	# set test libs based on external package dependencies above
-	SET( DataProxyServiceSystest_Libs
-		${DataProxyService_Libs}
+	SET( DataProxyShellSystest_Libs
+		${DataProxyShell_Libs}
 		${CPPUNIT_LIBRARIES}
 		${CURL_LIBRARIES}
 	)
 	
 	# test source files
-	SET( DataProxyServiceSystest_Src
-		systemtest/DataProxyServiceSystest.cpp
+	SET( DataProxyShellSystest_Src
+		systemtest/DataProxyShellSystest.cpp
 	)
 	
 	# define includes for test exe
-	SET( DataProxyServiceSystest_Incs
+	SET( DataProxyShellSystest_Incs
 		${CMAKE_CURRENT_SOURCE_DIR}/systemtest
 	)
 	
 	# include test directories for this build
-	INCLUDE_DIRECTORIES( ${DataProxyServiceSystest_Incs} )
+	INCLUDE_DIRECTORIES( ${DataProxyShellSystest_Incs} )
 	# include all the test dependent libs' include folders
 	INCLUDE_DIRECTORIES( ${TestHelpers_Incs} )
 	# include all the external libs' include folders
@@ -221,20 +194,18 @@ IF( BUILD_TESTS )
 	)
 
 	# add a target to link to the full dplShell version
-	ADD_CUSTOM_TARGET( DataProxyServiceLink COMMAND ln -sfn ${EXE_NAME} ${LINK_NAME} )
+	ADD_CUSTOM_TARGET( DataProxyShellLink COMMAND ln -sfn ${EXE_NAME} ${LINK_NAME} )
 	
 	# add test executable target, but exclude it from "all" target
-	ADD_EXECUTABLE( DataProxyServiceSystest EXCLUDE_FROM_ALL systemtest/system-main.cpp ${DataProxyServiceSystest_Src} )
+	ADD_EXECUTABLE( DataProxyShellSystest EXCLUDE_FROM_ALL systemtest/system-main.cpp ${DataProxyShellSystest_Src} )
 	
 	# add dependencies for test target so they will be built first
-	ADD_DEPENDENCIES( DataProxyServiceTest Logger Utility TestHelpers Service DataProxyService DataProxyServiceLink )
+	ADD_DEPENDENCIES( DataProxyShellSystest Logger Utility TestHelpers DataProxyShell DataProxyShellLink )
 	
 	# link test library to dependent libs
-	TARGET_LINK_LIBRARIES( DataProxyServiceSystest 
-		${DataProxyServiceSystest_Libs}
+	TARGET_LINK_LIBRARIES( DataProxyShellSystest 
+		${DataProxyShellSystest_Libs}
 		$<TARGET_SONAME_FILE:DataProxy>
-		$<TARGET_SONAME_FILE:Monitoring>
-		$<TARGET_FILE:Service>
 		$<TARGET_FILE:TestHelpers>
 		$<TARGET_FILE:Utility>
 		$<TARGET_SONAME_FILE:Logger>
