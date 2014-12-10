@@ -19,10 +19,10 @@ SET_DIRECTORY_PROPERTIES( PROPERTIES COMPILE_DEFINITIONS LIBDPL_BUILD )
 ###################  VERSION  ###################
 #################################################
 
-FILE( STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/Version.txt VERSION_STRING )
-STRING( REGEX REPLACE "^([0-9]+)\\.([0-9]+)\\.([0-9]+)" "\\1" VERSION_MAJOR "${VERSION_STRING}" )
-STRING( REGEX REPLACE "^([0-9]+)\\.([0-9]+)\\.([0-9]+)" "\\2" VERSION_MINOR "${VERSION_STRING}" )
-STRING( REGEX REPLACE "^([0-9]+)\\.([0-9]+)\\.([0-9]+)" "\\3" VERSION_BUILD "${VERSION_STRING}" )
+FILE( STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/Version.txt VERSION )
+STRING( REGEX REPLACE "^([0-9]+)\\.([0-9]+)\\.([0-9]+)" "\\1" VERSION_MAJOR "${VERSION}" )
+STRING( REGEX REPLACE "^([0-9]+)\\.([0-9]+)\\.([0-9]+)" "\\2" VERSION_MINOR "${VERSION}" )
+STRING( REGEX REPLACE "^([0-9]+)\\.([0-9]+)\\.([0-9]+)" "\\3" VERSION_BUILD "${VERSION}" )
 
 #################################################
 ##################### MAIN  #####################
@@ -38,6 +38,7 @@ ADD_LIB_ONCE( ${CMAKE_CURRENT_SOURCE_DIR}/../lib/adl-libmon Monitoring )
 
 # external package dependencies
 FIND_PACKAGE( Boost 1.44 REQUIRED system filesystem program_options date_time regex thread iostreams )
+FIND_PACKAGE( CURL REQUIRED )
 FIND_PACKAGE( AgentPP REQUIRED )
 FIND_PACKAGE( log4cxx REQUIRED )
 FIND_PACKAGE( ODBC REQUIRED )
@@ -51,6 +52,7 @@ FIND_PACKAGE( XercesC REQUIRED )
 # set libs based on external package dependencies above
 SET( DataProxy_Libs
 	${Boost_LIBRARIES}
+	${CURL_LIBRARIES}
 	${AGENT_PP_LIBRARIES}
 	${LOG4CXX_LIBRARIES}
 	${ODBC_LIBRARIES}
@@ -162,7 +164,7 @@ TARGET_LINK_LIBRARIES( DataProxy
 )
 
 # set the SONAME version of this dynamic lib
-SET_TARGET_PROPERTIES( DataProxy PROPERTIES VERSION ${VERSION_STRING} SOVERSION "${VERSION_MAJOR}.${VERSION_MINOR}" )
+SET_TARGET_PROPERTIES( DataProxy PROPERTIES VERSION ${VERSION} SOVERSION "${VERSION_MAJOR}.${VERSION_MINOR}" )
 
 IF( CMAKE_COMPILER_IS_GNUCXX )
 	SET_TARGET_PROPERTIES( DataProxy PROPERTIES COMPILE_FLAGS "-fvisibility=hidden -fvisibility-inlines-hidden" )
@@ -211,6 +213,48 @@ IF( BUILD_SWIG_PERL )
 	SWIG_ADD_MODULE( SwigPerlDataProxy perl ${DataProxy_SwigSrc} )
 	SWIG_LINK_LIBRARIES( SwigPerlDataProxy $<TARGET_SONAME_FILE:DataProxy> )
 ENDIF()
+
+#################################################
+####################  APPS  #####################
+#################################################
+ADD_SUBDIRECTORY( ${CMAKE_CURRENT_SOURCE_DIR}/apps/Shell )
+ADD_SUBDIRECTORY( ${CMAKE_CURRENT_SOURCE_DIR}/apps/Service ) 
+
+#################################################
+###################  INSTALL  ###################
+#################################################
+
+# set install directories
+SET( DEFAULT_PREFIX "/data" )
+SET( APP_DIR "app" )
+SET( LIB_DIR "lib" )
+
+# install directives for dirs that need to be created
+INSTALL( DIRECTORY DESTINATION ${LIB_DIR} )
+
+# set properties of build
+SET( CPACK_PACKAGE_VENDOR "AOL" )
+SET( CPACK_PACKAGE_DESCRIPTION_SUMMARY "Data Proxy Library & Apps" )
+SET( CPACK_PACKAGE_NAME "adl_dpl" )
+SET( CPACK_PACKAGE_VERSION ${VERSION} )
+SET( CPACK_PACKAGE_RELEASE 8 )
+SET( CPACK_RPM_PACKAGE_RELEASE ${CPACK_PACKAGE_RELEASE} )
+INSTALL( TARGETS DataProxy DESTINATION ${LIB_DIR}
+	PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE )
+
+SET( CPACK_GENERATOR "RPM" )
+STRING( REGEX REPLACE "^.*\\.([^.]+)\\.[^.]+$" "\\1" EL_VERSION ${CMAKE_SYSTEM} )
+SET( CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${CMAKE_SYSTEM_PROCESSOR}.${EL_VERSION}" )
+SET( CPACK_PACKAGING_INSTALL_PREFIX ${DEFAULT_PREFIX} )
+SET( CPACK_RPM_SPEC_MORE_DEFINE "${CPACK_RPM_SPEC_MORE_DEFINE}\n%define libDir ${LIB_DIR}" )
+SET( CPACK_RPM_SPEC_MORE_DEFINE "${CPACK_RPM_SPEC_MORE_DEFINE}\n%define appDir ${APP_DIR}" )
+SET( CPACK_RPM_POST_INSTALL_SCRIPT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/package/install.sh" )
+
+# disable auto prereq checks
+SET( CPACK_RPM_PACKAGE_AUTOREQPROV " no" )
+
+# start cpack!
+INCLUDE( CPack )
 
 #################################################
 ####################  MOCK  #####################
@@ -264,13 +308,11 @@ IF( BUILD_TESTS )
 	
 	# external package dependencies for tests
 	FIND_PACKAGE( Cppunit REQUIRED )
-	FIND_PACKAGE( CURL REQUIRED )
 	
 	# set test libs based on external package dependencies above
 	SET( DataProxyTest_Libs
 		${DataProxy_Libs}
 		${CPPUNIT_LIBRARIES}
-		${CURL_LIBRARIES}
 	)
 	
 	# test source files
