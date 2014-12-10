@@ -107,11 +107,14 @@ SET( LINK_NAME dplService )
 SET( EXE_NAME ${LINK_NAME}_v${VERSION} )
 SET_PROPERTY( TARGET DataProxyService PROPERTY OUTPUT_NAME ${EXE_NAME} )
 
+# add a target to link to the full dplShell version
+ADD_CUSTOM_COMMAND( TARGET DataProxyService POST_BUILD COMMAND ln -sfn ${EXE_NAME} ${LINK_NAME} )
+
 #################################################
 ###################  INSTALL  ###################
 #################################################
 
-SET( APPLICATION_DIRECTORY "app/dpl/service" CACHE INTERNAL "${PROJECT_NAME} application directory" FORCE )
+SET( APPLICATION_DIRECTORY "app/dpl/service" )
 INSTALL( DIRECTORY DESTINATION ${APPLICATION_DIRECTORY} )
 INSTALL( DIRECTORY DESTINATION ${APPLICATION_DIRECTORY}/bin )
 INSTALL( TARGETS DataProxyService DESTINATION ${APPLICATION_DIRECTORY}/bin
@@ -232,14 +235,11 @@ IF( BUILD_TESTS )
 		${CPPUNIT_INCLUDE_DIR}
 	)
 
-	# add a target to link to the full dplShell version
-	ADD_CUSTOM_TARGET( DataProxyServiceLink COMMAND ln -sfn ${EXE_NAME} ${LINK_NAME} )
-	
 	# add test executable target, but exclude it from "all" target
 	ADD_EXECUTABLE( DataProxyServiceSystest EXCLUDE_FROM_ALL systemtest/system-main.cpp ${DataProxyServiceSystest_Src} )
 	
 	# add dependencies for test target so they will be built first
-	ADD_DEPENDENCIES( DataProxyServiceTest Logger Utility TestHelpers Service DataProxyService DataProxyServiceLink )
+	ADD_DEPENDENCIES( DataProxyServiceSystest Logger Utility TestHelpers Service Monitoring DataProxy DataProxyService )
 	
 	# link test library to dependent libs
 	TARGET_LINK_LIBRARIES( DataProxyServiceSystest 
