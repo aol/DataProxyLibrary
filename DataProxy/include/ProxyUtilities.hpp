@@ -11,7 +11,7 @@
 #ifndef _PROXY_UTILITIES_HPP_
 #define _PROXY_UTILITIES_HPP_
 
-#include "DPLVisibility.hpp"
+#include "detail/DPLVisibility.hpp"
 #include "MVException.hpp"
 #include <xercesc/dom/DOM.hpp>
 #include <map>

@@ -38,6 +38,7 @@ ADD_LIB_ONCE( ${CMAKE_CURRENT_SOURCE_DIR}/../lib/adl-libmon Monitoring )
 
 # external package dependencies
 FIND_PACKAGE( Boost 1.44 REQUIRED system filesystem program_options date_time regex thread iostreams )
+FIND_PACKAGE( CURL REQUIRED )
 FIND_PACKAGE( AgentPP REQUIRED )
 FIND_PACKAGE( log4cxx REQUIRED )
 FIND_PACKAGE( ODBC REQUIRED )
@@ -51,6 +52,7 @@ FIND_PACKAGE( XercesC REQUIRED )
 # set libs based on external package dependencies above
 SET( DataProxy_Libs
 	${Boost_LIBRARIES}
+	${CURL_LIBRARIES}
 	${AGENT_PP_LIBRARIES}
 	${LOG4CXX_LIBRARIES}
 	${ODBC_LIBRARIES}
@@ -264,13 +266,11 @@ IF( BUILD_TESTS )
 	
 	# external package dependencies for tests
 	FIND_PACKAGE( Cppunit REQUIRED )
-	FIND_PACKAGE( CURL REQUIRED )
 	
 	# set test libs based on external package dependencies above
 	SET( DataProxyTest_Libs
 		${DataProxy_Libs}
 		${CPPUNIT_LIBRARIES}
-		${CURL_LIBRARIES}
 	)
 	
 	# test source files
