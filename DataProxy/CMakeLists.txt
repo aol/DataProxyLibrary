@@ -19,7 +19,9 @@ SET_DIRECTORY_PROPERTIES( PROPERTIES COMPILE_DEFINITIONS LIBDPL_BUILD )
 ###################  VERSION  ###################
 #################################################
 
-FILE( STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/Version.txt VERSION )
+FILE( STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/Version.txt VERSION_DATA )
+LIST( GET VERSION_DATA 0 VERSION )
+LIST( GET VERSION_DATA 1 RELEASE )
 STRING( REGEX REPLACE "^([0-9]+)\\.([0-9]+)\\.([0-9]+)" "\\1" VERSION_MAJOR "${VERSION}" )
 STRING( REGEX REPLACE "^([0-9]+)\\.([0-9]+)\\.([0-9]+)" "\\2" VERSION_MINOR "${VERSION}" )
 STRING( REGEX REPLACE "^([0-9]+)\\.([0-9]+)\\.([0-9]+)" "\\3" VERSION_BUILD "${VERSION}" )
@@ -175,43 +177,47 @@ ENDIF()
 ##################### SWIG  #####################
 #################################################
 
-# swig boilerplate
-FIND_PACKAGE( SWIG REQUIRED )
-INCLUDE( ${SWIG_USE_FILE} )
+IF( BUILD_SWIG )
 
-# set swig properties (applicable to all)
-SET( BASE_SWIG_FLAGS "-nodefaultctor" )
-SET( CMAKE_SWIG_OUTDIR "${CMAKE_CURRENT_BINARY_DIR}/gen-swig" )
-SET_DIRECTORY_PROPERTIES( PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${CMAKE_SWIG_OUTDIR};${AutoGenDir}" )
+	# swig boilerplate
+	FIND_PACKAGE( SWIG REQUIRED )
+	INCLUDE( ${SWIG_USE_FILE} )
+	
+	# set swig properties (applicable to all)
+	SET( BASE_SWIG_FLAGS "-nodefaultctor" )
+	SET( CMAKE_SWIG_OUTDIR "${CMAKE_CURRENT_BINARY_DIR}/gen-swig" )
+	SET_DIRECTORY_PROPERTIES( PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${CMAKE_SWIG_OUTDIR};${AutoGenDir}" )
+	
+	# set swig source(s)
+	SET( DataProxy_SwigSrc
+		swig/SwigDataProxy.i
+	)
+	
+	# set source properties
+	SET_SOURCE_FILES_PROPERTIES( ${DataProxy_SwigSrc} PROPERTIES CPLUSPLUS ON )
+	SET_SOURCE_FILES_PROPERTIES( ${DataProxy_SwigSrc} PROPERTIES SWIG_FLAGS "-includeall" )
+	
+	# support for python swig libraries, if enabled
+	IF( BUILD_SWIG_PYTHON )
+		FIND_PACKAGE( PythonLibs REQUIRED )
+		INCLUDE_DIRECTORIES( ${PYTHON_INCLUDE_PATH} )
+		SET( CMAKE_SWIG_FLAGS ${BASE_SWIG_FLAGS} -module SwigPythonDataProxy )
+		SET_SOURCE_FILES_PROPERTIES( ${DataProxy_SwigSrc} PROPERTIES SWIG_MODULE_NAME SwigPythonDataProxy )
+		SET( SWIG_MODULE_SwigPythonDataProxy_EXTRA_DEPS DataProxy )
+		SWIG_ADD_MODULE( SwigPythonDataProxy python ${DataProxy_SwigSrc} )
+		SWIG_LINK_LIBRARIES( SwigPythonDataProxy ${PYTHON_LIBRARIES} $<TARGET_SONAME_FILE:DataProxy> )
+	ENDIF()
+	
+	# support for perl swig libraries, if enabled
+	IF( BUILD_SWIG_PERL )
+		SET( CMAKE_SWIG_FLAGS ${BASE_SWIG_FLAGS} -module SwigPerlDataProxy )
+		SET_SOURCE_FILES_PROPERTIES( ${DataProxy_SwigSrc} PROPERTIES SWIG_MODULE_NAME SwigPerlDataProxy )
+		SET( SWIG_MODULE_SwigPerlDataProxy_EXTRA_DEPS DataProxy )
+		SET_SOURCE_FILES_PROPERTIES( ${CMAKE_SWIG_OUTDIR}/SwigDataProxyPERL_wrap.cxx PROPERTIES COMPILE_FLAGS "-Wno-unused-variable -Wno-maybe-uninitialized" )
+		SWIG_ADD_MODULE( SwigPerlDataProxy perl ${DataProxy_SwigSrc} )
+		SWIG_LINK_LIBRARIES( SwigPerlDataProxy $<TARGET_SONAME_FILE:DataProxy> )
+	ENDIF()
 
-# set swig source(s)
-SET( DataProxy_SwigSrc
-	swig/SwigDataProxy.i
-)
-
-# set source properties
-SET_SOURCE_FILES_PROPERTIES( ${DataProxy_SwigSrc} PROPERTIES CPLUSPLUS ON )
-SET_SOURCE_FILES_PROPERTIES( ${DataProxy_SwigSrc} PROPERTIES SWIG_FLAGS "-includeall" )
-
-# support for python swig libraries, if enabled
-IF( BUILD_SWIG_PYTHON )
-	FIND_PACKAGE( PythonLibs REQUIRED )
-	INCLUDE_DIRECTORIES( ${PYTHON_INCLUDE_PATH} )
-	SET( CMAKE_SWIG_FLAGS ${BASE_SWIG_FLAGS} -module SwigPythonDataProxy )
-	SET_SOURCE_FILES_PROPERTIES( ${DataProxy_SwigSrc} PROPERTIES SWIG_MODULE_NAME SwigPythonDataProxy )
-	SET( SWIG_MODULE_SwigPythonDataProxy_EXTRA_DEPS DataProxy )
-	SWIG_ADD_MODULE( SwigPythonDataProxy python ${DataProxy_SwigSrc} )
-	SWIG_LINK_LIBRARIES( SwigPythonDataProxy ${PYTHON_LIBRARIES} $<TARGET_SONAME_FILE:DataProxy> )
-ENDIF()
-
-# support for perl swig libraries, if enabled
-IF( BUILD_SWIG_PERL )
-	SET( CMAKE_SWIG_FLAGS ${BASE_SWIG_FLAGS} -module SwigPerlDataProxy )
-	SET_SOURCE_FILES_PROPERTIES( ${DataProxy_SwigSrc} PROPERTIES SWIG_MODULE_NAME SwigPerlDataProxy )
-	SET( SWIG_MODULE_SwigPerlDataProxy_EXTRA_DEPS DataProxy )
-	SET_SOURCE_FILES_PROPERTIES( ${CMAKE_SWIG_OUTDIR}/SwigDataProxyPERL_wrap.cxx PROPERTIES COMPILE_FLAGS "-Wno-unused-variable -Wno-maybe-uninitialized" )
-	SWIG_ADD_MODULE( SwigPerlDataProxy perl ${DataProxy_SwigSrc} )
-	SWIG_LINK_LIBRARIES( SwigPerlDataProxy $<TARGET_SONAME_FILE:DataProxy> )
 ENDIF()
 
 #################################################
@@ -224,38 +230,42 @@ ADD_SUBDIRECTORY( ${CMAKE_CURRENT_SOURCE_DIR}/apps/Service )
 ###################  INSTALL  ###################
 #################################################
 
-# set install directories
-SET( DEFAULT_PREFIX "/data" )
-SET( APP_DIR "app" )
-SET( LIB_DIR "lib" )
+IF( NOT NO_INSTALL )
 
-# install directives for dirs that need to be created
-INSTALL( DIRECTORY DESTINATION ${LIB_DIR}
-	DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE )
+	# set install directories
+	SET( DEFAULT_PREFIX "/data" )
+	SET( APP_DIR "app" )
+	SET( LIB_DIR "lib" )
+	
+	# install directives for dirs that need to be created
+	INSTALL( DIRECTORY DESTINATION ${LIB_DIR}
+		DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE )
+	
+	# set properties of build
+	SET( CPACK_PACKAGE_VENDOR "AOL" )
+	SET( CPACK_PACKAGE_DESCRIPTION_SUMMARY "Data Proxy Library & Apps" )
+	SET( CPACK_PACKAGE_NAME "adl_dpl" )
+	SET( CPACK_PACKAGE_VERSION ${VERSION} )
+	SET( CPACK_PACKAGE_RELEASE ${RELEASE} )
+	SET( CPACK_RPM_PACKAGE_RELEASE ${CPACK_PACKAGE_RELEASE} )
+	INSTALL( TARGETS DataProxy DESTINATION ${LIB_DIR}
+		PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE )
+	
+	SET( CPACK_GENERATOR "RPM" )
+	STRING( REGEX REPLACE "^.*\\.([^.]+)\\.[^.]+$" "\\1" EL_VERSION ${CMAKE_SYSTEM} )
+	SET( CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${CMAKE_SYSTEM_PROCESSOR}.${EL_VERSION}" )
+	SET( CPACK_PACKAGING_INSTALL_PREFIX ${DEFAULT_PREFIX} )
+	LIST( APPEND CPACK_RPM_USER_FILELIST "%attr(-,adlearn,optimization) ${DEFAULT_PREFIX}" )
+	SET( CPACK_RPM_SPEC_MORE_DEFINE "${CPACK_RPM_SPEC_MORE_DEFINE}\n%define libDir ${LIB_DIR}" )
+	SET( CPACK_RPM_SPEC_MORE_DEFINE "${CPACK_RPM_SPEC_MORE_DEFINE}\n%define appDir ${APP_DIR}" )
+	
+	# disable auto prereq checks
+	SET( CPACK_RPM_PACKAGE_AUTOREQPROV " no" )
+	
+	# start cpack!
+	INCLUDE( CPack )
 
-# set properties of build
-SET( CPACK_PACKAGE_VENDOR "AOL" )
-SET( CPACK_PACKAGE_DESCRIPTION_SUMMARY "Data Proxy Library & Apps" )
-SET( CPACK_PACKAGE_NAME "adl_dpl" )
-SET( CPACK_PACKAGE_VERSION ${VERSION} )
-SET( CPACK_PACKAGE_RELEASE 8 )
-SET( CPACK_RPM_PACKAGE_RELEASE ${CPACK_PACKAGE_RELEASE} )
-INSTALL( TARGETS DataProxy DESTINATION ${LIB_DIR}
-	PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE )
-
-SET( CPACK_GENERATOR "RPM" )
-STRING( REGEX REPLACE "^.*\\.([^.]+)\\.[^.]+$" "\\1" EL_VERSION ${CMAKE_SYSTEM} )
-SET( CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${CMAKE_SYSTEM_PROCESSOR}.${EL_VERSION}" )
-SET( CPACK_PACKAGING_INSTALL_PREFIX ${DEFAULT_PREFIX} )
-LIST( APPEND CPACK_RPM_USER_FILELIST "%attr(-,adlearn,optimization) ${DEFAULT_PREFIX}" )
-SET( CPACK_RPM_SPEC_MORE_DEFINE "${CPACK_RPM_SPEC_MORE_DEFINE}\n%define libDir ${LIB_DIR}" )
-SET( CPACK_RPM_SPEC_MORE_DEFINE "${CPACK_RPM_SPEC_MORE_DEFINE}\n%define appDir ${APP_DIR}" )
-
-# disable auto prereq checks
-SET( CPACK_RPM_PACKAGE_AUTOREQPROV " no" )
-
-# start cpack!
-INCLUDE( CPack )
+ENDIF()
 
 #################################################
 ####################  MOCK  #####################
