@@ -21,8 +21,6 @@
 
 namespace
 {
-	const std::string SHELL_VERSION( "DataProxy Shell v3.2.4" );
-
 	const char* INIT( "init" );
 	const char* NAME( "name" );
 	const char* PARAMS( "params" );
@@ -48,7 +46,7 @@ namespace
 }
 
 DataProxyShellConfig::DataProxyShellConfig( int argc, char** argv )
-:	m_Options( "Shell", SHELL_VERSION ),
+:	m_Options( "DataProxyShell", DATA_PROXY_SHELL_VERSION ),
 	m_Parameters(),
 	m_pData( NULL )
 {

@@ -15,6 +15,13 @@ INCLUDE( "${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/adl-cmake/Common.cmake" )
 ##################### MAIN  #####################
 #################################################
 
+# generate hpps from *.in configure files (for version, etc.)
+SET( GEN_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include )
+FILE( MAKE_DIRECTORY ${GEN_INCLUDE_DIR} )
+INCLUDE_DIRECTORIES( ${GEN_INCLUDE_DIR} )
+SET_DIRECTORY_PROPERTIES( PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${GEN_INCLUDE_DIR} )
+CONFIGURE_FILE( ${CMAKE_CURRENT_SOURCE_DIR}/include/DataProxyService.hpp.in ${GEN_INCLUDE_DIR}/DataProxyService.hpp @ONLY )
+
 # define the libs needed for this build
 ADD_LIB_ONCE( ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/adl-liblogger Logger )
 ADD_LIB_ONCE( ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/adl-libcore Utility )
@@ -127,7 +134,7 @@ IF( NOT NO_INSTALL )
 	INSTALL( FILES ${CMAKE_CURRENT_BINARY_DIR}/${LINK_NAME} DESTINATION ${APPLICATION_DIRECTORY}/bin
 		PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE )
 
-ENDIF
+ENDIF()
 
 #################################################
 ####################  TESTS  ####################
