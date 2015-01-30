@@ -403,7 +403,7 @@ IF( BUILD_TESTS )
 	ADD_EXECUTABLE( DataProxyTest EXCLUDE_FROM_ALL test/main.cpp ${DataProxy_Src} ${DataProxyTest_Src} )
 	
 	# add dependencies for test target so they will be built first
-	ADD_DEPENDENCIES( DataProxyTest Logger Utility MockUtility Service MockService Database MockDatabase Monitoring MockMonitoring TestHelpers MockDataProxy )
+	ADD_DEPENDENCIES( DataProxyTest DataProxyThppGeneratedHpps Logger Utility MockUtility Service MockService Database MockDatabase Monitoring MockMonitoring TestHelpers MockDataProxy )
 	
 	# link test library to dependent libs
 	TARGET_LINK_LIBRARIES( DataProxyTest 
