@@ -76,6 +76,7 @@ namespace Dpl
 	DATUMINFO( ClientParameters, ParameterContainer );
 	DATUMINFO( GroupConfig, Dpl::GroupContainer );
 	DATUMINFO( UriPathSegmentOrder, UriPathSegmentList );
+	DATUMINFO( BodyParameterName, std::string );
 
 	typedef
 		GenericDatum< PingEndpoint,
@@ -85,7 +86,8 @@ namespace Dpl
 		GenericDatum< ClientParameters,
 		GenericDatum< GroupConfig,
 		GenericDatum< UriPathSegmentOrder,
-		RowEnd > > > > > > >
+		GenericDatum< BodyParameterName,
+		RowEnd > > > > > > > >
 	RestConfigDatum;
 };
 

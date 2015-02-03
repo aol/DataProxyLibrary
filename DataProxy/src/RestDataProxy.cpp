@@ -35,6 +35,7 @@ namespace
 
 	// attributes
 	const std::string PING_ATTRIBUTE( "ping" );
+	const std::string BODY_PARAMETER_ATTRIBUTE( "bodyParameter" );
 	const std::string METHOD_OVERRIDE_ATTRIBUTE( "methodOverride" );
 	const std::string URI_SUFFIX_ATTRIBUTE( "uriSuffix" );
 	const std::string TIMEOUT_ATTRIBUTE( "timeout" );
@@ -358,6 +359,13 @@ namespace
 			o_rConfig.GetReference< Dpl::RestParameters >().SetCompression( XMLUtilities::XMLChToString(pAttribute->getValue()) );
 		}
 	
+		// get name of the body parameter
+		pAttribute = XMLUtilities::GetAttribute( &i_rNode, BODY_PARAMETER_ATTRIBUTE );
+		if( pAttribute != NULL )
+		{
+			o_rConfig.SetValue< Dpl::BodyParameterName >( XMLUtilities::XMLChToString(pAttribute->getValue()) );
+		}
+	
 		// read & set query parameters
 		SetQueryParameters( i_rNode, o_rConfig );
 	
@@ -434,18 +442,21 @@ RestDataProxy::RestDataProxy( const std::string& i_rName, DataProxyClient& i_rPa
 	allowedReadAttributes.insert( URI_SUFFIX_ATTRIBUTE );
 	allowedReadAttributes.insert( COMPRESSION_ATTRIBUTE );
 	allowedReadAttributes.insert( MAX_REDIRECTS_ATTRIBUTE );
+	allowedReadAttributes.insert( BODY_PARAMETER_ATTRIBUTE );
 	std::set< std::string > allowedWriteAttributes;
 	allowedWriteAttributes.insert( PING_ATTRIBUTE );
 	allowedWriteAttributes.insert( METHOD_OVERRIDE_ATTRIBUTE );
 	allowedWriteAttributes.insert( TIMEOUT_ATTRIBUTE );
 	allowedWriteAttributes.insert( URI_SUFFIX_ATTRIBUTE );
 	allowedWriteAttributes.insert( MAX_REDIRECTS_ATTRIBUTE );
+	allowedWriteAttributes.insert( BODY_PARAMETER_ATTRIBUTE );
 	std::set< std::string > allowedDeleteAttributes;
 	allowedDeleteAttributes.insert( PING_ATTRIBUTE );
 	allowedDeleteAttributes.insert( METHOD_OVERRIDE_ATTRIBUTE );
 	allowedDeleteAttributes.insert( TIMEOUT_ATTRIBUTE );
 	allowedDeleteAttributes.insert( URI_SUFFIX_ATTRIBUTE );
 	allowedDeleteAttributes.insert( MAX_REDIRECTS_ATTRIBUTE );
+	allowedDeleteAttributes.insert( BODY_PARAMETER_ATTRIBUTE );
 	AbstractNode::ValidateXmlAttributes( i_rNode, allowedReadAttributes, allowedWriteAttributes, allowedDeleteAttributes );
 	
 	// Default HTTP methods for load, store, and delete are GET, POST, and DELETE respectively
@@ -495,7 +506,18 @@ void RestDataProxy::LoadImpl( const std::map<std::string,std::string>& i_rParame
 	// take a copy of the stored rest parameters so we can modify the copy
 	RESTParameters restParameters( m_ReadConfig.GetValue< Dpl::RestParameters >() );
 	builder.BuildRequest( uri, restParameters );
-	RESTClient().Execute( uri, o_rData, restParameters );
+
+	std::map<std::string, std::string>::const_iterator bodyParameter = i_rParameters.find( m_ReadConfig.GetValue< Dpl::BodyParameterName >() );
+
+	if (bodyParameter == i_rParameters.end())
+	{
+		RESTClient().Execute( uri, o_rData, restParameters );
+	}
+	else
+	{
+		std::istringstream body( bodyParameter->second );
+		RESTClient().Execute( uri, body, o_rData, restParameters );
+	}
 }
 
 void RestDataProxy::StoreImpl( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData )
@@ -516,7 +538,17 @@ void RestDataProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 	builder.BuildRequest( uri, restParameters );
 	std::large_ostringstream responseBody;
 
-	RESTClient().Execute( uri, i_rData, responseBody, restParameters );
+	std::map<std::string, std::string>::const_iterator bodyParameter = i_rParameters.find( m_WriteConfig.GetValue< Dpl::BodyParameterName >() );
+
+	if (bodyParameter == i_rParameters.end())
+	{
+		RESTClient().Execute( uri, i_rData, responseBody, restParameters );
+	}
+	else
+	{
+		std::istringstream body( bodyParameter->second );
+		RESTClient().Execute( uri, body, responseBody, restParameters );
+	}
 
 	if( responseBody.tellp() > 0L )
 	{
@@ -542,7 +574,17 @@ void RestDataProxy::DeleteImpl( const std::map<std::string,std::string>& i_rPara
 	builder.BuildRequest( uri, restParameters );
 	std::large_ostringstream responseBody;
 
-	RESTClient().Execute( uri, responseBody, restParameters );
+	std::map<std::string, std::string>::const_iterator bodyParameter = i_rParameters.find( m_DeleteConfig.GetValue< Dpl::BodyParameterName >() );
+
+	if (bodyParameter == i_rParameters.end())
+	{
+		RESTClient().Execute( uri, responseBody, restParameters );
+	}
+	else
+	{
+		std::istringstream body( bodyParameter->second );
+		RESTClient().Execute( uri, body, responseBody, restParameters );
+	}
 
 	if( responseBody.tellp() > 0L )
 	{
