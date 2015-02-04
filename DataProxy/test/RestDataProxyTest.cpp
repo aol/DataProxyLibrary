@@ -680,6 +680,41 @@ void RestDataProxyTest::testLoadBasic()
 	CPPUNIT_ASSERT_EQUAL( data, results.str() );
 }
 
+void RestDataProxyTest::testLoadWithBodyParameter()
+{
+	MockDataProxyClient client;
+	std::string data = "This data should also be returned\n";
+	std::string fileSpec( m_pTempDir->GetDirectoryName() + "/post_results.dat" );
+	std::ofstream file( fileSpec.c_str() );
+	file << data;
+	file.close();
+
+	std::string expectedPost("this is\nmulti-lined\ndata\n");
+	std::map< std::string, std::string > parameters;
+	parameters[ "ignoredParam" ] = "ignoredValue";
+	parameters[ "someParam" ] = expectedPost;
+
+	std::stringstream xmlContents;
+	std::vector<xercesc::DOMNode*> nodes;
+	boost::scoped_ptr<RestDataProxy> pProxy;
+	std::stringstream results;
+
+	xmlContents << "<DataNode location=\"" << m_pService->GetEndpoint() + m_pTempDir->GetDirectoryName() << "\" >"
+				<< "	<Read methodOverride=\"POST\" bodyParameter=\"someParam\" />"
+				<< "</DataNode>";
+
+	CPPUNIT_ASSERT_NO_THROW( ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes ) );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	CPPUNIT_ASSERT_NO_THROW( pProxy.reset( new RestDataProxy( "name", client, *nodes[0] ) ) );
+	CPPUNIT_ASSERT_NO_THROW( pProxy->Load( parameters, results ) );
+
+	VerifyServicePostRequest( *m_pService, m_pTempDir->GetDirectoryName(), "", expectedPost );
+
+	// SimpleMockRestService adds an additional newline to the response from posts.
+	CPPUNIT_ASSERT_EQUAL( data + "\n", results.str() );
+}
+
 void RestDataProxyTest::testLoadMethodOverride()
 {
 	MockDataProxyClient client;
@@ -1081,6 +1116,34 @@ void RestDataProxyTest::testStoreBasic()
 	VerifyServicePostRequest( *m_pService, path, "", data.str() );
 }
 
+void RestDataProxyTest::testStoreWithBodyParameter()
+{
+	MockDataProxyClient client;
+	std::stringstream data;
+	data << "This data should be posted";
+	std::stringstream notPosted;
+	notPosted <<  "This data should not be posted";
+	std::string path = "/some/path/to/nowhere";
+
+	std::map< std::string, std::string > parameters;
+	parameters[ "ignoredParam" ] = "ignoredValue";
+	parameters[ "dataParam" ] = data.str();
+
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode location=\"" << m_pService->GetEndpoint() + path << "\" >"
+				<< "\t<Write bodyParameter=\"dataParam\" />"
+				<< "</DataNode>";
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	RestDataProxy proxy( "name", client, *nodes[0] );
+	CPPUNIT_ASSERT( !proxy.SupportsTransactions() );
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, notPosted ) );
+
+	VerifyServicePostRequest( *m_pService, path, "", data.str() );
+}
+
 void RestDataProxyTest::testStoreMethodOverride()
 {
 	MockDataProxyClient client;
@@ -1196,6 +1259,31 @@ void RestDataProxyTest::testDeleteBasic()
 	
 	// a second delete should not throw
 	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+}
+
+void RestDataProxyTest::testDeleteWithBodyParameter()
+{
+	MockDataProxyClient client;
+	std::stringstream data;
+	data << "This data should be posted";
+	std::string path = "/some/path/to/nowhere";
+
+	std::map< std::string, std::string > parameters;
+	parameters[ "ignoredParam" ] = "ignoredValue";
+	parameters[ "dataParam" ] = data.str();
+
+	std::stringstream xmlContents;
+	xmlContents << "<DataNode location=\"" << m_pService->GetEndpoint() + path << "\" >"
+				<< "\t<Delete methodOverride=\"POST\" bodyParameter=\"dataParam\" />"
+				<< "</DataNode>";
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	RestDataProxy proxy( "name", client, *nodes[0] );
+
+	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
+
+	VerifyServicePostRequest( *m_pService, path, "", data.str() );
 }
 
 void RestDataProxyTest::testDeleteMethodOverride()

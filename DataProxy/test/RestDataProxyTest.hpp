@@ -41,14 +41,17 @@ private:
 	CPPUNIT_TEST( testLoadBasic );
 	CPPUNIT_TEST( testLoadMethodOverride );
 	CPPUNIT_TEST( testLoadComplex );
+	CPPUNIT_TEST( testLoadWithBodyParameter );
 	CPPUNIT_TEST( testStoreTimeout );
 	CPPUNIT_TEST( testStoreBasic );
 	CPPUNIT_TEST( testStoreMethodOverride );
+	CPPUNIT_TEST( testStoreWithBodyParameter );
 	CPPUNIT_TEST( testStoreComplex );
 	CPPUNIT_TEST( testDeleteTimeout );
 	CPPUNIT_TEST( testDeleteBasic );
 	CPPUNIT_TEST( testDeleteMethodOverride );
 	CPPUNIT_TEST( testDeleteComplex );
+	CPPUNIT_TEST( testDeleteWithBodyParameter );
 	CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -77,14 +80,17 @@ public:
 	void testLoadBasic();
 	void testLoadMethodOverride();
 	void testLoadComplex();
+	void testLoadWithBodyParameter();
 	void testStoreTimeout();
 	void testStoreBasic();
 	void testStoreMethodOverride();
 	void testStoreComplex();
+	void testStoreWithBodyParameter();
 	void testDeleteTimeout();
 	void testDeleteBasic();
 	void testDeleteMethodOverride();
 	void testDeleteComplex();
+	void testDeleteWithBodyParameter();
 
 private:
 	boost::scoped_ptr<TempDirectory> m_pTempDir;
