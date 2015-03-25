@@ -49,11 +49,11 @@ private:
 	class ScopedTempTable
 	{
 	public:
-		ScopedTempTable( Database& i_rDatabase, const std::string& i_rDatabaseType, const std::string& i_rTable, const std::string& i_rStagingTable );
+		ScopedTempTable( boost::shared_ptr<Database> i_pDatabase, const std::string& i_rDatabaseType, const std::string& i_rTable, const std::string& i_rStagingTable );
 		virtual ~ScopedTempTable();
 
 	private:
-		Database& m_rDatabase;
+		boost::shared_ptr<Database> m_pDatabase;
 		const std::string m_TempTableName;
 		const std::string m_DatabaseType;
 	};
