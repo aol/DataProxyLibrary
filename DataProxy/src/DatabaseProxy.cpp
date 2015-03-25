@@ -396,8 +396,8 @@ DatabaseProxy::PendingDropInserter::~PendingDropInserter()
 	m_rDropContainer.push_back( m_Table );
 }
 
-DatabaseProxy::ScopedTempTable::ScopedTempTable( Database& i_rDatabase, const std::string& i_rDatabaseType, const std::string& i_rTable, const std::string& i_rStagingTable )
-:	m_rDatabase( i_rDatabase ),
+DatabaseProxy::ScopedTempTable::ScopedTempTable( boost::shared_ptr<Database> i_pDatabase, const std::string& i_rDatabaseType, const std::string& i_rTable, const std::string& i_rStagingTable )
+:	m_pDatabase( i_pDatabase ),
 	m_TempTableName( i_rStagingTable ),
 	m_DatabaseType( i_rDatabaseType )
 {
@@ -412,7 +412,7 @@ DatabaseProxy::ScopedTempTable::ScopedTempTable( Database& i_rDatabase, const st
 		sql << "CREATE TABLE " << m_TempTableName << " AS ( SELECT * FROM " << i_rTable << " WHERE 1 = 0 )";
 	}
 	MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.CreatingStagingTable", "Creating staging table: " << m_TempTableName << " with statement: " << sql.str() );
-	Database::Statement( m_rDatabase, sql.str() ).Execute();
+	Database::Statement( *m_pDatabase, sql.str() ).Execute();
 }
 
 DatabaseProxy::ScopedTempTable::~ScopedTempTable()
@@ -428,7 +428,7 @@ DatabaseProxy::ScopedTempTable::~ScopedTempTable()
 		sql << "DROP TABLE " << m_TempTableName;
 	}
 	MVLOGGER( "root.lib.DataProxy.DatabaseProxy.Store.DroppingStagingTable", "Dropping staging table: " << m_TempTableName << " with statement: " << sql.str() );
-	Database::Statement( m_rDatabase, sql.str() ).Execute();
+	Database::Statement( *m_pDatabase, sql.str() ).Execute();
 }
 
 DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rParent, const xercesc::DOMNode& i_rNode, DatabaseConnectionManager& i_rDatabaseConnectionManager )
@@ -1088,13 +1088,13 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			if( m_WriteDynamicStagingTable )
 			{
 				stagingTable = GetDynamicStagingTable( stagingTable, m_WriteMaxTableNameLength );
-				pTempTable.reset( new ScopedTempTable( (databaseType == MYSQL_DB_TYPE) ? *pTransactionDatabase : *pDataDefinitionDatabase, databaseType, table, stagingTable ) );
+				pTempTable.reset( new ScopedTempTable( (databaseType == MYSQL_DB_TYPE) ? pTransactionDatabase : pDataDefinitionDatabase, databaseType, table, stagingTable ) );
 				pPendingInsert.reset( new PendingDropInserter( pTempTable, m_PendingDrops, m_PendingDropsMutex ) );
 			}
 			else if ( databaseType == MYSQL_DB_TYPE )
 			{
 				std::string temporaryStagingTable = GetDynamicStagingTable( stagingTable, m_WriteMaxTableNameLength );
-				pTempTable.reset( new ScopedTempTable( *pTransactionDatabase, databaseType, stagingTable, temporaryStagingTable ) );
+				pTempTable.reset( new ScopedTempTable( pTransactionDatabase, databaseType, stagingTable, temporaryStagingTable ) );
 				stagingTable = temporaryStagingTable;
 				pPendingInsert.reset( new PendingDropInserter( pTempTable, m_PendingDrops, m_PendingDropsMutex ) );
 			}
