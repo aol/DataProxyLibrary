@@ -11,9 +11,24 @@
 #include "MockDataProxyClient.hpp"
 #include <sstream>
 #include <boost/algorithm/string/replace.hpp>
+#include <stdio.h>
+#include <ctype.h>
 
 namespace
 {
+	bool ContainsNonPrintable( const std::string& i_rData )
+	{
+		std::string::const_iterator iter = i_rData.begin();
+		for( ; iter != i_rData.end(); ++iter )
+		{
+			if( !::isprint( *iter ) )
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
 	/* A version of this method has been moved to Utilities/MapUtilites.cpp
 	 * Future edits to DPL should reference that version of this method
 	  */
@@ -64,6 +79,7 @@ namespace
 
 MockDataProxyClient::MockDataProxyClient()
 :	DataProxyClient( true ),
+	storedNonPrintableData(),
 	m_Log(),
 	m_rLog( m_Log ),
 	m_ExceptionNameAndParameters(),
@@ -74,6 +90,7 @@ MockDataProxyClient::MockDataProxyClient()
 
 MockDataProxyClient::MockDataProxyClient( std::ostream& o_rLog )
 :	DataProxyClient( true ),
+	storedNonPrintableData(),
 	m_Log(),
 	m_rLog( o_rLog ),
 	m_ExceptionNameAndParameters(),
@@ -133,9 +150,20 @@ void MockDataProxyClient::Load( const std::string& i_rName, const std::map<std::
 
 void MockDataProxyClient::Store( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData ) const
 {
-	std::stringstream data;
-	data << i_rData.rdbuf();
-	m_rLog << "Store called with Name: " << i_rName << " Parameters: " << ToString( i_rParameters ) << " Data: " << data.str() << std::endl;
+	std::stringstream dataStream;
+	dataStream << i_rData.rdbuf();
+	std::string data = dataStream.str();
+	m_rLog << "Store called with Name: " << i_rName << " Parameters: " << ToString( i_rParameters ) << " Data: ";
+	if( ContainsNonPrintable( data ) )
+	{
+		m_rLog << "<" << data.size() << " bytes>";
+		storedNonPrintableData.push_back( data );
+	}
+	else
+	{
+		m_rLog << data;
+	}
+	m_rLog << std::endl;
 	std::map< std::string, std::map< std::string, std::string > >::const_iterator exceptionEntry = m_ExceptionNameAndParameters.find( i_rName );
 	if( exceptionEntry != m_ExceptionNameAndParameters.end() && AllSpecificParametersMatch( i_rParameters, exceptionEntry->second ) )
 	{
