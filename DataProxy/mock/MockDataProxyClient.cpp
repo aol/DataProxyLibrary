@@ -157,7 +157,7 @@ void MockDataProxyClient::Store( const std::string& i_rName, const std::map<std:
 	if( ContainsNonPrintable( data ) )
 	{
 		m_rLog << "<" << data.size() << " bytes>";
-		storedNonPrintableData.push_back( data );
+		this->storedNonPrintableData.push_back( data );
 	}
 	else
 	{
