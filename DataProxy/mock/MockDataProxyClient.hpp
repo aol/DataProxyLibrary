@@ -37,6 +37,8 @@ public:
 	void SetDataToReturn( const std::string& i_rName, const std::string& i_rData );
 	void SetDataToReturn( const std::string& i_rName, const std::map<std::string, std::string>& i_rParameters, const std::string& i_rData );
 
+	mutable std::vector< std::string > storedNonPrintableData;
+
 private:
 	mutable std::stringstream m_Log;
 	std::ostream& m_rLog;
