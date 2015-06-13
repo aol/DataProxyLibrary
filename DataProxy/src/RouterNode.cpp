@@ -103,7 +103,7 @@ void RouterNode::LoadImpl( const std::map<std::string,std::string>& i_rParameter
 		return;
 	}
 
-	m_rParent.Load( static_cast< const std::string& >( m_ReadRoute ), i_rParameters, o_rData );
+	m_rParent.LoadImpl( static_cast< const std::string& >( m_ReadRoute ), i_rParameters, o_rData );
 }
 
 void RouterNode::StoreImpl( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData )
@@ -139,7 +139,7 @@ void RouterNode::StoreImpl( const std::map<std::string,std::string>& i_rParamete
 		{
 			i_rData.clear();
 			i_rData.seekg( inputPos );
-			m_rParent.Store( destinationIter->GetValue< NodeName >(), i_rParameters, i_rData );
+			m_rParent.StoreImpl( destinationIter->GetValue< NodeName >(), i_rParameters, i_rData );
 			success = true;
 		}
 		catch( const std::exception& rException )
@@ -212,7 +212,7 @@ void RouterNode::DeleteImpl( const std::map<std::string,std::string>& i_rParamet
 		
 		try
 		{
-			m_rParent.Delete( destinationIter->GetValue< NodeName >(), i_rParameters );
+			m_rParent.DeleteImpl( destinationIter->GetValue< NodeName >(), i_rParameters );
 			success = true;
 		}
 		catch( const std::exception& rException )
@@ -361,7 +361,7 @@ void RouterNode::Ping( int i_Mode ) const
 		// if we have a read route (legal to have a dummy one), ping it
 		if( !m_ReadRoute.IsNull() )
 		{
-			m_rParent.Ping( m_ReadRoute, DPL::READ );
+			m_rParent.PingImpl( m_ReadRoute, DPL::READ );
 		}
 	}
 	if( i_Mode & DPL::WRITE )
@@ -376,7 +376,7 @@ void RouterNode::Ping( int i_Mode ) const
 		std::vector< RouteConfig >::const_iterator iter = m_WriteRoute.begin();
 		for( ; iter != m_WriteRoute.end(); ++iter )
 		{
-			m_rParent.Ping( iter->GetValue< NodeName >(), DPL::WRITE );
+			m_rParent.PingImpl( iter->GetValue< NodeName >(), DPL::WRITE );
 		}
 	}
 	if( i_Mode & DPL::DELETE )
@@ -391,7 +391,7 @@ void RouterNode::Ping( int i_Mode ) const
 		std::vector< RouteConfig >::const_iterator iter = m_DeleteRoute.begin();
 		for( ; iter != m_DeleteRoute.end(); ++iter )
 		{
-			m_rParent.Ping( iter->GetValue< NodeName >(), DPL::DELETE );
+			m_rParent.PingImpl( iter->GetValue< NodeName >(), DPL::DELETE );
 		}
 	}
 }
