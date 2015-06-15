@@ -10,6 +10,7 @@
 #include "DPLCommon.hpp"
 #include "PartitionNode.hpp"
 #include "PartitionNodeTest.hpp"
+#include "MockRequestForwarder.hpp"
 #include "MockDataProxyClient.hpp"
 #include "FileUtilities.hpp"
 #include "TempDirectory.hpp"
@@ -63,7 +64,7 @@ void PartitionNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( std::string("name"), client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( std::string("name"), boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: garbage in node: Read" );
 
 	xmlContents.str("");
@@ -73,7 +74,7 @@ void PartitionNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( std::string("name"), client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( std::string("name"), boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Incorrect number of ForwardTo child nodes specified in Write. There were 0 but there should be exactly 1" );
 
 	xmlContents.str("");
@@ -83,7 +84,7 @@ void PartitionNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( std::string("name"), client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( std::string("name"), boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Incorrect number of ForwardTo child nodes specified in Read. There were 0 but there should be exactly 1" );
 
 	xmlContents.str("");
@@ -100,7 +101,7 @@ void PartitionNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: garbage in node: ForwardTo" );
 
 	xmlContents.str("");
@@ -115,7 +116,7 @@ void PartitionNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid attribute: garbage in node: ForwardTo" );
 
 	xmlContents.str("");
@@ -124,7 +125,7 @@ void PartitionNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Incorrect number of Write child nodes specified in PartitionNode. There were 0 but there should be exactly 1" );
 
 	xmlContents.str("");
@@ -136,7 +137,7 @@ void PartitionNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: garbage in node: Write" );
 
 	xmlContents.str("");
@@ -150,7 +151,7 @@ void PartitionNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: garbage in node: ForwardTo" );
 
 	xmlContents.str("");
@@ -162,7 +163,7 @@ void PartitionNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid attribute: garbage in node: ForwardTo" );
 
 	xmlContents.str("");
@@ -174,7 +175,7 @@ void PartitionNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Unable to find attribute: 'sortTimeout' in node: Write" );
 
 	xmlContents.str("");
@@ -186,7 +187,7 @@ void PartitionNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( "name", client, *nodes[0] ), PartitionNodeException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), PartitionNodeException,
 		".*:\\d+: Write attribute: 'skipSort' has invalid value: 'garbage'. Valid values are 'true' and 'false'" );
 
 	xmlContents.str("");
@@ -201,7 +202,7 @@ void PartitionNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( std::string("name"), client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( std::string("name"), boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: garbage in node: Delete" );
 
 	// StreamTransformers configuration should be disallowed in Delete nodes
@@ -217,7 +218,7 @@ void PartitionNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( std::string("name"), client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( std::string("name"), boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: StreamTransformers in node: Delete" );
 
 	xmlContents.str("");
@@ -230,7 +231,7 @@ void PartitionNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( std::string("name"), client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( std::string("name"), boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Incorrect number of ForwardTo child nodes specified in Delete. There were 0 but there should be exactly 1" );
 
 	xmlContents.str("");
@@ -247,7 +248,7 @@ void PartitionNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: garbage in node: ForwardTo" );
 
 	xmlContents.str("");
@@ -262,7 +263,7 @@ void PartitionNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( PartitionNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid attribute: garbage in node: ForwardTo" );
 }
 
@@ -285,7 +286,7 @@ void PartitionNodeTest::testOperationAttributeParsing()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_NO_THROW( PartitionNode node( "name", client, *nodes[0] ) ); 
+	CPPUNIT_ASSERT_NO_THROW( PartitionNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) ); 
 }
 
 void PartitionNodeTest::testPing()
@@ -307,7 +308,7 @@ void PartitionNodeTest::testPing()
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-		PartitionNode node( std::string("name"), client, *nodes[0] ) ;
+		PartitionNode node( std::string("name"), boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) ;
 		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::READ ) );
 		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::WRITE ) );
 		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::READ | DPL::WRITE ) );
@@ -333,7 +334,7 @@ void PartitionNodeTest::testPing()
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-		PartitionNode node( std::string("name"), client, *nodes[0] ) ;
+		PartitionNode node( std::string("name"), boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) ;
 		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::WRITE ) );
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::READ ), PingException, ".*:\\d+: Not configured to be able to handle Read operations" );
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
@@ -358,7 +359,7 @@ void PartitionNodeTest::testPing()
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "PartitionNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-		PartitionNode node( std::string("name"), client, *nodes[0] ) ;
+		PartitionNode node( std::string("name"), boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) ;
 		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::DELETE ) );
 		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::WRITE ) );
 		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::DELETE | DPL::WRITE ) );
@@ -391,7 +392,7 @@ void PartitionNodeTest::testLoad()
 
 	MockDataProxyClient client;
 
-	PartitionNode node( "name", client, *nodes[0] );
+	PartitionNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::stringstream results;
 	std::map<std::string,std::string> parameters;
@@ -419,7 +420,7 @@ void PartitionNodeTest::testLoadNotSupported()
 
 	MockDataProxyClient client;
 
-	PartitionNode node( "name", client, *nodes[0] );
+	PartitionNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::stringstream results;
 	std::map<std::string,std::string> parameters;
@@ -444,7 +445,7 @@ void PartitionNodeTest::testStore()
 
 	MockDataProxyClient client;
 
-	PartitionNode node( "name", client, *nodes[0] );
+	PartitionNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::stringstream data;
 	data << "media_id,campaign_id" << std::endl
@@ -513,7 +514,7 @@ void PartitionNodeTest::testStoreSkipSort()
 
 	MockDataProxyClient client;
 
-	PartitionNode node( "name", client, *nodes[0] );
+	PartitionNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::stringstream data;
 	data << "media_id,campaign_id" << std::endl
@@ -585,7 +586,7 @@ void PartitionNodeTest::testStoreNoData()
 
 	MockDataProxyClient client;
 
-	PartitionNode node( "name", client, *nodes[0] );
+	PartitionNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::stringstream data;
 	data << "media_id,campaign_id" << std::endl;
@@ -610,7 +611,7 @@ void PartitionNodeTest::testStoreNoData()
 
 	data.clear();
 	data.seekg(0);
-	PartitionNode node2( "name", client, *nodes[0] );
+	PartitionNode node2( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 	CPPUNIT_ASSERT_NO_THROW( node2.StoreImpl( parameters, data ) );
 	CPPUNIT_ASSERT_EQUAL( expected.str(), client.GetLog() );
 }
@@ -629,7 +630,7 @@ void PartitionNodeTest::testStoreExceptions()
 
 	MockDataProxyClient client;
 
-	PartitionNode node( "name", client, *nodes[0] );
+	PartitionNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	// case 1: no stream whatsoever
 	std::stringstream data;
@@ -665,7 +666,7 @@ void PartitionNodeTest::testDelete()
 
 	MockDataProxyClient client;
 
-	PartitionNode node( "name", client, *nodes[0] );
+	PartitionNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::map<std::string,std::string> parameters;
 	parameters["param1"] = "value1";
@@ -692,7 +693,7 @@ void PartitionNodeTest::testDeleteNotSupported()
 
 	MockDataProxyClient client;
 
-	PartitionNode node( "name", client, *nodes[0] );
+	PartitionNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::map<std::string,std::string> parameters;
 	parameters["param1"] = "value1";

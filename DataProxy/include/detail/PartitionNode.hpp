@@ -21,7 +21,7 @@ class PartitionNode : public AbstractNode
 {
 public:
 	PartitionNode( const std::string& i_rName,
-				   DataProxyClient& i_rParent,
+				   boost::shared_ptr< RequestForwarder > i_pRequestForwarder,
 				   const xercesc::DOMNode& i_rNode );
 	virtual ~PartitionNode();
 	
@@ -42,8 +42,6 @@ public:
 	virtual void InsertImplDeleteForwards( std::set< std::string >& o_rForwards ) const;
 
 private:
-	std::string m_Name;
-	DataProxyClient& m_rParent;
 	Nullable< std::string > m_ReadRoute;
 	std::string m_WriteRoute;
 	Nullable< std::string > m_DeleteRoute;

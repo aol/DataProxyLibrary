@@ -421,8 +421,8 @@ namespace
 	}
 }
 
-RestDataProxy::RestDataProxy( const std::string& i_rName, DataProxyClient& i_rParent, const xercesc::DOMNode& i_rNode )
-:	AbstractNode( i_rName, i_rParent, i_rNode ),
+RestDataProxy::RestDataProxy( const std::string& i_rName, boost::shared_ptr< RequestForwarder > i_pRequestForwarder, const xercesc::DOMNode& i_rNode )
+:	AbstractNode( i_rName, i_pRequestForwarder, i_rNode ),
 	m_Location( XMLUtilities::GetAttributeValue( &i_rNode, LOCATION_ATTRIBUTE ) ),
 	m_Host( ExtractHost( m_Location ) ),
 	m_ReadConfig(),

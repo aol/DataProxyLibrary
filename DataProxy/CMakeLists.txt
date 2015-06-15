@@ -92,6 +92,7 @@ SET( DataProxy_Src
 	src/PartitionNode.cpp
 	src/PropertyDomain.cpp
 	src/ProxyUtilities.cpp
+	src/RequestForwarder.cpp
 	src/RestDataProxy.cpp
 	src/RestRequestBuilder.cpp
 	src/RouterNode.cpp
@@ -370,6 +371,7 @@ IF( BUILD_TESTS )
 		mock/MockDatabaseConnectionManager.cpp
 		mock/MockNode.cpp
 		mock/MockNodeFactory.cpp
+		mock/MockRequestForwarder.cpp
 		mock/MockTransformFunctionDomain.cpp
 		mock/MockTransformFunctions.cpp
 		mock/TestableDataProxyClient.cpp

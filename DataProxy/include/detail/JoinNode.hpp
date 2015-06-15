@@ -21,7 +21,7 @@ class JoinNode : public AbstractNode
 {
 public:
 	JoinNode( const std::string& i_rName,
-				DataProxyClient& i_rParent,
+				boost::shared_ptr< RequestForwarder > i_pRequestForwarder,
 				const xercesc::DOMNode& i_rNode );
 	virtual ~JoinNode();
 	
@@ -95,9 +95,6 @@ private:
 							  const std::string& i_rWorkingDir, 
 							  int i_Timeout,
 							  const std::string& i_rPrimaryStreamDescription );
-
-	std::string m_Name;
-	DataProxyClient& m_rParent;
 
 	// read members
 	bool m_ReadEnabled;

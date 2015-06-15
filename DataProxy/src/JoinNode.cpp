@@ -18,6 +18,7 @@
 #include "FileUtilities.hpp"
 #include "ShellExecutor.hpp"
 #include "UniqueIdGenerator.hpp"
+#include "RequestForwarder.hpp"
 #include "LargeStringStream.hpp"
 #include <boost/lexical_cast.hpp>
 #include <boost/iostreams/copy.hpp>
@@ -222,11 +223,9 @@ namespace
 }
 
 JoinNode::JoinNode(	const std::string& i_rName,
-					DataProxyClient& i_rParent,
+					boost::shared_ptr< RequestForwarder > i_pRequestForwarder,
 					const xercesc::DOMNode& i_rNode )
-:	AbstractNode( i_rName, i_rParent, i_rNode ),
-	m_Name( i_rName ),
-	m_rParent( i_rParent ),
+:	AbstractNode( i_rName, i_pRequestForwarder, i_rNode ),
 	m_ReadEnabled( false ),
 	m_ReadEndpoint(),
 	m_ReadKey(),
@@ -316,7 +315,7 @@ void JoinNode::LoadImpl( const std::map<std::string,std::string>& i_rParameters,
 	}
 	if( m_ReadJoins.empty() )
 	{
-		m_rParent.Load( m_ReadEndpoint, i_rParameters, o_rData );
+		m_pRequestForwarder->Load( m_ReadEndpoint, i_rParameters, o_rData );
 		return;
 	}
 
@@ -324,19 +323,19 @@ void JoinNode::LoadImpl( const std::map<std::string,std::string>& i_rParameters,
 	if( m_ReadBehavior == COLUMN_JOIN )
 	{
 		std::large_stringstream tempStream;
-		m_rParent.Load( m_ReadEndpoint, i_rParameters, tempStream );
+		m_pRequestForwarder->Load( m_ReadEndpoint, i_rParameters, tempStream );
 		tempStream.flush();
 		WriteHorizontalJoin( tempStream, o_rData, m_ReadKey, m_ReadColumns, i_rParameters, m_ReadJoins, m_ReadWorkingDir, m_ReadTimeout, m_ReadEndpoint );
 	}
 	else if( m_ReadBehavior == APPEND )
 	{
-		m_rParent.Load( m_ReadEndpoint, i_rParameters, o_rData );
+		m_pRequestForwarder->Load( m_ReadEndpoint, i_rParameters, o_rData );
 		std::vector< StreamConfig >::const_iterator iter = m_ReadJoins.begin();
 		for( ; iter != m_ReadJoins.end(); ++iter )
 		{
 			std::large_stringstream tempStream;
 			std::string tempLine;
-			m_rParent.Load( iter->GetValue< NodeName >(), i_rParameters, tempStream );
+			m_pRequestForwarder->Load( iter->GetValue< NodeName >(), i_rParameters, tempStream );
 			tempStream.flush();
 			for( int i=0; i<iter->GetValue< SkipLines >(); ++i )
 			{
@@ -359,14 +358,14 @@ void JoinNode::StoreImpl( const std::map<std::string,std::string>& i_rParameters
 	}
 	if( m_WriteJoins.empty() )
 	{
-		m_rParent.Store( m_WriteEndpoint, i_rParameters, i_rData );
+		m_pRequestForwarder->Store( m_WriteEndpoint, i_rParameters, i_rData );
 	}
 	else if( m_WriteBehavior == COLUMN_JOIN )
 	{
 		std::large_stringstream input;
 		WriteHorizontalJoin( i_rData, input, m_WriteKey, m_WriteColumns, i_rParameters, m_WriteJoins, m_WriteWorkingDir, m_WriteTimeout, "Input" );
 		input.flush();
-		m_rParent.Store( m_WriteEndpoint, i_rParameters, input );
+		m_pRequestForwarder->Store( m_WriteEndpoint, i_rParameters, input );
 	}
 	else if( m_WriteBehavior == APPEND )
 	{
@@ -378,7 +377,7 @@ void JoinNode::StoreImpl( const std::map<std::string,std::string>& i_rParameters
 		for( ; iter != m_WriteJoins.end(); ++iter )
 		{
 			std::string tempLine;
-			m_rParent.Load( iter->GetValue< NodeName >(), i_rParameters, tempStream );
+			m_pRequestForwarder->Load( iter->GetValue< NodeName >(), i_rParameters, tempStream );
 			tempStream.flush();
 			for( int i=0; i<iter->GetValue< SkipLines >(); ++i )
 			{
@@ -387,7 +386,7 @@ void JoinNode::StoreImpl( const std::map<std::string,std::string>& i_rParameters
 			boost::iostreams::copy( tempStream, input );
 			input.flush();
 		}
-		m_rParent.Store( m_WriteEndpoint, i_rParameters, input );
+		m_pRequestForwarder->Store( m_WriteEndpoint, i_rParameters, input );
 	}
 	else
 	{
@@ -401,7 +400,7 @@ void JoinNode::DeleteImpl( const std::map<std::string,std::string>& i_rParameter
 	{
 		MV_THROW( JoinNodeException, "JoinNode: " << m_Name << " does not support delete operations" );
 	}
-	m_rParent.Delete( m_DeleteEndpoint, i_rParameters );
+	m_pRequestForwarder->Delete( m_DeleteEndpoint, i_rParameters );
 }
 
 bool JoinNode::SupportsTransactions() const
@@ -679,7 +678,7 @@ void JoinNode::WriteHorizontalJoin( std::istream& i_rInput,
 		}
 
 		// load the next stream & extract the header
-		m_rParent.Load( iter->GetValue< NodeName >(), i_rParameters, *pCurrentStream );
+		m_pRequestForwarder->Load( iter->GetValue< NodeName >(), i_rParameters, *pCurrentStream );
 		pCurrentStream->flush();
 		if( !getline( *pCurrentStream, headerLine ) )
 		{
@@ -800,13 +799,13 @@ void JoinNode::Ping( int i_Mode ) const
 		}
 
 		// ping the primary endpoint
-		m_rParent.Ping( m_ReadEndpoint, DPL::READ );
+		m_pRequestForwarder->Ping( m_ReadEndpoint, DPL::READ );
 
 		// and all subsequent joins (if any)
 		std::vector< StreamConfig >::const_iterator iter = m_ReadJoins.begin();
 		for( ; iter != m_ReadJoins.end(); ++iter )
 		{
-			m_rParent.Ping( iter->GetValue< NodeName >(), DPL::READ );
+			m_pRequestForwarder->Ping( iter->GetValue< NodeName >(), DPL::READ );
 		}
 	}
 	if( i_Mode & DPL::WRITE )
@@ -818,13 +817,13 @@ void JoinNode::Ping( int i_Mode ) const
 		}
 
 		// ping the primary endpoint
-		m_rParent.Ping( m_WriteEndpoint, DPL::WRITE );
+		m_pRequestForwarder->Ping( m_WriteEndpoint, DPL::WRITE );
 
 		// and all subsequent joins (if any)
 		std::vector< StreamConfig >::const_iterator iter = m_WriteJoins.begin();
 		for( ; iter != m_WriteJoins.end(); ++iter )
 		{
-			m_rParent.Ping( iter->GetValue< NodeName >(), DPL::WRITE );
+			m_pRequestForwarder->Ping( iter->GetValue< NodeName >(), DPL::WRITE );
 		}
 	}
 	if( i_Mode & DPL::DELETE )
@@ -836,6 +835,6 @@ void JoinNode::Ping( int i_Mode ) const
 		}
 
 		// ping the primary endpoint
-		m_rParent.Ping( m_DeleteEndpoint, DPL::DELETE );
+		m_pRequestForwarder->Ping( m_DeleteEndpoint, DPL::DELETE );
 	}
 }

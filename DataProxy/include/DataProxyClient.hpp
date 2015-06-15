@@ -59,7 +59,7 @@ protected:
 #endif
 
 private:
-	friend class RouterNode;
+	friend class RequestForwarder;
 	void PingImpl( const std::string& i_rName, int i_Mode ) const;
 	void LoadImpl( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData ) const;
 	void StoreImpl( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData ) const;
