@@ -357,6 +357,7 @@ IF( BUILD_TESTS )
 		test/PropertyDomainTest.cpp
 		test/ProxyTestHelpers.cpp
 		test/ProxyUtilitiesTest.cpp
+		test/RequestForwarderTest.cpp
 		test/RestDataProxyTest.cpp
 		test/RestRequestBuilderTest.cpp
 		test/RouterNodeTest.cpp
