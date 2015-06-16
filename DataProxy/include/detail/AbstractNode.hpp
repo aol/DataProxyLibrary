@@ -25,6 +25,7 @@
 class DataProxyClient;
 class ParameterTranslator;
 class TransformerManager;
+class RequestForwarder;
 
 MV_MAKEEXCEPTIONCLASS( NodeConfigException, MVException );
 MV_MAKEEXCEPTIONCLASS( ParameterValidationException, MVException );
@@ -33,7 +34,7 @@ MV_MAKEEXCEPTIONCLASS( PingException, MVException );
 class AbstractNode : public boost::noncopyable
 {
 public:
-	AbstractNode( const std::string& i_rName, DataProxyClient& i_rParent, const xercesc::DOMNode& i_rNode );
+	AbstractNode( const std::string& i_rName, boost::shared_ptr< RequestForwarder > i_pRequestForwarder, const xercesc::DOMNode& i_rNode );
 	virtual ~AbstractNode();
 
 	// top-level loading & storing. handles all common operations like
@@ -114,9 +115,9 @@ private:
 	
 	protected:
 	std::string m_Name;
+	boost::shared_ptr< RequestForwarder > m_pRequestForwarder;
 	
 	private:
-	DataProxyClient& m_rParent;
 	NodeConfigDatum m_ReadConfig;
 	NodeConfigDatum m_WriteConfig;
 	NodeConfigDatum m_DeleteConfig;

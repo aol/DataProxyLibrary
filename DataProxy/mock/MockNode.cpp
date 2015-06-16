@@ -12,6 +12,8 @@
 #include "DataProxyClient.hpp"
 #include "ProxyUtilities.hpp"
 #include "MockDataProxyClient.hpp"
+#include "MockRequestForwarder.hpp"
+#include <boost/make_shared.hpp>
 
 namespace
 {
@@ -35,7 +37,7 @@ MockNode::MockNode( std::ostream& i_rLog,
 					const std::set< std::string >& i_rWriteForwards,
 					const std::set< std::string >& i_rDeleteForwards,
 					const xercesc::DOMNode& i_rNode )
-:	AbstractNode( i_rName, DEFAULT_DPL_CLIENT, i_rNode ),
+:	AbstractNode( i_rName, boost::make_shared< MockRequestForwarder >( DEFAULT_DPL_CLIENT ), i_rNode ),
 	m_rLog( i_rLog ),
 	m_Name( i_rName ),
 	m_SupportsTransactions( i_SupportsTransactions ),

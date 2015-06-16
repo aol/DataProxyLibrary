@@ -27,7 +27,7 @@ class UniqueIdGenerator;
 class LocalFileProxy : public AbstractNode
 {
 public:
-	LocalFileProxy( const std::string& i_rName, DataProxyClient& i_rParent, const xercesc::DOMNode& i_rNode, UniqueIdGenerator& i_rUniqueIdGenerator );
+	LocalFileProxy( const std::string& i_rName, boost::shared_ptr< RequestForwarder > i_pRequestForwarder, const xercesc::DOMNode& i_rNode, UniqueIdGenerator& i_rUniqueIdGenerator );
 	virtual ~LocalFileProxy();
 	
 	virtual void LoadImpl( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData );

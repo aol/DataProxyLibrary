@@ -24,10 +24,8 @@ namespace
 	const std::string TIMEOUT_ATTRIBUTE( "timeout" );
 }
 
-ExecutionProxy::ExecutionProxy( const std::string& i_rName, DataProxyClient& i_rParent, const xercesc::DOMNode& i_rNode )
-:	AbstractNode( i_rName, i_rParent, i_rNode ),
-	m_Name( i_rName ),
-	m_rParent( i_rParent ),
+ExecutionProxy::ExecutionProxy( const std::string& i_rName, boost::shared_ptr< RequestForwarder > i_pRequestForwarder, const xercesc::DOMNode& i_rNode )
+:	AbstractNode( i_rName, i_pRequestForwarder, i_rNode ),
 	m_ReadCommand(),
 	m_ReadTimeout(),
 	m_WriteCommand(),

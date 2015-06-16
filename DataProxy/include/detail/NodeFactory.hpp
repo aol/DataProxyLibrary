@@ -14,10 +14,12 @@
 #include "INodeFactory.hpp"
 #include "MVException.hpp"
 #include "UniqueIdGenerator.hpp"
+#include <boost/shared_ptr.hpp>
 
 MV_MAKEEXCEPTIONCLASS( NodeFactoryException, MVException );
 
 class DataProxyClient;
+class RequestForwarder;
 
 class NodeFactory : public INodeFactory
 {
@@ -31,7 +33,7 @@ public:
 private:
 	UniqueIdGenerator m_UniqueIdGenerator;
 	DatabaseConnectionManager *m_pDatabaseConnectionManager;
-	DataProxyClient& m_rParent;
+	boost::shared_ptr< RequestForwarder > m_pRequestForwarder;
 };
 
 #endif //_NODE_FACTORY_HPP_

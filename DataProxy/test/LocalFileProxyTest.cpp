@@ -13,6 +13,7 @@
 #include "TempDirectory.hpp"
 #include "ProxyUtilities.hpp"
 #include "ProxyTestHelpers.hpp"
+#include "MockRequestForwarder.hpp"
 #include "MockDataProxyClient.hpp"
 #include "MockUniqueIdGenerator.hpp"
 #include "AssertThrowWithMessage.hpp"
@@ -69,7 +70,7 @@ void LocalFileProxyTest::testNoLocation()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Unable to find attribute: 'location' in node: DataNode" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Unable to find attribute: 'location' in node: DataNode" );
 }
 
 void LocalFileProxyTest::testBadBaseLocation()
@@ -81,7 +82,7 @@ void LocalFileProxyTest::testBadBaseLocation()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator ), InvalidDirectoryException, ".*/FileUtilities\\.cpp:\\d+: /nonexistent1234 does not exist or is not a valid directory\\." );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator ), InvalidDirectoryException, ".*/FileUtilities\\.cpp:\\d+: /nonexistent1234 does not exist or is not a valid directory\\." );
 }
 
 void LocalFileProxyTest::testGarbageChildren()
@@ -96,7 +97,7 @@ void LocalFileProxyTest::testGarbageChildren()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: DataNode" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: DataNode" );
 
 	xmlContents.str("");
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl;
@@ -106,7 +107,7 @@ void LocalFileProxyTest::testGarbageChildren()
 	xmlContents << "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: Read" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: Read" );
 
 	xmlContents.str("");
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl;
@@ -116,7 +117,7 @@ void LocalFileProxyTest::testGarbageChildren()
 	xmlContents << "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: Write" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: Write" );
 
 	xmlContents.str("");
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl;
@@ -126,7 +127,7 @@ void LocalFileProxyTest::testGarbageChildren()
 	xmlContents << "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: Delete" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: Delete" );
 
 	xmlContents.str("");
 	xmlContents << "<DataNode location=\"" << m_pTempDir->GetDirectoryName() << "\" >" << std::endl;
@@ -136,7 +137,7 @@ void LocalFileProxyTest::testGarbageChildren()
 	xmlContents << "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Found invalid child: StreamTransformers in node: Delete" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Found invalid child: StreamTransformers in node: Delete" );
 }
 
 void LocalFileProxyTest::testOperationAttributeParsing()
@@ -153,7 +154,7 @@ void LocalFileProxyTest::testOperationAttributeParsing()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_NO_THROW( LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator ) ); 
+	CPPUNIT_ASSERT_NO_THROW( LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator ) ); 
 }
 
 void LocalFileProxyTest::testPing()
@@ -166,7 +167,7 @@ void LocalFileProxyTest::testPing()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	// case: read enabled
 	{
@@ -215,7 +216,7 @@ void LocalFileProxyTest::testPing()
 		std::vector<xercesc::DOMNode*> nodes;
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-		LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+		LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 		// first, with all permissions, all operations are OK
 		::system( ( std::string( "chmod +r " ) + m_pTempDir->GetDirectoryName() ).c_str() );
@@ -237,7 +238,7 @@ void LocalFileProxyTest::testLoadNonexistent()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -257,7 +258,7 @@ void LocalFileProxyTest::testLoadUnreadable()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -289,7 +290,7 @@ void LocalFileProxyTest::testLoad()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -326,7 +327,7 @@ void LocalFileProxyTest::testLoadEmpty()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -352,7 +353,7 @@ void LocalFileProxyTest::testLoadNameFormat()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -399,7 +400,7 @@ void LocalFileProxyTest::testLoadNameFormatAll()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -433,7 +434,7 @@ void LocalFileProxyTest::testLoadNoParameters()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 
@@ -463,7 +464,7 @@ void LocalFileProxyTest::testLoadFailIfOlderThan()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -502,7 +503,7 @@ void LocalFileProxyTest::testStoreUnwritable()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -534,7 +535,7 @@ void LocalFileProxyTest::testStore()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 	CPPUNIT_ASSERT( proxy.SupportsTransactions() );
 
 	std::map< std::string, std::string > parameters;
@@ -572,7 +573,7 @@ void LocalFileProxyTest::testStoreNameFormat()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -614,7 +615,7 @@ void LocalFileProxyTest::testStoreNameFormatAll()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -645,7 +646,7 @@ void LocalFileProxyTest::testStoreFileExistsBehavior()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -676,7 +677,7 @@ void LocalFileProxyTest::testStoreFileExistsBehavior()
 				<< "</DataNode>";
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy2( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy2( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::stringstream appendedData;
 	appendedData << "this data will be appended to previously stored data" << std::endl;
@@ -694,7 +695,7 @@ void LocalFileProxyTest::testStoreFileExistsBehavior()
 				<< "</DataNode>";
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy2a( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy2a( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::stringstream appendedData2;
 	appendedData2 << "line1\nline2\nline3\nline4";
@@ -715,7 +716,7 @@ void LocalFileProxyTest::testStoreNoParameters()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 
@@ -750,7 +751,7 @@ void LocalFileProxyTest::testRoundTrip()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -788,7 +789,7 @@ void LocalFileProxyTest::testStoreCommitOverwrite()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -841,7 +842,7 @@ void LocalFileProxyTest::testStoreCommitAppend()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -896,7 +897,7 @@ void LocalFileProxyTest::testStoreCommitAppendSkipLines()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -955,7 +956,7 @@ void LocalFileProxyTest::testStoreRollbackOverwrite()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -1008,7 +1009,7 @@ void LocalFileProxyTest::testStoreRollbackAppend()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -1061,7 +1062,7 @@ void LocalFileProxyTest::testDeleteUnremovable()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -1102,7 +1103,7 @@ void LocalFileProxyTest::testDelete()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 	CPPUNIT_ASSERT( proxy.SupportsTransactions() );
 
 	std::map< std::string, std::string > parameters;
@@ -1129,7 +1130,7 @@ void LocalFileProxyTest::testDeleteNameFormat()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -1166,7 +1167,7 @@ void LocalFileProxyTest::testDeleteNameFormatAll()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -1194,7 +1195,7 @@ void LocalFileProxyTest::testDeleteNoParameters()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 
@@ -1216,7 +1217,7 @@ void LocalFileProxyTest::testDeleteNonexistent()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "my_subdir";
@@ -1271,7 +1272,7 @@ void LocalFileProxyTest::testDeleteStoreCommit()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 	boost::scoped_ptr< LocalFileProxy > pProxy;
-	pProxy.reset( new LocalFileProxy( "name", client, *nodes[0], uniqueIdGenerator ) );
+	pProxy.reset( new LocalFileProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator ) );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -1310,7 +1311,7 @@ void LocalFileProxyTest::testDeleteStoreCommit()
 				<< "</DataNode>";
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	pProxy.reset( new LocalFileProxy( "name", client, *nodes[0], uniqueIdGenerator ) );
+	pProxy.reset( new LocalFileProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator ) );
 
 	// Check that delete leaves the file untouched until committed.
 	CPPUNIT_ASSERT_NO_THROW( pProxy->Delete( parameters ) );
@@ -1342,7 +1343,7 @@ void LocalFileProxyTest::testAppendStoreDeleteStore()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 	
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -1436,7 +1437,7 @@ void LocalFileProxyTest::testOverwriteStoreDeleteStore()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 	
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -1529,7 +1530,7 @@ void LocalFileProxyTest::testDeleteRollback()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";
@@ -1582,7 +1583,7 @@ void LocalFileProxyTest::testStoreEmpties()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	LocalFileProxy proxy( "name", client, *nodes[0], uniqueIdGenerator );
+	LocalFileProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], uniqueIdGenerator );
 
 	std::map< std::string, std::string > parameters;
 	parameters["key1"] = "value1";

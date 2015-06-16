@@ -10,6 +10,7 @@
 #include "DPLCommon.hpp"
 #include "RouterNode.hpp"
 #include "RouterNodeTest.hpp"
+#include "MockRequestForwarder.hpp"
 #include "MockDataProxyClient.hpp"
 #include "FileUtilities.hpp"
 #include "TempDirectory.hpp"
@@ -61,7 +62,7 @@ void RouterNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: garbage in node: Read" );
 
 	xmlContents.str("");
@@ -75,7 +76,7 @@ void RouterNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: garbage in node: ForwardTo" );
 
 	xmlContents.str("");
@@ -87,7 +88,7 @@ void RouterNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid attribute: garbage in node: ForwardTo" );
 
 	// Store config
@@ -100,7 +101,7 @@ void RouterNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: garbage in node: Write" );
 
 	xmlContents.str("");
@@ -114,7 +115,7 @@ void RouterNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: garbage in node: ForwardTo" );
 
 	xmlContents.str("");
@@ -126,7 +127,7 @@ void RouterNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid attribute: garbage in node: ForwardTo" );
 
 	// Delete config
@@ -139,7 +140,7 @@ void RouterNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: garbage in node: Delete" );
 	
 	// StreamTransformers configuration should be disallowed in Delete nodes
@@ -152,7 +153,7 @@ void RouterNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: StreamTransformers in node: Delete" );
 
 	xmlContents.str("");
@@ -166,7 +167,7 @@ void RouterNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: garbage in node: ForwardTo" );
 
 	xmlContents.str("");
@@ -178,7 +179,7 @@ void RouterNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RouterNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid attribute: garbage in node: ForwardTo" );
 }
 
@@ -195,7 +196,7 @@ void RouterNodeTest::testOperationAttributeParsing()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_NO_THROW( RouterNode node( "name", client, *nodes[0] ) ); 
+	CPPUNIT_ASSERT_NO_THROW( RouterNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) ); 
 }
 
 void RouterNodeTest::testPing()
@@ -214,7 +215,7 @@ void RouterNodeTest::testPing()
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-		RouterNode node( std::string("name"), client, *nodes[0] ) ;
+		RouterNode node( std::string("name"), boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) ;
 		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::READ ) );
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::WRITE ), PingException, ".*:\\d+: Not configured to be able to handle Write operations" );
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
@@ -238,7 +239,7 @@ void RouterNodeTest::testPing()
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-		RouterNode node( std::string("name"), client, *nodes[0] ) ;
+		RouterNode node( std::string("name"), boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) ;
 		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::WRITE ) );
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::READ ), PingException, ".*:\\d+: Not configured to be able to handle Read operations" );
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
@@ -264,7 +265,7 @@ void RouterNodeTest::testPing()
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-		RouterNode node( std::string("name"), client, *nodes[0] ) ;
+		RouterNode node( std::string("name"), boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) ;
 		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::DELETE ) );
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::READ ), PingException, ".*:\\d+: Not configured to be able to handle Read operations" );
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::WRITE ), PingException, ".*:\\d+: Not configured to be able to handle Write operations" );
@@ -293,7 +294,7 @@ void RouterNodeTest::testPing()
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "RouterNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-		RouterNode node( std::string("name"), client, *nodes[0] ) ;
+		RouterNode node( std::string("name"), boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) ;
 		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::READ ) );
 		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::WRITE ) );
 		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::READ | DPL::WRITE ) );
@@ -338,7 +339,7 @@ void RouterNodeTest::testLoad()
 
 	MockDataProxyClient client;
 
-	RouterNode node( "name", client, *nodes[0] );
+	RouterNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::stringstream results;
 	std::map<std::string,std::string> parameters;
@@ -363,7 +364,7 @@ void RouterNodeTest::testLoadNotSupported()
 
 	MockDataProxyClient client;
 
-	RouterNode node( "name", client, *nodes[0] );
+	RouterNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::stringstream results;
 	std::map<std::string,std::string> parameters;
@@ -387,7 +388,7 @@ void RouterNodeTest::testLoadEmpty()
 
 	MockDataProxyClient client;
 
-	RouterNode node( "name", client, *nodes[0] );
+	RouterNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::string previousData( "this is some data already in results" );
 	std::stringstream results( previousData );
@@ -416,7 +417,7 @@ void RouterNodeTest::testStore()
 
 	MockDataProxyClient client;
 
-	RouterNode node( "name", client, *nodes[0] );
+	RouterNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::stringstream data;
 	data << "data to store";
@@ -445,7 +446,7 @@ void RouterNodeTest::testStoreNotSupported()
 
 	MockDataProxyClient client;
 
-	RouterNode node( "name", client, *nodes[0] );
+	RouterNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::stringstream data;
 	data << "data to store";
@@ -473,7 +474,7 @@ void RouterNodeTest::testStoreNowhere()
 
 	MockDataProxyClient client;
 
-	RouterNode node( "name", client, *nodes[0] );
+	RouterNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::stringstream data;
 	data << "data to store";
@@ -511,7 +512,7 @@ void RouterNodeTest::testStoreExceptions()
 	MockDataProxyClient client;
 	client.SetExceptionForName( "name2" );
 
-	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
+	pNode.reset( new RouterNode( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) );
 
 	std::stringstream data;
 	data << "data to store";
@@ -548,7 +549,7 @@ void RouterNodeTest::testStoreExceptions()
 
 	client.SetExceptionForName( "name1", std::map<std::string, std::string>() );
 
-	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
+	pNode.reset( new RouterNode( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) );
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pNode->StoreImpl( parameters, data ), MVException,
 		".*:\\d+: Set to throw an exception for name: name1" );
@@ -580,7 +581,7 @@ void RouterNodeTest::testStoreExceptions()
 	client.SetExceptionForName( "name3" );
 	client.SetExceptionForName( "name4", std::map<std::string, std::string>() );
 
-	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
+	pNode.reset( new RouterNode( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) );
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pNode->StoreImpl( parameters, data ), RouterNodeException,
 		".*:\\d+: Unable to successfully store to any of the destination store nodes for RouterNode: name" );
@@ -615,7 +616,7 @@ void RouterNodeTest::testStoreExceptions()
 
 	client.SetExceptionForName( "name1" );
 
-	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
+	pNode.reset( new RouterNode( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) );
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pNode->StoreImpl( parameters, data ), RouterNodeException,
 		".*:\\d+: One or more store exceptions were caught on critical destinations for RouterNode: name1" );
@@ -648,7 +649,7 @@ void RouterNodeTest::testStoreExceptions()
 
 	client.SetExceptionForName( "name1", std::map<std::string, std::string>() );
 
-	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
+	pNode.reset( new RouterNode( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) );
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pNode->StoreImpl( parameters, data ), RouterNodeException,
 		".*:\\d+: One or more store exceptions were caught on critical destinations for RouterNode: name1" );
@@ -681,7 +682,7 @@ void RouterNodeTest::testStoreExceptions()
 	client.SetExceptionForName( "name1" );
 	client.SetExceptionForName( "name2", std::map<std::string, std::string>() );
 
-	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
+	pNode.reset( new RouterNode( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) );
 
 	CPPUNIT_ASSERT_NO_THROW( pNode->StoreImpl( parameters, data ) );
 	
@@ -709,7 +710,7 @@ void RouterNodeTest::testDelete()
 
 	MockDataProxyClient client;
 
-	RouterNode node( "name", client, *nodes[0] );
+	RouterNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::map<std::string,std::string> parameters;
 	parameters["param1"] = "value1";
@@ -736,7 +737,7 @@ void RouterNodeTest::testDeleteNotSupported()
 
 	MockDataProxyClient client;
 
-	RouterNode node( "name", client, *nodes[0] );
+	RouterNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::map<std::string,std::string> parameters;
 	parameters["param1"] = "value1";
@@ -762,7 +763,7 @@ void RouterNodeTest::testDeleteNowhere()
 
 	MockDataProxyClient client;
 
-	RouterNode node( "name", client, *nodes[0] );
+	RouterNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::map<std::string,std::string> parameters;
 	parameters["param1"] = "value1";
@@ -798,7 +799,7 @@ void RouterNodeTest::testDeleteExceptions()
 	MockDataProxyClient client;
 	client.SetExceptionForName( "name2" );
 
-	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
+	pNode.reset( new RouterNode( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) );
 
 	std::map<std::string,std::string> parameters;
 	parameters["param1"] = "value1";
@@ -831,7 +832,7 @@ void RouterNodeTest::testDeleteExceptions()
 
 	client.SetExceptionForName( "name1", std::map<std::string, std::string>() );
 
-	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
+	pNode.reset( new RouterNode( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) );
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pNode->DeleteImpl( parameters ), MVException,
 		".*:\\d+: Set to throw an exception for name: name1" );
@@ -861,7 +862,7 @@ void RouterNodeTest::testDeleteExceptions()
 	client.SetExceptionForName( "name3" );
 	client.SetExceptionForName( "name4", std::map<std::string, std::string>() );
 
-	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
+	pNode.reset( new RouterNode( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) );
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pNode->DeleteImpl( parameters ), RouterNodeException,
 		".*:\\d+: Unable to successfully delete to any of the destination delete nodes for RouterNode: name" );
@@ -894,7 +895,7 @@ void RouterNodeTest::testDeleteExceptions()
 
 	client.SetExceptionForName( "name1" );
 
-	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
+	pNode.reset( new RouterNode( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) );
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pNode->DeleteImpl( parameters ), RouterNodeException,
 		".*:\\d+: One or more delete exceptions were caught on critical destinations for RouterNode: name1" );
@@ -926,7 +927,7 @@ void RouterNodeTest::testDeleteExceptions()
 
 	client.SetExceptionForName( "name1", std::map<std::string, std::string>() );
 
-	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
+	pNode.reset( new RouterNode( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) );
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( pNode->DeleteImpl( parameters ), RouterNodeException,
 		".*:\\d+: One or more delete exceptions were caught on critical destinations for RouterNode: name1" );
@@ -958,7 +959,7 @@ void RouterNodeTest::testDeleteExceptions()
 	client.SetExceptionForName( "name1" );
 	client.SetExceptionForName( "name2", std::map<std::string, std::string>() );
 
-	pNode.reset( new RouterNode( "name", client, *nodes[0] ) );
+	pNode.reset( new RouterNode( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) );
 
 	CPPUNIT_ASSERT_NO_THROW( pNode->DeleteImpl( parameters ) );
 	

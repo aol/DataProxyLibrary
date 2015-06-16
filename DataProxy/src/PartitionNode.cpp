@@ -13,6 +13,7 @@
 #include "DPLCommon.hpp"
 #include "XMLUtilities.hpp"
 #include "MVLogger.hpp"
+#include "RequestForwarder.hpp"
 #include "ShellExecutor.hpp"
 #include "CSVReader.hpp"
 #include "LargeStringStream.hpp"
@@ -55,11 +56,9 @@ namespace
 }
 
 PartitionNode::PartitionNode( const std::string& i_rName,
-							  DataProxyClient& i_rParent,
+							  boost::shared_ptr< RequestForwarder > i_pRequestForwarder,
 							  const xercesc::DOMNode& i_rNode )
-:	AbstractNode( i_rName, i_rParent, i_rNode ),
-	m_Name( i_rName ),
-	m_rParent( i_rParent ),
+:	AbstractNode( i_rName, i_pRequestForwarder, i_rNode ),
 	m_ReadRoute(),
 	m_WriteRoute(),
 	m_DeleteRoute(),
@@ -160,7 +159,7 @@ void PartitionNode::LoadImpl( const std::map<std::string,std::string>& i_rParame
 	{
 		MV_THROW( PartitionNodeException, "PartitionNode: " << m_Name << " does not have a read-side configuration" );
 	}
-	m_rParent.Load( static_cast< const std::string& >( m_ReadRoute ), i_rParameters, o_rData );
+	m_pRequestForwarder->Load( static_cast< const std::string& >( m_ReadRoute ), i_rParameters, o_rData );
 }
 
 void PartitionNode::StoreImpl( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData )
@@ -214,7 +213,7 @@ void PartitionNode::StoreImpl( const std::map<std::string,std::string>& i_rParam
 			std::map< std::string, std::string > parameters( i_rParameters );
 			parameters[ m_WritePartitionKey ] = previousPartitionId;
 			pTempIOStream->flush();
-			m_rParent.Store( m_WriteRoute, parameters, *pTempIOStream );
+			m_pRequestForwarder->Store( m_WriteRoute, parameters, *pTempIOStream );
 			pTempIOStream.reset( new std::large_stringstream() );
 			*pTempIOStream << header << std::endl;
 		}
@@ -228,7 +227,7 @@ void PartitionNode::StoreImpl( const std::map<std::string,std::string>& i_rParam
 		std::map< std::string, std::string > parameters( i_rParameters );
 		parameters[ m_WritePartitionKey ] = previousPartitionId;
 		pTempIOStream->flush();
-		m_rParent.Store( m_WriteRoute, parameters, *pTempIOStream );
+		m_pRequestForwarder->Store( m_WriteRoute, parameters, *pTempIOStream );
 		pTempIOStream.reset( NULL );
 	}
 }
@@ -239,7 +238,7 @@ void PartitionNode::DeleteImpl( const std::map<std::string,std::string>& i_rPara
 	{
 		MV_THROW( PartitionNodeException, "PartitionNode: " << m_Name << " does not have a delete-side configuration" );
 	}
-	m_rParent.Delete( static_cast< const std::string& >( m_DeleteRoute ), i_rParameters );
+	m_pRequestForwarder->Delete( static_cast< const std::string& >( m_DeleteRoute ), i_rParameters );
 
 }
 
@@ -288,12 +287,12 @@ void PartitionNode::Ping( int i_Mode ) const
 		}
 
 		// ping the endpoint
-		m_rParent.Ping( m_ReadRoute, DPL::READ );
+		m_pRequestForwarder->Ping( m_ReadRoute, DPL::READ );
 	}
 	if( i_Mode & DPL::WRITE )
 	{
 		// ping the endpoint
-		m_rParent.Ping( m_WriteRoute, DPL::WRITE );
+		m_pRequestForwarder->Ping( m_WriteRoute, DPL::WRITE );
 	}
 	if( i_Mode & DPL::DELETE )
 	{
@@ -304,6 +303,6 @@ void PartitionNode::Ping( int i_Mode ) const
 		}
 
 		// ping the endpoint
-		m_rParent.Ping( m_DeleteRoute, DPL::DELETE );
+		m_pRequestForwarder->Ping( m_DeleteRoute, DPL::DELETE );
 	}
 }

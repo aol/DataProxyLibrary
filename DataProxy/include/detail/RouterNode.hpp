@@ -13,6 +13,8 @@
 
 #include "AbstractNode.hpp"
 #include "MVException.hpp"
+#include "RequestForwarder.hpp"
+#include <boost/scoped_ptr.hpp>
 #include <set>
 
 MV_MAKEEXCEPTIONCLASS( RouterNodeException, MVException );
@@ -21,7 +23,7 @@ class RouterNode : public AbstractNode
 {
 public:
 	RouterNode( const std::string& i_rName,
-				DataProxyClient& i_rParent,
+				boost::shared_ptr< RequestForwarder > i_pRequestForwarder,
 				const xercesc::DOMNode& i_rNode );
 	virtual ~RouterNode();
 	
@@ -62,8 +64,6 @@ private:
 	void SetWriteDeleteConfig( const xercesc::DOMNode* i_pNode, CriticalErrorBehavior& o_rOnCriticalError, std::vector< RouteConfig >& o_rRoute  );
 	void StoreDeleteImpl( bool i_bIsWrite, const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData ); 
 
-	std::string m_Name;
-	DataProxyClient& m_rParent;
 	Nullable< std::string > m_ReadRoute;
 	bool m_ReadEnabled;
 	std::vector< RouteConfig > m_WriteRoute;

@@ -20,7 +20,7 @@ MV_MAKEEXCEPTIONCLASS( ExecutionProxyException, MVException );
 class ExecutionProxy : public AbstractNode
 {
 public:
-	ExecutionProxy( const std::string& i_rName, DataProxyClient& i_rParent, const xercesc::DOMNode& i_rNode );
+	ExecutionProxy( const std::string& i_rName, boost::shared_ptr< RequestForwarder > i_pRequestForwarder, const xercesc::DOMNode& i_rNode );
 	virtual ~ExecutionProxy();
 	
 	virtual void LoadImpl( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData );
@@ -38,8 +38,6 @@ public:
 	virtual void Rollback();
 
 private:
-	std::string m_Name;
-	DataProxyClient& m_rParent;
 	Nullable< std::string > m_ReadCommand;
 	double m_ReadTimeout;
 	Nullable< std::string > m_WriteCommand;
