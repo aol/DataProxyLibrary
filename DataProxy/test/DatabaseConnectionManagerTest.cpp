@@ -10,9 +10,11 @@
 
 #include "DatabaseConnectionManagerTest.hpp"
 #include "Database.hpp"
+#include "OracleUnitTestDatabase.hpp"
 #include "TempDirectory.hpp"
 #include "ProxyTestHelpers.hpp"
 #include "AssertThrowWithMessage.hpp"
+#include "AssertTableContents.hpp"
 #include "MockDataProxyClient.hpp"
 #include <boost/algorithm/string.hpp>
 #include <sstream>
@@ -98,6 +100,7 @@ void DatabaseConnectionManagerTest::testNormal()
 	xmlContents << "  name = \"ADLAPPD\""   << std::endl;
 	xmlContents << "  user = \"five0test\""   << std::endl;
 	xmlContents << "  password = \"DSLYCZZHA7\""   << std::endl;
+	xmlContents << "  txnIsolationLevel = \"serializable\""   << std::endl;
 	xmlContents << "  schema = \"\" />"   << std::endl;
 
 	xmlContents << " <Database type = \"mysql\""<< std::endl;
@@ -106,6 +109,7 @@ void DatabaseConnectionManagerTest::testNormal()
 	xmlContents << "  user = \"adlearn\""  << std::endl;
 	xmlContents << "  password = \"Adv.commv\""  << std::endl;
 	xmlContents << "  name = \"\""  << std::endl;
+	xmlContents << "  txnIsolationLevel = \"readCommitted\""   << std::endl;
 	xmlContents << "  disableCache = \"false\" />"   << std::endl;
 	xmlContents << "</DatabaseConnections>" << std::endl;
 
@@ -183,6 +187,7 @@ void DatabaseConnectionManagerTest::testNormalReconnect()
 	xmlContents << "  user = \"five0test\""   << std::endl;
 	xmlContents << "  password = \"DSLYCZZHA7\""   << std::endl;
 	xmlContents << "  reconnectTimeout = \"0.0\""   << std::endl;
+	xmlContents << "  txnIsolationLevel = \"readCommitted\""   << std::endl;
 	xmlContents << "  schema = \"\" />"   << std::endl;
 	xmlContents << "</DatabaseConnections>" << std::endl;
 
@@ -212,6 +217,81 @@ void DatabaseConnectionManagerTest::testNormalReconnect()
 	CPPUNIT_ASSERT_EQUAL( 1, GetNumConnections( *pDatabase ) );
 	pDatabase2 = pDatabase.get();
 	CPPUNIT_ASSERT( pDatabase1 != pDatabase2 );
+}
+
+void DatabaseConnectionManagerTest::testTxnIsolationLevel()
+{
+	// Prepare table:
+	boost::scoped_ptr< Database > pDB;
+	CPPUNIT_ASSERT_NO_THROW( pDB.reset( new OracleUnitTestDatabase() ) );
+
+	std::stringstream sql;
+	sql << "CREATE TABLE txn_test_table ( "
+		<< "id NUMBER(*,0) NOT NULL, "
+		<< "value NUMBER(*,0), "
+		<< " CONSTRAINT cpk_txn PRIMARY KEY(id) )";
+	CPPUNIT_ASSERT_NO_THROW( Database::Statement( *pDB, sql.str() ).Execute() );
+
+	std::string prefix = "INSERT INTO txn_test_table (id, value) VALUES";
+	CPPUNIT_ASSERT_NO_THROW( Database::Statement( *pDB, prefix + "(1, 10)" ).Execute() );
+	CPPUNIT_ASSERT_NO_THROW( pDB->Commit() );
+	CPPUNIT_ASSERT_NO_THROW( Database::Statement( *pDB, prefix + "(2, 20)" ).Execute() );
+	CPPUNIT_ASSERT_NO_THROW( Database::Statement( *pDB, prefix + "(3, 30)" ).Execute() );
+	CPPUNIT_ASSERT_NO_THROW( Database::Statement( *pDB, prefix + "(4, 40)" ).Execute() );
+	CPPUNIT_ASSERT_NO_THROW( Database::Statement( *pDB, prefix + "(5, 50)" ).Execute() );
+
+	std::stringstream expected;
+	expected << "1,10" << std::endl;
+	std::string snapshot1 = expected.str();
+
+	std::stringstream xmlContents;
+	boost::scoped_ptr<DatabaseConnectionManager> dbConnectionManager;
+
+	xmlContents << "<DatabaseConnections>" << std::endl;
+	xmlContents << " <Database type = \"oracle\"" << std::endl;
+	xmlContents << "  connection = \"rc\""   << std::endl;
+	xmlContents << "  name = \"" << pDB->GetDBName() << "\""   << std::endl;
+	xmlContents << "  user = \"" << pDB->GetUserName() << "\""   << std::endl;
+	xmlContents << "  password = \"" << pDB->GetPassword() << "\""   << std::endl;
+	xmlContents << "  txnIsolationLevel = \"readCommitted\""   << std::endl;
+	xmlContents << "  schema = \"" << pDB->GetSchema() << "\" />"   << std::endl;
+	xmlContents << " <Database type = \"oracle\"" << std::endl;
+	xmlContents << "  connection = \"ser\""   << std::endl;
+	xmlContents << "  name = \"" << pDB->GetDBName() << "\""   << std::endl;
+	xmlContents << "  user = \"" << pDB->GetUserName() << "\""   << std::endl;
+	xmlContents << "  password = \"" << pDB->GetPassword() << "\""   << std::endl;
+	xmlContents << "  txnIsolationLevel = \"serializable\""   << std::endl;
+	xmlContents << "  schema = \"" << pDB->GetSchema() << "\" />"   << std::endl;
+	xmlContents << "</DatabaseConnections>" << std::endl;
+
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes(m_pTempDirectory->GetDirectoryName(), xmlContents.str(), "DatabaseConnections", nodes);
+
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	dbConnectionManager.reset(new DatabaseConnectionManager( DEFAULT_DATA_PROXY_CLIENT ));
+	dbConnectionManager->Parse(*nodes[0]);
+
+	boost::shared_ptr< Database > pReadCommittedDb = dbConnectionManager->GetConnection( "rc" );
+	boost::shared_ptr< Database > pSerializableDb = dbConnectionManager->GetConnection( "ser" );
+
+	// neither connection reads the dirty data:
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( snapshot1, *pReadCommittedDb, "txn_test_table", "id, value", "id" );
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( snapshot1, *pSerializableDb, "txn_test_table", "id, value", "id" );
+
+	// after commit, the read-committed connection can read it but the serializable cannot
+	CPPUNIT_ASSERT_NO_THROW( pDB->Commit() );
+	expected << "2,20" << std::endl
+			 << "3,30" << std::endl
+			 << "4,40" << std::endl
+			 << "5,50" << std::endl;
+	std::string snapshot2 = expected.str();
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( snapshot1, *pSerializableDb, "txn_test_table", "id, value", "id" );
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( snapshot2, *pReadCommittedDb, "txn_test_table", "id, value", "id" );
+
+	// ...until the serializable connection commits
+	pSerializableDb->Commit();
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( snapshot2, *pSerializableDb, "txn_test_table", "id, value", "id" );
+	CPPUNIT_ASSERT_TABLE_ORDERED_CONTENTS( snapshot2, *pReadCommittedDb, "txn_test_table", "id, value", "id" );
 }
 
 void DatabaseConnectionManagerTest::testParseMissingAttributes()
@@ -393,6 +473,28 @@ void DatabaseConnectionManagerTest::testParseExceptionInvalidValues()
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(dbConnectionManager->Parse(*nodes[0]),
 									  DatabaseConnectionManagerException,
 									  MATCH_FILE_AND_LINE_NUMBER + "MySQL db connection has invalid value for disableCache attribute: invalid_disableCache_value. Valid values are 'true' and 'false'");
+
+	xmlContents.str("");
+	xmlContents << "<DatabaseConnections>" << std::endl;
+	xmlContents << " <Database type = \"mysql\""<< std::endl;
+	xmlContents << "  connection = \"name2\""  << std::endl;
+	xmlContents << "  server = \"localhost\""  << std::endl;
+	xmlContents << "  user = \"adlearn\""  << std::endl;
+	xmlContents << "  password = \"Adv.commv\""  << std::endl;
+	xmlContents << "  name = \"\""  << std::endl;
+	xmlContents << "  txnIsolationLevel = \"unknown_txn_iso\""  << std::endl;
+	xmlContents << "  disableCache = \"false\" />"   << std::endl;
+	xmlContents << "</DatabaseConnections>" << std::endl;
+
+	nodes.clear();
+	ProxyTestHelpers::GetDataNodes(m_pTempDirectory->GetDirectoryName(), xmlContents.str(), "DatabaseConnections", nodes);
+
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	dbConnectionManager.reset(new DatabaseConnectionManager( DEFAULT_DATA_PROXY_CLIENT ));
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(dbConnectionManager->Parse(*nodes[0]),
+									  DatabaseConnectionManagerException,
+									  MATCH_FILE_AND_LINE_NUMBER + "Unknown transaction isolation level requested: unknown_txn_iso");
 
 	xmlContents.str("");
 	xmlContents << "<DatabaseConnections>" << std::endl;
