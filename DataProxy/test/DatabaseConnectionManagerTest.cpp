@@ -98,6 +98,7 @@ void DatabaseConnectionManagerTest::testNormal()
 	xmlContents << "  name = \"ADLAPPD\""   << std::endl;
 	xmlContents << "  user = \"five0test\""   << std::endl;
 	xmlContents << "  password = \"DSLYCZZHA7\""   << std::endl;
+	xmlContents << "  txnIsolationLevel = \"serializable\""   << std::endl;
 	xmlContents << "  schema = \"\" />"   << std::endl;
 
 	xmlContents << " <Database type = \"mysql\""<< std::endl;
@@ -106,6 +107,7 @@ void DatabaseConnectionManagerTest::testNormal()
 	xmlContents << "  user = \"adlearn\""  << std::endl;
 	xmlContents << "  password = \"Adv.commv\""  << std::endl;
 	xmlContents << "  name = \"\""  << std::endl;
+	xmlContents << "  txnIsolationLevel = \"readCommitted\""   << std::endl;
 	xmlContents << "  disableCache = \"false\" />"   << std::endl;
 	xmlContents << "</DatabaseConnections>" << std::endl;
 
@@ -183,6 +185,7 @@ void DatabaseConnectionManagerTest::testNormalReconnect()
 	xmlContents << "  user = \"five0test\""   << std::endl;
 	xmlContents << "  password = \"DSLYCZZHA7\""   << std::endl;
 	xmlContents << "  reconnectTimeout = \"0.0\""   << std::endl;
+	xmlContents << "  txnIsolationLevel = \"readCommitted\""   << std::endl;
 	xmlContents << "  schema = \"\" />"   << std::endl;
 	xmlContents << "</DatabaseConnections>" << std::endl;
 
@@ -393,6 +396,28 @@ void DatabaseConnectionManagerTest::testParseExceptionInvalidValues()
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(dbConnectionManager->Parse(*nodes[0]),
 									  DatabaseConnectionManagerException,
 									  MATCH_FILE_AND_LINE_NUMBER + "MySQL db connection has invalid value for disableCache attribute: invalid_disableCache_value. Valid values are 'true' and 'false'");
+
+	xmlContents.str("");
+	xmlContents << "<DatabaseConnections>" << std::endl;
+	xmlContents << " <Database type = \"mysql\""<< std::endl;
+	xmlContents << "  connection = \"name2\""  << std::endl;
+	xmlContents << "  server = \"localhost\""  << std::endl;
+	xmlContents << "  user = \"adlearn\""  << std::endl;
+	xmlContents << "  password = \"Adv.commv\""  << std::endl;
+	xmlContents << "  name = \"\""  << std::endl;
+	xmlContents << "  txnIsolationLevel = \"unknown_txn_iso\""  << std::endl;
+	xmlContents << "  disableCache = \"false\" />"   << std::endl;
+	xmlContents << "</DatabaseConnections>" << std::endl;
+
+	nodes.clear();
+	ProxyTestHelpers::GetDataNodes(m_pTempDirectory->GetDirectoryName(), xmlContents.str(), "DatabaseConnections", nodes);
+
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+	dbConnectionManager.reset(new DatabaseConnectionManager( DEFAULT_DATA_PROXY_CLIENT ));
+
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(dbConnectionManager->Parse(*nodes[0]),
+									  DatabaseConnectionManagerException,
+									  MATCH_FILE_AND_LINE_NUMBER + "Unknown transaction isolation level requested: unknown_txn_iso");
 
 	xmlContents.str("");
 	xmlContents << "<DatabaseConnections>" << std::endl;

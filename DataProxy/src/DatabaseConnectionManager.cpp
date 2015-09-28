@@ -38,6 +38,10 @@ namespace
 	const std::string MIN_POOL_SIZE_ATTRIBUTE("minPoolSize");
 	const std::string MAX_POOL_SIZE_ATTRIBUTE("maxPoolSize");
 	const std::string POOL_REFRESH_PERIOD_ATTRIBUTE("poolRefreshPeriod");
+	const std::string TXN_ISOLATION_LEVEL_ATTRIBUTE("txnIsolationLevel");
+
+	const std::string TXN_ISOLATION_LEVEL_READ_COMMITTED("readCommitted");
+	const std::string TXN_ISOLATION_LEVEL_SERIALIZABLE("serializable");
 	
 	const std::string CONNECTION_NAME_ATTRIBUTE("connection");
 
@@ -47,6 +51,19 @@ namespace
 	const std::string NODE_COLUMN( "node_id" );
 
 	const std::string NODE_NAME_PREFIX( "__shard" );
+
+	Database::TransactionIsolationLevel GetTxnIsolationLevel( const std::string& i_rDesc )
+	{
+		if( i_rDesc == TXN_ISOLATION_LEVEL_READ_COMMITTED )
+		{
+			return Database::READ_COMMITTED;
+		}
+		if( i_rDesc == TXN_ISOLATION_LEVEL_SERIALIZABLE )
+		{
+			return Database::SERIALIZABLE;
+		}
+		MV_THROW( DatabaseConnectionManagerException, "Unknown transaction isolation level requested: " << i_rDesc );
+	}
 
 	std::string GetConnectionName( const std::string& i_rNodeId, const std::string& i_rShardNode )
 	{
@@ -85,7 +102,7 @@ namespace
 			std::string reconnectString = XMLUtilities::XMLChToString( pAttribute->getValue() );
 			try
 			{
-				return boost::lexical_cast< double >( reconnectString );
+				return boost::lexical_cast< T_Data >( reconnectString );
 			}
 			catch( const boost::bad_lexical_cast& i_rException )
 			{
@@ -199,7 +216,8 @@ namespace
 																i_rConfig.GetValue<DatabaseUserName>(),
 																i_rConfig.GetValue<DatabasePassword>(),
 																false,
-																i_rConfig.GetValue<DatabaseSchema>() ) );
+																i_rConfig.GetValue<DatabaseSchema>(),
+																i_rConfig.GetValue<TransactionIsolationLevel>() ) );
 		}
 		else if (connectionType == MYSQL_DB_TYPE)
 		{
@@ -209,7 +227,8 @@ namespace
 																i_rConfig.GetValue<DatabaseUserName>(),
 																i_rConfig.GetValue<DatabasePassword>(),
 																i_rConfig.GetValue<DisableCache>(),
-																i_rConfig.GetValue<DatabaseName>() ) );
+																i_rConfig.GetValue<DatabaseName>(),
+																i_rConfig.GetValue<TransactionIsolationLevel>() ) );
 		}
 		else if (connectionType == VERTICA_DB_TYPE)
 		{
@@ -219,7 +238,8 @@ namespace
 																i_rConfig.GetValue<DatabaseUserName>(),
 																i_rConfig.GetValue<DatabasePassword>(),
 																false,
-																i_rConfig.GetValue<DatabaseName>() ) );
+																i_rConfig.GetValue<DatabaseName>(),
+																i_rConfig.GetValue<TransactionIsolationLevel>() ) );
 		}
 		else
 		{
@@ -421,6 +441,7 @@ void DatabaseConnectionManager::Parse( const xercesc::DOMNode& i_rDatabaseConnec
 		size_t minPoolSize = GetPoolSize( *iter, MIN_POOL_SIZE_ATTRIBUTE, 1 );
 		size_t maxPoolSize = GetPoolSize( *iter, MAX_POOL_SIZE_ATTRIBUTE, minPoolSize );
 		int poolRefreshPeriod = GetOptional< int >( *iter, POOL_REFRESH_PERIOD_ATTRIBUTE, 60, "int" );
+		Database::TransactionIsolationLevel txnIsolation = GetTxnIsolationLevel( GetOptional< std::string >( *iter, TXN_ISOLATION_LEVEL_ATTRIBUTE, TXN_ISOLATION_LEVEL_READ_COMMITTED, "string" ) );
 		if( maxPoolSize < minPoolSize )
 		{
 			MV_THROW( DatabaseConnectionManagerException, "maxPoolSize: " << maxPoolSize << " must be greater than or equal to minPoolSize: " << minPoolSize );
@@ -497,6 +518,7 @@ void DatabaseConnectionManager::Parse( const xercesc::DOMNode& i_rDatabaseConnec
 		databaseConfig.SetValue< MinPoolSize >( minPoolSize );
 		databaseConfig.SetValue< MaxPoolSize >( maxPoolSize );
 		databaseConfig.SetValue< PoolRefreshPeriod >( poolRefreshPeriod );
+		databaseConfig.SetValue< TransactionIsolationLevel >( txnIsolation );
 		datum.SetValue< DatabaseConfig >( databaseConfig );
 		datum.GetReference< DatabasePool >().reserve( maxPoolSize );
 		datum.GetReference< Mutex >().reset( new boost::shared_mutex() );
