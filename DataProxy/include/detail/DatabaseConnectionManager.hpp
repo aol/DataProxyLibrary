@@ -16,7 +16,6 @@
 #include "IncludeHashMap.hpp"
 #include "GenericDataContainer.hpp"
 #include "GenericDataObject.hpp"
-#include "Database.hpp"
 #include <xercesc/dom/DOM.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/scoped_ptr.hpp>
@@ -42,7 +41,9 @@ MV_MAKEEXCEPTIONCLASS(DatabaseConnectionManagerException, MVException);
 	DATUMINFO( MinPoolSize, size_t );
 	DATUMINFO( MaxPoolSize, size_t );
 	DATUMINFO( PoolRefreshPeriod, int );
-	DATUMINFO( TransactionIsolationLevel, Database::TransactionIsolationLevel );
+	// this is actually a Database::TransactionIsolationLevel enum,
+	// but we don't want to have to #include that header:
+	DATUMINFO( TransactionIsolationLevel, int );
 
 	typedef
 		GenericDatum< DatabaseConnectionType,

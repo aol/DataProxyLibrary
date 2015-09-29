@@ -217,7 +217,8 @@ namespace
 																i_rConfig.GetValue<DatabasePassword>(),
 																false,
 																i_rConfig.GetValue<DatabaseSchema>(),
-																i_rConfig.GetValue<TransactionIsolationLevel>() ) );
+																// the following cast is safe because the data was originally stored as a Database::TransactionIsolationLevel
+																Database::TransactionIsolationLevel( i_rConfig.GetValue<TransactionIsolationLevel>() ) ) );
 		}
 		else if (connectionType == MYSQL_DB_TYPE)
 		{
@@ -228,7 +229,8 @@ namespace
 																i_rConfig.GetValue<DatabasePassword>(),
 																i_rConfig.GetValue<DisableCache>(),
 																i_rConfig.GetValue<DatabaseName>(),
-																i_rConfig.GetValue<TransactionIsolationLevel>() ) );
+																// the following cast is safe because the data was originally stored as a Database::TransactionIsolationLevel
+																Database::TransactionIsolationLevel( i_rConfig.GetValue<TransactionIsolationLevel>() ) ) );
 		}
 		else if (connectionType == VERTICA_DB_TYPE)
 		{
@@ -239,7 +241,8 @@ namespace
 																i_rConfig.GetValue<DatabasePassword>(),
 																false,
 																i_rConfig.GetValue<DatabaseName>(),
-																i_rConfig.GetValue<TransactionIsolationLevel>() ) );
+																// the following cast is safe because the data was originally stored as a Database::TransactionIsolationLevel
+																Database::TransactionIsolationLevel( i_rConfig.GetValue<TransactionIsolationLevel>() ) ) );
 		}
 		else
 		{
