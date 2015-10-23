@@ -206,7 +206,7 @@ IF( BUILD_SWIG )
 		SET_SOURCE_FILES_PROPERTIES( ${DataProxy_SwigSrc} PROPERTIES SWIG_MODULE_NAME SwigPythonDataProxy )
 		SET( SWIG_MODULE_SwigPythonDataProxy_EXTRA_DEPS DataProxy )
 		SWIG_ADD_MODULE( SwigPythonDataProxy python ${DataProxy_SwigSrc} )
-		SWIG_LINK_LIBRARIES( SwigPythonDataProxy ${PYTHON_LIBRARIES} $<TARGET_SONAME_FILE:DataProxy> )
+		SWIG_LINK_LIBRARIES( SwigPythonDataProxy ${PYTHON_LIBRARIES} $<TARGET_FILE:Utility> $<TARGET_SONAME_FILE:DataProxy> )
 	ENDIF()
 	
 	# support for perl swig libraries, if enabled
@@ -216,7 +216,7 @@ IF( BUILD_SWIG )
 		SET( SWIG_MODULE_SwigPerlDataProxy_EXTRA_DEPS DataProxy )
 		SET_SOURCE_FILES_PROPERTIES( ${CMAKE_SWIG_OUTDIR}/SwigDataProxyPERL_wrap.cxx PROPERTIES COMPILE_FLAGS "-Wno-unused-variable -Wno-maybe-uninitialized" )
 		SWIG_ADD_MODULE( SwigPerlDataProxy perl ${DataProxy_SwigSrc} )
-		SWIG_LINK_LIBRARIES( SwigPerlDataProxy $<TARGET_SONAME_FILE:DataProxy> )
+	SWIG_LINK_LIBRARIES( SwigPerlDataProxy $<TARGET_FILE:Utility> $<TARGET_SONAME_FILE:DataProxy> )
 	ENDIF()
 
 ENDIF()
