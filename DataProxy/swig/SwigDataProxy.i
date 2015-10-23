@@ -32,7 +32,6 @@ using std::ptrdiff_t;
 }
 
 %{
-#include <fstream>
 #include "DataProxyClient.hpp"
 #include "LargeStringStream.hpp"
 %}
@@ -70,43 +69,11 @@ public:
         return data.str();
     }
 
-    void LoadToFile( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, const std::string& i_rFileSpec ) const
-    {
-        std::ofstream file( i_rFileSpec.c_str() );
-        if( !file.good() )
-        {
-            MV_THROW( DataProxyClientException, i_rFileSpec << " could not be opened for writing. "
-                     << "eof(): " << file.eof() << ", fail(): " << file.fail() << ", bad(): " << file.bad() );
-        }
-        self->Load( i_rName, i_rParameters, file );
-        if( file.fail() )
-        {
-            MV_THROW( DataProxyClientException, "Writing to file: " << i_rFileSpec << " caused a stream failure on destination, "
-                     << "most likely due to a disk issue (disk full, unmounted, etc.). "
-                     << "fail(): " << file.fail() << ", bad(): " << file.bad() );
-        }
-        file.close();
-    }
-
-
     void StoreStr( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, const std::string& i_rData )
     {
         std::large_istringstream data( i_rData );
         self->Store( i_rName, i_rParameters, data );
     }
-
-    void StoreFromFile( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, const std::string& i_rFileSpec )
-    {
-        std::ifstream data( i_rFileSpec.c_str() );
-
-        if( !data.good() )
-        {
-            MV_THROW( DataProxyClientException, "Error ready data from source: " << i_rFileSpec
-                     << ", most likely due to non-existing file" );
-        }
-        self->Store( i_rName, i_rParameters, data );
-    }
-
 }
 
 namespace std
