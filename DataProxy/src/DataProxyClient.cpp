@@ -462,6 +462,11 @@ std::string DataProxyClient::ExtractName( xercesc::DOMNode* i_pNode ) const
 void DataProxyClient::Ping( const std::string& i_rName, int i_Mode ) const
 {
 	boost::shared_lock< boost::shared_mutex > lock( m_ConfigMutex );
+	PingImpl( i_rName, i_Mode );
+}
+
+void DataProxyClient::PingImpl( const std::string& i_rName, int i_Mode ) const
+{
 	if( !m_Initialized )
 	{
 		MV_THROW( DataProxyClientException, "Attempted to issue Ping request on uninitialized DataProxyClient" );
@@ -489,6 +494,11 @@ void DataProxyClient::Ping( const std::string& i_rName, int i_Mode ) const
 void DataProxyClient::Load( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData ) const
 {
 	boost::shared_lock< boost::shared_mutex > lock( m_ConfigMutex );
+	LoadImpl( i_rName, i_rParameters, o_rData );
+}
+
+void DataProxyClient::LoadImpl( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData ) const
+{
 	if( !m_Initialized )
 	{
 		MV_THROW( DataProxyClientException, "Attempted to issue Load request on uninitialized DataProxyClient" );
@@ -508,10 +518,14 @@ void DataProxyClient::Load( const std::string& i_rName, const std::map<std::stri
 	HandleResult( i_rName, iter, success, LOAD_OP );
 }
 
-
 void DataProxyClient::Store( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData ) const
 {
 	boost::shared_lock< boost::shared_mutex > lock( m_ConfigMutex );
+	StoreImpl( i_rName, i_rParameters, i_rData );
+}
+
+void DataProxyClient::StoreImpl( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData ) const
+{
 	if( !m_Initialized )
 	{
 		MV_THROW( DataProxyClientException, "Attempted to issue Store request on uninitialized DataProxyClient" );
@@ -534,6 +548,11 @@ void DataProxyClient::Store( const std::string& i_rName, const std::map<std::str
 void DataProxyClient::Delete( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters ) const
 {
 	boost::shared_lock< boost::shared_mutex > lock( m_ConfigMutex );
+	DeleteImpl( i_rName, i_rParameters );
+}
+
+void DataProxyClient::DeleteImpl( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters ) const
+{
 	if( !m_Initialized )
 	{
 		MV_THROW( DataProxyClientException, "Attempted to issue Delete request on uninitialized DataProxyClient" );

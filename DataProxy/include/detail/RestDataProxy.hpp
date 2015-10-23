@@ -27,7 +27,7 @@ MV_MAKEEXCEPTIONCLASS( UnrecognizedParameterException, MVException );
 class RestDataProxy : public AbstractNode
 {
 public:
-	RestDataProxy( const std::string& i_rName, DataProxyClient& i_rParent, const xercesc::DOMNode& i_rNode );
+	RestDataProxy( const std::string& i_rName, boost::shared_ptr< RequestForwarder > i_pRequestForwarder, const xercesc::DOMNode& i_rNode );
 	virtual ~RestDataProxy();
 	
 	virtual void LoadImpl( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData );

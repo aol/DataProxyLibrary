@@ -12,6 +12,7 @@
 #include "DataProxyClient.hpp"
 #include "ProxyUtilities.hpp"
 #include "DPLCommon.hpp"
+#include "RequestForwarder.hpp"
 #include "XMLUtilities.hpp"
 #include "StringUtilities.hpp"
 #include "MVLogger.hpp"
@@ -29,11 +30,9 @@ namespace
 }
 
 RouterNode::RouterNode(	const std::string& i_rName,
-						DataProxyClient& i_rParent,
+						boost::shared_ptr< RequestForwarder > i_pRequestForwarder,
 						const xercesc::DOMNode& i_rNode )
-:	AbstractNode( i_rName, i_rParent, i_rNode ),
-	m_Name( i_rName ),
-	m_rParent( i_rParent ),
+:	AbstractNode( i_rName, i_pRequestForwarder, i_rNode ),
 	m_ReadRoute(),
 	m_ReadEnabled( false ),
 	m_WriteRoute(),
@@ -43,6 +42,11 @@ RouterNode::RouterNode(	const std::string& i_rName,
 	m_DeleteEnabled( false ),
 	m_OnCriticalDeleteError( STOP )
 {
+	if( !m_pRequestForwarder )
+	{
+		MV_THROW( RouterNodeException, "Attempted to create a RouterNode with a NULL RequestForwarder" );
+	}
+
 	std::set< std::string > allowedChildren;
 	allowedChildren.insert( FORWARD_TO_NODE );
 	AbstractNode::ValidateXmlElements( i_rNode, allowedChildren, allowedChildren, allowedChildren );
@@ -103,7 +107,7 @@ void RouterNode::LoadImpl( const std::map<std::string,std::string>& i_rParameter
 		return;
 	}
 
-	m_rParent.Load( static_cast< const std::string& >( m_ReadRoute ), i_rParameters, o_rData );
+	m_pRequestForwarder->Load( static_cast< const std::string& >( m_ReadRoute ), i_rParameters, o_rData );
 }
 
 void RouterNode::StoreImpl( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData )
@@ -139,7 +143,7 @@ void RouterNode::StoreImpl( const std::map<std::string,std::string>& i_rParamete
 		{
 			i_rData.clear();
 			i_rData.seekg( inputPos );
-			m_rParent.Store( destinationIter->GetValue< NodeName >(), i_rParameters, i_rData );
+			m_pRequestForwarder->Store( destinationIter->GetValue< NodeName >(), i_rParameters, i_rData );
 			success = true;
 		}
 		catch( const std::exception& rException )
@@ -212,7 +216,7 @@ void RouterNode::DeleteImpl( const std::map<std::string,std::string>& i_rParamet
 		
 		try
 		{
-			m_rParent.Delete( destinationIter->GetValue< NodeName >(), i_rParameters );
+			m_pRequestForwarder->Delete( destinationIter->GetValue< NodeName >(), i_rParameters );
 			success = true;
 		}
 		catch( const std::exception& rException )
@@ -361,7 +365,7 @@ void RouterNode::Ping( int i_Mode ) const
 		// if we have a read route (legal to have a dummy one), ping it
 		if( !m_ReadRoute.IsNull() )
 		{
-			m_rParent.Ping( m_ReadRoute, DPL::READ );
+			m_pRequestForwarder->Ping( m_ReadRoute, DPL::READ );
 		}
 	}
 	if( i_Mode & DPL::WRITE )
@@ -376,7 +380,7 @@ void RouterNode::Ping( int i_Mode ) const
 		std::vector< RouteConfig >::const_iterator iter = m_WriteRoute.begin();
 		for( ; iter != m_WriteRoute.end(); ++iter )
 		{
-			m_rParent.Ping( iter->GetValue< NodeName >(), DPL::WRITE );
+			m_pRequestForwarder->Ping( iter->GetValue< NodeName >(), DPL::WRITE );
 		}
 	}
 	if( i_Mode & DPL::DELETE )
@@ -391,7 +395,7 @@ void RouterNode::Ping( int i_Mode ) const
 		std::vector< RouteConfig >::const_iterator iter = m_DeleteRoute.begin();
 		for( ; iter != m_DeleteRoute.end(); ++iter )
 		{
-			m_rParent.Ping( iter->GetValue< NodeName >(), DPL::DELETE );
+			m_pRequestForwarder->Ping( iter->GetValue< NodeName >(), DPL::DELETE );
 		}
 	}
 }

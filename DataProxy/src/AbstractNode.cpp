@@ -16,6 +16,7 @@
 #include "XMLUtilities.hpp"
 #include "ProxyUtilities.hpp"
 #include "LargeStringStream.hpp"
+#include "RequestForwarder.hpp"
 #include "MVLogger.hpp"
 #include <fstream>
 #include <boost/lexical_cast.hpp>
@@ -101,14 +102,19 @@ namespace
 	}
 }
 
-AbstractNode::AbstractNode( const std::string& i_rName, DataProxyClient& i_rParent, const xercesc::DOMNode& i_rNode )
+AbstractNode::AbstractNode( const std::string& i_rName, boost::shared_ptr< RequestForwarder > i_pRequestForwarder, const xercesc::DOMNode& i_rNode )
 :	m_Name( i_rName ),
-	m_rParent( i_rParent ),
+	m_pRequestForwarder( i_pRequestForwarder ),
 	m_ReadConfig(),
 	m_WriteConfig(),
 	m_DeleteConfig(),
 	m_TeeConfig()
 {
+	if( !m_pRequestForwarder )
+	{
+		MV_THROW( MVException, "Attempted to create a node: " << i_rName << " with a NULL RequestForwarder" );
+	}
+
 	// set defaults
 	m_ReadConfig.SetValue< RetryCount >( 0 );
 	m_ReadConfig.SetValue< RetryDelay >( 0.0 );
@@ -277,7 +283,7 @@ bool AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 				{
 					pTransformedStream->clear();
 					pTransformedStream->seekg( 0L );
-					m_rParent.Store( m_TeeConfig.GetValue< ForwardNodeName >(), rTeeParameters, *pTransformedStream );
+					m_pRequestForwarder->Store( m_TeeConfig.GetValue< ForwardNodeName >(), rTeeParameters, *pTransformedStream );
 					pTransformedStream->clear();
 					pTransformedStream->seekg( 0L );
 				}
@@ -285,7 +291,7 @@ bool AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 				{
 					pTempIOStream->clear();
 					pTempIOStream->seekg( 0L );
-					m_rParent.Store( m_TeeConfig.GetValue< ForwardNodeName >(), rTeeParameters, *pTempIOStream );
+					m_pRequestForwarder->Store( m_TeeConfig.GetValue< ForwardNodeName >(), rTeeParameters, *pTempIOStream );
 				}
 			}
 
@@ -301,7 +307,7 @@ bool AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 		else if( !m_TeeConfig.GetValue< ForwardNodeName >().IsNull() )
 		{
 			const std::map< std::string, std::string >& rTeeParameters = ( m_TeeConfig.GetValue< UseTranslatedParameters >() ? translatedParameters : i_rParameters );
-			m_rParent.Store( m_TeeConfig.GetValue< ForwardNodeName >(), rTeeParameters, *pTempIOStream );
+			m_pRequestForwarder->Store( m_TeeConfig.GetValue< ForwardNodeName >(), rTeeParameters, *pTempIOStream );
 			pTempIOStream->clear();
 			pTempIOStream->seekg( 0L );
 		}
@@ -377,7 +383,7 @@ bool AbstractNode::Load( const std::map<std::string,std::string>& i_rParameters,
 		MVLOGGER( "root.lib.DataProxy.DataProxyClient.Load.Forward.Info", "Forwarding request to named node: "
 			<< forwardName << " with " << (m_ReadConfig.GetValue< UseTranslatedParameters >() ? "translated" : "original")
 			<< " parameters" << (m_ReadConfig.GetValue< IncludeNodeNameAsParameter >().IsNull() ? "" : " (with failed name added)") );
-		m_rParent.Load( static_cast<std::string>( forwardName ), forwardedParams, o_rData );
+		m_pRequestForwarder->Load( static_cast<std::string>( forwardName ), forwardedParams, o_rData );
 	}
 	return false;
 }
@@ -538,7 +544,7 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 		pUseData->clear();
 		pUseData->seekg( inputPos );
 
-		m_rParent.Store( static_cast<std::string>( forwardName ), forwardedParams, *pUseData );
+		m_pRequestForwarder->Store( static_cast<std::string>( forwardName ), forwardedParams, *pUseData );
 	}
 	return false;
 }
@@ -636,7 +642,7 @@ bool AbstractNode::Delete( const std::map<std::string,std::string>& i_rParameter
 			<< forwardName << " with " << (m_DeleteConfig.GetValue< UseTranslatedParameters >() ? "translated" : "original")
 			<< " parameters" << (m_DeleteConfig.GetValue< IncludeNodeNameAsParameter >().IsNull() ? "" : " (with failed name added)") );
 		
-		m_rParent.Delete( static_cast<std::string>( forwardName ), forwardedParams );
+		m_pRequestForwarder->Delete( static_cast<std::string>( forwardName ), forwardedParams );
 	}
 	return false;
 }

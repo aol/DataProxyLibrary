@@ -456,8 +456,8 @@ DatabaseProxy::ScopedTempTable::~ScopedTempTable()
 	}
 }
 
-DatabaseProxy::DatabaseProxy( const std::string& i_rName, DataProxyClient& i_rParent, const xercesc::DOMNode& i_rNode, DatabaseConnectionManager& i_rDatabaseConnectionManager )
-:	AbstractNode( i_rName, i_rParent, i_rNode ),
+DatabaseProxy::DatabaseProxy( const std::string& i_rName, boost::shared_ptr< RequestForwarder > i_pRequestForwarder, const xercesc::DOMNode& i_rNode, DatabaseConnectionManager& i_rDatabaseConnectionManager )
+:	AbstractNode( i_rName, i_pRequestForwarder, i_rNode ),
 	m_ReadEnabled( false ),
 	m_ReadMaxBindSize( DEFAULT_MAX_BIND_SIZE ),
 	m_RowsBuffered( DEFAULT_ROWS_BUFFERED ),

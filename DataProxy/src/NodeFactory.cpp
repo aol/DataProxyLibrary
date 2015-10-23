@@ -17,6 +17,7 @@
 #include "RouterNode.hpp"
 #include "PartitionNode.hpp"
 #include "JoinNode.hpp"
+#include "RequestForwarder.hpp"
 #include "DatabaseConnectionManager.hpp"
 #include "XMLUtilities.hpp"
 
@@ -31,7 +32,7 @@ namespace
 NodeFactory::NodeFactory( DataProxyClient& i_rParent )
 :	m_UniqueIdGenerator(),
 	m_pDatabaseConnectionManager( NULL ),
-	m_rParent( i_rParent )
+	m_pRequestForwarder( new RequestForwarder( i_rParent ) )
 {
 }
 
@@ -48,11 +49,11 @@ AbstractNode* NodeFactory::CreateNode( const std::string& i_rName, const std::st
 			std::string type = XMLUtilities::GetAttributeValue( &i_rNode, TYPE_ATTRIBUTE );
 			if( type == REST )
 			{
-				return new RestDataProxy( i_rName, m_rParent, i_rNode );
+				return new RestDataProxy( i_rName, m_pRequestForwarder, i_rNode );
 			}
 			else if( type == LOCAL )
 			{
-				return new LocalFileProxy( i_rName, m_rParent, i_rNode, m_UniqueIdGenerator );
+				return new LocalFileProxy( i_rName, m_pRequestForwarder, i_rNode, m_UniqueIdGenerator );
 			}
 			else if( type == DB )
 			{
@@ -60,11 +61,11 @@ AbstractNode* NodeFactory::CreateNode( const std::string& i_rName, const std::st
 				{
 					MV_THROW( NodeFactoryException, "Attempted to construct a DatabaseProxy without first having registered a DatabaseConnectionManager" );
 				}
-				return new DatabaseProxy( i_rName, m_rParent, i_rNode, *m_pDatabaseConnectionManager );
+				return new DatabaseProxy( i_rName, m_pRequestForwarder, i_rNode, *m_pDatabaseConnectionManager );
 			}
 			else if( type == EXE )
 			{
-				return new ExecutionProxy( i_rName, m_rParent, i_rNode );
+				return new ExecutionProxy( i_rName, m_pRequestForwarder, i_rNode );
 			}
 			else
 			{
@@ -73,15 +74,15 @@ AbstractNode* NodeFactory::CreateNode( const std::string& i_rName, const std::st
 		}
 		else if( i_rNodeType == ROUTER_NODE )
 		{
-			return new RouterNode( i_rName, m_rParent, i_rNode );
+			return new RouterNode( i_rName, m_pRequestForwarder, i_rNode );
 		}
 		else if( i_rNodeType == PARTITION_NODE )
 		{
-			return new PartitionNode( i_rName, m_rParent, i_rNode );
+			return new PartitionNode( i_rName, m_pRequestForwarder, i_rNode );
 		}
 		else if( i_rNodeType == JOIN_NODE )
 		{
-			return new JoinNode( i_rName, m_rParent, i_rNode );
+			return new JoinNode( i_rName, m_pRequestForwarder, i_rNode );
 		}
 		else
 		{

@@ -92,6 +92,7 @@ SET( DataProxy_Src
 	src/PartitionNode.cpp
 	src/PropertyDomain.cpp
 	src/ProxyUtilities.cpp
+	src/RequestForwarder.cpp
 	src/RestDataProxy.cpp
 	src/RestRequestBuilder.cpp
 	src/RouterNode.cpp
@@ -255,7 +256,7 @@ IF( NOT NO_INSTALL )
 	STRING( REGEX REPLACE "^.*\\.([^.]+)\\.[^.]+$" "\\1" EL_VERSION ${CMAKE_SYSTEM} )
 	SET( CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${CMAKE_SYSTEM_PROCESSOR}.${EL_VERSION}" )
 	SET( CPACK_PACKAGING_INSTALL_PREFIX ${DEFAULT_PREFIX} )
-	LIST( APPEND CPACK_RPM_USER_FILELIST "%attr(-,adlearn,optimization) ${DEFAULT_PREFIX}" )
+	LIST( APPEND CPACK_RPM_USER_FILELIST "%attr(755,adlearn,optimization) ${DEFAULT_PREFIX}" )
 	SET( CPACK_RPM_SPEC_MORE_DEFINE "${CPACK_RPM_SPEC_MORE_DEFINE}\n%define libDir ${LIB_DIR}" )
 	SET( CPACK_RPM_SPEC_MORE_DEFINE "${CPACK_RPM_SPEC_MORE_DEFINE}\n%define appDir ${APP_DIR}" )
 	
@@ -356,6 +357,7 @@ IF( BUILD_TESTS )
 		test/PropertyDomainTest.cpp
 		test/ProxyTestHelpers.cpp
 		test/ProxyUtilitiesTest.cpp
+		test/RequestForwarderTest.cpp
 		test/RestDataProxyTest.cpp
 		test/RestRequestBuilderTest.cpp
 		test/RouterNodeTest.cpp
@@ -370,6 +372,7 @@ IF( BUILD_TESTS )
 		mock/MockDatabaseConnectionManager.cpp
 		mock/MockNode.cpp
 		mock/MockNodeFactory.cpp
+		mock/MockRequestForwarder.cpp
 		mock/MockTransformFunctionDomain.cpp
 		mock/MockTransformFunctions.cpp
 		mock/TestableDataProxyClient.cpp

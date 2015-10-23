@@ -14,6 +14,7 @@
 #include "ProxyTestHelpers.hpp"
 #include "AssertThrowWithMessage.hpp"
 #include "SimpleRestMockService.hpp"
+#include "MockRequestForwarder.hpp"
 #include "MockDataProxyClient.hpp"
 #include "RESTClient.hpp"
 #include <fstream>
@@ -132,7 +133,7 @@ void RestDataProxyTest::testMissingLocation()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Unable to find attribute: 'location' in node: DataNode" );
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException, ".*/XMLUtilities\\.cpp:\\d+: Unable to find attribute: 'location' in node: DataNode" );
 
 	xmlContents.str("");
 	xmlContents << "<DataNode location=\"this-does-not-match-regex\" >"
@@ -140,7 +141,7 @@ void RestDataProxyTest::testMissingLocation()
 	nodes.clear();
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), RestDataProxyException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), RestDataProxyException,
 		".*RestDataProxy\\.cpp:\\d+: Unable to extract host from location: this-does-not-match-regex. Location must be an http endpoint" );
 
 	xmlContents.str("");
@@ -150,7 +151,7 @@ void RestDataProxyTest::testMissingLocation()
 	nodes.clear();
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), RestDataProxyException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), RestDataProxyException,
 		".*RestDataProxy\\.cpp:\\d+: Unable to extract host from ping location: this-does-not-match-regex. Location must be an http endpoint" );
 }
 
@@ -167,7 +168,7 @@ void RestDataProxyTest::testMoreThanOneUriQueryParametersNode()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Incorrect number of UriQueryParameters child nodes specified in Read. There were 2 but there should be exactly 1" );
 }
 
@@ -184,7 +185,7 @@ void RestDataProxyTest::testMoreThanOneHttpHeaderParametersNode()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Incorrect number of HttpHeaderParameters child nodes specified in Read. There were 2 but there should be exactly 1" );
 }
 
@@ -201,7 +202,7 @@ void RestDataProxyTest::testMoreThanOneUriPathSegmentParametersNode()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Incorrect number of UriPathSegmentParameters child nodes specified in Read. There were 2 but there should be exactly 1" );
 }
 
@@ -217,7 +218,7 @@ void RestDataProxyTest::testMalformedReadNode()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: Read" );
 
 	xmlContents.str("");
@@ -226,7 +227,7 @@ void RestDataProxyTest::testMalformedReadNode()
 				<< "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: garbage in node: Read" );
 
 	// Read is the only node which should permit the compression attribute
@@ -236,7 +237,7 @@ void RestDataProxyTest::testMalformedReadNode()
 				<< "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_NO_THROW( RestDataProxy proxy( "name", client, *nodes[0] ) );
+	CPPUNIT_ASSERT_NO_THROW( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) );
 }
 
 void RestDataProxyTest::testMalformedWriteNode()
@@ -251,7 +252,7 @@ void RestDataProxyTest::testMalformedWriteNode()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: Write" );
 
 	xmlContents.str("");
@@ -260,7 +261,7 @@ void RestDataProxyTest::testMalformedWriteNode()
 				<< "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: garbage in node: Write" );
 
 	// Write nodes disallow compression attribute
@@ -270,7 +271,7 @@ void RestDataProxyTest::testMalformedWriteNode()
 				<< "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: compression in node: Write" );
 }
 
@@ -286,7 +287,7 @@ void RestDataProxyTest::testMalformedDeleteNode()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: Delete" );
 
 	xmlContents.str("");
@@ -295,7 +296,7 @@ void RestDataProxyTest::testMalformedDeleteNode()
 				<< "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: garbage in node: Delete" );
 
 	// Delete nodes disallow compression attribute
@@ -305,7 +306,7 @@ void RestDataProxyTest::testMalformedDeleteNode()
 				<< "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: compression in node: Delete" );
 }
 
@@ -322,7 +323,7 @@ void RestDataProxyTest::testOperationAttributeParsing()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_NO_THROW( RestDataProxy proxy( "name", client, *nodes[0] ) ); 
+	CPPUNIT_ASSERT_NO_THROW( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) ); 
 }
 
 void RestDataProxyTest::testMalformedUriQueryParametersNode()
@@ -339,7 +340,7 @@ void RestDataProxyTest::testMalformedUriQueryParametersNode()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: UriQueryParameters" );
 
 	xmlContents.str("");
@@ -351,7 +352,7 @@ void RestDataProxyTest::testMalformedUriQueryParametersNode()
 				<< "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: garbage in node: UriQueryParameters" );
 }
 
@@ -371,7 +372,7 @@ void RestDataProxyTest::testMalformedUriQueryGroupParametersNode()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: Group" );
 
 	xmlContents.str("");
@@ -385,7 +386,7 @@ void RestDataProxyTest::testMalformedUriQueryGroupParametersNode()
 				<< "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: garbage in node: Group" );
 }
 
@@ -403,7 +404,7 @@ void RestDataProxyTest::testMalformedHttpHeaderParametersNode()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: HttpHeaderParameters" );
 
 	xmlContents.str("");
@@ -415,7 +416,7 @@ void RestDataProxyTest::testMalformedHttpHeaderParametersNode()
 				<< "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: garbage in node: HttpHeaderParameters" );
 }
 
@@ -433,7 +434,7 @@ void RestDataProxyTest::testMalformedUriPathSegmentParametersNode()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid child: garbage in node: UriPathSegmentParameters" );
 
 	xmlContents.str("");
@@ -447,7 +448,7 @@ void RestDataProxyTest::testMalformedUriPathSegmentParametersNode()
 	nodes.clear();
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), RestDataProxyException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), RestDataProxyException,
 		".*RestDataProxy\\.cpp:\\d+: Default catch-all parameter: '\\*' cannot be configured to be a "
 		<< "uri path segment parameter since the order of path segments must be well defined" );
 
@@ -462,7 +463,7 @@ void RestDataProxyTest::testMalformedUriPathSegmentParametersNode()
 	nodes.clear();
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: garbage in node: UriPathSegmentParameters" );
 }
 
@@ -480,7 +481,7 @@ void RestDataProxyTest::testMalformedParameterNode()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: garbage in node: Parameter" );
 
 	xmlContents.str("");
@@ -493,7 +494,7 @@ void RestDataProxyTest::testMalformedParameterNode()
 				<< "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: default in node: Parameter" );
 
 	xmlContents.str("");
@@ -506,7 +507,7 @@ void RestDataProxyTest::testMalformedParameterNode()
 				<< "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: garbage in node: Parameter" );
 
 	xmlContents.str("");
@@ -519,7 +520,7 @@ void RestDataProxyTest::testMalformedParameterNode()
 				<< "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: default in node: Parameter" );
 
 	xmlContents.str("");
@@ -534,7 +535,7 @@ void RestDataProxyTest::testMalformedParameterNode()
 				<< "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: garbage in node: Parameter" );
 
 	xmlContents.str("");
@@ -549,7 +550,7 @@ void RestDataProxyTest::testMalformedParameterNode()
 				<< "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: default in node: Parameter" );
 
 	xmlContents.str("");
@@ -562,7 +563,7 @@ void RestDataProxyTest::testMalformedParameterNode()
 				<< "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: garbage in node: Parameter" );
 
 	xmlContents.str("");
@@ -575,7 +576,7 @@ void RestDataProxyTest::testMalformedParameterNode()
 				<< "</DataNode>" << std::endl;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*XMLUtilities\\.cpp:\\d+: Found invalid attribute: default in node: Parameter" );
 }
 
@@ -594,7 +595,7 @@ void RestDataProxyTest::testDuplicateParameters()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), RestDataProxyException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), RestDataProxyException,
 		".*RestDataProxy\\.cpp:\\d+: Parameter or Group 'param1' is configured ambiguously" );
 
 	xmlContents.str("");
@@ -611,7 +612,7 @@ void RestDataProxyTest::testDuplicateParameters()
 	nodes.clear();
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), RestDataProxyException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), RestDataProxyException,
 		".*RestDataProxy\\.cpp:\\d+: Parameter or Group 'param1' is configured ambiguously" );
 
 	xmlContents.str("");
@@ -626,7 +627,7 @@ void RestDataProxyTest::testDuplicateParameters()
 	nodes.clear();
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), RestDataProxyException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), RestDataProxyException,
 		".*RestDataProxy\\.cpp:\\d+: Parameter or Group 'param1' is configured ambiguously" );
 
 	xmlContents.str("");
@@ -643,7 +644,7 @@ void RestDataProxyTest::testDuplicateParameters()
 	nodes.clear();
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", client, *nodes[0] ), RestDataProxyException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), RestDataProxyException,
 		".*RestDataProxy\\.cpp:\\d+: Parameter or Group 'param1' is configured ambiguously" );
 }
 
@@ -664,7 +665,7 @@ void RestDataProxyTest::testLoadBasic()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	RestDataProxy proxy( "name", client, *nodes[0] );
+	RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::stringstream results;
 
@@ -706,7 +707,7 @@ void RestDataProxyTest::testLoadWithBodyParameter()
 	CPPUNIT_ASSERT_NO_THROW( ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes ) );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_NO_THROW( pProxy.reset( new RestDataProxy( "name", client, *nodes[0] ) ) );
+	CPPUNIT_ASSERT_NO_THROW( pProxy.reset( new RestDataProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) ) );
 	CPPUNIT_ASSERT_NO_THROW( pProxy->Load( parameters, results ) );
 
 	VerifyServicePostRequest( *m_pService, m_pTempDir->GetDirectoryName(), "", expectedPost );
@@ -734,7 +735,7 @@ void RestDataProxyTest::testLoadMethodOverride()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	RestDataProxy proxy( "name", client, *nodes[0] );
+	RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::stringstream results;
 
@@ -764,7 +765,7 @@ void RestDataProxyTest::testPing()
 		std::vector<xercesc::DOMNode*> nodes;
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-		RestDataProxy proxy( "name", client, *nodes[0] );
+		RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::stringstream results;
 		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ | DPL::WRITE | DPL::DELETE ) );
@@ -776,7 +777,7 @@ void RestDataProxyTest::testPing()
 		std::vector<xercesc::DOMNode*> nodes;
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-		RestDataProxy proxy( "name", client, *nodes[0] );
+		RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::stringstream results;
 		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ | DPL::WRITE | DPL::DELETE ) );
@@ -788,7 +789,7 @@ void RestDataProxyTest::testPing()
 		std::vector<xercesc::DOMNode*> nodes;
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-		RestDataProxy proxy( "name", client, *nodes[0] );
+		RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::stringstream results;
 		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ | DPL::WRITE | DPL::DELETE ) );
@@ -800,7 +801,7 @@ void RestDataProxyTest::testPing()
 		std::vector<xercesc::DOMNode*> nodes;
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-		RestDataProxy proxy( "name", client, *nodes[0] );
+		RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::stringstream results;
 		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ | DPL::WRITE | DPL::DELETE ) );
@@ -814,7 +815,7 @@ void RestDataProxyTest::testPing()
 		std::vector<xercesc::DOMNode*> nodes;
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-		RestDataProxy proxy( "name", client, *nodes[0] );
+		RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::stringstream results;
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::READ ), PingException,
@@ -836,7 +837,7 @@ void RestDataProxyTest::testPing()
 		std::vector<xercesc::DOMNode*> nodes;
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-		RestDataProxy proxy( "name", client, *nodes[0] );
+		RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::stringstream results;
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::READ ), PingException,
@@ -855,7 +856,7 @@ void RestDataProxyTest::testPing()
 		std::vector<xercesc::DOMNode*> nodes;
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-		RestDataProxy proxy( "name", client, *nodes[0] );
+		RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::stringstream results;
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::READ ), PingException,
@@ -874,7 +875,7 @@ void RestDataProxyTest::testPing()
 		std::vector<xercesc::DOMNode*> nodes;
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-		RestDataProxy proxy( "name", client, *nodes[0] );
+		RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::stringstream results;
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::WRITE ), PingException,
@@ -893,7 +894,7 @@ void RestDataProxyTest::testPing()
 		std::vector<xercesc::DOMNode*> nodes;
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-		RestDataProxy proxy( "name", client, *nodes[0] );
+		RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::stringstream results;
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::WRITE ), PingException,
@@ -912,7 +913,7 @@ void RestDataProxyTest::testPing()
 		std::vector<xercesc::DOMNode*> nodes;
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-		RestDataProxy proxy( "name", client, *nodes[0] );
+		RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::stringstream results;
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::DELETE ), PingException,
@@ -931,7 +932,7 @@ void RestDataProxyTest::testPing()
 		std::vector<xercesc::DOMNode*> nodes;
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-		RestDataProxy proxy( "name", client, *nodes[0] );
+		RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::stringstream results;
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::DELETE ), PingException,
@@ -952,7 +953,7 @@ void RestDataProxyTest::testPing()
 		std::vector<xercesc::DOMNode*> nodes;
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-		RestDataProxy proxy( "name", client, *nodes[0] );
+		RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::stringstream results;
 		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ ) );
@@ -980,7 +981,7 @@ void RestDataProxyTest::testLoadTimeout()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	RestDataProxy proxy( "name", client, *nodes[0] );
+	RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::stringstream results;
 	CPPUNIT_ASSERT_THROW( proxy.Load( parameters, results ), RESTClientException );
@@ -1041,7 +1042,7 @@ void RestDataProxyTest::testLoadComplex()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	RestDataProxy proxy( "name", client, *nodes[0] );
+	RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::map< std::string, std::string > parameters;
 	parameters["uriPathSegment1"] = "segOne";
@@ -1088,7 +1089,7 @@ void RestDataProxyTest::testStoreTimeout()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	RestDataProxy proxy( "name", client, *nodes[0] );
+	RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	CPPUNIT_ASSERT_THROW( proxy.Store( parameters, data ), RESTClientException );
 }
@@ -1108,7 +1109,7 @@ void RestDataProxyTest::testStoreBasic()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	RestDataProxy proxy( "name", client, *nodes[0] );
+	RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 	CPPUNIT_ASSERT( !proxy.SupportsTransactions() );
 
 	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data ) );
@@ -1136,7 +1137,7 @@ void RestDataProxyTest::testStoreWithBodyParameter()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	RestDataProxy proxy( "name", client, *nodes[0] );
+	RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 	CPPUNIT_ASSERT( !proxy.SupportsTransactions() );
 
 	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, notPosted ) );
@@ -1161,7 +1162,7 @@ void RestDataProxyTest::testStoreMethodOverride()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	RestDataProxy proxy( "name", client, *nodes[0] );
+	RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 	CPPUNIT_ASSERT( !proxy.SupportsTransactions() );
 
 	CPPUNIT_ASSERT_NO_THROW( proxy.Store( parameters, data ) );
@@ -1206,7 +1207,7 @@ void RestDataProxyTest::testStoreComplex()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	RestDataProxy proxy( "name", client, *nodes[0] );
+	RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::map< std::string, std::string > parameters;
 	parameters["uriPathSegment1"] = "segOne";
@@ -1244,7 +1245,7 @@ void RestDataProxyTest::testDeleteBasic()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	RestDataProxy proxy( "name", client, *nodes[0] );
+	RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	// ensure RestDataProxy does not support commit or rollback
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Commit(), NotSupportedException, ".*/RestDataProxy.cpp:\\d+: RestDataProxy does not support transactions" );
@@ -1279,7 +1280,7 @@ void RestDataProxyTest::testDeleteWithBodyParameter()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	RestDataProxy proxy( "name", client, *nodes[0] );
+	RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	CPPUNIT_ASSERT_NO_THROW( proxy.Delete( parameters ) );
 
@@ -1305,7 +1306,7 @@ void RestDataProxyTest::testDeleteMethodOverride()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	RestDataProxy proxy( "name", client, *nodes[0] );
+	RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	// ensure RestDataProxy does not support commit or rollback
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Commit(), NotSupportedException, ".*/RestDataProxy.cpp:\\d+: RestDataProxy does not support transactions" );
@@ -1333,7 +1334,7 @@ void RestDataProxyTest::testDeleteTimeout()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	RestDataProxy proxy( "name", client, *nodes[0] );
+	RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	CPPUNIT_ASSERT_THROW( proxy.Delete( parameters ), RESTClientException );
 }
@@ -1391,7 +1392,7 @@ void RestDataProxyTest::testDeleteComplex()
 	std::vector<xercesc::DOMNode*> nodes;
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
-	RestDataProxy proxy( "name", client, *nodes[0] );
+	RestDataProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::map< std::string, std::string > parameters;
 	parameters["uriPathSegment1"] = "segOne";

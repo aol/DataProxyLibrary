@@ -18,11 +18,13 @@
 #include <boost/shared_ptr.hpp>
 #include <set>
 
+class MockDataProxyClient;
+
 class TestableNode : public AbstractNode
 {
 public:
 	TestableNode( const std::string& i_rName,
-				  DataProxyClient& i_rParent,
+				  MockDataProxyClient& i_rParent,
 				  const xercesc::DOMNode& i_rNode );
 	virtual ~TestableNode();
 	

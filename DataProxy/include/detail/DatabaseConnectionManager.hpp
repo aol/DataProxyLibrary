@@ -41,6 +41,9 @@ MV_MAKEEXCEPTIONCLASS(DatabaseConnectionManagerException, MVException);
 	DATUMINFO( MinPoolSize, size_t );
 	DATUMINFO( MaxPoolSize, size_t );
 	DATUMINFO( PoolRefreshPeriod, int );
+	// this is actually a Database::TransactionIsolationLevel enum,
+	// but we don't want to have to #include that header:
+	DATUMINFO( TransactionIsolationLevel, int );
 
 	typedef
 		GenericDatum< DatabaseConnectionType,
@@ -54,7 +57,8 @@ MV_MAKEEXCEPTIONCLASS(DatabaseConnectionManagerException, MVException);
 		GenericDatum< MinPoolSize,
 		GenericDatum< MaxPoolSize,
 		GenericDatum< PoolRefreshPeriod,
-		RowEnd > > > > > > > > > > >
+		GenericDatum< TransactionIsolationLevel,
+		RowEnd > > > > > > > > > > > >
 	DatabaseConfigDatum;
 
 	DATUMINFO( DatabaseConfig, DatabaseConfigDatum );

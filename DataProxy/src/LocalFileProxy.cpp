@@ -81,8 +81,8 @@ namespace
 	}
 }
 
-LocalFileProxy::LocalFileProxy( const std::string& i_rName, DataProxyClient& i_rParent, const xercesc::DOMNode& i_rNode, UniqueIdGenerator& i_rUniqueIdGenerator )
-:	AbstractNode( i_rName, i_rParent, i_rNode ),
+LocalFileProxy::LocalFileProxy( const std::string& i_rName, boost::shared_ptr< RequestForwarder > i_pRequestForwarder, const xercesc::DOMNode& i_rNode, UniqueIdGenerator& i_rUniqueIdGenerator )
+:	AbstractNode( i_rName, i_pRequestForwarder, i_rNode ),
 	m_BaseLocation(),
 	m_NameFormat(),
 	m_OpenMode( OVERWRITE ),

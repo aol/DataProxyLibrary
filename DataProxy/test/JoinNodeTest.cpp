@@ -11,6 +11,7 @@
 #include "JoinNode.hpp"
 #include "ShellExecutor.hpp"
 #include "JoinNodeTest.hpp"
+#include "MockRequestForwarder.hpp"
 #include "MockDataProxyClient.hpp"
 #include "FileUtilities.hpp"
 #include "TempDirectory.hpp"
@@ -62,7 +63,7 @@ void JoinNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: garbage in node: Read" );
 
 	xmlContents.str("");
@@ -77,7 +78,7 @@ void JoinNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: garbage in node: JoinTo" );
 
 	xmlContents.str("");
@@ -90,7 +91,7 @@ void JoinNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid attribute: garbage in node: JoinTo" );
 
 	xmlContents.str("");
@@ -103,7 +104,7 @@ void JoinNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid attribute: type in node: ForwardTo" );
 
 	xmlContents.str("");
@@ -116,7 +117,7 @@ void JoinNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Unable to find attribute: 'type' in node: JoinTo" );
 
 	xmlContents.str("");
@@ -129,7 +130,7 @@ void JoinNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), JoinNodeException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), JoinNodeException,
 		".*:\\d+: Unknown value for Read behavior: garbage. Legal values are 'columnJoin', 'append'" );
 
 	xmlContents.str("");
@@ -142,7 +143,7 @@ void JoinNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), JoinNodeException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), JoinNodeException,
 		".*:\\d+: When providing nonzero JoinTo nodes, the read-side ForwardTo must contain an attribute for 'key'" );
 
 	xmlContents.str("");
@@ -155,7 +156,7 @@ void JoinNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Unable to find attribute: 'key' in node: JoinTo" );
 
 	xmlContents.str("");
@@ -168,7 +169,7 @@ void JoinNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), JoinNodeException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), JoinNodeException,
 		".*:\\d+: Illegal type specified for JoinTo node name2: 'stupid'. Legal values are: 'inner', 'right', 'left', 'outer', 'antiRight', 'antiLeft', 'antiInner'" );
 
 	xmlContents.str("");
@@ -181,7 +182,7 @@ void JoinNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), InvalidDirectoryException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), InvalidDirectoryException,
 		".*:\\d+: /nonexistent does not exist or is not a valid directory." );
 	
 	// Store config
@@ -194,7 +195,7 @@ void JoinNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: garbage in node: Write" );
 
 	xmlContents.str("");
@@ -209,7 +210,7 @@ void JoinNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: garbage in node: JoinTo" );
 
 	xmlContents.str("");
@@ -221,7 +222,7 @@ void JoinNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), JoinNodeException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), JoinNodeException,
 		".*:\\d+: Must provide a ForwardTo node for write-side joins to determine the final destination" );
 
 	xmlContents.str("");
@@ -234,7 +235,7 @@ void JoinNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Unable to find attribute: 'type' in node: JoinTo" );
 
 	xmlContents.str("");
@@ -248,7 +249,7 @@ void JoinNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: garbage in node: ForwardTo" );
 
 	// Delete config
@@ -261,7 +262,7 @@ void JoinNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: garbage in node: Delete" );
 	
 	// StreamTransformers configuration should be disallowed in Delete nodes
@@ -274,7 +275,7 @@ void JoinNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: StreamTransformers in node: Delete" );
 
 	xmlContents.str("");
@@ -288,7 +289,7 @@ void JoinNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid child: garbage in node: ForwardTo" );
 
 	xmlContents.str("");
@@ -300,7 +301,7 @@ void JoinNodeTest::testInvalidXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", client, *nodes[0] ), XMLUtilitiesException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ), XMLUtilitiesException,
 		".*:\\d+: Found invalid attribute: garbage in node: ForwardTo" );
 }
 
@@ -317,7 +318,7 @@ void JoinNodeTest::testOperationNotSupported()
 
 		MockDataProxyClient client;
 
-		JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::stringstream results;
 		std::map<std::string,std::string> parameters;
@@ -359,7 +360,7 @@ void JoinNodeTest::testOperationNotSupported()
 		client.SetDataToReturn( "name1", stream1.str() );
 		client.SetDataToReturn( "name2", stream2.str() );
 
-		JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::stringstream results;
 		std::map<std::string,std::string> parameters;
@@ -387,7 +388,7 @@ void JoinNodeTest::testOperationAttributeParsing()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_NO_THROW( JoinNode node( "name", client, *nodes[0] ) ); 
+	CPPUNIT_ASSERT_NO_THROW( JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) ); 
 }
 
 void JoinNodeTest::testPing()
@@ -408,7 +409,7 @@ void JoinNodeTest::testPing()
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-		JoinNode node( std::string("name"), client, *nodes[0] ) ;
+		JoinNode node( std::string("name"), boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) ;
 		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::READ ) );
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::WRITE ), PingException, ".*:\\d+: Not configured to be able to handle Write operations" );
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
@@ -434,7 +435,7 @@ void JoinNodeTest::testPing()
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-		JoinNode node( std::string("name"), client, *nodes[0] ) ;
+		JoinNode node( std::string("name"), boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) ;
 		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::WRITE ) );
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::READ ), PingException, ".*:\\d+: Not configured to be able to handle Read operations" );
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::DELETE ), PingException, ".*:\\d+: Not configured to be able to handle Delete operations" );
@@ -458,7 +459,7 @@ void JoinNodeTest::testPing()
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-		JoinNode node( std::string("name"), client, *nodes[0] ) ;
+		JoinNode node( std::string("name"), boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) ;
 		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::DELETE ) );
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::READ ), PingException, ".*:\\d+: Not configured to be able to handle Read operations" );
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( node.Ping( DPL::WRITE ), PingException, ".*:\\d+: Not configured to be able to handle Write operations" );
@@ -487,7 +488,7 @@ void JoinNodeTest::testPing()
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "JoinNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-		JoinNode node( std::string("name"), client, *nodes[0] ) ;
+		JoinNode node( std::string("name"), boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] ) ;
 		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::READ ) );
 		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::WRITE ) );
 		CPPUNIT_ASSERT_NO_THROW( node.Ping( DPL::READ | DPL::WRITE ) );
@@ -540,7 +541,7 @@ void JoinNodeTest::testLoad()
 
 	MockDataProxyClient client;
 
-	JoinNode node( "name", client, *nodes[0] );
+	JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::stringstream results;
 	std::map<std::string,std::string> parameters;
@@ -601,7 +602,7 @@ void JoinNodeTest::testLoadJoinInner()
 		client.SetDataToReturn( "name2", stream2.str() );
 		client.SetDataToReturn( "name3", stream3.str() );
 
-		JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::stringstream results;
 		std::map<std::string,std::string> parameters;
@@ -669,7 +670,7 @@ void JoinNodeTest::testLoadJoinInner()
 		client.SetDataToReturn( "name1", stream1.str() );
 		client.SetDataToReturn( "name2", stream2.str() );
 
-		JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::stringstream results;
 		std::map<std::string,std::string> parameters;
@@ -727,7 +728,7 @@ void JoinNodeTest::testLoadJoinInner()
 		client.SetDataToReturn( "name1", stream1.str() );
 		client.SetDataToReturn( "name2", stream2.str() );
 
-		JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::stringstream results;
 		std::map<std::string,std::string> parameters;
@@ -784,7 +785,7 @@ void JoinNodeTest::testLoadJoinInner()
 		client.SetDataToReturn( "name1", stream1.str() );
 		client.SetDataToReturn( "name2", stream2.str() );
 
-		JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::stringstream results;
 		std::map<std::string,std::string> parameters;
@@ -843,7 +844,7 @@ void JoinNodeTest::testLoadJoinLeft()
 	client.SetDataToReturn( "name1", stream1.str() );
 	client.SetDataToReturn( "name2", stream2.str() );
 
-	JoinNode node( "name", client, *nodes[0] );
+	JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::stringstream results;
 	std::map<std::string,std::string> parameters;
@@ -907,7 +908,7 @@ void JoinNodeTest::testLoadJoinRight()
 	client.SetDataToReturn( "name1", stream1.str() );
 	client.SetDataToReturn( "name2", stream2.str() );
 
-	JoinNode node( "name", client, *nodes[0] );
+	JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::stringstream results;
 	std::map<std::string,std::string> parameters;
@@ -971,7 +972,7 @@ void JoinNodeTest::testLoadJoinOuter()
 	client.SetDataToReturn( "name1", stream1.str() );
 	client.SetDataToReturn( "name2", stream2.str() );
 
-	JoinNode node( "name", client, *nodes[0] );
+	JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::stringstream results;
 	std::map<std::string,std::string> parameters;
@@ -1036,7 +1037,7 @@ void JoinNodeTest::testLoadAntiJoin()
 		client.SetDataToReturn( "name1", stream1.str() );
 		client.SetDataToReturn( "name2", stream2.str() );
 
-		JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::stringstream results;
 		std::map<std::string,std::string> parameters;
@@ -1092,7 +1093,7 @@ void JoinNodeTest::testLoadAntiJoin()
 		client.SetDataToReturn( "name1", stream1.str() );
 		client.SetDataToReturn( "name2", stream2.str() );
 
-		JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::stringstream results;
 		std::map<std::string,std::string> parameters;
@@ -1148,7 +1149,7 @@ void JoinNodeTest::testLoadAntiJoin()
 		client.SetDataToReturn( "name1", stream1.str() );
 		client.SetDataToReturn( "name2", stream2.str() );
 
-		JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::stringstream results;
 		std::map<std::string,std::string> parameters;
@@ -1227,7 +1228,7 @@ void JoinNodeTest::testLoadJoinComplex()
 	client.SetDataToReturn( "name4", stream4.str() );
 	client.SetDataToReturn( "name5", stream5.str() );
 
-	JoinNode node( "name", client, *nodes[0] );
+	JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::stringstream results;
 	std::map<std::string,std::string> parameters;
@@ -1284,7 +1285,7 @@ void JoinNodeTest::testLoadJoinRuntimeErrors()
 		client.SetDataToReturn( "name1", stream1.str() );
 		client.SetDataToReturn( "name2", stream2.str() );
 
-		JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::stringstream results;
 		std::map<std::string,std::string> parameters;
@@ -1316,7 +1317,7 @@ void JoinNodeTest::testLoadJoinRuntimeErrors()
 		client.SetDataToReturn( "name1", stream1.str() );
 		client.SetDataToReturn( "name2", stream2.str() );
 
-		JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::stringstream results;
 		std::map<std::string,std::string> parameters;
@@ -1350,7 +1351,7 @@ void JoinNodeTest::testLoadJoinRuntimeErrors()
 		client.SetDataToReturn( "name1", stream1.str() );
 		client.SetDataToReturn( "name2", stream2.str() );
 
-		JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::stringstream results;
 		std::map<std::string,std::string> parameters;
@@ -1382,7 +1383,7 @@ void JoinNodeTest::testLoadJoinRuntimeErrors()
 		client.SetDataToReturn( "name1", stream1.str() );
 		client.SetDataToReturn( "name2", stream2.str() );
 
-		JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::stringstream results;
 		std::map<std::string,std::string> parameters;
@@ -1416,7 +1417,7 @@ void JoinNodeTest::testLoadJoinRuntimeErrors()
 		client.SetDataToReturn( "name1", stream1.str() );
 		client.SetDataToReturn( "name2", stream2.str() );
 
-		JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::stringstream results;
 		std::map<std::string,std::string> parameters;
@@ -1474,7 +1475,7 @@ void JoinNodeTest::testLoadJoinMulti()
 	client.SetDataToReturn( "name1", stream1.str() );
 	client.SetDataToReturn( "name2", stream2.str() );
 
-	JoinNode node( "name", client, *nodes[0] );
+	JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::stringstream results;
 	std::map<std::string,std::string> parameters;
@@ -1547,7 +1548,7 @@ void JoinNodeTest::testLoadAppend()
 	client.SetDataToReturn( "name3", stream3.str() );
 	client.SetDataToReturn( "name4", stream4.str() );
 
-	JoinNode node( "name", client, *nodes[0] );
+	JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::stringstream results;
 	std::map<std::string,std::string> parameters;
@@ -1595,7 +1596,7 @@ void JoinNodeTest::testStore()
 
 	MockDataProxyClient client;
 
-	JoinNode node( "name", client, *nodes[0] );
+	JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::map<std::string,std::string> parameters;
 	parameters["param1"] = "value1";
@@ -1658,7 +1659,7 @@ void JoinNodeTest::testStoreJoinInner()
 		client.SetDataToReturn( "name2", stream2.str() );
 		client.SetDataToReturn( "name3", stream3.str() );
 
-		JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::map<std::string,std::string> parameters;
 		parameters["param1"] = "value1";
@@ -1723,7 +1724,7 @@ void JoinNodeTest::testStoreJoinInner()
 		MockDataProxyClient client;
 		client.SetDataToReturn( "name2", stream2.str() );
 
-		JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::map<std::string,std::string> parameters;
 
@@ -1776,7 +1777,7 @@ void JoinNodeTest::testStoreJoinInner()
 		MockDataProxyClient client;
 		client.SetDataToReturn( "name2", stream2.str() );
 
-		JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::map<std::string,std::string> parameters;
 
@@ -1828,7 +1829,7 @@ void JoinNodeTest::testStoreJoinInner()
 		MockDataProxyClient client;
 		client.SetDataToReturn( "name2", stream2.str() );
 
-		JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::map<std::string,std::string> parameters;
 
@@ -1882,7 +1883,7 @@ void JoinNodeTest::testStoreJoinLeft()
 	MockDataProxyClient client;
 	client.SetDataToReturn( "name2", stream2.str() );
 
-	JoinNode node( "name", client, *nodes[0] );
+	JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::map<std::string,std::string> parameters;
 	parameters["param1"] = "value1";
@@ -1941,7 +1942,7 @@ void JoinNodeTest::testStoreJoinRight()
 	MockDataProxyClient client;
 	client.SetDataToReturn( "name2", stream2.str() );
 
-	JoinNode node( "name", client, *nodes[0] );
+	JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::map<std::string,std::string> parameters;
 	parameters["param1"] = "value1";
@@ -2000,7 +2001,7 @@ void JoinNodeTest::testStoreJoinOuter()
 	MockDataProxyClient client;
 	client.SetDataToReturn( "name2", stream2.str() );
 
-	JoinNode node( "name", client, *nodes[0] );
+	JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::map<std::string,std::string> parameters;
 	parameters["param1"] = "value1";
@@ -2060,7 +2061,7 @@ void JoinNodeTest::testStoreAntiJoin()
 		MockDataProxyClient client;
 		client.SetDataToReturn( "name2", stream2.str() );
 
-		JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::map<std::string,std::string> parameters;
 		parameters["param1"] = "value1";
@@ -2111,7 +2112,7 @@ void JoinNodeTest::testStoreAntiJoin()
 		MockDataProxyClient client;
 		client.SetDataToReturn( "name2", stream2.str() );
 
-		JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::map<std::string,std::string> parameters;
 		parameters["param1"] = "value1";
@@ -2162,7 +2163,7 @@ void JoinNodeTest::testStoreAntiJoin()
 		MockDataProxyClient client;
 		client.SetDataToReturn( "name2", stream2.str() );
 
-		JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::map<std::string,std::string> parameters;
 		parameters["param1"] = "value1";
@@ -2236,7 +2237,7 @@ void JoinNodeTest::testStoreJoinComplex()
 	client.SetDataToReturn( "name4", stream4.str() );
 	client.SetDataToReturn( "name5", stream5.str() );
 
-	JoinNode node( "name", client, *nodes[0] );
+	JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::map<std::string,std::string> parameters;
 	parameters["param1"] = "value1";
@@ -2288,7 +2289,7 @@ void JoinNodeTest::testStoreJoinRuntimeErrors()
 		MockDataProxyClient client;
 		client.SetDataToReturn( "name2", stream2.str() );
 
-		JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::map<std::string,std::string> parameters;
 		parameters["param1"] = "value1";
@@ -2318,7 +2319,7 @@ void JoinNodeTest::testStoreJoinRuntimeErrors()
 		MockDataProxyClient client;
 		client.SetDataToReturn( "name2", stream2.str() );
 
-		JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::map<std::string,std::string> parameters;
 		parameters["param1"] = "value1";
@@ -2350,7 +2351,7 @@ void JoinNodeTest::testStoreJoinRuntimeErrors()
 		MockDataProxyClient client;
 		client.SetDataToReturn( "name2", stream2.str() );
 
-		JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::map<std::string,std::string> parameters;
 		parameters["param1"] = "value1";
@@ -2380,7 +2381,7 @@ void JoinNodeTest::testStoreJoinRuntimeErrors()
 		MockDataProxyClient client;
 		client.SetDataToReturn( "name2", stream2.str() );
 
-		JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::map<std::string,std::string> parameters;
 		parameters["param1"] = "value1";
@@ -2412,7 +2413,7 @@ void JoinNodeTest::testStoreJoinRuntimeErrors()
 		MockDataProxyClient client;
 		client.SetDataToReturn( "name2", stream2.str() );
 
-		JoinNode node( "name", client, *nodes[0] );
+		JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 		std::map<std::string,std::string> parameters;
 		parameters["param1"] = "value1";
@@ -2468,7 +2469,7 @@ void JoinNodeTest::testStoreJoinMulti()
 	MockDataProxyClient client;
 	client.SetDataToReturn( "name2", stream2.str() );
 
-	JoinNode node( "name", client, *nodes[0] );
+	JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::map<std::string,std::string> parameters;
 	parameters["param1"] = "value1";
@@ -2536,7 +2537,7 @@ void JoinNodeTest::testStoreAppend()
 	client.SetDataToReturn( "name3", stream3.str() );
 	client.SetDataToReturn( "name4", stream4.str() );
 
-	JoinNode node( "name", client, *nodes[0] );
+	JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::map<std::string,std::string> parameters;
 	parameters["param1"] = "value1";
@@ -2576,7 +2577,7 @@ void JoinNodeTest::testDelete()
 
 	MockDataProxyClient client;
 
-	JoinNode node( "name", client, *nodes[0] );
+	JoinNode node( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0] );
 
 	std::map<std::string,std::string> parameters;
 	parameters["param1"] = "value1";

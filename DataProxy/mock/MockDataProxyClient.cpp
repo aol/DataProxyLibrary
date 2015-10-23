@@ -21,7 +21,7 @@ namespace
 		std::string::const_iterator iter = i_rData.begin();
 		for( ; iter != i_rData.end(); ++iter )
 		{
-			if( !::isprint( *iter ) )
+			if( !::isprint( *iter ) && !::isspace( *iter ) )
 			{
 				return true;
 			}

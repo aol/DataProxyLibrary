@@ -59,6 +59,12 @@ protected:
 #endif
 
 private:
+	friend class RequestForwarder;
+	void PingImpl( const std::string& i_rName, int i_Mode ) const;
+	void LoadImpl( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData ) const;
+	void StoreImpl( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData ) const;
+	void DeleteImpl( const std::string& i_rName, const std::map<std::string,std::string>& i_rParameters ) const;
+
 	typedef std::map< std::string, boost::shared_ptr< AbstractNode > > NodesMap;
 
 	void PrivateRollback( bool i_ObtainLock );

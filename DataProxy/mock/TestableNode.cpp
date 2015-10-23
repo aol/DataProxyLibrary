@@ -11,12 +11,14 @@
 #include "TestableNode.hpp"
 #include "DataProxyClient.hpp"
 #include "ProxyUtilities.hpp"
+#include "MockRequestForwarder.hpp"
 #include <boost/iostreams/copy.hpp>
+#include <boost/make_shared.hpp>
 
 TestableNode::TestableNode(	const std::string& i_rName,
-							DataProxyClient& i_rParent,
+							MockDataProxyClient& i_rParent,
 							const xercesc::DOMNode& i_rNode )
-:	AbstractNode( i_rName, i_rParent, i_rNode ),
+:	AbstractNode( i_rName, boost::make_shared< MockRequestForwarder >( i_rParent ), i_rNode ),
 	m_Log(),
 	m_DataToReturn(),
 	m_PingException( false ),

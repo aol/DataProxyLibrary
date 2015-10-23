@@ -19,6 +19,7 @@
 #include "AssertTableContents.hpp"
 #include "OracleUnitTestDatabase.hpp"
 #include "MySqlUnitTestDatabase.hpp"
+#include "MockRequestForwarder.hpp"
 #include "MockDataProxyClient.hpp"
 #include "MockDatabaseConnectionManager.hpp"
 #include <fstream>
@@ -141,7 +142,7 @@ void DatabaseProxyTest::testConstructorExceptionWithNoReadOrWriteOrDeleteNode()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", client, *nodes[0], dbManager ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ),
 									  DatabaseProxyException,
 									  MATCH_FILE_AND_LINE_NUMBER + "Node not configured to handle Load or Store or Delete operations" );
 }
@@ -161,7 +162,7 @@ void DatabaseProxyTest::testConstructorExceptionIllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", client, *nodes[0], dbManager ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ),
 									  DatabaseProxyException,
 									  MATCH_FILE_AND_LINE_NUMBER + "Neither 'connection' nor 'connectionByTable' attributes were provided");
 
@@ -175,7 +176,7 @@ void DatabaseProxyTest::testConstructorExceptionIllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", client, *nodes[0], dbManager ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ),
 									  DatabaseProxyException,
 									  MATCH_FILE_AND_LINE_NUMBER + "Invalid to supply both 'connection' and 'connectionByTable' attributes");
 
@@ -188,7 +189,7 @@ void DatabaseProxyTest::testConstructorExceptionIllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", client, *nodes[0], dbManager ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ),
 									  XMLUtilitiesException,
 									  MATCH_FILE_AND_LINE_NUMBER + "Unable to find attribute: 'query' in node: Read");
 
@@ -201,7 +202,7 @@ void DatabaseProxyTest::testConstructorExceptionIllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", client, *nodes[0], dbManager ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ),
 									  XMLUtilitiesException,
 									  MATCH_FILE_AND_LINE_NUMBER + "Unable to find attribute: 'header' in node: Read");
 
@@ -217,7 +218,7 @@ void DatabaseProxyTest::testConstructorExceptionIllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", client, *nodes[0], dbManager ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ),
 									  DatabaseProxyException,
 									  MATCH_FILE_AND_LINE_NUMBER + "Neither 'connection' nor 'connectionByTable' attributes were provided");
 
@@ -235,7 +236,7 @@ void DatabaseProxyTest::testConstructorExceptionIllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", client, *nodes[0], dbManager ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ),
 									  DatabaseProxyException,
 									  MATCH_FILE_AND_LINE_NUMBER + "Invalid to supply both 'connection' and 'connectionByTable' attributes");
 
@@ -251,7 +252,7 @@ void DatabaseProxyTest::testConstructorExceptionIllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", client, *nodes[0], dbManager ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ),
 									  XMLUtilitiesException,
 									  MATCH_FILE_AND_LINE_NUMBER + "Unable to find attribute: 'table' in node: Write");
 
@@ -267,7 +268,7 @@ void DatabaseProxyTest::testConstructorExceptionIllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", client, *nodes[0], dbManager ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ),
 									  XMLUtilitiesException,
 									  MATCH_FILE_AND_LINE_NUMBER + "Unable to find attribute: 'workingDir' in node: Write");
 
@@ -283,7 +284,7 @@ void DatabaseProxyTest::testConstructorExceptionIllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", client, *nodes[0], dbManager ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ),
 									  XMLUtilitiesException,
 									  MATCH_FILE_AND_LINE_NUMBER + "Incorrect number of Columns child nodes specified in Write. There were 0 but there should be exactly 1");
 
@@ -300,7 +301,7 @@ void DatabaseProxyTest::testConstructorExceptionIllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", client, *nodes[0], dbManager ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ),
 									  DatabaseProxyException,
 									  MATCH_FILE_AND_LINE_NUMBER + "Attributes for table and stagingTable cannot have the same value: myTable");
 
@@ -316,7 +317,7 @@ void DatabaseProxyTest::testConstructorExceptionIllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", client, *nodes[0], dbManager ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ),
 									  DatabaseProxyException,
 									  MATCH_FILE_AND_LINE_NUMBER + "Attributes for table and stagingTable cannot have the same value: myTable\\$\\{campaign\\}");
 
@@ -333,7 +334,7 @@ void DatabaseProxyTest::testConstructorExceptionIllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", client, *nodes[0], dbManager ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ),
 									  InvalidDirectoryException,
 									  MATCH_FILE_AND_LINE_NUMBER + "/nonexistent does not exist or is not a valid directory\\." );
 
@@ -351,7 +352,7 @@ void DatabaseProxyTest::testConstructorExceptionIllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", client, *nodes[0], dbManager ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ),
 									  XMLUtilitiesException,
 									  MATCH_FILE_AND_LINE_NUMBER + "Found invalid attribute: garbage in node: Write" );
 	
@@ -369,7 +370,7 @@ void DatabaseProxyTest::testConstructorExceptionIllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", client, *nodes[0], dbManager ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ),
 									  DatabaseProxyException,
 									  MATCH_FILE_AND_LINE_NUMBER + "Write attribute: onColumnParameterCollision has invalid value: garbage. Valid values are 'fail', 'useColumn', 'useParameter'" );
 
@@ -381,7 +382,7 @@ void DatabaseProxyTest::testConstructorExceptionIllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", client, *nodes[0], dbManager ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ),
 									  DatabaseProxyException,
 									  MATCH_FILE_AND_LINE_NUMBER + "Neither 'connection' nor 'connectionByTable' attributes were provided");
 	
@@ -395,7 +396,7 @@ void DatabaseProxyTest::testConstructorExceptionIllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", client, *nodes[0], dbManager ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ),
 									  DatabaseProxyException,
 									  MATCH_FILE_AND_LINE_NUMBER + "Invalid to supply both 'connection' and 'connectionByTable' attributes");
 
@@ -408,7 +409,7 @@ void DatabaseProxyTest::testConstructorExceptionIllegalXml()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", client, *nodes[0], dbManager ),
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE(DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ),
 									  XMLUtilitiesException,
 									  MATCH_FILE_AND_LINE_NUMBER + "Unable to find attribute: 'query' in node: Delete");
 }
@@ -451,7 +452,7 @@ void DatabaseProxyTest::testOperationAttributeParsing()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_NO_THROW( DatabaseProxy proxy( "name", client, *nodes[0], dbManager ) ); 
+	CPPUNIT_ASSERT_NO_THROW( DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ) ); 
 }
 
 void DatabaseProxyTest::testOperationNotSupported()
@@ -470,7 +471,7 @@ void DatabaseProxyTest::testOperationNotSupported()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 	std::map< std::string, std::string > parameters;
 	std::stringstream results;
@@ -495,7 +496,7 @@ void DatabaseProxyTest::testOperationNotSupported()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	DatabaseProxy proxy2( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy2( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy2.Load( parameters, results ),
 									   DatabaseProxyException,
@@ -514,7 +515,7 @@ void DatabaseProxyTest::testOperationNotSupported()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	DatabaseProxy proxy3( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy3( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy3.Load( parameters, results ),
 									   DatabaseProxyException,
@@ -544,7 +545,7 @@ void DatabaseProxyTest::testPing()
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-		DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+		DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ ) );
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::WRITE ), PingException, ".*:\\d+: Not configured to be able to handle Write operations" );
@@ -578,7 +579,7 @@ void DatabaseProxyTest::testPing()
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-		DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+		DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::WRITE ) );
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::READ ), PingException, ".*:\\d+: Not configured to be able to handle Read operations" );
@@ -611,7 +612,7 @@ void DatabaseProxyTest::testPing()
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-		DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+		DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::DELETE ) );
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::READ ), PingException, ".*:\\d+: Not configured to be able to handle Read operations" );
@@ -648,7 +649,7 @@ void DatabaseProxyTest::testPing()
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-		DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+		DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ ) );
 		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::WRITE ) );
@@ -712,7 +713,7 @@ void DatabaseProxyTest::testPing()
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-		DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+		DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ ) );
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::WRITE ), PingException, ".*:\\d+: Not configured to be able to handle Write operations" );
@@ -747,7 +748,7 @@ void DatabaseProxyTest::testPing()
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-		DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+		DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::WRITE ) );
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::READ ), PingException, ".*:\\d+: Not configured to be able to handle Read operations" );
@@ -781,7 +782,7 @@ void DatabaseProxyTest::testPing()
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-		DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+		DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::DELETE ) );
 		CPPUNIT_ASSERT_THROW_WITH_MESSAGE( proxy.Ping( DPL::READ ), PingException, ".*:\\d+: Not configured to be able to handle Read operations" );
@@ -819,7 +820,7 @@ void DatabaseProxyTest::testPing()
 		ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 		CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-		DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+		DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::READ ) );
 		CPPUNIT_ASSERT_NO_THROW( proxy.Ping( DPL::WRITE ) );
@@ -907,7 +908,7 @@ void DatabaseProxyTest::testOracleLoad()
 
 	MockDatabaseConnectionManager dbManager;
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 	std::map< std::string, std::string > parameters;
 	parameters["idToMatch"] = "3";
@@ -970,7 +971,7 @@ void DatabaseProxyTest::testMySQLLoad()
 
 	MockDatabaseConnectionManager dbManager;
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 	std::map< std::string, std::string > parameters;
 	parameters["idToMatch"] = "3";
@@ -1031,7 +1032,7 @@ void DatabaseProxyTest::testLoadExceptionMissingVariableNameDefinition()
 
 	MockDatabaseConnectionManager dbManager;
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 	std::stringstream expected;
 	expected << "MockDatabaseConnectionManager::ValidateConnectionName" << std::endl
 			 << "ConnectionName: myOracleConnection" << std::endl
@@ -1081,7 +1082,7 @@ void DatabaseProxyTest::testLoadWithExtraVariableNameDefinitions()
 
 	MockDatabaseConnectionManager dbManager;
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 	std::map< std::string, std::string > parameters;
 	parameters["idToMatch"] = "3";
@@ -1142,7 +1143,7 @@ void DatabaseProxyTest::testLoadWithNoVariableNames()
 
 	MockDatabaseConnectionManager dbManager;
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 	std::map< std::string, std::string > parameters;
 	parameters["idToMatch"] = "3";
@@ -1201,7 +1202,7 @@ void DatabaseProxyTest::testLoadWithMultipleVariableNames()
 
 	MockDatabaseConnectionManager dbManager;
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 	std::map< std::string, std::string > parameters;
 	parameters["idToMatch"] = "3";
@@ -1263,7 +1264,7 @@ void DatabaseProxyTest::testLoadExceptionWithBadConnection()
 
 	MockDatabaseConnectionManager dbManager;
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 	std::map< std::string, std::string > parameters;
 	parameters["idToMatch"] = "3";
@@ -1331,7 +1332,7 @@ void DatabaseProxyTest::testLoadMaxStringParameter()
 
 	MockDatabaseConnectionManager dbManager;
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 	std::map< std::string, std::string > parameters;
 	parameters["idToMatch"] = "3";
@@ -1391,7 +1392,7 @@ void DatabaseProxyTest::testLoadSameVarNameReplacedTwice()
 
 	MockDatabaseConnectionManager dbManager;
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 	std::map< std::string, std::string > parameters;
 	parameters["idToMatch"] = "3";
@@ -1454,7 +1455,7 @@ void DatabaseProxyTest::testLoadExceptionEmptyVarName()
 
 	MockDatabaseConnectionManager dbManager;
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 	std::map< std::string, std::string > parameters;
 	parameters["idToMatch"] = "3";
@@ -1506,7 +1507,7 @@ void DatabaseProxyTest::testLoadCustomSeparators()
 
 	MockDatabaseConnectionManager dbManager;
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 	std::map< std::string, std::string > parameters;
 	parameters["idToMatch"] = "3";
@@ -1572,7 +1573,7 @@ void DatabaseProxyTest::testStoreException()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	boost::scoped_ptr< DatabaseProxy > pProxy;
-	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+	pProxy.reset( new DatabaseProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ) );
 
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
 
@@ -1618,7 +1619,7 @@ void DatabaseProxyTest::testStoreException()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+	pProxy.reset( new DatabaseProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ) );
 
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
 
@@ -1677,7 +1678,7 @@ void DatabaseProxyTest::testOracleStore()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	DatabaseProxy proxy( "na\\?!*&()[]{}|,'\"me", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "na\\?!*&()[]{}|,'\"me", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 	CPPUNIT_ASSERT( proxy.SupportsTransactions() );
 
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
@@ -1757,7 +1758,7 @@ void DatabaseProxyTest::testOracleStore()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	DatabaseProxy proxy2( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy2( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
 
@@ -1819,7 +1820,7 @@ void DatabaseProxyTest::testOracleStagingTableSpecifiedByParameter()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	DatabaseProxy proxy( "na\\?!*&()[]{}|,'\"me", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "na\\?!*&()[]{}|,'\"me", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 	CPPUNIT_ASSERT( proxy.SupportsTransactions() );
 
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
@@ -1900,7 +1901,7 @@ void DatabaseProxyTest::testOracleStagingTableSpecifiedByParameter()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	DatabaseProxy proxy2( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy2( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
 
@@ -1965,7 +1966,7 @@ void DatabaseProxyTest::testOracleStoreDifferentSchema()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 	CPPUNIT_ASSERT( proxy.SupportsTransactions() );
 
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
@@ -2024,7 +2025,7 @@ void DatabaseProxyTest::testOracleStoreDifferentSchema()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	DatabaseProxy proxy2( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy2( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 	data.clear();
 	data.seekg( 0L, std::ios_base::beg );
@@ -2069,7 +2070,7 @@ void DatabaseProxyTest::testOracleStoreNoStaging()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 	CPPUNIT_ASSERT( proxy.SupportsTransactions() );
 
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
@@ -2144,7 +2145,7 @@ void DatabaseProxyTest::testMySqlStore()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 	CPPUNIT_ASSERT( proxy.SupportsTransactions() );
 
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
@@ -2214,7 +2215,7 @@ void DatabaseProxyTest::testMySqlStore()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	DatabaseProxy proxy2( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy2( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
 
@@ -2275,7 +2276,7 @@ void DatabaseProxyTest::testMySqlStagingTableSpecifiedByParameter()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 	CPPUNIT_ASSERT( proxy.SupportsTransactions() );
 
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
@@ -2347,7 +2348,7 @@ void DatabaseProxyTest::testMySqlStagingTableSpecifiedByParameter()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	DatabaseProxy proxy2( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy2( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
 
@@ -2398,7 +2399,7 @@ void DatabaseProxyTest::testMySqlStoreNoStaging()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 	CPPUNIT_ASSERT( proxy.SupportsTransactions() );
 
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
@@ -2493,7 +2494,7 @@ void DatabaseProxyTest::testStoreColumnParameterCollisionBehaviors()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	boost::scoped_ptr< DatabaseProxy > pProxy;
-	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+	pProxy.reset( new DatabaseProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ) );
 
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
 
@@ -2542,7 +2543,7 @@ void DatabaseProxyTest::testStoreColumnParameterCollisionBehaviors()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+	pProxy.reset( new DatabaseProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ) );
 
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
 
@@ -2581,7 +2582,7 @@ void DatabaseProxyTest::testStoreColumnParameterCollisionBehaviors()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+	pProxy.reset( new DatabaseProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ) );
 
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
 
@@ -2630,7 +2631,7 @@ void DatabaseProxyTest::testStoreColumnParameterCollisionBehaviors()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+	pProxy.reset( new DatabaseProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ) );
 
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
 
@@ -2683,7 +2684,7 @@ void DatabaseProxyTest::testStoreColumnParameterCollisionBehaviorsNoStaging()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	boost::scoped_ptr< DatabaseProxy > pProxy;
-	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+	pProxy.reset( new DatabaseProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ) );
 
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
 
@@ -2728,7 +2729,7 @@ void DatabaseProxyTest::testStoreColumnParameterCollisionBehaviorsNoStaging()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+	pProxy.reset( new DatabaseProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ) );
 
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
 
@@ -2764,7 +2765,7 @@ void DatabaseProxyTest::testStoreColumnParameterCollisionBehaviorsNoStaging()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+	pProxy.reset( new DatabaseProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ) );
 
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
 
@@ -2810,7 +2811,7 @@ void DatabaseProxyTest::testStoreColumnParameterCollisionBehaviorsNoStaging()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+	pProxy.reset( new DatabaseProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ) );
 
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
 
@@ -2866,7 +2867,7 @@ void DatabaseProxyTest::testStoreParameterOnly()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	boost::scoped_ptr< DatabaseProxy > pProxy;
-	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+	pProxy.reset( new DatabaseProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ) );
 
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
 
@@ -2924,7 +2925,7 @@ void DatabaseProxyTest::testStoreParameterWithTableParameter()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	boost::scoped_ptr< DatabaseProxy > pProxy;
-	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+	pProxy.reset( new DatabaseProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ) );
 
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
 
@@ -2977,7 +2978,7 @@ void DatabaseProxyTest::testStoreParameterOnlyNoStaging()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	boost::scoped_ptr< DatabaseProxy > pProxy;
-	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+	pProxy.reset( new DatabaseProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ) );
 
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
 
@@ -3033,7 +3034,7 @@ void DatabaseProxyTest::testMySqlStoreDynamicTables()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 	CPPUNIT_ASSERT( proxy.SupportsTransactions() );
 
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
@@ -3101,7 +3102,7 @@ void DatabaseProxyTest::testOracleStoreDynamicTables()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 	CPPUNIT_ASSERT( proxy.SupportsTransactions() );
 
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
@@ -3169,7 +3170,7 @@ void DatabaseProxyTest::testDynamicTableNameLength()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( DatabaseProxy proxy( "name", client, *nodes[0], dbManager ), DatabaseProxyException,
+	CPPUNIT_ASSERT_THROW_WITH_MESSAGE( DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ), DatabaseProxyException,
 		".*/.*:\\d+: Attributes for table and stagingTable will collide due to the fact that the maxTableNameLength attribute will truncate the staging table name" );
 }
 
@@ -3209,7 +3210,7 @@ void DatabaseProxyTest::testOracleDelete()
 	MockDatabaseConnectionManager dbManager;
 	dbManager.InsertConnection("myOracleConnection", m_pOracleDB);
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 	std::map< std::string, std::string > parameters;
 	parameters["idToMatch"] = "3";
@@ -3281,7 +3282,7 @@ void DatabaseProxyTest::testMySQLDelete()
 	MockDatabaseConnectionManager dbManager;
 	dbManager.InsertConnection("myMySQLConnection", m_pMySQLDB);
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 	std::map< std::string, std::string > parameters;
 	parameters["idToMatch"] = "3";
@@ -3352,7 +3353,7 @@ void DatabaseProxyTest::testDeleteExceptionMissingVariableNameDefinition()
 
 	MockDatabaseConnectionManager dbManager;
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 	std::stringstream expected;
 	expected << "MockDatabaseConnectionManager::ValidateConnectionName" << std::endl
 			 << "ConnectionName: myOracleConnection" << std::endl
@@ -3403,7 +3404,7 @@ void DatabaseProxyTest::testDeleteWithExtraVariableNameDefinitions()
 
 	MockDatabaseConnectionManager dbManager;
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 	std::map< std::string, std::string > parameters;
 	parameters["idToMatch"] = "3";
@@ -3476,7 +3477,7 @@ void DatabaseProxyTest::testDeleteWithNoVariableNames()
 
 	MockDatabaseConnectionManager dbManager;
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 	std::map< std::string, std::string > parameters;
 	parameters["ignored"] = "3";
@@ -3548,7 +3549,7 @@ void DatabaseProxyTest::testDeleteWithMultipleVariableNames()
 
 	MockDatabaseConnectionManager dbManager;
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 	std::map< std::string, std::string > parameters;
 	parameters["idToMatch1"] = "4";
@@ -3622,7 +3623,7 @@ void DatabaseProxyTest::testDeleteSameVarNameReplacedTwice()
 
 	MockDatabaseConnectionManager dbManager;
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 	std::map< std::string, std::string > parameters;
 	parameters["idToMatch"] = "3";
@@ -3692,7 +3693,7 @@ void DatabaseProxyTest::testDeleteExceptionEmptyVarName()
 
 	MockDatabaseConnectionManager dbManager;
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 
 	std::map< std::string, std::string > parameters;
 	parameters["idToMatch"] = "3";
@@ -3750,7 +3751,7 @@ void DatabaseProxyTest::testOracleStoreWithPreStatement()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	boost::scoped_ptr< DatabaseProxy > pProxy;
-	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+	pProxy.reset( new DatabaseProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ) );
 
 	std::map< std::string, std::string > parameters;
 	std::stringstream dataStream(data);
@@ -3819,7 +3820,7 @@ void DatabaseProxyTest::testOracleStoreWithPostStatement()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	boost::scoped_ptr< DatabaseProxy > pProxy;
-	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+	pProxy.reset( new DatabaseProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ) );
 
 	std::map< std::string, std::string > parameters;
 	std::stringstream dataStream(data);
@@ -3890,7 +3891,7 @@ void DatabaseProxyTest::testOracleStoreWithBothPreStatementAndPostStatement()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	boost::scoped_ptr< DatabaseProxy > pProxy;
-	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+	pProxy.reset( new DatabaseProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ) );
 
 	std::map< std::string, std::string > parameters;
 	parameters["preConstant"] = "6999";
@@ -3962,7 +3963,7 @@ void DatabaseProxyTest::testOracleStoreWithBothPreStatementAndPostStatementNoDat
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	boost::scoped_ptr< DatabaseProxy > pProxy;
-	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+	pProxy.reset( new DatabaseProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ) );
 
 	std::map< std::string, std::string > parameters;
 	parameters["preConstant"] = "6999";
@@ -4031,7 +4032,7 @@ void DatabaseProxyTest::testOracleStoreWithBothPreStatementAndPostStatementNoSta
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	boost::scoped_ptr< DatabaseProxy > pProxy;
-	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+	pProxy.reset( new DatabaseProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ) );
 
 	std::map< std::string, std::string > parameters;
 	parameters["preConstant"] = "6999";
@@ -4104,7 +4105,7 @@ void DatabaseProxyTest::testMySqlStoreWithPreStatement()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	boost::scoped_ptr< DatabaseProxy > pProxy;
-	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+	pProxy.reset( new DatabaseProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ) );
 
 	std::map< std::string, std::string > parameters;
 	std::stringstream dataStream(data);
@@ -4173,7 +4174,7 @@ void DatabaseProxyTest::testMySqlStoreWithPostStatement()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	boost::scoped_ptr< DatabaseProxy > pProxy;
-	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+	pProxy.reset( new DatabaseProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ) );
 
 	std::map< std::string, std::string > parameters;
 	std::stringstream dataStream(data);
@@ -4244,7 +4245,7 @@ void DatabaseProxyTest::testMySqlStoreWithBothPreStatementAndPostStatement()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	boost::scoped_ptr< DatabaseProxy > pProxy;
-	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+	pProxy.reset( new DatabaseProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ) );
 
 	std::map< std::string, std::string > parameters;
 	parameters["preConstant"] = "6999";
@@ -4316,7 +4317,7 @@ void DatabaseProxyTest::testMySqlStoreWithBothPreStatementAndPostStatementNoData
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	boost::scoped_ptr< DatabaseProxy > pProxy;
-	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+	pProxy.reset( new DatabaseProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ) );
 
 	std::map< std::string, std::string > parameters;
 	parameters["preConstant"] = "6999";
@@ -4385,7 +4386,7 @@ void DatabaseProxyTest::testMySqlStoreWithBothPreStatementAndPostStatementNoStag
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	boost::scoped_ptr< DatabaseProxy > pProxy;
-	pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) );
+	pProxy.reset( new DatabaseProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ) );
 
 	std::map< std::string, std::string > parameters;
 	parameters["preConstant"] = "6999";
@@ -4459,7 +4460,7 @@ void DatabaseProxyTest::testOracleMultipleStore()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	boost::scoped_ptr< DatabaseProxy > pProxy;
-	CPPUNIT_ASSERT_NO_THROW(pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) ));
+	CPPUNIT_ASSERT_NO_THROW(pProxy.reset( new DatabaseProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ) ));
 
 	std::map< std::string, std::string > parameters;
 	std::stringstream dataStream(firstStoreData);
@@ -4537,7 +4538,7 @@ void DatabaseProxyTest::testMySqlMultipleStore()
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
 	boost::scoped_ptr< DatabaseProxy > pProxy;
-	CPPUNIT_ASSERT_NO_THROW(pProxy.reset( new DatabaseProxy( "name", client, *nodes[0], dbManager ) ));
+	CPPUNIT_ASSERT_NO_THROW(pProxy.reset( new DatabaseProxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager ) ));
 
 	std::map< std::string, std::string > parameters;
 	std::stringstream dataStream(firstStoreData);
@@ -4595,7 +4596,7 @@ void DatabaseProxyTest::testOracleStoreNoStagingWithMaxColumnLength()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlNoLengthAttribute.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
 
 	std::stringstream header;
@@ -4651,7 +4652,7 @@ void DatabaseProxyTest::testOracleStoreNoStagingWithMaxColumnLength()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlLengthOf257.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	DatabaseProxy proxy1( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy1( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
 
 	std::stringstream storeInputCSV2;
@@ -4695,7 +4696,7 @@ void DatabaseProxyTest::testOracleStoreWithStagingWithMaxColumnLength()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlNoLengthAttribute.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
 
 	std::stringstream header;
@@ -4753,7 +4754,7 @@ void DatabaseProxyTest::testOracleStoreWithStagingWithMaxColumnLength()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlLengthOf257.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	DatabaseProxy proxy1( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy1( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
 
 	std::stringstream storeInputCSV2;
@@ -4796,7 +4797,7 @@ void DatabaseProxyTest::testMySQLStoreWithStagingWithMaxColumnLength()
 	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlNoLengthAttribute.str(), "DataNode", nodes );
 	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
 
-	DatabaseProxy proxy( "name", client, *nodes[0], dbManager );
+	DatabaseProxy proxy( "name", boost::shared_ptr< RequestForwarder >( new MockRequestForwarder( client ) ), *nodes[0], dbManager );
 	FileUtilities::ClearDirectory( m_pTempDir->GetDirectoryName() );
 
 	std::stringstream header;
