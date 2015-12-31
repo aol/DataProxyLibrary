@@ -25,25 +25,25 @@ public:
 	DataProxyServiceConfig( int argc, char **argv );
 	virtual ~DataProxyServiceConfig();
 
-	MV_VIRTUAL const std::string& GetInstanceId() const;
-	MV_VIRTUAL const std::string& GetLogConfig() const;
-	MV_VIRTUAL const std::string& GetDplConfig() const;
-	MV_VIRTUAL uint GetPort() const;
-	MV_VIRTUAL uint GetNumThreads() const;
-	MV_VIRTUAL uint GetMaxRequestSize() const;
-	MV_VIRTUAL int GetZLibCompressionLevel() const;
-	MV_VIRTUAL bool GetEnableXForwardedFor() const;
+	virtual const std::string& GetInstanceId() const;
+	virtual const std::string& GetLogConfig() const;
+	virtual const std::string& GetDplConfig() const;
+	virtual uint GetPort() const;
+	virtual uint GetNumThreads() const;
+	virtual uint GetMaxRequestSize() const;
+	virtual int GetZLibCompressionLevel() const;
+	virtual bool GetEnableXForwardedFor() const;
 
-	MV_VIRTUAL const std::string& GetLoadWhitelistFile() const;
-	MV_VIRTUAL const std::string& GetStoreWhitelistFile() const;
-	MV_VIRTUAL const std::string& GetDeleteWhitelistFile() const;
-	MV_VIRTUAL const std::string& GetPingWhitelistFile() const;
+	virtual const std::string& GetLoadWhitelistFile() const;
+	virtual const std::string& GetStoreWhitelistFile() const;
+	virtual const std::string& GetDeleteWhitelistFile() const;
+	virtual const std::string& GetPingWhitelistFile() const;
 
-	MV_VIRTUAL unsigned int GetStatsRetentionHours() const;
-	MV_VIRTUAL long GetStatsRetentionSize() const;
-	MV_VIRTUAL size_t GetStatsPerHourEstimate() const;
+	virtual unsigned int GetStatsRetentionHours() const;
+	virtual long GetStatsRetentionSize() const;
+	virtual size_t GetStatsPerHourEstimate() const;
 
-	MV_VIRTUAL const std::string& GetMonitorConfig() const;
+	virtual const std::string& GetMonitorConfig() const;
 
 private:
 	CliOptions m_Options;

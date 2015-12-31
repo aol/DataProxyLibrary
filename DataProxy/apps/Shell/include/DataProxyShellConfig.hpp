@@ -26,13 +26,13 @@ public:
 	DataProxyShellConfig( int argc, char** argv );
 	virtual ~DataProxyShellConfig();
 
-	MV_VIRTUAL const std::string& GetDplConfig() const;
-	MV_VIRTUAL const std::string& GetName() const;
-	MV_VIRTUAL const std::string& GetOperation() const;
-	MV_VIRTUAL std::istream& GetData() const;
-	MV_VIRTUAL const std::map< std::string, std::string >& GetParameters() const;
-	MV_VIRTUAL bool IsTransactional() const;
-	MV_VIRTUAL int GetPingMode() const;
+	virtual const std::string& GetDplConfig() const;
+	virtual const std::string& GetName() const;
+	virtual const std::string& GetOperation() const;
+	virtual std::istream& GetData() const;
+	virtual const std::map< std::string, std::string >& GetParameters() const;
+	virtual bool IsTransactional() const;
+	virtual int GetPingMode() const;
 
 private:
 	CliOptions m_Options;
