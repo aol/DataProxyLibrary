@@ -27,7 +27,7 @@ public:
 	ParameterTranslator( const xercesc::DOMNode& i_rNode );
 	virtual ~ParameterTranslator();
 
-	MV_VIRTUAL void Translate( const std::map<std::string,std::string>& i_rInputParameters,
+	virtual void Translate( const std::map<std::string,std::string>& i_rInputParameters,
 							   std::map<std::string,std::string>& o_rTranslatedParameters ) const;
 	
 private:

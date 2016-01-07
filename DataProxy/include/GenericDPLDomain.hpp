@@ -30,7 +30,7 @@ public:
 	GenericDPLDomain();
 	virtual ~GenericDPLDomain();
 
-	MV_VIRTUAL void Load( const std::string& i_rFileSpec, const std::string& i_rDataNodeName, const std::map<std::string, std::string>& i_rParameters );
+	virtual void Load( const std::string& i_rFileSpec, const std::string& i_rDataNodeName, const std::map<std::string, std::string>& i_rParameters );
 
 };
 

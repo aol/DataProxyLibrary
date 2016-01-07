@@ -39,18 +39,18 @@ public:
 
 	// top-level loading & storing. handles all common operations like
 	// parameter translation, stream translation, failure forwarding, etc.
-	MV_VIRTUAL bool Load( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData );
-	MV_VIRTUAL bool Store( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData );
-	MV_VIRTUAL bool Delete( const std::map<std::string, std::string>& i_rParameters );
+	virtual bool Load( const std::map<std::string,std::string>& i_rParameters, std::ostream& o_rData );
+	virtual bool Store( const std::map<std::string,std::string>& i_rParameters, std::istream& i_rData );
+	virtual bool Delete( const std::map<std::string, std::string>& i_rParameters );
 
 	// ping support: all children must implement this to say to the outside world whether they
 	// are able to complete the indicated tasks
 	virtual void Ping( int i_Mode ) const = 0;
 	
 	// cycle-checking support
-	MV_VIRTUAL void InsertReadForwards( std::set< std::string >& o_rForwards ) const;
-	MV_VIRTUAL void InsertWriteForwards( std::set< std::string >& o_rForwards ) const;
-	MV_VIRTUAL void InsertDeleteForwards( std::set< std::string >& o_rForwards ) const;
+	virtual void InsertReadForwards( std::set< std::string >& o_rForwards ) const;
+	virtual void InsertWriteForwards( std::set< std::string >& o_rForwards ) const;
+	virtual void InsertDeleteForwards( std::set< std::string >& o_rForwards ) const;
 
 	// transaction support
 	virtual bool SupportsTransactions() const = 0;
