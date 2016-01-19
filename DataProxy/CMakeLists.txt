@@ -39,7 +39,7 @@ ADD_LIB_ONCE( ${CMAKE_CURRENT_SOURCE_DIR}/../lib/adl-libcore Database )
 ADD_LIB_ONCE( ${CMAKE_CURRENT_SOURCE_DIR}/../lib/adl-libmon Monitoring )
 
 # external package dependencies
-FIND_PACKAGE( Boost 1.44 REQUIRED system filesystem program_options date_time regex thread iostreams )
+FIND_BOOST_LIBRARIES( 1.44 system filesystem program_options date_time regex thread iostreams )
 FIND_PACKAGE( CURL REQUIRED )
 FIND_PACKAGE( AgentPP REQUIRED )
 FIND_PACKAGE( log4cxx REQUIRED )
@@ -151,13 +151,13 @@ INCLUDE_DIRECTORIES( SYSTEM
 LINK_DIRECTORIES( ${Boost_LIBRARY_DIRS} )
 
 # define primary output
-ADD_LIBRARY( DataProxy SHARED ${DataProxy_Src} )
+ADD_SHARED_LIBRARY( LIBRARY_NAME "DataProxy" ${DataProxy_Src} )
 
 # add dependencies for this target so they will be built first
-ADD_DEPENDENCIES( DataProxy DataProxyThppGeneratedHpps Logger Utility Service Database Monitoring )
+ADD_DEPENDENCIES( ${LIBRARY_NAME} DataProxyThppGeneratedHpps Logger Utility Service Database Monitoring )
 
 # link target against external libs
-TARGET_LINK_LIBRARIES( DataProxy
+TARGET_LINK_LIBRARIES( ${LIBRARY_NAME}
 	${DataProxy_Libs}
 	$<TARGET_SONAME_FILE:Monitoring>
 	$<TARGET_FILE:Database>
@@ -167,18 +167,18 @@ TARGET_LINK_LIBRARIES( DataProxy
 )
 
 # set the SONAME version of this dynamic lib
-SET_TARGET_PROPERTIES( DataProxy PROPERTIES VERSION ${VERSION} SOVERSION "${VERSION_MAJOR}.${VERSION_MINOR}" )
+SET_TARGET_PROPERTIES( ${LIBRARY_NAME} PROPERTIES VERSION ${VERSION} SOVERSION "${VERSION_MAJOR}.${VERSION_MINOR}" )
 
 IF( CMAKE_COMPILER_IS_GNUCXX )
-	SET_TARGET_PROPERTIES( DataProxy PROPERTIES COMPILE_FLAGS "-fvisibility=hidden -fvisibility-inlines-hidden" )
-	SET_TARGET_PROPERTIES( DataProxy PROPERTIES LINK_FLAGS "-Wl,--exclude-libs=ALL" )
+	SET_TARGET_PROPERTIES( ${LIBRARY_NAME} PROPERTIES COMPILE_FLAGS "-fvisibility=hidden -fvisibility-inlines-hidden" )
+	SET_TARGET_PROPERTIES( ${LIBRARY_NAME} PROPERTIES LINK_FLAGS "-Wl,--exclude-libs=ALL" )
 ENDIF()
 
 #################################################
 ##################### SWIG  #####################
 #################################################
 
-IF( BUILD_SWIG )
+IF( BUILD_SWIG AND NOT DEFINED ALTERNATIVE_BUILD )
 
 	# swig boilerplate
 	FIND_PACKAGE( SWIG REQUIRED )
@@ -204,7 +204,7 @@ IF( BUILD_SWIG )
 		INCLUDE_DIRECTORIES( ${PYTHON_INCLUDE_PATH} )
 		SET( CMAKE_SWIG_FLAGS ${BASE_SWIG_FLAGS} -module SwigPythonDataProxy )
 		SET_SOURCE_FILES_PROPERTIES( ${DataProxy_SwigSrc} PROPERTIES SWIG_MODULE_NAME SwigPythonDataProxy )
-		SET( SWIG_MODULE_SwigPythonDataProxy_EXTRA_DEPS DataProxy )
+		SET( SWIG_MODULE_SwigPythonDataProxy_EXTRA_DEPS ${LIBRARY_NAME} )
 		SWIG_ADD_MODULE( SwigPythonDataProxy python ${DataProxy_SwigSrc} )
 		SWIG_LINK_LIBRARIES( SwigPythonDataProxy ${PYTHON_LIBRARIES} $<TARGET_FILE:Utility> $<TARGET_SONAME_FILE:DataProxy> )
 	ENDIF()
@@ -213,7 +213,7 @@ IF( BUILD_SWIG )
 	IF( BUILD_SWIG_PERL )
 		SET( CMAKE_SWIG_FLAGS ${BASE_SWIG_FLAGS} -module SwigPerlDataProxy )
 		SET_SOURCE_FILES_PROPERTIES( ${DataProxy_SwigSrc} PROPERTIES SWIG_MODULE_NAME SwigPerlDataProxy )
-		SET( SWIG_MODULE_SwigPerlDataProxy_EXTRA_DEPS DataProxy )
+		SET( SWIG_MODULE_SwigPerlDataProxy_EXTRA_DEPS ${LIBRARY_NAME} )
 		SET_SOURCE_FILES_PROPERTIES( ${CMAKE_SWIG_OUTDIR}/SwigDataProxyPERL_wrap.cxx PROPERTIES COMPILE_FLAGS "-Wno-unused-variable -Wno-maybe-uninitialized" )
 		SWIG_ADD_MODULE( SwigPerlDataProxy perl ${DataProxy_SwigSrc} )
 	SWIG_LINK_LIBRARIES( SwigPerlDataProxy $<TARGET_FILE:Utility> $<TARGET_SONAME_FILE:DataProxy> )
@@ -224,8 +224,10 @@ ENDIF()
 #################################################
 ####################  APPS  #####################
 #################################################
-ADD_SUBDIRECTORY( ${CMAKE_CURRENT_SOURCE_DIR}/apps/Shell )
-ADD_SUBDIRECTORY( ${CMAKE_CURRENT_SOURCE_DIR}/apps/Service ) 
+IF( NOT DEFINED ALTERNATIVE_BUILD )
+	ADD_SUBDIRECTORY( ${CMAKE_CURRENT_SOURCE_DIR}/apps/Shell )
+	ADD_SUBDIRECTORY( ${CMAKE_CURRENT_SOURCE_DIR}/apps/Service ) 
+ENDIF()
 
 #################################################
 ###################  INSTALL  ###################
@@ -249,7 +251,7 @@ IF( NOT NO_INSTALL )
 	SET( CPACK_PACKAGE_VERSION ${VERSION} )
 	SET( CPACK_PACKAGE_RELEASE ${RELEASE} )
 	SET( CPACK_RPM_PACKAGE_RELEASE ${CPACK_PACKAGE_RELEASE} )
-	INSTALL( TARGETS DataProxy DESTINATION ${LIB_DIR}
+	INSTALL( TARGETS ${LIBRARY_NAME} DESTINATION ${LIB_DIR}
 		PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE )
 	
 	SET( CPACK_GENERATOR "RPM" )
