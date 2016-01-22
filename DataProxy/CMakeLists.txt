@@ -178,7 +178,7 @@ ENDIF()
 ##################### SWIG  #####################
 #################################################
 
-IF( BUILD_SWIG AND NOT DEFINED ALTERNATIVE_BUILD )
+IF( BUILD_SWIG AND NOT DEFINED ALTERNATIVE_BUILD_SUFFIX )
 
 	# swig boilerplate
 	FIND_PACKAGE( SWIG REQUIRED )
@@ -224,7 +224,7 @@ ENDIF()
 #################################################
 ####################  APPS  #####################
 #################################################
-IF( NOT DEFINED ALTERNATIVE_BUILD )
+IF( NOT DEFINED ALTERNATIVE_BUILD_SUFFIX )
 	ADD_SUBDIRECTORY( ${CMAKE_CURRENT_SOURCE_DIR}/apps/Shell )
 	ADD_SUBDIRECTORY( ${CMAKE_CURRENT_SOURCE_DIR}/apps/Service ) 
 ENDIF()
