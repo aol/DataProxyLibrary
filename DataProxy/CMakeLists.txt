@@ -230,6 +230,23 @@ IF( NOT DEFINED ALTERNATIVE_BUILD_SUFFIX )
 ENDIF()
 
 #################################################
+#####################  MCR  #####################
+#################################################
+
+IF( USE_MCR )
+	FIND_PACKAGE( MCR REQUIRED )
+	INCLUDE_DIRECTORIES( ${MCR_INCLUDE_DIR} )
+
+	SET( Mex_IncFlags "-I$<JOIN:$<TARGET_PROPERTY:${LIBRARY_NAME},INCLUDE_DIRECTORIES>, -I>" )
+
+	ADD_CUSTOM_TARGET( DataProxy_Mex
+		ALL ${MCR_MEX} CXXFLAGS=${MCR_CXXFLAGS}\ ${Mex_IncFlags} ${Boost_LIBRARIES} ${LOG4CXX_LIBRARIES} ${XERCESC_LIBRARY}
+			$<TARGET_LINKER_FILE:${LIBRARY_NAME}> $<TARGET_FILE:Utility> ${CMAKE_CURRENT_SOURCE_DIR}/matlab/DataProxyWrapper.cpp -output DataProxy.mexa64
+	)
+	SET_DIRECTORY_PROPERTIES(PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${CMAKE_CURRENT_BINARY_DIR}/DataProxy.mexa64")
+ENDIF()
+
+#################################################
 ###################  INSTALL  ###################
 #################################################
 
@@ -381,6 +398,12 @@ IF( BUILD_TESTS )
 		mock/TestableNode.cpp
 	)
 	
+	IF( USE_MCR )
+		LIST( APPEND DataProxyTest_Src test/DataProxyWrapperTest.cpp test/MATLABExecutor.cpp )
+		FIND_LIBRARY( LIBMATLAB libeng.so HINTS /data/app/matlab/bin/* ENV LIBRARY_PATH )
+		LIST( APPEND DataProxyTest_Libs ${LIBMATLAB} )
+	ENDIF()
+
 	# define includes for test exe
 	SET( DataProxyTest_Incs
 		${CMAKE_CURRENT_SOURCE_DIR}/test
@@ -405,8 +428,12 @@ IF( BUILD_TESTS )
 	# add test executable target, but exclude it from "all" target
 	# NOTE: this executable is built off the main sources as well, because we have
 	# to use them directly as most of their symbols will NOT be exported
+	LIST( SORT DataProxyTest_Src )
 	ADD_EXECUTABLE( DataProxyTest EXCLUDE_FROM_ALL test/main.cpp ${DataProxy_Src} ${DataProxyTest_Src} )
-	
+	IF( USE_MCR )
+		ADD_DEPENDENCIES( DataProxyTest DataProxy_Mex )
+	ENDIF()
+
 	# add dependencies for test target so they will be built first
 	ADD_DEPENDENCIES( DataProxyTest DataProxyThppGeneratedHpps Logger Utility MockUtility Service MockService Database MockDatabase Monitoring MockMonitoring TestHelpers MockDataProxy )
 	
