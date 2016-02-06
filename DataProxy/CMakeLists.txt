@@ -239,7 +239,7 @@ IF( USE_MCR )
 
 	SET( Mex_IncFlags "-I$<JOIN:$<TARGET_PROPERTY:${LIBRARY_NAME},INCLUDE_DIRECTORIES>, -I>" )
 
-	ADD_CUSTOM_TARGET( DataProxy_Mex
+	ADD_CUSTOM_TARGET( DataProxyMex
 		ALL ${MCR_MEX} CXXFLAGS=${MCR_CXXFLAGS}\ ${Mex_IncFlags} ${Boost_LIBRARIES} ${LOG4CXX_LIBRARIES} ${XERCESC_LIBRARY}
 			$<TARGET_LINKER_FILE:${LIBRARY_NAME}> $<TARGET_FILE:Utility> ${CMAKE_CURRENT_SOURCE_DIR}/matlab/DataProxyWrapper.cpp -output DataProxy.mexa64
 	)
@@ -431,7 +431,7 @@ IF( BUILD_TESTS )
 	LIST( SORT DataProxyTest_Src )
 	ADD_EXECUTABLE( DataProxyTest EXCLUDE_FROM_ALL test/main.cpp ${DataProxy_Src} ${DataProxyTest_Src} )
 	IF( USE_MCR )
-		ADD_DEPENDENCIES( DataProxyTest DataProxy_Mex )
+		ADD_DEPENDENCIES( DataProxyTest DataProxyMex )
 	ENDIF()
 
 	# add dependencies for test target so they will be built first
