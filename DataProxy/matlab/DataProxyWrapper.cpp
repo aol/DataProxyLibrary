@@ -28,17 +28,41 @@ namespace
 	const char* NAME = "name";
 	const char* VALUE = "value";
 
-	enum
+	enum GlobalParam
 	{
-		FUNCTION_NAME = 0,
-		INIT_CONFIG_FILE_SPEC = 1,
+		FUNCTION_NAME = 0
+	};
+
+	enum InitParam
+	{
+		INIT_CONFIG_FILE_SPEC = 1
+	};
+
+	enum PingParam
+	{
 		PING_NODE_NAME = 1,
-		PING_MODE = 2,
+		PING_MODE = 2
+	};
+
+	enum LoadParam
+	{
 		LOAD_DATA_SOURCE = 1,
+	};
+
+	enum LoadToFileParam
+	{
 		LOAD_TO_FILE_DATA_SOURCE = 1,
-		LOAD_TO_FILE_FILENAME = 3,
+		LOAD_TO_FILE_FILENAME = 3
+	};
+
+	enum StoreParam
+	{
 		STORE_DATA_SINK = 1,
-		STORE_DATA_TO_STORE = 3,
+		STORE_DATA_TO_STORE = 3
+	};
+
+	enum StoreFromFileParam
+	{
 		STORE_DATA_FROM_FILE_DATA_SINK = 1,
 		STORE_DATA_FROM_FILE_FILENAME = 3
 	};
