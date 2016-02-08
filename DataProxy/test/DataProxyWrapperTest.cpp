@@ -50,7 +50,7 @@ void DataProxyWrapperTest::setUp()
 	m_pTempDir.reset( new TempDirectory() );
 	m_pMatlabExecutor.reset( new MATLABExecutor() );
 	m_pMatlabExecutor->AddScriptPath( m_pTempDir->GetDirectoryName() );	// for generated scripts
-	m_pMatlabExecutor->AddScriptPath( "../Logger" );	// for logging mex-ed function
+	m_pMatlabExecutor->AddScriptPath( "./libLogger" );	// for logging mex-ed function
 }
 
 void DataProxyWrapperTest::tearDown()
@@ -175,7 +175,7 @@ void DataProxyWrapperTest::testWrapperInMemoryFunctions_WithSyntaxHelper()
 	std::stringstream cmd;
 	cmd << "storeAndLoad('" << configFileSpec << "','" << outputFileSpec << "')";
 
-	CPPUNIT_ASSERT_NO_THROW( m_pMatlabExecutor->AddScriptPath( "syntaxHelper" ) );
+	CPPUNIT_ASSERT_NO_THROW( m_pMatlabExecutor->AddScriptPath( "../matlab/syntaxHelper" ) );
 	CPPUNIT_ASSERT_NO_THROW( m_pMatlabExecutor->Execute( cmd.str() ) );
 
 	std::string storedFileSpec( m_pTempDir->GetDirectoryName() + "/param1~value1^param2~value2" );
@@ -312,7 +312,7 @@ void DataProxyWrapperTest::testWrapperFileFunctions_WithSyntaxHelper()
 	std::stringstream cmd;
 	cmd << "storeAndLoad('" << configFileSpec << "','" << inputFileSpec << "','" << outputFileSpec << "')";
 
-	CPPUNIT_ASSERT_NO_THROW( m_pMatlabExecutor->AddScriptPath( "syntaxHelper" ) );
+	CPPUNIT_ASSERT_NO_THROW( m_pMatlabExecutor->AddScriptPath( "../matlab/syntaxHelper" ) );
 	CPPUNIT_ASSERT_NO_THROW( m_pMatlabExecutor->Execute( cmd.str() ) );
 
 	std::string storedFileSpec( m_pTempDir->GetDirectoryName() + "/param1~value1^param2~value2" );
