@@ -18,7 +18,6 @@
 #include "LargeStringStream.hpp"
 #include "RequestForwarder.hpp"
 #include "MVLogger.hpp"
-#include "MVUtility.hpp"
 #include <fstream>
 #include <boost/lexical_cast.hpp>
 #include "Counters.hpp"
@@ -50,8 +49,6 @@ namespace
 	const std::string CHILD_RESULT_SUCCESS( "success" );
 	const std::string CHILD_RESULT_FAILED( "fail" );
 	const std::string CHILD_NODE( "node" );
-
-	const std::string MD5_VALUE( "md5" );
 
 	const std::map< std::string, std::string >& ChooseParameters( const std::map< std::string, std::string >& i_rOriginalParameters,
 																  const std::map< std::string, std::string >& i_rTranslatedParameters,
@@ -425,13 +422,6 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 		{
 			// if we found a translator, translate the parameters
 			m_WriteConfig.GetValue< Translator >()->Translate( i_rParameters, translatedParameters );
-			// if we found md5 translate parameter, then set the md5 value of data
-			std::map< std::string, std::string >::iterator md5Iter = translatedParameters.find( MD5_VALUE );
-			if( md5Iter != translatedParameters.end() )
-			{
-				std::string strData( std::istreambuf_iterator<char>( i_rData ), {} );
-				md5Iter->second = MVUtility::GetMD5( strData );
-			}
 			if( translatedParameters != i_rParameters )
 			{
 				MVLOGGER( "root.lib.DataProxy.DataProxyClient.Store.TranslatedParameters", "Parameters have been translated to: "
