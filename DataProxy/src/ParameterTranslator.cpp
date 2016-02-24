@@ -42,6 +42,7 @@ namespace
 	const std::string DATE_TIME = "datetime";
 	const std::string GUID = "guid";
 	const std::string PID = "pid";
+	const std::string MD5 = "md5";
 	const std::string UNKNOWN = "unknown";
 	const std::string s_Hostname = MVUtility::GetHostName();
 
@@ -122,6 +123,10 @@ namespace
 			}
 			return DateTime().GetFormattedString( format );
 		}
+		else if( i_rValue == MD5 )
+		{
+			return std::string(""); 
+		}
 
 		// we should have returned by now; if not, return unknown
 		MVLOGGER( "root.lib.DataProxy.ParameterTranslator.BuiltIn.Unknown",
@@ -148,7 +153,8 @@ ParameterTranslator::ParameterTranslator( const xercesc::DOMNode& i_rNode )
 	m_PrimaryDefaults(),
 	m_SecondaryDefaults(),
 	m_DerivedValues(),
-	m_ShellTimeout( EVAL_TIMEOUT_DEFAULT )
+	m_ShellTimeout( EVAL_TIMEOUT_DEFAULT ),
+	m_MD5Parameters()
 {
 	xercesc::DOMNode* pTranslateNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, TRANSLATE_PARAMETERS_NODE );
 	if( pTranslateNode == NULL )
@@ -365,8 +371,9 @@ ParameterTranslator::~ParameterTranslator()
 }
 
 void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_rInputParameters,
-									 std::map<std::string,std::string>& o_rTranslatedParameters ) const
+									 std::map<std::string,std::string>& o_rTranslatedParameters )
 {
+	m_MD5Parameters.clear();
 	o_rTranslatedParameters.clear();
 
 	// first, iterate over the incoming parameters & perform whatever translations are necessary
@@ -424,6 +431,7 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 				std::string builtIn( GetBuiltIn( valueTranslator ) );
 				boost::replace_all( builtIn, VALUE_FORMATTER, value );
 				value = EvalBuiltIn( builtIn );
+				AddMD5Parameter( builtIn, name );
 			}
 			// otherwise use it as a literal
 			else
@@ -433,10 +441,14 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 			}
 		}
 		
-		// as long as the name has not been silenced, we can insert this name/value pair
+		// as long as the name has not been silenced, we can insert this name/value pair, else remove the name if it has been added into m_MD5Parameters
 		if( !IsSilenced( name ) )
 		{
 			o_rTranslatedParameters[ name ] = value;
+		}
+		else
+		{
+			m_MD5Parameters.erase( name );
 		}
 	}
 
@@ -452,7 +464,9 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 			}
 			else if( IsBuiltIn( valueDefault ) )
 			{
-				valueDefault = EvalBuiltIn( GetBuiltIn( valueDefault ) );
+				std::string builtIn( GetBuiltIn( valueDefault ) );
+				valueDefault = EvalBuiltIn( builtIn );
+				AddMD5Parameter( builtIn, inputIter->first );
 			}
 			o_rTranslatedParameters[ inputIter->first ] = valueDefault;
 		}
@@ -482,6 +496,8 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 			boost::replace_all( derivedValue, VALUE_FORMATTER, sourceValue );
 		}
 
+		std::string builtIn("");
+
 		// calculate the derived value from the source value
 		if( IsExpression( derivedValue ) )
 		{
@@ -489,7 +505,8 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 		}
 		else if( IsBuiltIn( derivedValue ) )
 		{
-			derivedValue = EvalBuiltIn( GetBuiltIn( derivedValue ) );
+			builtIn = GetBuiltIn( derivedValue );
+			derivedValue = EvalBuiltIn( builtIn );
 		}
 
 		// if it's an override or it's currently missing from the output parameters, add it
@@ -497,6 +514,7 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 		if( derivedIter->second.GetValue< IsOverride >() || o_rTranslatedParameters.find( paramName ) == o_rTranslatedParameters.end() )
 		{
 			o_rTranslatedParameters[ paramName ] = derivedValue;
+			AddMD5Parameter( builtIn, paramName );
 		}
 	}
 
@@ -512,7 +530,9 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 			}
 			else if( IsBuiltIn( valueDefault ) )
 			{
-				valueDefault = EvalBuiltIn( GetBuiltIn( valueDefault ) );
+				std::string builtIn = GetBuiltIn( valueDefault );
+				valueDefault = EvalBuiltIn( builtIn );
+				AddMD5Parameter( builtIn, inputIter->first );
 			}
 			o_rTranslatedParameters[ inputIter->first ] = valueDefault;
 		}
@@ -528,4 +548,26 @@ bool ParameterTranslator::IsSilenced( const std::string& i_rName ) const
 		  && iter->second.GetValue< TranslatedName >().IsNull()	// there is not translated name
 		  && iter->second.GetValue< ValueTranslator >().IsNull()	// there is no value translator
 		  && m_PrimaryDefaults.find( i_rName ) == m_PrimaryDefaults.end() );		// there is no value default
+}
+
+void ParameterTranslator::AddMD5Parameter( const std::string& i_rBuiltIn, const std::string& i_rParameter )
+{
+	if( i_rBuiltIn == MD5 )
+	{
+		 m_MD5Parameters.insert( i_rParameter );
+	}
+}
+
+void ParameterTranslator::SetMD5( std::map< std::string, std::string >& o_rTranslatedParameters, std::istream& i_rData ) const
+{
+	if( !m_MD5Parameters.empty() )
+	{
+		std::string strData( std::istreambuf_iterator<char>( i_rData ), {} );
+		std::string md5 = MVUtility::GetMD5( strData );
+		std::set< std::string >::const_iterator md5Iter = m_MD5Parameters.begin();
+		for( ; md5Iter != m_MD5Parameters.end(); ++md5Iter )
+		{
+			o_rTranslatedParameters[*md5Iter] = md5;
+		}
+	}
 }

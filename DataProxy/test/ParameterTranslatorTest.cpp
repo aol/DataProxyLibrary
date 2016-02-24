@@ -598,6 +598,7 @@ void ParameterTranslatorTest::testTranslateBuiltIn()
 				<< "  <Parameter name=\"pid\" valueDefault=\"[pid]\" />"
 				<< "  <Parameter name=\"unkown1\" valueDefault=\"[cpu]\" />"
 				<< "  <Parameter name=\"unkown2\" valueDefault=\"[mem]\" />"
+				<< "  <Parameter name=\"md5value\" valueDefault=\"[md5]\" />"
 				<< " </TranslateParameters>"
 				<< "</Whatever>";
 	std::vector<xercesc::DOMNode*> nodes;
@@ -611,7 +612,7 @@ void ParameterTranslatorTest::testTranslateBuiltIn()
 	DateTime before;
 	CPPUNIT_ASSERT_NO_THROW( translator.Translate( inputParameters, translatedParameters ) );
 	DateTime after;
-	CPPUNIT_ASSERT_EQUAL( size_t( 11 ), translatedParameters.size() );
+	CPPUNIT_ASSERT_EQUAL( size_t( 12 ), translatedParameters.size() );
 	std::map< std::string, std::string >::const_iterator findIter;
 	CPPUNIT_ASSERT( ( findIter = translatedParameters.find( "host" ) ) != translatedParameters.end() );
 	CPPUNIT_ASSERT_EQUAL( MVUtility::GetHostName(), findIter->second );
@@ -638,4 +639,11 @@ void ParameterTranslatorTest::testTranslateBuiltIn()
 	CPPUNIT_ASSERT_EQUAL( std::string( "cpu-unknown" ), findIter->second );
 	CPPUNIT_ASSERT( ( findIter = translatedParameters.find( "unkown2" ) ) != translatedParameters.end() );
 	CPPUNIT_ASSERT_EQUAL( std::string( "mem-unknown" ), findIter->second );
+	CPPUNIT_ASSERT( ( findIter = translatedParameters.find( "md5value" ) ) != translatedParameters.end() );
+	CPPUNIT_ASSERT_EQUAL( std::string( "" ), findIter->second );
+
+	std::istringstream data(std::string("abcdefg"));
+	CPPUNIT_ASSERT_NO_THROW( translator.SetMD5( translatedParameters, data ) );
+	CPPUNIT_ASSERT( ( findIter = translatedParameters.find( "md5value" ) ) != translatedParameters.end() );
+	CPPUNIT_ASSERT_EQUAL( std::string("7ac66c0f148de9519b8bd264312c4d64"), findIter->second );
 }
