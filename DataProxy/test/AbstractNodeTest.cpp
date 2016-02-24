@@ -1123,6 +1123,46 @@ void AbstractNodeTest::testStoreTranslateParameters()
 	CPPUNIT_ASSERT_EQUAL( expected.str(), node.GetLog() );
 }
 
+void AbstractNodeTest::testStoreTranslateMD5Parameters()
+{
+	std::stringstream xmlContents;
+	xmlContents << "  <DataNode>" << std::endl
+				<< "    <Write>" << std::endl
+				<< "      <TranslateParameters>" << std::endl
+				<< "        <Parameter name=\"param2\" valueOverride=\"overrideValue2\" />" << std::endl
+				<< "        <Parameter name=\"param3\" valueOverride=\"[md5]\" />" << std::endl
+				<< "      </TranslateParameters>" << std::endl
+				<< "    </Write>" << std::endl
+				<< "  </DataNode>" << std::endl;
+	std::vector<xercesc::DOMNode*> nodes;
+	ProxyTestHelpers::GetDataNodes( m_pTempDir->GetDirectoryName(), xmlContents.str(), "DataNode", nodes );
+	CPPUNIT_ASSERT_EQUAL( size_t(1), nodes.size() );
+
+	MockDataProxyClient client;
+
+	TestableNode node( "name", client, *nodes[0] );
+
+	std::map<std::string,std::string> parameters;
+	parameters["param1"] = "value1";
+	parameters["param2"] = "value2";
+	parameters["param3"] = "value3";
+	parameters["param4"] = "value4";
+
+	std::stringstream data;
+	data << "this is some data";
+
+	CPPUNIT_ASSERT_NO_THROW( CPPUNIT_ASSERT( node.Store( parameters, data ) ) );
+
+	std::map<std::string,std::string> expectedParameters( parameters );
+	expectedParameters["param2"] = "overrideValue2";
+	expectedParameters["param3"] = "1463f25d10e363181d686d2484a9eab6";
+
+	std::stringstream expected;
+	expected << "StoreImpl called with parameters: " << ProxyUtilities::ToString( expectedParameters ) << " with data: " << data.str() << std::endl;
+
+	CPPUNIT_ASSERT_EQUAL( expected.str(), node.GetLog() );
+}
+
 void AbstractNodeTest::testStoreRequiredParameters()
 {
 	std::stringstream xmlContents;

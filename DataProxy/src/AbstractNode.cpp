@@ -451,6 +451,14 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 			transformedInputPos = pTransformedStream->tellg();
 			retryPos = transformedInputPos;
 		}
+
+		if( m_WriteConfig.GetValue< Translator >() != NULL )
+		{
+			pUseData->clear();
+			pUseData->seekg( retryPos );
+			m_WriteConfig.GetValue< Translator >()->SetMD5( translatedParameters, *pUseData );
+		}
+
 		for( uint i=0; i<m_WriteConfig.GetValue< RetryCount >()+1; ++i )
 		{
 			try

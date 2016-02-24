@@ -105,6 +105,7 @@ public:
 
 	void testStore();
 	void testStoreTranslateParameters();
+	void testStoreTranslateMD5Parameters();
 	void testStoreRequiredParameters();
 	void testStoreTransformStream();
 	void testStoreRetryCount();
