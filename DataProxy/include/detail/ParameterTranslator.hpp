@@ -30,7 +30,7 @@ public:
 
 	virtual void Translate( const std::map<std::string,std::string>& i_rInputParameters,
 							   std::map<std::string,std::string>& o_rTranslatedParameters );
-	void SetMD5( std::map< std::string, std::string >& o_rTranslatedParameters, std::istream& i_rData ) const;
+	virtual void TranslateDelayedParameters( std::map< std::string, std::string >& o_rTranslatedParameters, std::istream& i_rData, std::streampos i_StrPos ) const;
 	
 private:
 	DATUMINFO( ParameterName, std::string );
@@ -76,14 +76,14 @@ private:
 	typedef GenericOrderedDataContainer< DerivedValueDatum, DerivedValueDesc > DerivedValueContainer;
 
 	bool IsSilenced( const std::string& i_rName ) const;
-	void AddMD5Parameter( const std::string& i_rBuiltIn, const std::string& i_rParameter );
+	void AddDelayedParameter( const std::string& i_rBuiltIn, const std::string& i_rParameter );
 
 	TranslatorContainer m_Parameters;
 	std::map< std::string, std::string > m_PrimaryDefaults;
 	std::map< std::string, std::string > m_SecondaryDefaults;
 	DerivedValueContainer m_DerivedValues;
 	int m_ShellTimeout;
-	std::set< std::string > m_MD5Parameters;
+	std::map< std::string, std::string > m_DelayedEvaluationParameters;
 };
 
 #endif //_PARAMETER_TRANSLATOR_HPP_

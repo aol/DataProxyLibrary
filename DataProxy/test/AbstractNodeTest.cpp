@@ -20,6 +20,7 @@
 #include "MockDatabaseConnectionManager.hpp"
 #include "XMLUtilities.hpp"
 #include "TransformerTestHelpers.hpp"
+#include "MVUtility.hpp"
 #include <iostream>
 #include <unistd.h>
 #include <fstream>
@@ -1123,7 +1124,7 @@ void AbstractNodeTest::testStoreTranslateParameters()
 	CPPUNIT_ASSERT_EQUAL( expected.str(), node.GetLog() );
 }
 
-void AbstractNodeTest::testStoreTranslateMD5Parameters()
+void AbstractNodeTest::testStoreDelayedTranslateParameters()
 {
 	std::stringstream xmlContents;
 	xmlContents << "  <DataNode>" << std::endl
@@ -1131,6 +1132,7 @@ void AbstractNodeTest::testStoreTranslateMD5Parameters()
 				<< "      <TranslateParameters>" << std::endl
 				<< "        <Parameter name=\"param2\" valueOverride=\"overrideValue2\" />" << std::endl
 				<< "        <Parameter name=\"param3\" valueOverride=\"[md5]\" />" << std::endl
+				<< "        <Parameter name=\"param4\" valueOverride=\"[byteCount]\" />" << std::endl
 				<< "      </TranslateParameters>" << std::endl
 				<< "    </Write>" << std::endl
 				<< "  </DataNode>" << std::endl;
@@ -1155,7 +1157,8 @@ void AbstractNodeTest::testStoreTranslateMD5Parameters()
 
 	std::map<std::string,std::string> expectedParameters( parameters );
 	expectedParameters["param2"] = "overrideValue2";
-	expectedParameters["param3"] = "1463f25d10e363181d686d2484a9eab6";
+	expectedParameters["param3"] = MVUtility::GetMD5( data.str() );
+	expectedParameters["param4"] = boost::lexical_cast< std::string >( data.str().size() );
 
 	std::stringstream expected;
 	expected << "StoreImpl called with parameters: " << ProxyUtilities::ToString( expectedParameters ) << " with data: " << data.str() << std::endl;
@@ -1202,6 +1205,8 @@ void AbstractNodeTest::testStoreTransformStream()
 				<< "    <Write>" << std::endl
 			 	<< "      <TranslateParameters>" << std::endl
 				<< "		<Parameter name=\"param3\" valueOverride=\"override3\" />" << std::endl
+				<< "		<Parameter name=\"md5value\" valueOverride=\"[md5]\" />" << std::endl
+				<< "		<Parameter name=\"bytecount\" valueOverride=\"[byteCount]\" />" << std::endl
 			 	<< "      </TranslateParameters>" << std::endl
 			 	<< "      <StreamTransformers>" << std::endl
 				<< "		 <StreamTransformer path=\"" << m_LibrarySpec << "\"" << " functionName=\"TransformFunction\">" << std::endl
@@ -1234,9 +1239,6 @@ void AbstractNodeTest::testStoreTransformStream()
 	parameters["param3"] = "value3";
 	parameters["param4"] = "value4";
 
-	std::map<std::string,std::string> expectedParameters( parameters );
-	expectedParameters["param3"] = "override3";
-
 	std::stringstream data;
 	data << "this is some data";
 	boost::iostreams::filtering_istream input;
@@ -1248,13 +1250,20 @@ void AbstractNodeTest::testStoreTransformStream()
 	CPPUNIT_ASSERT_NO_THROW( CPPUNIT_ASSERT( node.Store( parameters, input ) ) );
 
 	std::stringstream expected;
-	expected << "StoreImpl called with parameters: " << ProxyUtilities::ToString( expectedParameters ) << " with data: "
-			 << "ST2_name1 : ST2_value1" << std::endl
+	data.str("");
+	data	 << "ST2_name1 : ST2_value1" << std::endl
 			 << "ST2_name2 : value2" << std::endl
 			 << "ST2_name3 : override3" << std::endl
 			 << "ST1_name1 : ST1_value1" << std::endl
 			 << "ST1_name2 : ST1_value2" << std::endl
-			 << "this is some data" << std::endl;
+			 << "this is some data";
+
+	std::map<std::string,std::string> expectedParameters( parameters );
+	expectedParameters["param3"] = "override3";
+	expectedParameters["md5value"] = MVUtility::GetMD5( data.str() );
+	expectedParameters["bytecount"] = boost::lexical_cast< std::string >( data.str().size() );
+
+	expected << "StoreImpl called with parameters: " << ProxyUtilities::ToString( expectedParameters ) << " with data: " << data.str() << std::endl;
 	CPPUNIT_ASSERT_EQUAL( expected.str(), node.GetLog() );
 
 	const std::vector< std::pair< std::string, MonitoringMetric > >& rReports = pMonitoringInstance->GetReports();	

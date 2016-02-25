@@ -599,6 +599,7 @@ void ParameterTranslatorTest::testTranslateBuiltIn()
 				<< "  <Parameter name=\"unkown1\" valueDefault=\"[cpu]\" />"
 				<< "  <Parameter name=\"unkown2\" valueDefault=\"[mem]\" />"
 				<< "  <Parameter name=\"md5value\" valueDefault=\"[md5]\" />"
+				<< "  <Parameter name=\"bytecount\" valueDefault=\"[byteCount]\" />"
 				<< " </TranslateParameters>"
 				<< "</Whatever>";
 	std::vector<xercesc::DOMNode*> nodes;
@@ -612,7 +613,7 @@ void ParameterTranslatorTest::testTranslateBuiltIn()
 	DateTime before;
 	CPPUNIT_ASSERT_NO_THROW( translator.Translate( inputParameters, translatedParameters ) );
 	DateTime after;
-	CPPUNIT_ASSERT_EQUAL( size_t( 12 ), translatedParameters.size() );
+	CPPUNIT_ASSERT_EQUAL( size_t( 13 ), translatedParameters.size() );
 	std::map< std::string, std::string >::const_iterator findIter;
 	CPPUNIT_ASSERT( ( findIter = translatedParameters.find( "host" ) ) != translatedParameters.end() );
 	CPPUNIT_ASSERT_EQUAL( MVUtility::GetHostName(), findIter->second );
@@ -642,8 +643,12 @@ void ParameterTranslatorTest::testTranslateBuiltIn()
 	CPPUNIT_ASSERT( ( findIter = translatedParameters.find( "md5value" ) ) != translatedParameters.end() );
 	CPPUNIT_ASSERT_EQUAL( std::string( "" ), findIter->second );
 
-	std::istringstream data(std::string("abcdefg"));
-	CPPUNIT_ASSERT_NO_THROW( translator.SetMD5( translatedParameters, data ) );
+	std::string str("abcdefg");
+	std::istringstream data(str);
+	data.seekg(1);
+	CPPUNIT_ASSERT_NO_THROW( translator.TranslateDelayedParameters( translatedParameters, data, data.tellg() ) );
 	CPPUNIT_ASSERT( ( findIter = translatedParameters.find( "md5value" ) ) != translatedParameters.end() );
-	CPPUNIT_ASSERT_EQUAL( std::string("7ac66c0f148de9519b8bd264312c4d64"), findIter->second );
+	CPPUNIT_ASSERT_EQUAL( MVUtility::GetMD5(str.substr(1,str.size()-1)), findIter->second );
+	CPPUNIT_ASSERT( ( findIter = translatedParameters.find( "bytecount" ) ) != translatedParameters.end() );
+	CPPUNIT_ASSERT_EQUAL( boost::lexical_cast< std::string >( str.size()-1 ), findIter->second );
 }

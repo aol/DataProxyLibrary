@@ -454,9 +454,7 @@ bool AbstractNode::Store( const std::map<std::string,std::string>& i_rParameters
 
 		if( m_WriteConfig.GetValue< Translator >() != NULL )
 		{
-			pUseData->clear();
-			pUseData->seekg( retryPos );
-			m_WriteConfig.GetValue< Translator >()->SetMD5( translatedParameters, *pUseData );
+			m_WriteConfig.GetValue< Translator >()->TranslateDelayedParameters( translatedParameters, *pUseData, retryPos );
 		}
 
 		for( uint i=0; i<m_WriteConfig.GetValue< RetryCount >()+1; ++i )

@@ -45,6 +45,7 @@ private:
 
 	CPPUNIT_TEST( testStore );
 	CPPUNIT_TEST( testStoreTranslateParameters );
+	CPPUNIT_TEST( testStoreDelayedTranslateParameters );
 	CPPUNIT_TEST( testStoreRequiredParameters );
 	CPPUNIT_TEST( testStoreTransformStream );
 	CPPUNIT_TEST( testStoreRetryCount );
@@ -105,7 +106,7 @@ public:
 
 	void testStore();
 	void testStoreTranslateParameters();
-	void testStoreTranslateMD5Parameters();
+	void testStoreDelayedTranslateParameters();
 	void testStoreRequiredParameters();
 	void testStoreTransformStream();
 	void testStoreRetryCount();
