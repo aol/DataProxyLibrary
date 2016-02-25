@@ -128,6 +128,10 @@ namespace
 		{
 			return std::string(""); 
 		}
+		else if( i_rValue == BYTE_COUNT )
+		{
+			return std::string("");
+		}
 
 		// we should have returned by now; if not, return unknown
 		MVLOGGER( "root.lib.DataProxy.ParameterTranslator.BuiltIn.Unknown",
@@ -432,7 +436,10 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 				std::string builtIn( GetBuiltIn( valueTranslator ) );
 				boost::replace_all( builtIn, VALUE_FORMATTER, value );
 				value = EvalBuiltIn( builtIn );
-				AddDelayedParameter( builtIn, name );
+				if( IsDelayedParameter( builtIn ) )
+				{
+					m_DelayedEvaluationParameters[ name ] = builtIn;
+				}
 			}
 			// otherwise use it as a literal
 			else
@@ -467,7 +474,10 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 			{
 				std::string builtIn( GetBuiltIn( valueDefault ) );
 				valueDefault = EvalBuiltIn( builtIn );
-				AddDelayedParameter( builtIn, inputIter->first );
+				if( IsDelayedParameter( builtIn ) )
+				{
+					m_DelayedEvaluationParameters[ inputIter->first ] = builtIn;
+				}
 			}
 			o_rTranslatedParameters[ inputIter->first ] = valueDefault;
 		}
@@ -515,7 +525,10 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 		if( derivedIter->second.GetValue< IsOverride >() || o_rTranslatedParameters.find( paramName ) == o_rTranslatedParameters.end() )
 		{
 			o_rTranslatedParameters[ paramName ] = derivedValue;
-			AddDelayedParameter( builtIn, paramName );
+			if( IsDelayedParameter( builtIn ) )
+			{
+				m_DelayedEvaluationParameters[ paramName ] = builtIn;		
+			}
 		}
 	}
 
@@ -533,7 +546,7 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 			{
 				std::string builtIn = GetBuiltIn( valueDefault );
 				valueDefault = EvalBuiltIn( builtIn );
-				AddDelayedParameter( builtIn, inputIter->first );
+				m_DelayedEvaluationParameters[ inputIter->first ] = builtIn;
 			}
 			o_rTranslatedParameters[ inputIter->first ] = valueDefault;
 		}
@@ -549,18 +562,6 @@ bool ParameterTranslator::IsSilenced( const std::string& i_rName ) const
 		  && iter->second.GetValue< TranslatedName >().IsNull()	// there is not translated name
 		  && iter->second.GetValue< ValueTranslator >().IsNull()	// there is no value translator
 		  && m_PrimaryDefaults.find( i_rName ) == m_PrimaryDefaults.end() );		// there is no value default
-}
-
-void ParameterTranslator::AddDelayedParameter(const std::string& i_rBuiltIn, const std::string& i_rParameter )
-{
-	if( i_rBuiltIn == MD5 )
-	{
-		m_DelayedEvaluationParameters[i_rParameter] = MD5;
-	}
-	else if( i_rBuiltIn == BYTE_COUNT )
-	{
-		m_DelayedEvaluationParameters[i_rParameter] = BYTE_COUNT;
-	}
 }
 
 void ParameterTranslator::TranslateDelayedParameters( std::map< std::string, std::string >& o_rTranslatedParameters, std::istream& i_rData ) const
@@ -591,7 +592,6 @@ void ParameterTranslator::TranslateDelayedParameters( std::map< std::string, std
 		{
 			if( !hasCalculateByte )
 			{
-				i_rData.clear();
 				i_rData.seekg( 0, i_rData.end );
 				byteCount = i_rData.tellg() - dataPos;
 				hasCalculateByte = true;
@@ -601,4 +601,9 @@ void ParameterTranslator::TranslateDelayedParameters( std::map< std::string, std
 			o_rTranslatedParameters[iter->first] = boost::lexical_cast< std::string >( byteCount );
 		}
 	}
+}
+
+bool ParameterTranslator::IsDelayedParameter( const std::string& i_rBuiltIn ) const
+{
+	return ( i_rBuiltIn == MD5 || i_rBuiltIn == BYTE_COUNT );
 }
