@@ -30,7 +30,7 @@ public:
 
 	virtual void Translate( const std::map<std::string,std::string>& i_rInputParameters,
 							   std::map<std::string,std::string>& o_rTranslatedParameters );
-	virtual void TranslateDelayedParameters( std::map< std::string, std::string >& o_rTranslatedParameters, std::istream& i_rData, std::streampos i_StrPos ) const;
+	virtual void TranslateDelayedParameters( std::map< std::string, std::string >& o_rTranslatedParameters, std::istream& i_rData ) const;
 	
 private:
 	DATUMINFO( ParameterName, std::string );

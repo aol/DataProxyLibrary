@@ -646,7 +646,8 @@ void ParameterTranslatorTest::testTranslateBuiltIn()
 	std::string str("abcdefg");
 	std::istringstream data(str);
 	data.seekg(1);
-	CPPUNIT_ASSERT_NO_THROW( translator.TranslateDelayedParameters( translatedParameters, data, data.tellg() ) );
+	CPPUNIT_ASSERT_NO_THROW( translator.TranslateDelayedParameters( translatedParameters, data ) );
+	CPPUNIT_ASSERT_EQUAL( std::streampos( 1 ), data.tellg() );
 	CPPUNIT_ASSERT( ( findIter = translatedParameters.find( "md5value" ) ) != translatedParameters.end() );
 	CPPUNIT_ASSERT_EQUAL( MVUtility::GetMD5(str.substr(1,str.size()-1)), findIter->second );
 	CPPUNIT_ASSERT( ( findIter = translatedParameters.find( "bytecount" ) ) != translatedParameters.end() );

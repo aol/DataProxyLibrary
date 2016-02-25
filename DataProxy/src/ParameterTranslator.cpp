@@ -43,6 +43,8 @@ namespace
 	const std::string GUID = "guid";
 	const std::string PID = "pid";
 	const std::string UNKNOWN = "unknown";
+	const std::string MD5("md5");
+	const std::string BYTE_COUNT( "byteCount" );
 	const std::string s_Hostname = MVUtility::GetHostName();
 
 	bool IsExpression( const std::string& i_rValue )
@@ -561,12 +563,14 @@ void ParameterTranslator::AddDelayedParameter(const std::string& i_rBuiltIn, con
 	}
 }
 
-void ParameterTranslator::TranslateDelayedParameters( std::map< std::string, std::string >& o_rTranslatedParameters, std::istream& i_rData, std::streampos i_StrPos ) const
+void ParameterTranslator::TranslateDelayedParameters( std::map< std::string, std::string >& o_rTranslatedParameters, std::istream& i_rData ) const
 {
 	bool hasCalculateMD5 = false;
 	bool hasCalculateByte = false;
 	std::string md5Value("");
 	std::streampos byteCount = 0;
+
+	const std::streampos dataPos = i_rData.tellg();
 
 	std::map< std::string, std::string >::const_iterator iter = m_DelayedEvaluationParameters.begin();
 	for( ; iter != m_DelayedEvaluationParameters.end(); ++iter )
@@ -575,11 +579,11 @@ void ParameterTranslator::TranslateDelayedParameters( std::map< std::string, std
 		{
 			if( !hasCalculateMD5 )
 			{
-				i_rData.clear();
-				i_rData.seekg( i_StrPos );
 				std::string strData( std::istreambuf_iterator<char>( i_rData ), {} );
 				md5Value = MVUtility::GetMD5( strData );
 				hasCalculateMD5 = true;
+				i_rData.clear();
+				i_rData.seekg( dataPos );
 			}
 			o_rTranslatedParameters[iter->first] = md5Value;
 		}
@@ -589,8 +593,10 @@ void ParameterTranslator::TranslateDelayedParameters( std::map< std::string, std
 			{
 				i_rData.clear();
 				i_rData.seekg( 0, i_rData.end );
-				byteCount = i_rData.tellg() - i_StrPos;
+				byteCount = i_rData.tellg() - dataPos;
 				hasCalculateByte = true;
+				i_rData.clear();
+				i_rData.seekg( dataPos );
 			}
 			o_rTranslatedParameters[iter->first] = boost::lexical_cast< std::string >( byteCount );
 		}
