@@ -75,7 +75,6 @@ private:
 	typedef GenericOrderedDataContainer< DerivedValueDatum, DerivedValueDesc > DerivedValueContainer;
 
 	bool IsSilenced( const std::string& i_rName ) const;
-	bool IsDelayedParameter( const std::string& i_rBuiltIn ) const;
 
 	TranslatorContainer m_Parameters;
 	std::map< std::string, std::string > m_PrimaryDefaults;

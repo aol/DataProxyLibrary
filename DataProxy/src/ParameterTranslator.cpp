@@ -23,6 +23,8 @@
 #include <boost/regex.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/optional.hpp>
+#include <boost/iostreams/copy.hpp>
 
 namespace
 {
@@ -88,6 +90,11 @@ namespace
 		return i_rValue.substr( 1, i_rValue.size() - 2 );
 	}
 
+	bool IsDelayedParameter( const std::string& i_rBuiltIn )
+	{
+		return ( i_rBuiltIn == MD5 || i_rBuiltIn == BYTE_COUNT );
+	}
+
 	std::string EvalBuiltIn( const std::string& i_rValue )
 	{
 		if( i_rValue == HOSTNAME )
@@ -124,13 +131,9 @@ namespace
 			}
 			return DateTime().GetFormattedString( format );
 		}
-		else if( i_rValue == MD5 )
+		else if( IsDelayedParameter( i_rValue ) )
 		{
 			return std::string(""); 
-		}
-		else if( i_rValue == BYTE_COUNT )
-		{
-			return std::string("");
 		}
 
 		// we should have returned by now; if not, return unknown
@@ -566,10 +569,8 @@ bool ParameterTranslator::IsSilenced( const std::string& i_rName ) const
 
 void ParameterTranslator::TranslateDelayedParameters( std::map< std::string, std::string >& o_rTranslatedParameters, std::istream& i_rData ) const
 {
-	bool hasCalculateMD5 = false;
-	bool hasCalculateByte = false;
 	std::string md5Value("");
-	std::streampos byteCount = 0;
+	boost::optional< std::streampos > byteCount( boost::none );
 
 	const std::streampos dataPos = i_rData.tellg();
 
@@ -578,11 +579,11 @@ void ParameterTranslator::TranslateDelayedParameters( std::map< std::string, std
 	{
 		if( iter->second == MD5 )
 		{
-			if( !hasCalculateMD5 )
+			if( md5Value.empty() )
 			{
-				std::string strData( std::istreambuf_iterator<char>( i_rData ), {} );
-				md5Value = MVUtility::GetMD5( strData );
-				hasCalculateMD5 = true;
+				std::stringstream data;
+				boost::iostreams::copy( i_rData, data );
+				md5Value = MVUtility::GetMD5( data.str() );
 				i_rData.clear();
 				i_rData.seekg( dataPos );
 			}
@@ -590,20 +591,15 @@ void ParameterTranslator::TranslateDelayedParameters( std::map< std::string, std
 		}
 		else if( iter->second == BYTE_COUNT )
 		{
-			if( !hasCalculateByte )
+			if( !byteCount )
 			{
 				i_rData.seekg( 0, i_rData.end );
 				byteCount = i_rData.tellg() - dataPos;
-				hasCalculateByte = true;
 				i_rData.clear();
 				i_rData.seekg( dataPos );
 			}
-			o_rTranslatedParameters[iter->first] = boost::lexical_cast< std::string >( byteCount );
+			o_rTranslatedParameters[iter->first] = boost::lexical_cast< std::string >( byteCount.get() );
 		}
 	}
 }
 
-bool ParameterTranslator::IsDelayedParameter( const std::string& i_rBuiltIn ) const
-{
-	return ( i_rBuiltIn == MD5 || i_rBuiltIn == BYTE_COUNT );
-}
