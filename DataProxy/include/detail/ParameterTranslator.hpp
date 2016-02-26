@@ -18,7 +18,6 @@
 #include "MVException.hpp"
 #include <xercesc/dom/DOM.hpp>
 #include <boost/noncopyable.hpp>
-#include <set>
 
 MV_MAKEEXCEPTIONCLASS( ParameterTranslatorException, MVException );
 
