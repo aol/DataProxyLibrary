@@ -23,6 +23,8 @@
 #include <boost/regex.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/replace.hpp>
+#include <boost/optional.hpp>
+#include <boost/iostreams/copy.hpp>
 
 namespace
 {
@@ -43,6 +45,8 @@ namespace
 	const std::string GUID = "guid";
 	const std::string PID = "pid";
 	const std::string UNKNOWN = "unknown";
+	const std::string MD5("md5");
+	const std::string BYTE_COUNT( "byteCount" );
 	const std::string s_Hostname = MVUtility::GetHostName();
 
 	bool IsExpression( const std::string& i_rValue )
@@ -78,12 +82,17 @@ namespace
 
 	bool IsBuiltIn( const std::string& i_rValue )
 	{
-		return ( i_rValue[0] == '[' && i_rValue[i_rValue.size()-1] == ']' );
+		return ( i_rValue.size() > 1 && i_rValue[0] == '[' && i_rValue[i_rValue.size()-1] == ']' );
 	}
 
 	std::string GetBuiltIn( const std::string& i_rValue )
 	{
 		return i_rValue.substr( 1, i_rValue.size() - 2 );
+	}
+
+	bool IsDelayedParameter( const std::string& i_rBuiltIn )
+	{
+		return ( i_rBuiltIn == MD5 || i_rBuiltIn == BYTE_COUNT );
 	}
 
 	std::string EvalBuiltIn( const std::string& i_rValue )
@@ -122,6 +131,10 @@ namespace
 			}
 			return DateTime().GetFormattedString( format );
 		}
+		else if( IsDelayedParameter( i_rValue ) )
+		{
+			return std::string(""); 
+		}
 
 		// we should have returned by now; if not, return unknown
 		MVLOGGER( "root.lib.DataProxy.ParameterTranslator.BuiltIn.Unknown",
@@ -148,7 +161,8 @@ ParameterTranslator::ParameterTranslator( const xercesc::DOMNode& i_rNode )
 	m_PrimaryDefaults(),
 	m_SecondaryDefaults(),
 	m_DerivedValues(),
-	m_ShellTimeout( EVAL_TIMEOUT_DEFAULT )
+	m_ShellTimeout( EVAL_TIMEOUT_DEFAULT ),
+	m_DelayedEvaluationParameters()
 {
 	xercesc::DOMNode* pTranslateNode = XMLUtilities::TryGetSingletonChildByName( &i_rNode, TRANSLATE_PARAMETERS_NODE );
 	if( pTranslateNode == NULL )
@@ -365,8 +379,9 @@ ParameterTranslator::~ParameterTranslator()
 }
 
 void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_rInputParameters,
-									 std::map<std::string,std::string>& o_rTranslatedParameters ) const
+									 std::map<std::string,std::string>& o_rTranslatedParameters )
 {
+	m_DelayedEvaluationParameters.clear();
 	o_rTranslatedParameters.clear();
 
 	// first, iterate over the incoming parameters & perform whatever translations are necessary
@@ -424,6 +439,10 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 				std::string builtIn( GetBuiltIn( valueTranslator ) );
 				boost::replace_all( builtIn, VALUE_FORMATTER, value );
 				value = EvalBuiltIn( builtIn );
+				if( IsDelayedParameter( builtIn ) )
+				{
+					m_DelayedEvaluationParameters[ name ] = builtIn;
+				}
 			}
 			// otherwise use it as a literal
 			else
@@ -433,10 +452,14 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 			}
 		}
 		
-		// as long as the name has not been silenced, we can insert this name/value pair
+		// as long as the name has not been silenced, we can insert this name/value pair, else remove the name if it has been added into m_DelayedEvaluationParameters
 		if( !IsSilenced( name ) )
 		{
 			o_rTranslatedParameters[ name ] = value;
+		}
+		else
+		{
+			m_DelayedEvaluationParameters.erase( name );
 		}
 	}
 
@@ -452,7 +475,12 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 			}
 			else if( IsBuiltIn( valueDefault ) )
 			{
-				valueDefault = EvalBuiltIn( GetBuiltIn( valueDefault ) );
+				std::string builtIn( GetBuiltIn( valueDefault ) );
+				valueDefault = EvalBuiltIn( builtIn );
+				if( IsDelayedParameter( builtIn ) )
+				{
+					m_DelayedEvaluationParameters[ inputIter->first ] = builtIn;
+				}
 			}
 			o_rTranslatedParameters[ inputIter->first ] = valueDefault;
 		}
@@ -482,6 +510,8 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 			boost::replace_all( derivedValue, VALUE_FORMATTER, sourceValue );
 		}
 
+		std::string builtIn("");
+
 		// calculate the derived value from the source value
 		if( IsExpression( derivedValue ) )
 		{
@@ -489,7 +519,8 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 		}
 		else if( IsBuiltIn( derivedValue ) )
 		{
-			derivedValue = EvalBuiltIn( GetBuiltIn( derivedValue ) );
+			builtIn = GetBuiltIn( derivedValue );
+			derivedValue = EvalBuiltIn( builtIn );
 		}
 
 		// if it's an override or it's currently missing from the output parameters, add it
@@ -497,6 +528,10 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 		if( derivedIter->second.GetValue< IsOverride >() || o_rTranslatedParameters.find( paramName ) == o_rTranslatedParameters.end() )
 		{
 			o_rTranslatedParameters[ paramName ] = derivedValue;
+			if( IsDelayedParameter( builtIn ) )
+			{
+				m_DelayedEvaluationParameters[ paramName ] = builtIn;		
+			}
 		}
 	}
 
@@ -512,7 +547,9 @@ void ParameterTranslator::Translate( const std::map<std::string,std::string>& i_
 			}
 			else if( IsBuiltIn( valueDefault ) )
 			{
-				valueDefault = EvalBuiltIn( GetBuiltIn( valueDefault ) );
+				std::string builtIn = GetBuiltIn( valueDefault );
+				valueDefault = EvalBuiltIn( builtIn );
+				m_DelayedEvaluationParameters[ inputIter->first ] = builtIn;
 			}
 			o_rTranslatedParameters[ inputIter->first ] = valueDefault;
 		}
@@ -529,3 +566,40 @@ bool ParameterTranslator::IsSilenced( const std::string& i_rName ) const
 		  && iter->second.GetValue< ValueTranslator >().IsNull()	// there is no value translator
 		  && m_PrimaryDefaults.find( i_rName ) == m_PrimaryDefaults.end() );		// there is no value default
 }
+
+void ParameterTranslator::TranslateDelayedParameters( std::map< std::string, std::string >& o_rTranslatedParameters, std::istream& i_rData ) const
+{
+	std::string md5Value("");
+	boost::optional< std::streampos > byteCount( boost::none );
+
+	const std::streampos dataPos = i_rData.tellg();
+
+	std::map< std::string, std::string >::const_iterator iter = m_DelayedEvaluationParameters.begin();
+	for( ; iter != m_DelayedEvaluationParameters.end(); ++iter )
+	{
+		if( iter->second == MD5 )
+		{
+			if( md5Value.empty() )
+			{
+				std::stringstream data;
+				boost::iostreams::copy( i_rData, data );
+				md5Value = MVUtility::GetMD5( data.str() );
+				i_rData.clear();
+				i_rData.seekg( dataPos );
+			}
+			o_rTranslatedParameters[iter->first] = md5Value;
+		}
+		else if( iter->second == BYTE_COUNT )
+		{
+			if( !byteCount )
+			{
+				i_rData.seekg( 0, i_rData.end );
+				byteCount = i_rData.tellg() - dataPos;
+				i_rData.clear();
+				i_rData.seekg( dataPos );
+			}
+			o_rTranslatedParameters[iter->first] = boost::lexical_cast< std::string >( byteCount.get() );
+		}
+	}
+}
+

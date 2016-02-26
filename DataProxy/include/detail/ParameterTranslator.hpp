@@ -28,7 +28,8 @@ public:
 	virtual ~ParameterTranslator();
 
 	virtual void Translate( const std::map<std::string,std::string>& i_rInputParameters,
-							   std::map<std::string,std::string>& o_rTranslatedParameters ) const;
+							   std::map<std::string,std::string>& o_rTranslatedParameters );
+	virtual void TranslateDelayedParameters( std::map< std::string, std::string >& o_rTranslatedParameters, std::istream& i_rData ) const;
 	
 private:
 	DATUMINFO( ParameterName, std::string );
@@ -80,6 +81,7 @@ private:
 	std::map< std::string, std::string > m_SecondaryDefaults;
 	DerivedValueContainer m_DerivedValues;
 	int m_ShellTimeout;
+	std::map< std::string, std::string > m_DelayedEvaluationParameters;
 };
 
 #endif //_PARAMETER_TRANSLATOR_HPP_

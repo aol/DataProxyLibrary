@@ -49,6 +49,7 @@ const std::string KEY_FORMATTER( "%k" );
 const std::string VALUE_FORMATTER( "%v" );
 const std::string MULTI_VALUE_SOURCE( "*" );
 
+// common databases
 const std::string ORACLE_DB_TYPE("oracle");
 const std::string MYSQL_DB_TYPE("mysql");
 const std::string VERTICA_DB_TYPE("vertica");
