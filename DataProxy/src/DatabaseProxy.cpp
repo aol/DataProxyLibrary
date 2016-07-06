@@ -848,7 +848,7 @@ void DatabaseProxy::StoreImpl( const std::map<std::string,std::string>& i_rParam
 	std::vector< std::string > incomingHeaderColumns;
 
 	// try to get data from the incoming stream
-	if( std::getline( i_rData, incomingHeaderString ) != NULL )
+	if( std::getline( i_rData, incomingHeaderString ) )
 	{
 		Tokenize( incomingHeaderColumns, incomingHeaderString, "," );
 	
