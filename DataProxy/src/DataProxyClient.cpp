@@ -129,7 +129,9 @@ namespace
 			DOMConfiguration* pWriterConf = pSerializer->getDomConfig();
 			pWriterConf->setParameter(XMLUni::fgDOMWRTFormatPrettyPrint, false);
 			pWriterConf->setParameter(XMLUni::fgDOMWRTDiscardDefaultContent, true);
-			data << XMLUtilities::XMLChToString( pSerializer->writeToString( pConfig ) );
+			XMLCh* pXmlString = pSerializer->writeToString( pConfig );
+			data << XMLUtilities::XMLChToString( pXmlString );
+			XMLString::release( &pXmlString );
 			#endif
 			return MVUtility::GetMD5( data.str() );
 		}
