@@ -88,6 +88,11 @@ namespace
 			return m_pData;
 		}
 
+		T_Ptr* operator*()
+		{
+			return m_pData;
+		}
+
 		T_Ptr* operator ->()
 		{
 			return m_pData;
@@ -96,6 +101,20 @@ namespace
 	private:
 		T_Ptr* m_pData;
 	};
+
+	template<>
+	ScopedReleasePtr< XMLCh >::~ScopedReleasePtr()
+	{
+		XMLString::release( &m_pData );
+	}
+
+	// XMLString::transcode sometimes returns a char* buffer that shuold be freed with XMLString::release
+	// instead of delete or free
+	template<>
+	ScopedReleasePtr< char >::~ScopedReleasePtr()
+	{
+		XMLString::release( &m_pData );
+	}
 
 	std::string GetMD5( const std::string& i_rConfigFileSpec )
 	{
@@ -129,7 +148,8 @@ namespace
 			DOMConfiguration* pWriterConf = pSerializer->getDomConfig();
 			pWriterConf->setParameter(XMLUni::fgDOMWRTFormatPrettyPrint, false);
 			pWriterConf->setParameter(XMLUni::fgDOMWRTDiscardDefaultContent, true);
-			data << XMLUtilities::XMLChToString( pSerializer->writeToString( pConfig ) );
+			ScopedReleasePtr< XMLCh > pXmlString( pSerializer->writeToString( pConfig ) );
+			data << XMLUtilities::XMLChToString( *pXmlString );
 			#endif
 			return MVUtility::GetMD5( data.str() );
 		}
@@ -346,11 +366,13 @@ void DataProxyClient::InitializeImplementation( const std::string& i_rConfigFile
 		}
 		catch( const xercesc::SAXParseException& ex )
 		{
-			MV_THROW( DataProxyClientException, "Error parsing file: " << i_rConfigFileSpec << ": " << xercesc::XMLString::transcode( ex.getMessage() ) );
+			ScopedReleasePtr< char > message( xercesc::XMLString::transcode( ex.getMessage() ) );
+			MV_THROW( DataProxyClientException, "Error parsing file: " << i_rConfigFileSpec << ": " << message );
 		}
 		catch( const xercesc::XMLException& ex )
 		{
-			MV_THROW( DataProxyClientException, "Error parsing file: " << i_rConfigFileSpec << ": " << xercesc::XMLString::transcode( ex.getMessage() ) );
+			ScopedReleasePtr< char > message( xercesc::XMLString::transcode( ex.getMessage() ) );
+			MV_THROW( DataProxyClientException, "Error parsing file: " << i_rConfigFileSpec << ": " << message );
 		}
 
 		// ensure no cycles in dependencies

@@ -54,7 +54,7 @@ void DataProxyClientTest::tearDown()
 {
 	::system( (std::string("chmod 777 ") + m_pTempDir->GetDirectoryName() + "/* >/dev/null 2>&1" ).c_str() );
 	m_pTempDir.reset( NULL );
-	//XMLPlatformUtils::Terminate();
+	XMLPlatformUtils::Terminate();
 }
 
 void DataProxyClientTest::testUninitialized()
