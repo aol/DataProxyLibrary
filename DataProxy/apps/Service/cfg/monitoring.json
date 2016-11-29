@@ -1,0 +1,415 @@
+{
+	"root":
+	{	
+		"monitoring":
+		{
+			"application":"Monitoring Data Proxy Service",
+			"maxQueueLength":"10000",
+			"queueFullErrorLogPeriod":"10",
+			"multiplexRules":
+			[
+				{ "scopeId":"dpl.load", "childIds":"status" },
+				{ "scopeId":"dpl.store", "childIds":"status" },
+				{ "scopeId":"dpl.delete", "childIds":"status" }
+			]
+		},
+		"collectors":
+		[
+			{ "name":"loadTimeCollector", "sourceId":"dpl.load.time", "maxSize":"10000", "maxTime":"3600" },
+			{ "name":"loadTimeSuccessCollector", "sourceId":"dpl.load.time.status.success", "maxSize":"10000", "maxTime":"3600" },
+			{ "name":"loadTimeFailedCollector", "sourceId":"dpl.load.time.status.failed", "maxSize":"10000", "maxTime":"3600" },
+			{ "name":"loadPayloadBytesCollector", "sourceId":"dpl.load.payloadBytes", "maxSize":"10000", "maxTime":"3600" },
+			{ "name":"loadPayloadLinesCollector", "sourceId":"dpl.load.payloadLines", "maxSize":"10000", "maxTime":"3600" },
+
+			{ "name":"storeTimeCollector", "sourceId":"dpl.store.time", "maxSize":"10000", "maxTime":"3600" },
+			{ "name":"storeTimeSuccessCollector", "sourceId":"dpl.store.time.status.success", "maxSize":"10000", "maxTime":"3600" },
+			{ "name":"storeTimeFailedCollector", "sourceId":"dpl.store.time.status.failed", "maxSize":"10000", "maxTime":"3600" },
+			{ "name":"storePayloadBytesCollector", "sourceId":"dpl.store.payloadBytes", "maxSize":"10000", "maxTime":"3600" },
+			{ "name":"storePayloadLinesCollector", "sourceId":"dpl.store.payloadLines", "maxSize":"10000", "maxTime":"3600" },
+
+			{ "name":"deleteTimeCollector", "sourceId":"dpl.delete.time", "maxSize":"10000", "maxTime":"3600" },
+			{ "name":"deleteTimeSuccessCollector", "sourceId":"dpl.delete.time.status.success", "maxSize":"10000", "maxTime":"3600" },
+			{ "name":"deleteTimeFailedCollector", "sourceId":"dpl.delete.time.status.failed", "maxSize":"10000", "maxTime":"3600" }
+
+		],
+		"aggregators":
+		[
+			{ "name":"loadTimeStats", "sourceCollector":"loadTimeCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" },
+			{ "name":"loadTimeSuccessStats", "sourceCollector":"loadTimeSuccessCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" },
+			{ "name":"loadTimeFailedStats", "sourceCollector":"loadTimeFailedCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" },
+
+			{ "name":"loadPayloadBytesStats", "sourceCollector":"loadPayloadBytesCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" },
+			{ "name":"loadPayloadBytesBuckets", "sourceCollector":"loadPayloadBytesCollector", "type":"bucket", "recalculateAge":"1", "buckets":"100,1000,10000,100000" },
+			{ "name":"loadPayloadBytesLastN", "sourceCollector":"loadPayloadBytesCollector", "type":"lastN", "recalculateAge":"1", "n":"10" },
+			{ "name":"loadPayloadBytesPct", "sourceCollector":"loadPayloadBytesCollector", "type":"percentile", "recalculateAge":"1", "percentiles":"25,50,75,90,95,99,99.9" },
+
+			{ "name":"loadPayloadLinesStats", "sourceCollector":"loadPayloadLinesCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" },
+			{ "name":"loadPayloadLinesBuckets", "sourceCollector":"loadPayloadLinesCollector", "type":"bucket", "recalculateAge":"1", "buckets":"100,1000,10000,100000" },
+			{ "name":"loadPayloadLinesLastN", "sourceCollector":"loadPayloadLinesCollector", "type":"lastN", "recalculateAge":"1", "n":"10" },
+			{ "name":"loadPayloadLinesPct", "sourceCollector":"loadPayloadLinesCollector", "type":"percentile", "recalculateAge":"1", "percentiles":"25,50,75,90,95,99,99.9" },
+
+			{ "name":"storeTimeStats", "sourceCollector":"storeTimeCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" },
+			{ "name":"storeTimeSuccessStats", "sourceCollector":"storeTimeSuccessCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" },
+			{ "name":"storeTimeFailedStats", "sourceCollector":"storeTimeFailedCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" },
+
+			{ "name":"storePayloadBytesStats", "sourceCollector":"storePayloadBytesCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" },
+			{ "name":"storePayloadBytesBuckets", "sourceCollector":"storePayloadBytesCollector", "type":"bucket", "recalculateAge":"1", "buckets":"100,1000,10000,100000" },
+			{ "name":"storePayloadBytesLastN", "sourceCollector":"storePayloadBytesCollector", "type":"lastN", "recalculateAge":"1", "n":"10" },
+			{ "name":"storePayloadBytesPct", "sourceCollector":"storePayloadBytesCollector", "type":"percentile", "recalculateAge":"1", "percentiles":"25,50,75,90,95,99,99.9" },
+
+			{ "name":"storePayloadLinesStats", "sourceCollector":"storePayloadLinesCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" },
+			{ "name":"storePayloadLinesBuckets", "sourceCollector":"storePayloadLinesCollector", "type":"bucket", "recalculateAge":"1", "buckets":"100,1000,10000,100000" },
+			{ "name":"storePayloadLinesLastN", "sourceCollector":"storePayloadLinesCollector", "type":"lastN", "recalculateAge":"1", "n":"10" },
+			{ "name":"storePayloadLinesPct", "sourceCollector":"storePayloadLinesCollector", "type":"percentile", "recalculateAge":"1", "percentiles":"25,50,75,90,95,99,99.9" },
+
+			{ "name":"deleteTimeStats", "sourceCollector":"deleteTimeCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" },
+			{ "name":"deleteTimeSuccessStats", "sourceCollector":"deleteTimeSuccessCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" },
+			{ "name":"deleteTimeFailedStats", "sourceCollector":"deleteTimeFailedCollector", "type":"stats", "recalculateAge":"1", "zeroThreshold":"0.5" }
+
+		],
+		"interfaces":
+		{
+			"http":
+			{
+				"enabled":"1",
+				"port":"20161",
+				"numThreads":"16"
+			},
+			"snmp":
+			{
+				"enabled":"1",
+				"port":"10161",
+				"objects":
+				[
+					{ "objectId":"1.3.6.1.4.100.1.0", "sourceAggregator":"loadTimeStats", "field":"count", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.1.1", "sourceAggregator":"loadTimeStats", "field":"min", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.1.2", "sourceAggregator":"loadTimeStats", "field":"max", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.1.3", "sourceAggregator":"loadTimeStats", "field":"sum", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.1.4", "sourceAggregator":"loadTimeStats", "field":"avg", "type":"int32" },
+
+					{ "objectId":"1.3.6.1.4.100.2.0", "sourceAggregator":"loadTimeSuccessStats", "field":"count", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.2.1", "sourceAggregator":"loadTimeSuccessStats", "field":"min", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.2.2", "sourceAggregator":"loadTimeSuccessStats", "field":"max", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.2.3", "sourceAggregator":"loadTimeSuccessStats", "field":"sum", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.2.4", "sourceAggregator":"loadTimeSuccessStats", "field":"avg", "type":"int32" },
+
+					{ "objectId":"1.3.6.1.4.100.3.0", "sourceAggregator":"loadTimeFailedStats", "field":"count", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.3.1", "sourceAggregator":"loadTimeFailedStats", "field":"min", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.3.2", "sourceAggregator":"loadTimeFailedStats", "field":"max", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.3.3", "sourceAggregator":"loadTimeFailedStats", "field":"sum", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.3.4", "sourceAggregator":"loadTimeFailedStats", "field":"avg", "type":"int32" },
+
+					{ "objectId":"1.3.6.1.4.100.4.0", "sourceAggregator":"loadPayloadBytesStats", "field":"count", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.4.1", "sourceAggregator":"loadPayloadBytesStats", "field":"min", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.4.2", "sourceAggregator":"loadPayloadBytesStats", "field":"max", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.4.3", "sourceAggregator":"loadPayloadBytesStats", "field":"sum", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.4.4", "sourceAggregator":"loadPayloadBytesStats", "field":"avg", "type":"int32" },
+
+/*					{ "objectId":"1.3.6.1.4.100.5.0", "sourceAggregator":"loadPayloadBytesBuckets", "field":"bucket[-inf,100)", "type":"int32" },*/
+/*					{ "objectId":"1.3.6.1.4.100.5.1", "sourceAggregator":"loadPayloadBytesBuckets", "field":"bucket[100,1000)", "type":"int32" },*/
+/*					{ "objectId":"1.3.6.1.4.100.5.2", "sourceAggregator":"loadPayloadBytesBuckets", "field":"bucket[1000,10000)", "type":"int32" },*/
+/*					{ "objectId":"1.3.6.1.4.100.5.3", "sourceAggregator":"loadPayloadBytesBuckets", "field":"bucket[10000,100000)", "type":"int32" },*/
+/*					{ "objectId":"1.3.6.1.4.100.5.4", "sourceAggregator":"loadPayloadBytesBuckets", "field":"bucket[100000,inf]", "type":"int32" },*/
+
+/*					{ "objectId":"1.3.6.1.4.100.6.0.0", "sourceAggregator":"loadPayloadBytesLastN", "field":"item[0].time", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.6.0.1", "sourceAggregator":"loadPayloadBytesLastN", "field":"item[0].number", "type":"int32" },*/
+/*					{ "objectId":"1.3.6.1.4.100.6.1.0", "sourceAggregator":"loadPayloadBytesLastN", "field":"item[1].time", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.6.1.1", "sourceAggregator":"loadPayloadBytesLastN", "field":"item[1].number", "type":"uint32" },*/
+
+/*					{ "objectId":"1.3.6.1.4.100.7.25", "sourceAggregator":"loadPayloadBytesPct", "field":"pct25", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.7.50", "sourceAggregator":"loadPayloadBytesPct", "field":"pct50", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.7.75", "sourceAggregator":"loadPayloadBytesPct", "field":"pct75", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.7.90", "sourceAggregator":"loadPayloadBytesPct", "field":"pct90", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.7.95", "sourceAggregator":"loadPayloadBytesPct", "field":"pct95", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.7.99", "sourceAggregator":"loadPayloadBytesPct", "field":"pct99", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.7.999", "sourceAggregator":"loadPayloadBytesPct", "field":"pct99.9", "type":"uint64" },*/
+
+					{ "objectId":"1.3.6.1.4.100.8.0", "sourceAggregator":"loadPayloadLinesStats", "field":"count", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.8.1", "sourceAggregator":"loadPayloadLinesStats", "field":"min", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.8.2", "sourceAggregator":"loadPayloadLinesStats", "field":"max", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.8.3", "sourceAggregator":"loadPayloadLinesStats", "field":"sum", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.8.4", "sourceAggregator":"loadPayloadLinesStats", "field":"avg", "type":"int32" },
+
+/*					{ "objectId":"1.3.6.1.4.100.9.0", "sourceAggregator":"loadPayloadLinesBuckets", "field":"bucket[-inf,100)", "type":"int32" },*/
+/*					{ "objectId":"1.3.6.1.4.100.9.1", "sourceAggregator":"loadPayloadLinesBuckets", "field":"bucket[100,1000)", "type":"int32" },*/
+/*					{ "objectId":"1.3.6.1.4.100.9.2", "sourceAggregator":"loadPayloadLinesBuckets", "field":"bucket[1000,10000)", "type":"int32" },*/
+/*					{ "objectId":"1.3.6.1.4.100.9.3", "sourceAggregator":"loadPayloadLinesBuckets", "field":"bucket[10000,100000)", "type":"int32" },*/
+/*					{ "objectId":"1.3.6.1.4.100.9.4", "sourceAggregator":"loadPayloadLinesBuckets", "field":"bucket[100000,inf]", "type":"int32" },*/
+
+/*					{ "objectId":"1.3.6.1.4.100.10.0.0", "sourceAggregator":"loadPayloadLinesLastN", "field":"item[0].time", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.10.0.1", "sourceAggregator":"loadPayloadLinesLastN", "field":"item[0].number", "type":"int32" },*/
+/*					{ "objectId":"1.3.6.1.4.100.10.1.0", "sourceAggregator":"loadPayloadLinesLastN", "field":"item[1].time", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.10.1.1", "sourceAggregator":"loadPayloadLinesLastN", "field":"item[1].number", "type":"uint32" },*/
+
+/*					{ "objectId":"1.3.6.1.4.100.11.25", "sourceAggregator":"loadPayloadLinesPct", "field":"pct25", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.11.50", "sourceAggregator":"loadPayloadLinesPct", "field":"pct50", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.11.75", "sourceAggregator":"loadPayloadLinesPct", "field":"pct75", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.11.90", "sourceAggregator":"loadPayloadLinesPct", "field":"pct90", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.11.95", "sourceAggregator":"loadPayloadLinesPct", "field":"pct95", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.11.99", "sourceAggregator":"loadPayloadLinesPct", "field":"pct99", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.11.999", "sourceAggregator":"loadPayloadLinesPct", "field":"pct99.9", "type":"uint64" },*/
+
+					{ "objectId":"1.3.6.1.4.100.12.0", "sourceAggregator":"storeTimeStats", "field":"count", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.12.1", "sourceAggregator":"storeTimeStats", "field":"min", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.12.2", "sourceAggregator":"storeTimeStats", "field":"max", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.12.3", "sourceAggregator":"storeTimeStats", "field":"sum", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.12.4", "sourceAggregator":"storeTimeStats", "field":"avg", "type":"int32" },
+
+					{ "objectId":"1.3.6.1.4.100.13.0", "sourceAggregator":"storeTimeSuccessStats", "field":"count", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.13.1", "sourceAggregator":"storeTimeSuccessStats", "field":"min", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.13.2", "sourceAggregator":"storeTimeSuccessStats", "field":"max", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.13.3", "sourceAggregator":"storeTimeSuccessStats", "field":"sum", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.13.4", "sourceAggregator":"storeTimeSuccessStats", "field":"avg", "type":"int32" },
+
+					{ "objectId":"1.3.6.1.4.100.14.0", "sourceAggregator":"storeTimeFailedStats", "field":"count", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.14.1", "sourceAggregator":"storeTimeFailedStats", "field":"min", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.14.2", "sourceAggregator":"storeTimeFailedStats", "field":"max", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.14.3", "sourceAggregator":"storeTimeFailedStats", "field":"sum", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.14.4", "sourceAggregator":"storeTimeFailedStats", "field":"avg", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.14.5", "sourceAggregator":"storeTimeFailedStats", "field":"earliestTime", "type":"uint64" },
+					{ "objectId":"1.3.6.1.4.100.14.6", "sourceAggregator":"storeTimeFailedStats", "field":"latestTime", "type":"uint64" },
+
+					{ "objectId":"1.3.6.1.4.100.15.0", "sourceAggregator":"storePayloadBytesStats", "field":"count", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.15.1", "sourceAggregator":"storePayloadBytesStats", "field":"min", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.15.2", "sourceAggregator":"storePayloadBytesStats", "field":"max", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.15.3", "sourceAggregator":"storePayloadBytesStats", "field":"sum", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.15.4", "sourceAggregator":"storePayloadBytesStats", "field":"avg", "type":"int32" },
+
+/*					{ "objectId":"1.3.6.1.4.100.16.0", "sourceAggregator":"storePayloadBytesBuckets", "field":"bucket[-inf,100)", "type":"int32" },*/
+/*					{ "objectId":"1.3.6.1.4.100.16.1", "sourceAggregator":"storePayloadBytesBuckets", "field":"bucket[100,1000)", "type":"int32" },*/
+/*					{ "objectId":"1.3.6.1.4.100.16.2", "sourceAggregator":"storePayloadBytesBuckets", "field":"bucket[1000,10000)", "type":"int32" },*/
+/*					{ "objectId":"1.3.6.1.4.100.16.3", "sourceAggregator":"storePayloadBytesBuckets", "field":"bucket[10000,100000)", "type":"int32" },*/
+/*					{ "objectId":"1.3.6.1.4.100.16.4", "sourceAggregator":"storePayloadBytesBuckets", "field":"bucket[100000,inf]", "type":"int32" },*/
+
+/*					{ "objectId":"1.3.6.1.4.100.17.0.0", "sourceAggregator":"storePayloadBytesLastN", "field":"item[0].time", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.17.0.1", "sourceAggregator":"storePayloadBytesLastN", "field":"item[0].number", "type":"int32" },*/
+/*					{ "objectId":"1.3.6.1.4.100.17.1.0", "sourceAggregator":"storePayloadBytesLastN", "field":"item[1].time", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.17.1.1", "sourceAggregator":"storePayloadBytesLastN", "field":"item[1].number", "type":"uint32" },*/
+
+/*					{ "objectId":"1.3.6.1.4.100.18.25", "sourceAggregator":"storePayloadBytesPct", "field":"pct25", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.18.50", "sourceAggregator":"storePayloadBytesPct", "field":"pct50", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.18.75", "sourceAggregator":"storePayloadBytesPct", "field":"pct75", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.18.90", "sourceAggregator":"storePayloadBytesPct", "field":"pct90", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.18.95", "sourceAggregator":"storePayloadBytesPct", "field":"pct95", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.18.99", "sourceAggregator":"storePayloadBytesPct", "field":"pct99", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.18.999", "sourceAggregator":"storePayloadBytesPct", "field":"pct99.9", "type":"uint64" },*/
+
+					{ "objectId":"1.3.6.1.4.100.19.0", "sourceAggregator":"storePayloadLinesStats", "field":"count", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.19.1", "sourceAggregator":"storePayloadLinesStats", "field":"min", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.19.2", "sourceAggregator":"storePayloadLinesStats", "field":"max", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.19.3", "sourceAggregator":"storePayloadLinesStats", "field":"sum", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.19.4", "sourceAggregator":"storePayloadLinesStats", "field":"avg", "type":"int32" },
+
+/*					{ "objectId":"1.3.6.1.4.100.20.0", "sourceAggregator":"storePayloadLinesBuckets", "field":"bucket[-inf,100)", "type":"int32" },*/
+/*					{ "objectId":"1.3.6.1.4.100.20.1", "sourceAggregator":"storePayloadLinesBuckets", "field":"bucket[100,1000)", "type":"int32" },*/
+/*					{ "objectId":"1.3.6.1.4.100.20.2", "sourceAggregator":"storePayloadLinesBuckets", "field":"bucket[1000,10000)", "type":"int32" },*/
+/*					{ "objectId":"1.3.6.1.4.100.20.3", "sourceAggregator":"storePayloadLinesBuckets", "field":"bucket[10000,100000)", "type":"int32" },*/
+/*					{ "objectId":"1.3.6.1.4.100.20.4", "sourceAggregator":"storePayloadLinesBuckets", "field":"bucket[100000,inf]", "type":"int32" },*/
+
+/*					{ "objectId":"1.3.6.1.4.100.21.0.0", "sourceAggregator":"storePayloadLinesLastN", "field":"item[0].time", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.21.0.1", "sourceAggregator":"storePayloadLinesLastN", "field":"item[0].number", "type":"int32" },*/
+/*					{ "objectId":"1.3.6.1.4.100.21.1.0", "sourceAggregator":"storePayloadLinesLastN", "field":"item[1].time", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.21.1.1", "sourceAggregator":"storePayloadLinesLastN", "field":"item[1].number", "type":"uint32" },*/
+
+/*					{ "objectId":"1.3.6.1.4.100.22.25", "sourceAggregator":"storePayloadLinesPct", "field":"pct25", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.22.50", "sourceAggregator":"storePayloadLinesPct", "field":"pct50", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.22.75", "sourceAggregator":"storePayloadLinesPct", "field":"pct75", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.22.90", "sourceAggregator":"storePayloadLinesPct", "field":"pct90", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.22.95", "sourceAggregator":"storePayloadLinesPct", "field":"pct95", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.22.99", "sourceAggregator":"storePayloadLinesPct", "field":"pct99", "type":"uint64" },*/
+/*					{ "objectId":"1.3.6.1.4.100.22.999", "sourceAggregator":"storePayloadLinesPct", "field":"pct99.9", "type":"uint64" },*/
+
+
+					{ "objectId":"1.3.6.1.4.100.23.0", "sourceAggregator":"deleteTimeStats", "field":"count", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.23.1", "sourceAggregator":"deleteTimeStats", "field":"min", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.23.2", "sourceAggregator":"deleteTimeStats", "field":"max", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.23.3", "sourceAggregator":"deleteTimeStats", "field":"sum", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.23.4", "sourceAggregator":"deleteTimeStats", "field":"avg", "type":"int32" },
+
+					{ "objectId":"1.3.6.1.4.100.24.0", "sourceAggregator":"deleteTimeSuccessStats", "field":"count", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.24.1", "sourceAggregator":"deleteTimeSuccessStats", "field":"min", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.24.2", "sourceAggregator":"deleteTimeSuccessStats", "field":"max", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.24.3", "sourceAggregator":"deleteTimeSuccessStats", "field":"sum", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.24.4", "sourceAggregator":"deleteTimeSuccessStats", "field":"avg", "type":"int32" },
+
+					{ "objectId":"1.3.6.1.4.100.25.0", "sourceAggregator":"deleteTimeFailedStats", "field":"count", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.25.1", "sourceAggregator":"deleteTimeFailedStats", "field":"min", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.25.2", "sourceAggregator":"deleteTimeFailedStats", "field":"max", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.25.3", "sourceAggregator":"deleteTimeFailedStats", "field":"sum", "type":"int32" },
+					{ "objectId":"1.3.6.1.4.100.25.4", "sourceAggregator":"deleteTimeFailedStats", "field":"avg", "type":"int32" }
+
+				]
+			},
+			"datadog":
+			{
+				"verbose":"1",
+				"enabled":"1",
+				"api_key":"INSERT_API_KEY_HERE",
+				"api_metric_uri":"https://app.datadoghq.com/api/v1/series",
+				"api_event_uri":"https://app.datadoghq.com/api/v1/events",
+				"cycle_seconds": "10",
+				"timeout_seconds": "20",
+				"metrics":
+				[
+					{ "metric": "adlearn.dplservice.loadTimeStats.count", "sourceAggregator":"loadTimeStats", "field":"count" },
+					{ "metric": "adlearn.dplservice.loadTimeStats.min", "sourceAggregator":"loadTimeStats", "field":"min" },
+					{ "metric": "adlearn.dplservice.loadTimeStats.max", "sourceAggregator":"loadTimeStats", "field":"max" },
+					{ "metric": "adlearn.dplservice.loadTimeStats.sum", "sourceAggregator":"loadTimeStats", "field":"sum" },
+					{ "metric": "adlearn.dplservice.loadTimeStats.avg", "sourceAggregator":"loadTimeStats", "field":"avg" },
+
+					{ "metric": "adlearn.dplservice.loadTimeSuccessStats.count", "sourceAggregator":"loadTimeSuccessStats", "field":"count" },
+					{ "metric": "adlearn.dplservice.loadTimeSuccessStats.min", "sourceAggregator":"loadTimeSuccessStats", "field":"min" },
+					{ "metric": "adlearn.dplservice.loadTimeSuccessStats.max", "sourceAggregator":"loadTimeSuccessStats", "field":"max" },
+					{ "metric": "adlearn.dplservice.loadTimeSuccessStats.sum", "sourceAggregator":"loadTimeSuccessStats", "field":"sum" },
+					{ "metric": "adlearn.dplservice.loadTimeSuccessStats.avg", "sourceAggregator":"loadTimeSuccessStats", "field":"avg" },
+
+					{ "metric": "adlearn.dplservice.loadTimeFailedStats.count", "sourceAggregator":"loadTimeFailedStats", "field":"count" },
+					{ "metric": "adlearn.dplservice.loadTimeFailedStats.min", "sourceAggregator":"loadTimeFailedStats", "field":"min" },
+					{ "metric": "adlearn.dplservice.loadTimeFailedStats.max", "sourceAggregator":"loadTimeFailedStats", "field":"max" },
+					{ "metric": "adlearn.dplservice.loadTimeFailedStats.sum", "sourceAggregator":"loadTimeFailedStats", "field":"sum" },
+					{ "metric": "adlearn.dplservice.loadTimeFailedStats.avg", "sourceAggregator":"loadTimeFailedStats", "field":"avg" },
+
+					{ "metric": "adlearn.dplservice.loadPayloadBytesStats.count", "sourceAggregator":"loadPayloadBytesStats", "field":"count" },
+					{ "metric": "adlearn.dplservice.loadPayloadBytesStats.min", "sourceAggregator":"loadPayloadBytesStats", "field":"min" },
+					{ "metric": "adlearn.dplservice.loadPayloadBytesStats.max", "sourceAggregator":"loadPayloadBytesStats", "field":"max" },
+					{ "metric": "adlearn.dplservice.loadPayloadBytesStats.sum", "sourceAggregator":"loadPayloadBytesStats", "field":"sum" },
+					{ "metric": "adlearn.dplservice.loadPayloadBytesStats.avg", "sourceAggregator":"loadPayloadBytesStats", "field":"avg" },
+
+					{ "metric": "adlearn.dplservice.loadPayloadBytesBuckets.100", "sourceAggregator":"loadPayloadBytesBuckets", "field":"bucket[-inf,100)" },
+					{ "metric": "adlearn.dplservice.loadPayloadBytesBuckets.1000", "sourceAggregator":"loadPayloadBytesBuckets", "field":"bucket[100,1000)" },
+					{ "metric": "adlearn.dplservice.loadPayloadBytesBuckets.10000", "sourceAggregator":"loadPayloadBytesBuckets", "field":"bucket[1000,10000)" },
+					{ "metric": "adlearn.dplservice.loadPayloadBytesBuckets.100000", "sourceAggregator":"loadPayloadBytesBuckets", "field":"bucket[10000,100000)" },
+					{ "metric": "adlearn.dplservice.loadPayloadBytesBuckets.inf", "sourceAggregator":"loadPayloadBytesBuckets", "field":"bucket[100000,inf]" },
+
+					{ "metric": "adlearn.dplservice.loadPayloadBytesLastN.0.time", "sourceAggregator":"loadPayloadBytesLastN", "field":"item[0]/time" },
+					{ "metric": "adlearn.dplservice.loadPayloadBytesLastN.0.number", "sourceAggregator":"loadPayloadBytesLastN", "field":"item[0]/number" },
+					{ "metric": "adlearn.dplservice.loadPayloadBytesLastN.1.time", "sourceAggregator":"loadPayloadBytesLastN", "field":"item[1]/time" },
+					{ "metric": "adlearn.dplservice.loadPayloadBytesLastN.1.number", "sourceAggregator":"loadPayloadBytesLastN", "field":"item[1]/number" },
+
+					{ "metric": "adlearn.dplservice.loadPayloadBytesPct.25", "sourceAggregator":"loadPayloadBytesPct", "field":"pct25" },
+					{ "metric": "adlearn.dplservice.loadPayloadBytesPct.50", "sourceAggregator":"loadPayloadBytesPct", "field":"pct50" },
+					{ "metric": "adlearn.dplservice.loadPayloadBytesPct.75", "sourceAggregator":"loadPayloadBytesPct", "field":"pct75" },
+					{ "metric": "adlearn.dplservice.loadPayloadBytesPct.90", "sourceAggregator":"loadPayloadBytesPct", "field":"pct90" },
+					{ "metric": "adlearn.dplservice.loadPayloadBytesPct.95", "sourceAggregator":"loadPayloadBytesPct", "field":"pct95" },
+					{ "metric": "adlearn.dplservice.loadPayloadBytesPct.99", "sourceAggregator":"loadPayloadBytesPct", "field":"pct99" },
+					{ "metric": "adlearn.dplservice.loadPayloadBytesPct.999", "sourceAggregator":"loadPayloadBytesPct", "field":"pct99.9" },
+
+					{ "metric": "adlearn.dplservice.loadPayloadLinesStats.count", "sourceAggregator":"loadPayloadLinesStats", "field":"count" },
+					{ "metric": "adlearn.dplservice.loadPayloadLinesStats.min", "sourceAggregator":"loadPayloadLinesStats", "field":"min" },
+					{ "metric": "adlearn.dplservice.loadPayloadLinesStats.max", "sourceAggregator":"loadPayloadLinesStats", "field":"max" },
+					{ "metric": "adlearn.dplservice.loadPayloadLinesStats.sum", "sourceAggregator":"loadPayloadLinesStats", "field":"sum" },
+					{ "metric": "adlearn.dplservice.loadPayloadLinesStats.avg", "sourceAggregator":"loadPayloadLinesStats", "field":"avg" },
+
+					{ "metric": "adlearn.dplservice.loadPayloadLinesBuckets.100", "sourceAggregator":"loadPayloadLinesBuckets", "field":"bucket[-inf,100)" },
+					{ "metric": "adlearn.dplservice.loadPayloadLinesBuckets.1000", "sourceAggregator":"loadPayloadLinesBuckets", "field":"bucket[100,1000)" },
+					{ "metric": "adlearn.dplservice.loadPayloadLinesBuckets.10000", "sourceAggregator":"loadPayloadLinesBuckets", "field":"bucket[1000,10000)" },
+					{ "metric": "adlearn.dplservice.loadPayloadLinesBuckets.100000", "sourceAggregator":"loadPayloadLinesBuckets", "field":"bucket[10000,100000)" },
+					{ "metric": "adlearn.dplservice.loadPayloadLinesBuckets.inf", "sourceAggregator":"loadPayloadLinesBuckets", "field":"bucket[100000,inf]" },
+
+					{ "metric": "adlearn.dplservice.loadPayloadLinesLastN.0.time", "sourceAggregator":"loadPayloadLinesLastN", "field":"item[0]/time" },
+					{ "metric": "adlearn.dplservice.loadPayloadLinesLastN.0.number", "sourceAggregator":"loadPayloadLinesLastN", "field":"item[0]/number" },
+					{ "metric": "adlearn.dplservice.loadPayloadLinesLastN.1.time", "sourceAggregator":"loadPayloadLinesLastN", "field":"item[1]/time" },
+					{ "metric": "adlearn.dplservice.loadPayloadLinesLastN.1.number", "sourceAggregator":"loadPayloadLinesLastN", "field":"item[1]/number" },
+
+					{ "metric": "adlearn.dplservice.loadPayloadLinesPct.25", "sourceAggregator":"loadPayloadLinesPct", "field":"pct25" },
+					{ "metric": "adlearn.dplservice.loadPayloadLinesPct.50", "sourceAggregator":"loadPayloadLinesPct", "field":"pct50" },
+					{ "metric": "adlearn.dplservice.loadPayloadLinesPct.75", "sourceAggregator":"loadPayloadLinesPct", "field":"pct75" },
+					{ "metric": "adlearn.dplservice.loadPayloadLinesPct.90", "sourceAggregator":"loadPayloadLinesPct", "field":"pct90" },
+					{ "metric": "adlearn.dplservice.loadPayloadLinesPct.95", "sourceAggregator":"loadPayloadLinesPct", "field":"pct95" },
+					{ "metric": "adlearn.dplservice.loadPayloadLinesPct.99", "sourceAggregator":"loadPayloadLinesPct", "field":"pct99" },
+					{ "metric": "adlearn.dplservice.loadPayloadLinesPct.999", "sourceAggregator":"loadPayloadLinesPct", "field":"pct99.9" },
+
+					{ "metric": "adlearn.dplservice.storeTimeStats.count", "sourceAggregator":"storeTimeStats", "field":"count" },
+					{ "metric": "adlearn.dplservice.storeTimeStats.min", "sourceAggregator":"storeTimeStats", "field":"min" },
+					{ "metric": "adlearn.dplservice.storeTimeStats.max", "sourceAggregator":"storeTimeStats", "field":"max" },
+					{ "metric": "adlearn.dplservice.storeTimeStats.sum", "sourceAggregator":"storeTimeStats", "field":"sum" },
+					{ "metric": "adlearn.dplservice.storeTimeStats.avg", "sourceAggregator":"storeTimeStats", "field":"avg" },
+
+					{ "metric": "adlearn.dplservice.storeTimeSuccessStats.count", "sourceAggregator":"storeTimeSuccessStats", "field":"count" },
+					{ "metric": "adlearn.dplservice.storeTimeSuccessStats.min", "sourceAggregator":"storeTimeSuccessStats", "field":"min" },
+					{ "metric": "adlearn.dplservice.storeTimeSuccessStats.max", "sourceAggregator":"storeTimeSuccessStats", "field":"max" },
+					{ "metric": "adlearn.dplservice.storeTimeSuccessStats.sum", "sourceAggregator":"storeTimeSuccessStats", "field":"sum" },
+					{ "metric": "adlearn.dplservice.storeTimeSuccessStats.avg", "sourceAggregator":"storeTimeSuccessStats", "field":"avg" },
+
+					{ "metric": "adlearn.dplservice.storeTimeFailedStats.count", "sourceAggregator":"storeTimeFailedStats", "field":"count" },
+					{ "metric": "adlearn.dplservice.storeTimeFailedStats.min", "sourceAggregator":"storeTimeFailedStats", "field":"min" },
+					{ "metric": "adlearn.dplservice.storeTimeFailedStats.max", "sourceAggregator":"storeTimeFailedStats", "field":"max" },
+					{ "metric": "adlearn.dplservice.storeTimeFailedStats.sum", "sourceAggregator":"storeTimeFailedStats", "field":"sum" },
+					{ "metric": "adlearn.dplservice.storeTimeFailedStats.avg", "sourceAggregator":"storeTimeFailedStats", "field":"avg" },
+					{ "metric": "adlearn.dplservice.storeTimeFailedStats.earliestTime", "sourceAggregator":"storeTimeFailedStats", "field":"earliestTime" },
+					{ "metric": "adlearn.dplservice.storeTimeFailedStats.latestTime", "sourceAggregator":"storeTimeFailedStats", "field":"latestTime" },
+
+					{ "metric": "adlearn.dplservice.storePayloadBytesStats.count", "sourceAggregator":"storePayloadBytesStats", "field":"count" },
+					{ "metric": "adlearn.dplservice.storePayloadBytesStats.min", "sourceAggregator":"storePayloadBytesStats", "field":"min" },
+					{ "metric": "adlearn.dplservice.storePayloadBytesStats.max", "sourceAggregator":"storePayloadBytesStats", "field":"max" },
+					{ "metric": "adlearn.dplservice.storePayloadBytesStats.sum", "sourceAggregator":"storePayloadBytesStats", "field":"sum" },
+					{ "metric": "adlearn.dplservice.storePayloadBytesStats.avg", "sourceAggregator":"storePayloadBytesStats", "field":"avg" },
+
+					{ "metric": "adlearn.dplservice.storePayloadBytesBuckets.100", "sourceAggregator":"storePayloadBytesBuckets", "field":"bucket[-inf,100)" },
+					{ "metric": "adlearn.dplservice.storePayloadBytesBuckets.1000", "sourceAggregator":"storePayloadBytesBuckets", "field":"bucket[100,1000)" },
+					{ "metric": "adlearn.dplservice.storePayloadBytesBuckets.10000", "sourceAggregator":"storePayloadBytesBuckets", "field":"bucket[1000,10000)" },
+					{ "metric": "adlearn.dplservice.storePayloadBytesBuckets.100000", "sourceAggregator":"storePayloadBytesBuckets", "field":"bucket[10000,100000)" },
+					{ "metric": "adlearn.dplservice.storePayloadBytesBuckets.inf", "sourceAggregator":"storePayloadBytesBuckets", "field":"bucket[100000,inf]" },
+
+					{ "metric": "adlearn.dplservice.storePayloadBytesLastN.0.time", "sourceAggregator":"storePayloadBytesLastN", "field":"item[0]/time" },
+					{ "metric": "adlearn.dplservice.storePayloadBytesLastN.0.number", "sourceAggregator":"storePayloadBytesLastN", "field":"item[0]/number" },
+					{ "metric": "adlearn.dplservice.storePayloadBytesLastN.1.time", "sourceAggregator":"storePayloadBytesLastN", "field":"item[1]/time" },
+					{ "metric": "adlearn.dplservice.storePayloadBytesLastN.1.number", "sourceAggregator":"storePayloadBytesLastN", "field":"item[1]/number" },
+
+					{ "metric": "adlearn.dplservice.storePayloadBytesPct.25", "sourceAggregator":"storePayloadBytesPct", "field":"pct25" },
+					{ "metric": "adlearn.dplservice.storePayloadBytesPct.50", "sourceAggregator":"storePayloadBytesPct", "field":"pct50" },
+					{ "metric": "adlearn.dplservice.storePayloadBytesPct.75", "sourceAggregator":"storePayloadBytesPct", "field":"pct75" },
+					{ "metric": "adlearn.dplservice.storePayloadBytesPct.90", "sourceAggregator":"storePayloadBytesPct", "field":"pct90" },
+					{ "metric": "adlearn.dplservice.storePayloadBytesPct.95", "sourceAggregator":"storePayloadBytesPct", "field":"pct95" },
+					{ "metric": "adlearn.dplservice.storePayloadBytesPct.99", "sourceAggregator":"storePayloadBytesPct", "field":"pct99" },
+					{ "metric": "adlearn.dplservice.storePayloadBytesPct.999", "sourceAggregator":"storePayloadBytesPct", "field":"pct99.9" },
+
+					{ "metric": "adlearn.dplservice.storePayloadLinesStats.count", "sourceAggregator":"storePayloadLinesStats", "field":"count" },
+					{ "metric": "adlearn.dplservice.storePayloadLinesStats.min", "sourceAggregator":"storePayloadLinesStats", "field":"min" },
+					{ "metric": "adlearn.dplservice.storePayloadLinesStats.max", "sourceAggregator":"storePayloadLinesStats", "field":"max" },
+					{ "metric": "adlearn.dplservice.storePayloadLinesStats.sum", "sourceAggregator":"storePayloadLinesStats", "field":"sum" },
+					{ "metric": "adlearn.dplservice.storePayloadLinesStats.avg", "sourceAggregator":"storePayloadLinesStats", "field":"avg" },
+
+					{ "metric": "adlearn.dplservice.storePayloadLinesBuckets.100", "sourceAggregator":"storePayloadLinesBuckets", "field":"bucket[-inf,100)" },
+					{ "metric": "adlearn.dplservice.storePayloadLinesBuckets.1000", "sourceAggregator":"storePayloadLinesBuckets", "field":"bucket[100,1000)" },
+					{ "metric": "adlearn.dplservice.storePayloadLinesBuckets.10000", "sourceAggregator":"storePayloadLinesBuckets", "field":"bucket[1000,10000)" },
+					{ "metric": "adlearn.dplservice.storePayloadLinesBuckets.100000", "sourceAggregator":"storePayloadLinesBuckets", "field":"bucket[10000,100000)" },
+					{ "metric": "adlearn.dplservice.storePayloadLinesBuckets.inf", "sourceAggregator":"storePayloadLinesBuckets", "field":"bucket[100000,inf]" },
+
+					{ "metric": "adlearn.dplservice.storePayloadLinesLastN.0.time", "sourceAggregator":"storePayloadLinesLastN", "field":"item[0]/time" },
+					{ "metric": "adlearn.dplservice.storePayloadLinesLastN.0.number", "sourceAggregator":"storePayloadLinesLastN", "field":"item[0]/number" },
+					{ "metric": "adlearn.dplservice.storePayloadLinesLastN.1.time", "sourceAggregator":"storePayloadLinesLastN", "field":"item[1]/time" },
+					{ "metric": "adlearn.dplservice.storePayloadLinesLastN.1.number", "sourceAggregator":"storePayloadLinesLastN", "field":"item[1]/number" },
+
+					{ "metric": "adlearn.dplservice.storePayloadLinesPct.25", "sourceAggregator":"storePayloadLinesPct", "field":"pct25" },
+					{ "metric": "adlearn.dplservice.storePayloadLinesPct.50", "sourceAggregator":"storePayloadLinesPct", "field":"pct50" },
+					{ "metric": "adlearn.dplservice.storePayloadLinesPct.75", "sourceAggregator":"storePayloadLinesPct", "field":"pct75" },
+					{ "metric": "adlearn.dplservice.storePayloadLinesPct.90", "sourceAggregator":"storePayloadLinesPct", "field":"pct90" },
+					{ "metric": "adlearn.dplservice.storePayloadLinesPct.95", "sourceAggregator":"storePayloadLinesPct", "field":"pct95" },
+					{ "metric": "adlearn.dplservice.storePayloadLinesPct.99", "sourceAggregator":"storePayloadLinesPct", "field":"pct99" },
+					{ "metric": "adlearn.dplservice.storePayloadLinesPct.999", "sourceAggregator":"storePayloadLinesPct", "field":"pct99.9" },
+
+
+					{ "metric": "adlearn.dplservice.deleteTimeStats.count", "sourceAggregator":"deleteTimeStats", "field":"count" },
+					{ "metric": "adlearn.dplservice.deleteTimeStats.min", "sourceAggregator":"deleteTimeStats", "field":"min" },
+					{ "metric": "adlearn.dplservice.deleteTimeStats.max", "sourceAggregator":"deleteTimeStats", "field":"max" },
+					{ "metric": "adlearn.dplservice.deleteTimeStats.sum", "sourceAggregator":"deleteTimeStats", "field":"sum" },
+					{ "metric": "adlearn.dplservice.deleteTimeStats.avg", "sourceAggregator":"deleteTimeStats", "field":"avg" },
+
+					{ "metric": "adlearn.dplservice.deleteTimeSuccessStats.count", "sourceAggregator":"deleteTimeSuccessStats", "field":"count" },
+					{ "metric": "adlearn.dplservice.deleteTimeSuccessStats.min", "sourceAggregator":"deleteTimeSuccessStats", "field":"min" },
+					{ "metric": "adlearn.dplservice.deleteTimeSuccessStats.max", "sourceAggregator":"deleteTimeSuccessStats", "field":"max" },
+					{ "metric": "adlearn.dplservice.deleteTimeSuccessStats.sum", "sourceAggregator":"deleteTimeSuccessStats", "field":"sum" },
+					{ "metric": "adlearn.dplservice.deleteTimeSuccessStats.avg", "sourceAggregator":"deleteTimeSuccessStats", "field":"avg" },
+
+					{ "metric": "adlearn.dplservice.deleteTimeFailedStats.count", "sourceAggregator":"deleteTimeFailedStats", "field":"count" },
+					{ "metric": "adlearn.dplservice.deleteTimeFailedStats.min", "sourceAggregator":"deleteTimeFailedStats", "field":"min" },
+					{ "metric": "adlearn.dplservice.deleteTimeFailedStats.max", "sourceAggregator":"deleteTimeFailedStats", "field":"max" },
+					{ "metric": "adlearn.dplservice.deleteTimeFailedStats.sum", "sourceAggregator":"deleteTimeFailedStats", "field":"sum" },
+					{ "metric": "adlearn.dplservice.deleteTimeFailedStats.avg", "sourceAggregator":"deleteTimeFailedStats", "field":"avg" }
+
+				]
+			}
+		}
+	}
+}
