@@ -97,7 +97,7 @@ void DatabaseConnectionManagerTest::testNormal()
 	xmlContents << "<DatabaseConnections>" << std::endl;
 	xmlContents << " <Database type = \"oracle\"" << std::endl;
 	xmlContents << "  connection = \"name1\""   << std::endl;
-	xmlContents << "  name = \"ADLAPPD\""   << std::endl;
+	xmlContents << "  name = \"ADLAPPD_AWS\""   << std::endl;
 	xmlContents << "  user = \"five0test\""   << std::endl;
 	xmlContents << "  password = \"DSLYCZZHA7\""   << std::endl;
 	xmlContents << "  txnIsolationLevel = \"serializable\""   << std::endl;
@@ -129,7 +129,7 @@ void DatabaseConnectionManagerTest::testNormal()
 	Database* pDataDefinitionDatabase1;
 	Database* pDataDefinitionDatabase2;
 
-	expected << "ADLAPPD, , five0test, five0test, DSLYCZZHA7, 0" << std::endl;
+	expected << "ADLAPPD_AWS, , five0test, five0test, DSLYCZZHA7, 0" << std::endl;
 	// ensure we can get two cloned copies of the database, but they are not the same object (connection)
 	pDatabase1 = dbConnectionManager->GetConnection("name1").get();
 	CPPUNIT_ASSERT( pDatabase1 );
@@ -183,7 +183,7 @@ void DatabaseConnectionManagerTest::testNormalReconnect()
 	xmlContents << "<DatabaseConnections>" << std::endl;
 	xmlContents << " <Database type = \"oracle\"" << std::endl;
 	xmlContents << "  connection = \"name1\""   << std::endl;
-	xmlContents << "  name = \"ADLAPPD\""   << std::endl;
+	xmlContents << "  name = \"ADLAPPD_AWS\""   << std::endl;
 	xmlContents << "  user = \"five0test\""   << std::endl;
 	xmlContents << "  password = \"DSLYCZZHA7\""   << std::endl;
 	xmlContents << "  reconnectTimeout = \"0.0\""   << std::endl;
@@ -203,7 +203,7 @@ void DatabaseConnectionManagerTest::testNormalReconnect()
 	Database* pDatabase1;
 	Database* pDatabase2;
 
-	expected << "ADLAPPD, , five0test, five0test, DSLYCZZHA7, 0" << std::endl;
+	expected << "ADLAPPD_AWS, , five0test, five0test, DSLYCZZHA7, 0" << std::endl;
 	// ensure we can get two cloned copies of the database, but they are not the same object (connection)
 	pDatabase = dbConnectionManager->GetConnection("name1");
 	CPPUNIT_ASSERT( pDatabase );
@@ -302,7 +302,7 @@ void DatabaseConnectionManagerTest::testParseMissingAttributes()
 	xmlContents << "<DatabaseConnections>" << std::endl;
 	xmlContents << " <Database type = \"oracle\"" << std::endl;
 	//missing connection attribute
-	xmlContents << "  name = \"ADLAPPD\""   << std::endl;
+	xmlContents << "  name = \"ADLAPPD_AWS\""   << std::endl;
 	xmlContents << "  user = \"five0test\""   << std::endl;
 	xmlContents << "  password = \"DSLYCZZHA7\""   << std::endl;
 	xmlContents << "  schema = \"\" />"   << std::endl;
@@ -322,7 +322,7 @@ void DatabaseConnectionManagerTest::testParseMissingAttributes()
 	xmlContents << "<DatabaseConnections>" << std::endl;
 	xmlContents << " <Database" << std::endl;
 	xmlContents << "  connection = \"name1\""   << std::endl;
-	xmlContents << "  name = \"ADLAPPD\""   << std::endl;
+	xmlContents << "  name = \"ADLAPPD_AWS\""   << std::endl;
 	xmlContents << "  user = \"five0test\""   << std::endl;
 	xmlContents << "  password = \"DSLYCZZHA7\""   << std::endl;
 	xmlContents << "  schema = \"\" />"   << std::endl;
@@ -359,7 +359,7 @@ void DatabaseConnectionManagerTest::testParseMissingAttributes()
 	xmlContents << "<DatabaseConnections>" << std::endl;
 	xmlContents << " <Database type = \"oracle\"" << std::endl;
 	xmlContents << "  connection = \"name1\""   << std::endl;
-	xmlContents << "  name = \"ADLAPPD\""   << std::endl;
+	xmlContents << "  name = \"ADLAPPD_AWS\""   << std::endl;
 	xmlContents << "  password = \"five0test\""   << std::endl;
 	xmlContents << "  schema = \"\" />"   << std::endl;
 	xmlContents << "</DatabaseConnections>" << std::endl;
@@ -377,7 +377,7 @@ void DatabaseConnectionManagerTest::testParseMissingAttributes()
 	xmlContents << "<DatabaseConnections>" << std::endl;
 	xmlContents << " <Database type = \"oracle\"" << std::endl;
 	xmlContents << "  connection = \"name1\""   << std::endl;
-	xmlContents << "  name = \"ADLAPPD\""   << std::endl;
+	xmlContents << "  name = \"ADLAPPD_AWS\""   << std::endl;
 	xmlContents << "  user = \"five0test\""   << std::endl;
 	xmlContents << "  schema = \"\" />"   << std::endl;
 	xmlContents << "</DatabaseConnections>" << std::endl;
@@ -395,7 +395,7 @@ void DatabaseConnectionManagerTest::testParseMissingAttributes()
 	xmlContents << "<DatabaseConnections>" << std::endl;
 	xmlContents << " <Database type = \"oracle\"" << std::endl;
 	xmlContents << "  connection = \"name1\""   << std::endl;
-	xmlContents << "  name = \"ADLAPPD\""   << std::endl;
+	xmlContents << "  name = \"ADLAPPD_AWS\""   << std::endl;
 	xmlContents << "  user = \"five0test\""   << std::endl;
 	xmlContents << "  password = \"DSLYCZZHA7\""   << std::endl;
 	xmlContents << "   />"   << std::endl;
@@ -637,14 +637,14 @@ void DatabaseConnectionManagerTest::testConnectionOnlyHappensOnGetConnection()
 	xmlContents << "<DatabaseConnections>" << std::endl;
 	xmlContents << " <Database type = \"oracle\"" << std::endl;
 	xmlContents << "  connection = \"OracleConnectionOne\""   << std::endl;
-	xmlContents << "  name = \"ADLAPPD\""   << std::endl;
+	xmlContents << "  name = \"ADLAPPD_AWS\""   << std::endl;
 	xmlContents << "  user = \"five0test\""   << std::endl;
 	xmlContents << "  password = \"bogus_password\""   << std::endl;
 	xmlContents << "  schema = \"\" />"   << std::endl;
 
 	xmlContents << " <Database type = \"oracle\"" << std::endl;
 	xmlContents << "  connection = \"OracleConnectionTwo\""   << std::endl;
-	xmlContents << "  name = \"ADLAPPD\""   << std::endl;
+	xmlContents << "  name = \"ADLAPPD_AWS\""   << std::endl;
 	xmlContents << "  user = \"five0test\""   << std::endl;
 	xmlContents << "  password = \"DSLYCZZHA7\""   << std::endl;
 	xmlContents << "  schema = \"\" />"   << std::endl;
@@ -688,7 +688,7 @@ void DatabaseConnectionManagerTest::testConnectionOnlyHappensOnGetConnection()
 	Database* pDatabase( NULL );
 	CPPUNIT_ASSERT_NO_THROW(pDatabase = dbConnectionManager->GetConnection("OracleConnectionTwo").get());
 	CPPUNIT_ASSERT( pDatabase );
-	expected << "ADLAPPD, , five0test, five0test, DSLYCZZHA7, 0" << std::endl;
+	expected << "ADLAPPD_AWS, , five0test, five0test, DSLYCZZHA7, 0" << std::endl;
 	CPPUNIT_ASSERT_EQUAL(expected.str(), PrettyPrintDatabaseConnection(*pDatabase));
 
 	expected.str("");
@@ -715,7 +715,7 @@ void DatabaseConnectionManagerTest::testParseExceptionDuplicateConnectionNames()
 	xmlContents << "<DatabaseConnections>" << std::endl;
 	xmlContents << " <Database type = \"oracle\"" << std::endl;
 	xmlContents << "  connection = \"duplicateName\""   << std::endl;
-	xmlContents << "  name = \"ADLAPPD\""   << std::endl;
+	xmlContents << "  name = \"ADLAPPD_AWS\""   << std::endl;
 	xmlContents << "  user = \"five0test\""   << std::endl;
 	xmlContents << "  password = \"DSLYCZZHA7\""   << std::endl;
 	xmlContents << "  schema = \"\" />"   << std::endl;
@@ -765,7 +765,7 @@ void DatabaseConnectionManagerTest::testFetchShardNodes()
 	data << "node_id,type,server,database,username,password,schema,disable_cache" << std::endl
 		 << "1,mysql,localhost,,adlearn,Adv.commv,,0" << std::endl
 		 << "2,mysql,localhost,,adlearn,Adv.commv,,1" << std::endl
-		 << "3,oracle,,ADLAPPD,five0test,DSLYCZZHA7,," << std::endl;
+		 << "3,oracle,,ADLAPPD_AWS,five0test,DSLYCZZHA7,," << std::endl;
 	dplClient.SetDataToReturn( "nodes", data.str() );
 
 	data.str("");
@@ -789,12 +789,12 @@ void DatabaseConnectionManagerTest::testFetchShardNodes()
 	CPPUNIT_ASSERT_EQUAL(std::string(", localhost, adlearn, adlearn, Adv.commv, 0\n"), PrettyPrintDatabaseConnection(*manager.GetConnectionByTable("shard_12345")));
 	CPPUNIT_ASSERT_EQUAL(std::string(", localhost, adlearn, adlearn, Adv.commv, 0\n"), PrettyPrintDatabaseConnection(*manager.GetConnectionByTable("shard_54321")));
 	CPPUNIT_ASSERT_EQUAL(std::string(", localhost, adlearn, adlearn, Adv.commv, 1\n"), PrettyPrintDatabaseConnection(*manager.GetConnectionByTable("shard_22222")));
-	CPPUNIT_ASSERT_EQUAL(std::string("ADLAPPD, , five0test, five0test, DSLYCZZHA7, 0\n"), PrettyPrintDatabaseConnection(*manager.GetConnectionByTable("shard_33333")));
+	CPPUNIT_ASSERT_EQUAL(std::string("ADLAPPD_AWS, , five0test, five0test, DSLYCZZHA7, 0\n"), PrettyPrintDatabaseConnection(*manager.GetConnectionByTable("shard_33333")));
 
 	CPPUNIT_ASSERT_EQUAL(std::string(", localhost, adlearn, adlearn, Adv.commv, 0\n"), PrettyPrintDatabaseConnection(*manager.GetDataDefinitionConnectionByTable("shard_12345")));
 	CPPUNIT_ASSERT_EQUAL(std::string(", localhost, adlearn, adlearn, Adv.commv, 0\n"), PrettyPrintDatabaseConnection(*manager.GetDataDefinitionConnectionByTable("shard_54321")));
 	CPPUNIT_ASSERT_EQUAL(std::string(", localhost, adlearn, adlearn, Adv.commv, 1\n"), PrettyPrintDatabaseConnection(*manager.GetDataDefinitionConnectionByTable("shard_22222")));
-	CPPUNIT_ASSERT_EQUAL(std::string("ADLAPPD, , five0test, five0test, DSLYCZZHA7, 0\n"), PrettyPrintDatabaseConnection(*manager.GetDataDefinitionConnectionByTable("shard_33333")));
+	CPPUNIT_ASSERT_EQUAL(std::string("ADLAPPD_AWS, , five0test, five0test, DSLYCZZHA7, 0\n"), PrettyPrintDatabaseConnection(*manager.GetDataDefinitionConnectionByTable("shard_33333")));
 
 	CPPUNIT_ASSERT_EQUAL(std::string("mysql"), manager.GetDatabaseTypeByTable("shard_12345"));
 	CPPUNIT_ASSERT_EQUAL(std::string("mysql"), manager.GetDatabaseTypeByTable("shard_54321"));
@@ -831,7 +831,7 @@ void DatabaseConnectionManagerTest::testFetchShardNodesException()
 	data << "node_id,type,server,database,username,password,schema,disable_cache" << std::endl
 		 << "1,mysql,localhost,,adlearn,Adv.commv,,0" << std::endl
 		 << "2,mysql,localhost,,adlearn,Adv.commv,,1" << std::endl
-		 << "1,oracle,,ADLAPPD,five0test,DSLYCZZHA7,," << std::endl;	// node 1 is a duplicate
+		 << "1,oracle,,ADLAPPD_AWS,five0test,DSLYCZZHA7,," << std::endl;	// node 1 is a duplicate
 	dplClient.SetDataToReturn( "nodes", data.str() );
 	data.str("");
 	data << "table_id,node_id" << std::endl;
@@ -845,7 +845,7 @@ void DatabaseConnectionManagerTest::testFetchShardNodesException()
 	data << "node_id,type,server,database,username,password,schema,disable_cache" << std::endl
 		 << "1,mysql,localhost,,adlearn,Adv.commv,,0" << std::endl
 		 << "2,mysql,localhost,,adlearn,Adv.commv,,1" << std::endl
-		 << "3,oracle,,ADLAPPD,five0test,DSLYCZZHA7,," << std::endl;
+		 << "3,oracle,,ADLAPPD_AWS,five0test,DSLYCZZHA7,," << std::endl;
 	dplClient.SetDataToReturn( "nodes", data.str() );
 
 	data.str("");
@@ -869,7 +869,7 @@ void DatabaseConnectionManagerTest::testPoolingAutoReduce()
 	xmlContents << "<DatabaseConnections>" << std::endl;
 	xmlContents << " <Database type = \"oracle\"" << std::endl;
 	xmlContents << "  connection = \"name1\""   << std::endl;
-	xmlContents << "  name = \"ADLAPPD\""   << std::endl;
+	xmlContents << "  name = \"ADLAPPD_AWS\""   << std::endl;
 	xmlContents << "  user = \"five0test\""   << std::endl;
 	xmlContents << "  password = \"DSLYCZZHA7\""   << std::endl;
 	xmlContents << "  minPoolSize = \"2\""   << std::endl;
@@ -878,7 +878,7 @@ void DatabaseConnectionManagerTest::testPoolingAutoReduce()
 	xmlContents << "  schema = \"\" />"   << std::endl;
 	xmlContents << "</DatabaseConnections>" << std::endl;
 
-	Database observerDB( Database::DBCONN_OCI_THREADSAFE_ORACLE, "", "ADLAPPD", "five0test", "DSLYCZZHA7", false );
+	Database observerDB( Database::DBCONN_OCI_THREADSAFE_ORACLE, "", "ADLAPPD_AWS", "five0test", "DSLYCZZHA7", false );
 	CPPUNIT_ASSERT_EQUAL( 1, GetNumConnections( observerDB ) );
 
 	std::vector<xercesc::DOMNode*> nodes;
