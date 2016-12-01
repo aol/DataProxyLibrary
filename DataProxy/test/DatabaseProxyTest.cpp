@@ -1938,7 +1938,7 @@ void DatabaseProxyTest::testOracleStoreDifferentSchema()
 
 	MockDatabaseConnectionManager dbManager;
 	// create a db connection that is connected to username five0test, but attached to the unittestdb's SCHEMA
-	boost::shared_ptr< Database > pDifferentSchemaDB( new Database( Database::DBCONN_OCI_THREADSAFE_ORACLE, "", "ADLAPPD", "five0test", "DSLYCZZHA7", false, m_pOracleDB->GetSchema() ) );
+	boost::shared_ptr< Database > pDifferentSchemaDB( new Database( Database::DBCONN_OCI_THREADSAFE_ORACLE, "", "ADLAPPD_AWS", "five0test", "DSLYCZZHA7", false, m_pOracleDB->GetSchema() ) );
 	CPPUNIT_ASSERT_NO_THROW( Database::Statement( *m_pOracleDB, "GRANT SELECT, INSERT, UPDATE ON stg_kna TO five0test" ).Execute() );
 	CPPUNIT_ASSERT_NO_THROW( Database::Statement( *m_pOracleDB, "GRANT INSERT, UPDATE ON kna TO five0test" ).Execute() );
 	CPPUNIT_ASSERT_NO_THROW( Database::Statement( *m_pOracleDB, "GRANT EXECUTE ON sp_truncate_table TO five0test" ).Execute() );
