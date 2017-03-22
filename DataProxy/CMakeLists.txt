@@ -187,21 +187,21 @@ IF( BUILD_SWIG AND NOT DEFINED ALTERNATIVE_BUILD_SUFFIX )
 	# swig boilerplate
 	FIND_PACKAGE( SWIG REQUIRED )
 	INCLUDE( ${SWIG_USE_FILE} )
-	
+
 	# set swig properties (applicable to all)
 	SET( BASE_SWIG_FLAGS "-nodefaultctor" )
 	SET( CMAKE_SWIG_OUTDIR "${CMAKE_CURRENT_BINARY_DIR}/gen-swig" )
 	SET_DIRECTORY_PROPERTIES( PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${CMAKE_SWIG_OUTDIR};${AutoGenDir}" )
-	
+
 	# set swig source(s)
 	SET( DataProxy_SwigSrc
 		swig/SwigDataProxy.i
 	)
-	
+
 	# set source properties
 	SET_SOURCE_FILES_PROPERTIES( ${DataProxy_SwigSrc} PROPERTIES CPLUSPLUS ON )
 	SET_SOURCE_FILES_PROPERTIES( ${DataProxy_SwigSrc} PROPERTIES SWIG_FLAGS "-includeall" )
-	
+
 	# support for python swig libraries, if enabled
 	IF( BUILD_SWIG_PYTHON )
 		FIND_PACKAGE( PythonLibs REQUIRED )
@@ -212,7 +212,7 @@ IF( BUILD_SWIG AND NOT DEFINED ALTERNATIVE_BUILD_SUFFIX )
 		SWIG_ADD_MODULE( SwigPythonDataProxy python ${DataProxy_SwigSrc} )
 		SWIG_LINK_LIBRARIES( SwigPythonDataProxy ${PYTHON_LIBRARIES} $<TARGET_FILE:Utility> $<TARGET_SONAME_FILE:DataProxy> )
 	ENDIF()
-	
+
 	# support for perl swig libraries, if enabled
 	IF( BUILD_SWIG_PERL )
 		SET( CMAKE_SWIG_FLAGS ${BASE_SWIG_FLAGS} -module SwigPerlDataProxy )
@@ -230,7 +230,7 @@ ENDIF()
 #################################################
 IF( NOT DEFINED ALTERNATIVE_BUILD_SUFFIX )
 	ADD_SUBDIRECTORY( ${CMAKE_CURRENT_SOURCE_DIR}/apps/Shell )
-	ADD_SUBDIRECTORY( ${CMAKE_CURRENT_SOURCE_DIR}/apps/Service ) 
+	ADD_SUBDIRECTORY( ${CMAKE_CURRENT_SOURCE_DIR}/apps/Service )
 ENDIF()
 
 #################################################
@@ -261,11 +261,14 @@ IF( NOT NO_INSTALL )
 	SET( DEFAULT_PREFIX "/data" )
 	SET( APP_DIR "app" )
 	SET( LIB_DIR "lib" )
-	
+
+	SET( CPACK_RPM_DEFAULT_USER "adlearn" )
+	SET( CPACK_RPM_DEFAULT_GROUP "optimization" )
+
 	# install directives for dirs that need to be created
 	INSTALL( DIRECTORY DESTINATION ${LIB_DIR}
 		DIRECTORY_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE )
-	
+
 	# set properties of build
 	SET( CPACK_PACKAGE_VENDOR "AOL" )
 	SET( CPACK_PACKAGE_DESCRIPTION_SUMMARY "Data Proxy Library & Apps" )
@@ -275,7 +278,7 @@ IF( NOT NO_INSTALL )
 	SET( CPACK_RPM_PACKAGE_RELEASE ${CPACK_PACKAGE_RELEASE} )
 	INSTALL( TARGETS ${LIBRARY_NAME} DESTINATION ${LIB_DIR}
 		PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE )
-	
+
 	IF( USE_MCR )
 		INSTALL( FILES "${CMAKE_CURRENT_BINARY_DIR}/DataProxy.mexa64" DESTINATION ${LIB_DIR}
 			PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE )
@@ -285,13 +288,12 @@ IF( NOT NO_INSTALL )
 	STRING( REGEX MATCH "el[1-9]" EL_VERSION ${CMAKE_SYSTEM} )
 	SET( CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${CPACK_PACKAGE_VERSION}-${CPACK_PACKAGE_RELEASE}.${EL_VERSION}.${CMAKE_SYSTEM_PROCESSOR}" )
 	SET( CPACK_PACKAGING_INSTALL_PREFIX ${DEFAULT_PREFIX} )
-	LIST( APPEND CPACK_RPM_USER_FILELIST "%attr(755,adlearn,optimization) ${DEFAULT_PREFIX}" )
 	SET( CPACK_RPM_SPEC_MORE_DEFINE "${CPACK_RPM_SPEC_MORE_DEFINE}\n%define libDir ${LIB_DIR}" )
 	SET( CPACK_RPM_SPEC_MORE_DEFINE "${CPACK_RPM_SPEC_MORE_DEFINE}\n%define appDir ${APP_DIR}" )
-	
+
 	# disable auto prereq checks
 	SET( CPACK_RPM_PACKAGE_AUTOREQPROV " no" )
-	
+
 	# start cpack!
 	INCLUDE( CPack )
 
@@ -346,16 +348,16 @@ IF( BUILD_TESTS )
 
 	# define the libs needed for the test build
 	ADD_LIB_ONCE( ${CMAKE_CURRENT_SOURCE_DIR}/../lib/adl-libcore TestHelpers )
-	
+
 	# external package dependencies for tests
 	FIND_PACKAGE( Cppunit REQUIRED )
-	
+
 	# set test libs based on external package dependencies above
 	SET( DataProxyTest_Libs
 		${DataProxy_Libs}
 		${CPPUNIT_LIBRARIES}
 	)
-	
+
 	# test source files
 	# SEE NOT ABOVE IN THE MOCK SECTION
 	# regarding why there are mock files listed here
@@ -407,7 +409,7 @@ IF( BUILD_TESTS )
 		mock/TestableDataProxyClient.cpp
 		mock/TestableNode.cpp
 	)
-	
+
 	IF( USE_MCR )
 		LIST( APPEND DataProxyTest_Src test/DataProxyWrapperTest.cpp test/MATLABExecutor.cpp )
 		FIND_LIBRARY( LIBMATLAB libeng.so HINTS /data/app/matlab/bin/* ENV LIBRARY_PATH )
@@ -418,7 +420,7 @@ IF( BUILD_TESTS )
 	SET( DataProxyTest_Incs
 		${CMAKE_CURRENT_SOURCE_DIR}/test
 	)
-	
+
 	# include test directories for this build
 	INCLUDE_DIRECTORIES( ${DataProxyTest_Incs} )
 	# include mock directories for this build
@@ -434,7 +436,7 @@ IF( BUILD_TESTS )
 	INCLUDE_DIRECTORIES( SYSTEM
 		${CPPUNIT_INCLUDE_DIR}
 	)
-	
+
 	# add test executable target, but exclude it from "all" target
 	# NOTE: this executable is built off the main sources as well, because we have
 	# to use them directly as most of their symbols will NOT be exported
@@ -446,9 +448,9 @@ IF( BUILD_TESTS )
 
 	# add dependencies for test target so they will be built first
 	ADD_DEPENDENCIES( DataProxyTest DataProxyThppGeneratedHpps Logger Utility MockUtility Service MockService Database MockDatabase Monitoring MockMonitoring TestHelpers MockDataProxy )
-	
+
 	# link test library to dependent libs
-	TARGET_LINK_LIBRARIES( DataProxyTest 
+	TARGET_LINK_LIBRARIES( DataProxyTest
 		${DataProxyTest_Libs}
 		$<TARGET_FILE:MockDataProxy>
 		$<TARGET_FILE:TestHelpers>
@@ -462,7 +464,7 @@ IF( BUILD_TESTS )
 		$<TARGET_FILE:Utility>
 		$<TARGET_SONAME_FILE:Logger>
 	)
-	
+
 	SET_TARGET_PROPERTIES( DataProxyTest PROPERTIES COMPILE_DEFINITIONS DPL_TEST )
 
 ENDIF()
