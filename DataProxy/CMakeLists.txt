@@ -54,6 +54,7 @@ FIND_PACKAGE( SnmpPP REQUIRED )
 FIND_PACKAGE( Threads REQUIRED )
 FIND_PACKAGE( UUID REQUIRED )
 FIND_PACKAGE( XercesC REQUIRED )
+FIND_PACKAGE( Curses REQUIRED )
 
 # set libs based on external package dependencies above
 SET( DataProxy_Libs
@@ -182,7 +183,7 @@ ENDIF()
 ##################### SWIG  #####################
 #################################################
 
-IF( BUILD_SWIG AND NOT DEFINED ALTERNATIVE_BUILD_SUFFIX )
+IF( BUILD_SWIG )
 
 	# swig boilerplate
 	FIND_PACKAGE( SWIG REQUIRED )
